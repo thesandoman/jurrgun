@@ -1,0 +1,31 @@
+{
+  "version": "2026.12.20",
+  "framework": "hono",
+  "files": {
+    "INSTALL.md": "INSTALL.md",
+    "README.md": "README.md",
+    "package.json": "package.json",
+    "package-lock.json": "package-lock.json",
+    "tsconfig.json": "tsconfig.json",
+    "drizzle.config.ts": "drizzle.config.ts",
+    "wrangler.toml": "wrangler.toml",
+    "gitattributes": ".gitattributes",
+    "worker/index.ts": "src/index.ts",
+    "worker/db.ts": "src/db.ts",
+    "worker/storage.ts": "src/storage.ts",
+    "worker/spatial.ts": "src/spatial.ts",
+    "worker/state.ts": "src/state.ts",
+    "worker/s3.ts": "src/s3.ts",
+    "worker/schema.ts": "src/schema.ts",
+    "worker/logger.ts": "src/logger.ts",
+    "worker/assets.ts": "src/assets.ts",
+    "scripts/assets-manifest.mjs": "scripts/assets-manifest.mjs",
+    "design/README.md": "design/README.md",
+    "design/reference/gitkeep": "design/reference/.gitkeep",
+    "design/assets/gitkeep": "design/assets/.gitkeep",
+    "test/index.test.ts": "test/index.test.ts",
+    "github/workflows/deploy.yml": ".github/workflows/deploy.yml",
+    "github/workflows/sync-assets.sh": ".github/workflows/sync-assets.sh"
+  },
+  "updated_at": "2026-10-08T03:55:11.687Z"
+}
