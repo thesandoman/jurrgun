@@ -5,7 +5,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
-import { SV_MAP_CSS, SV_MAP_JS, SV_MAP_VERSION } from "../src/vendor/sv-map.generated";
+import { SV_MAP_VERSION } from "../src/vendor/sv-map.generated";
+import { svMapCss, svMapJs } from "../src/routes/vendor";
 
 describe("sv-map vendor files", () => {
   it("serves the JS module and the stylesheet", async () => {
@@ -17,10 +18,15 @@ describe("sv-map vendor files", () => {
     expect(css.headers.get("content-type")).toContain("text/css");
   });
 
+  it("keeps the deploy pipeline's module scan clean (no `from \"./…\"` in the bundle source)", async () => {
+    const gen = readFileSync("src/vendor/sv-map.generated.ts", "utf8");
+    expect(gen).not.toMatch(/from "\.\//);
+  });
+
   it("matches the installed package exactly", () => {
     const pkg = JSON.parse(readFileSync("node_modules/sv-map/package.json", "utf8"));
     expect(SV_MAP_VERSION).toBe(pkg.version);
-    expect(SV_MAP_JS).toBe(readFileSync("node_modules/sv-map/src/sv-map.js", "utf8"));
-    expect(SV_MAP_CSS).toBe(readFileSync("node_modules/sv-map/src/sv-map.css", "utf8"));
+    expect(svMapJs()).toBe(readFileSync("node_modules/sv-map/src/sv-map.js", "utf8"));
+    expect(svMapCss()).toBe(readFileSync("node_modules/sv-map/src/sv-map.css", "utf8"));
   });
 });
