@@ -41,6 +41,7 @@ import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUT
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import { fmtDate, type Lang, type T } from "../lib/i18n";
+import { eventPlace } from "../lib/places";
 import { qrSvg, shortCode } from "../lib/qr";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
@@ -78,6 +79,7 @@ import {
   view,
   type View,
 } from "../ui/kit";
+import { DiscoverMap, MAP_CSS, type MapChip, type MapPoint } from "../ui/discover-map";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -325,6 +327,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     fitsAge: c.req.query("fitsAge") === "1",
     resident: c.req.query("resident") === "1",
   };
+  const mapView = c.req.query("view") === "map";
 
   const where = [eq(events.status, "published"), gt(events.endsAt, now)];
   const win = whenWindow(q.when, now);
@@ -360,6 +363,14 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
   const filtered = q.when !== "all" || q.district || q.tag || q.free || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident;
+  // The same filters, in list or map view.
+  const params = new URLSearchParams(c.req.query());
+  params.delete("view");
+  params.delete("notice");
+  const listHref = `/events${params.size ? `?${params}` : ""}`;
+  params.set("view", "map");
+  const mapHref = `/events?${params}`;
+  const placed = mapView ? list.map((e) => ({ e, place: eventPlace(e) })) : [];
 
   return page(
     c,
@@ -394,6 +405,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <details open={!!filtered}>
         <summary>{t("ตัวกรอง", "Filters")}</summary>
         <form method="get" action="/events" class="filters">
+          {mapView ? <input type="hidden" name="view" value="map" /> : null}
           <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
           <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
           <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
@@ -405,12 +417,34 @@ eventRoutes.get("/events", requireMember, async (c) => {
           <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
           <div class="row">
             <Button>{t("ค้นหา", "Show events")}</Button>
-            {filtered ? <LinkButton href="/events" kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
+            {filtered ? <LinkButton href={mapView ? "/events?view=map" : "/events"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
           </div>
         </form>
       </details>
+      <style dangerouslySetInnerHTML={{ __html: MAP_CSS }} />
+      <nav class="view-toggle" aria-label={t("มุมมอง", "View")}>
+        <a href={listHref} class={mapView ? "" : "on"} aria-current={mapView ? undefined : "page"}>☰ {t("รายการ", "List")}</a>
+        <a href={mapHref} class={mapView ? "on" : ""} aria-current={mapView ? "page" : undefined}>🗺️ {t("แผนที่", "Map")}</a>
+      </nav>
       {list.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้", "No events match these filters yet.")}</Empty>
+      ) : mapView ? (
+        <>
+          <DiscoverMap
+            points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
+            chips={mapChips(list, lang)}
+            t={t}
+            listHref={listHref}
+          />
+          {placed.some((x) => !x.place) ? (
+            <>
+              <h2>{t("ยังไม่มีตำแหน่งบนแผนที่", "Not on the map yet")}</h2>
+              {placed
+                .filter((x) => !x.place)
+                .map(({ e }) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)}
+            </>
+          ) : null}
+        </>
       ) : (
         list.map((e) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)
       )}
@@ -423,6 +457,56 @@ eventRoutes.post("/events/quiz-hint/dismiss", requireMember, (c) => {
   setCookie(c, QUIZ_HINT_COOKIE, "hide", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax", httpOnly: true });
   return c.redirect("/events");
 });
+
+// ---------------------------------------------------------- map view --
+
+/** One event as the map needs it: what the card shows, plus where. Nothing about other people. */
+function mapPoint(
+  e: Event,
+  place: NonNullable<ReturnType<typeof eventPlace>>,
+  taken: number,
+  mine: string | undefined,
+  v: View,
+  cover: string | null | undefined,
+): MapPoint {
+  const { t, lang } = v;
+  const left = Math.max(0, e.capacity - taken);
+  return {
+    id: e.id,
+    title: title(e, lang),
+    when: fmtDate(e.startsAt, lang),
+    venue: e.venueName,
+    district: label(DISTRICTS, e.district, lang),
+    lat: place.lat,
+    lng: place.lng,
+    precision: place.precision,
+    emoji: coverEmoji(e),
+    cover: cover ?? null,
+    tags: e.tags,
+    free: e.costThb === 0,
+    cost: costText(e, t),
+    spots: left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full"),
+    full: left === 0,
+    mine: mine ? statusLabel(mine, t) : null,
+  };
+}
+
+const CHIP_EMOJI: Record<string, string> = {
+  food: "🍜", run: "🏃", walk: "🚶", culture: "🏛️", art: "🎨", volunteer: "🤲", board_game: "🎲", workshop: "🛠️", pets: "🐶",
+  language_exchange: "💬", newcomers: "👋", queer_friendly: "🏳️‍🌈", lgbtq_community: "🏳️‍🌈", english_friendly: "🇬🇧",
+  step_free: "♿", city_quest: "🧭", festival: "🎉", daytime: "☀️",
+};
+
+/** Category chips for the map: the categories these events actually have, most common first (up to 8). */
+function mapChips(list: Event[], lang: Lang): MapChip[] {
+  const n = new Map<string, number>();
+  for (const e of list) for (const tag of e.tags) n.set(tag, (n.get(tag) ?? 0) + 1);
+  return [...n.entries()]
+    .filter(([tag]) => values(EVENT_TAGS).includes(tag))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([tag]) => ({ value: tag, label: label(EVENT_TAGS, tag, lang), emoji: CHIP_EMOJI[tag] ?? "•" }));
+}
 
 // -------------------------------------------------------------- detail --
 
