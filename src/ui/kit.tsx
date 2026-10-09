@@ -27,6 +27,8 @@ export type PageOpts = {
   status?: 200 | 400 | 403 | 404 | 409;
   /** Focused task screens (onboarding, quiz): no tab bar, no footer. */
   bare?: boolean;
+  /** Full-screen map screens (Discover): the page draws its own floating header. */
+  fullscreen?: boolean;
 };
 
 /** `?notice=` keys pages can redirect with. */
@@ -96,8 +98,17 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           rel="stylesheet"
         />
         <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("bkk-text")==="big")document.documentElement.classList.add("big-text")}catch(e){}`,
+          }}
+        />
       </head>
-      <body class={opts.admin ? "admin" : opts.bare ? "bare" : ""}>
+      <body class={opts.admin ? "admin" : opts.bare ? "bare" : opts.fullscreen ? "fullmap-body" : ""}>
+        {opts.fullscreen ? (
+          <main class="fullmap">{props.children}</main>
+        ) : (
+          <>
         <div class="proto-banner">
           {t("ต้นแบบ (Prototype) — ห้ามใช้ข้อมูลจริง", "Prototype — please don't use real personal data")}
         </div>
@@ -128,6 +139,8 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
           <span>{t("โครงการของกรุงเทพมหานคร", "A Bangkok Metropolitan Administration project")}</span>
         </footer>
+          </>
+        )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
         <script
           dangerouslySetInnerHTML={{
@@ -141,17 +154,19 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
 
 function TabBar(props: { v: View; tab: Tab }) {
   const { t } = props.v;
+  // Same five places on every page; "My events" is the big centre button
+  // (your pass lives there), like the Sanroo map's centre action.
   const items: [Tab, string, string, string][] = [
     ["events", "/events", "🗺️", t("ค้นหา", "Discover")],
-    ["mine", "/me/events", "🎟️", t("ของฉัน", "My events")],
     ["connections", "/connections", "🤝", t("คนรู้จัก", "Circle")],
+    ["mine", "/me/events", "🎟️", t("ของฉัน", "My events")],
     ["pulse", "/pulse", "💬", t("City Pulse", "City Pulse")],
     ["me", "/settings", "👤", t("ฉัน", "Me")],
   ];
   return (
     <nav class="tabbar" aria-label={t("เมนูหลัก", "Main")}>
       {items.map(([key, href, icon, text]) => (
-        <a href={href} class={props.tab === key ? "on" : ""} aria-current={props.tab === key ? "page" : undefined}>
+        <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
           <span aria-hidden="true">{icon}</span>
           {text}
         </a>

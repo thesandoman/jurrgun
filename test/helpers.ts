@@ -11,7 +11,7 @@ import { getDb } from "../src/db";
 import { hashPassword, newId, randomToken, sha256 } from "../src/lib/crypto";
 import { accounts, consents, profiles, sessions, type Role } from "../src/schema";
 
-export const ENV = { DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/cloud_dev" };
+export const ENV = { DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/cloud_dev", NO_EXTERNAL: "1" };
 
 async function probe(): Promise<boolean> {
   const sql = postgres(ENV.DATABASE_URL, { max: 1, connect_timeout: 2 });

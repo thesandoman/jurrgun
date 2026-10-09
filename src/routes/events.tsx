@@ -22,7 +22,7 @@
  */
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { type AnyColumn, and, asc, count, eq, gt, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   ageOn,
@@ -79,7 +79,8 @@ import {
   view,
   type View,
 } from "../ui/kit";
-import { DiscoverMap, MAP_CSS, type MapChip, type MapPoint } from "../ui/discover-map";
+import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
+import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -326,6 +327,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     plusOne: c.req.query("plusOne") === "1",
     fitsAge: c.req.query("fitsAge") === "1",
     resident: c.req.query("resident") === "1",
+    text: (c.req.query("q") ?? "").trim().slice(0, 80),
   };
   const mapView = c.req.query("view") !== "list"; // the map is the default
 
@@ -340,6 +342,11 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (q.plusOne) where.push(eq(events.plusOneAllowed, true));
   // PRD §7.2: "Bangkok registered resident priority" (waitlist priority or a held quota).
   if (q.resident) where.push(or(eq(events.residentPriority, true), gt(events.residentQuota, 0))!);
+  if (q.text) {
+    // Text search over title, English title and venue (LIKE wildcards escaped).
+    const like = `%${q.text.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+    where.push(or(ilike(events.title, like), ilike(events.titleEn, like), ilike(events.venueName, like))!);
+  }
   if (q.fitsAge) {
     const age = ageOn(user.profile.birthDate, now);
     where.push(lte(events.ageMin, age), gte(events.ageMax, age));
@@ -348,7 +355,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(100);
   const ids = list.map((e) => e.id);
   const hintHidden = getCookie(c, QUIZ_HINT_COOKIE) === "hide";
-  const [taken, mine, myVibe, coverPairs] = await Promise.all([
+  const [taken, mine, myVibe, coverPairs, weather] = await Promise.all([
     takenCounts(db, ids),
     ids.length
       ? db
@@ -359,10 +366,11 @@ eventRoutes.get("/events", requireMember, async (c) => {
       : Promise.resolve([] as { eventId: string; status: string }[]),
     hintHidden ? Promise.resolve([{ id: "hidden" }]) : db.select({ id: vibes.accountId }).from(vibes).where(eq(vibes.accountId, user.account.id)).limit(1),
     Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(c.env, e)] as const)),
+    mapView ? bangkokWeather(c.env).catch(() => null) : Promise.resolve(null),
   ]);
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
-  const filtered = q.when !== "all" || q.district || q.tag || q.free || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident;
+  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
   // The same filters, in list or map view.
   const params = new URLSearchParams(c.req.query());
   params.delete("view");
@@ -372,6 +380,83 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const listHref = `/events?${params}`;
   const placed = mapView ? list.map((e) => ({ e, place: eventPlace(e) })) : [];
   const unplaced = placed.filter((x) => !x.place).length;
+
+  const filtersForm = (
+    <form method="get" action="/events" class="filters">
+      {mapView ? null : <input type="hidden" name="view" value="list" />}
+      {q.text ? <input type="hidden" name="q" value={q.text} /> : null}
+      <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
+      <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
+      <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
+      <Select label={t("ภาษา", "Language")} name="language" options={LANGUAGES} value={q.language} lang={lang} blank={t("ทุกภาษา", "Any language")} />
+      <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />
+      <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
+      <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
+      <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
+      <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
+      <div class="row">
+        <Button>{t("ค้นหา", "Show events")}</Button>
+        {filtered ? <LinkButton href={mapView ? "/events" : "/events?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
+      </div>
+    </form>
+  );
+  const unplacedNote =
+    mapView && unplaced > 0 ? (
+      <p class="muted">
+        {t(`${unplaced} กิจกรรมยังไม่มีตำแหน่งบนแผนที่ แต่อยู่ในรายการนี้`, `${unplaced} event${unplaced === 1 ? " isn't" : "s aren't"} on the map yet, but ${unplaced === 1 ? "it's" : "they're"} in this list`)}
+      </p>
+    ) : null;
+  const cards =
+    list.length === 0 ? (
+      <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ กลับมาดูใหม่เร็ว ๆ นี้", "No events match these filters yet. Check back soon.")}</Empty>
+    ) : (
+      list.map((e) => (
+        <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
+          <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />
+        </div>
+      ))
+    );
+
+  if (mapView) {
+    const week = list.filter((e) => e.startsAt.getTime() < now.getTime() + 7 * 86_400_000);
+    const open = week.filter((e) => (taken.get(e.id) ?? 0) < e.capacity).length;
+    const status = week.length
+      ? {
+          ok: true,
+          title: t(`✓ ${week.length} กิจกรรมสัปดาห์นี้ · ${open} ยังมีที่ว่าง`, `✓ ${week.length} event${week.length === 1 ? "" : "s"} this week · ${open} with spots left`),
+          sub: t(`นับจากฐานข้อมูลตอนเปิดหน้านี้ · ${fmtTime(now, lang)}`, `Counted from the database when this page loaded · ${fmtTime(now, lang)}`),
+        }
+      : {
+          ok: false,
+          title: t("ยังไม่มีกิจกรรมสัปดาห์นี้ · แตะดูทั้งหมด", "No events this week yet · tap to see all"),
+          sub: t(`อัปเดตตอนเปิดหน้านี้ · ${fmtTime(now, lang)}`, `Updated when this page loaded · ${fmtTime(now, lang)}`),
+        };
+    return page(
+      c,
+      { title: t("ค้นหากิจกรรม", "Discover"), tab: "events", fullscreen: true },
+      <FullDiscover
+        t={t}
+        lang={lang}
+        points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
+        chips={mapChips(list, lang)}
+        ticker={tickerItems({ v, list, taken, weather, hasVibe: myVibe.length > 0, newcomer: user.profile.newcomer })}
+        status={status}
+        search={q.text}
+        filtered={filtered}
+        filters={filtersForm}
+        list={
+          <>
+            {unplacedNote}
+            {cards}
+          </>
+        }
+        count={list.length}
+        listHref={listHref}
+        langHref={`/lang/${lang === "th" ? "en" : "th"}?back=${encodeURIComponent(mapHref)}`}
+        hasQuests={list.some((e) => e.tags.includes("city_quest"))}
+      />,
+    );
+  }
 
   return page(
     c,
@@ -403,51 +488,16 @@ eventRoutes.get("/events", requireMember, async (c) => {
           <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยจัดโต๊ะให้เข้ากับคุณ ไม่มีเรื่องการเมือง เป็นความลับจนกว่าคุณจะเลือกแสดง", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
         </Card>
       ) : null}
-      <details open={!!filtered}>
+      <details open={filtered}>
         <summary>{t("ตัวกรอง", "Filters")}</summary>
-        <form method="get" action="/events" class="filters">
-          {mapView ? null : <input type="hidden" name="view" value="list" />}
-          <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
-          <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
-          <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
-          <Select label={t("ภาษา", "Language")} name="language" options={LANGUAGES} value={q.language} lang={lang} blank={t("ทุกภาษา", "Any language")} />
-          <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />
-          <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
-          <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
-          <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
-          <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
-          <div class="row">
-            <Button>{t("ค้นหา", "Show events")}</Button>
-            {filtered ? <LinkButton href={mapView ? "/events" : "/events?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
-          </div>
-        </form>
+        {filtersForm}
       </details>
-      <style dangerouslySetInnerHTML={{ __html: MAP_CSS }} />
       <nav class="view-toggle" aria-label={t("มุมมอง", "View")}>
-        <a href={mapHref} class={mapView ? "on" : ""} aria-current={mapView ? "page" : undefined}>🗺️ {t("แผนที่", "Map")}</a>
-        <a href={listHref} class={mapView ? "" : "on"} aria-current={mapView ? undefined : "page"}>☰ {t("รายการ", "List")}</a>
+        <a href={mapHref}>🗺️ {t("แผนที่", "Map")}</a>
+        <a href={listHref} class="on" aria-current="page">☰ {t("รายการ", "List")}</a>
       </nav>
-      {mapView ? (
-        <DiscoverMap
-          points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
-          chips={mapChips(list, lang)}
-          t={t}
-          lang={lang}
-          listHref={listHref}
-        />
-      ) : null}
       <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
-        {mapView ? <h2>{t(`กิจกรรม (${list.length})`, `Events (${list.length})`)}</h2> : null}
-        {mapView && unplaced > 0 ? (
-          <p class="muted">
-            {t(`${unplaced} กิจกรรมยังไม่มีตำแหน่งบนแผนที่ แต่อยู่ในรายการนี้`, `${unplaced} event${unplaced === 1 ? " isn't" : "s aren't"} on the map yet, but ${unplaced === 1 ? "it's" : "they're"} in this list`)}
-          </p>
-        ) : null}
-        {list.length === 0 ? (
-          <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ กลับมาดูใหม่เร็ว ๆ นี้", "No events match these filters yet. Check back soon.")}</Empty>
-        ) : (
-          list.map((e) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)
-        )}
+        {cards}
       </section>
     </>,
   );
@@ -497,6 +547,50 @@ const CHIP_EMOJI: Record<string, string> = {
   language_exchange: "💬", newcomers: "👋", queer_friendly: "🏳️‍🌈", lgbtq_community: "🏳️‍🌈", english_friendly: "🇬🇧",
   step_free: "♿", city_quest: "🧭", festival: "🎉", daytime: "☀️",
 };
+
+function fmtTime(d: Date, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }).format(d);
+}
+
+/**
+ * The Discover ticker, Sanroo style: city conditions first (heat, rain and
+ * PM2.5 decide whether an outdoor meet-up is pleasant), then what's on.
+ */
+function tickerItems(p: { v: View; list: Event[]; taken: Map<string, number>; weather: Weather | null; hasVibe: boolean; newcomer: boolean }): TickerItem[] {
+  const { t, lang } = p.v;
+  const out: TickerItem[] = [];
+  const w = p.weather;
+  if (w?.rain3h != null) {
+    out.push({ icon: w.rain3h >= 60 ? "🌧️" : "⛅", text: t(`โอกาสฝน 3 ชม. ${w.rain3h}%${w.rain24h != null ? ` · ฝน 24 ชม.ข้างหน้า ${w.rain24h} มม.` : ""}`, `Rain chance next 3h ${w.rain3h}%${w.rain24h != null ? ` · next 24h ${w.rain24h} mm` : ""}`), tone: w.rain3h >= 60 ? "warn" : undefined });
+  }
+  if (w?.feelsLike != null) {
+    const b = heatBand(w.feelsLike);
+    out.push({ icon: "🌡️", text: t(`รู้สึกเหมือน ${w.feelsLike}°C · ${b.th}`, `Feels like ${w.feelsLike}°C · ${b.en}`), tone: b.tone === "ok" ? undefined : b.tone });
+  }
+  if (w?.pm25 != null) {
+    const b = pm25Band(w.pm25);
+    out.push({ icon: "😷", text: t(`PM2.5 ${w.pm25} มคก./ลบ.ม. · ${b.th}`, `PM2.5 ${w.pm25} µg/m³ · ${b.en}`), tone: b.tone === "ok" ? "ok" : b.tone });
+  }
+  const now = Date.now();
+  const week = p.list.filter((e) => e.startsAt.getTime() < now + 7 * 86_400_000);
+  out.push({ icon: "🎟️", text: t(`${week.length} กิจกรรมสัปดาห์นี้ · ฟรี ${week.filter((e) => e.costThb === 0).length}`, `${week.length} events this week · ${week.filter((e) => e.costThb === 0).length} free`) });
+  const next = p.list[0];
+  if (next) out.push({ icon: "⏰", text: t(`ถัดไป: ${title(next, lang)} · ${fmtDate(next.startsAt, lang)}`, `Next up: ${title(next, lang)} · ${fmtDate(next.startsAt, lang)}`), href: `/events/${next.id}` });
+  const filling = p.list
+    .map((e) => ({ e, left: e.capacity - (p.taken.get(e.id) ?? 0) }))
+    .filter((x) => x.left > 0 && x.left <= 5)
+    .sort((a, b) => a.left - b.left)[0];
+  if (filling) out.push({ icon: "🔥", text: t(`ใกล้เต็ม: ${title(filling.e, lang)} · เหลือ ${filling.left} ที่`, `Filling up: ${title(filling.e, lang)} · ${filling.left} left`), href: `/events/${filling.e.id}`, tone: "warn" });
+  const quest = p.list.find((e) => e.tags.includes("city_quest"));
+  if (quest) out.push({ icon: "🧭", text: t(`ซิตี้เควสต์: ${title(quest, lang)}`, `City Quest: ${title(quest, lang)}`), href: `/events/${quest.id}` });
+  if (p.newcomer) out.push({ icon: "👋", text: t("มาใหม่ในกรุงเทพฯ? ลองกิจกรรมสำหรับคนมาใหม่", "New to Bangkok? Try a newcomers meet-up"), href: "/events?tag=newcomers" });
+  if (!p.hasVibe) out.push({ icon: "🧩", text: t("ค้นหา Bangkok Type ของคุณ (2 นาที)", "Find your Bangkok Type (2 min)"), href: "/quiz" });
+  out.push({ icon: "🤝", text: t("ความยินยอม: ‘ใช่’ ต้องชัดเจน เต็มใจ เปลี่ยนใจได้", "Consent: a real yes is clear, free and can change"), href: "/learn/consent" });
+  out.push({ icon: "🛡️", text: t("ฉุกเฉินโทร 191 · เจ็บป่วย 1669", "Emergency 191 · medical 1669"), href: "/learn/date-responsibly" });
+  out.push({ icon: "⚠️", text: t("ต้นแบบ: ห้ามใช้ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data") });
+  if (w) out.push({ icon: "ℹ️", text: t("ข้อมูลอากาศจาก Open-Meteo.com", "Weather data by Open-Meteo.com"), href: "https://open-meteo.com/" });
+  return out;
+}
 
 /** Category chips for the map: the categories these events actually have, most common first (up to 8). */
 function mapChips(list: Event[], lang: Lang): MapChip[] {
