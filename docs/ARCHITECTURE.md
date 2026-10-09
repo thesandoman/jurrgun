@@ -28,6 +28,8 @@ Read this before adding a route. The product spec is `design/reference/bkk-socia
 | `src/lib/i18n.ts` | `tr(lang)` → `t("ไทย", "English")`, `fmtDate`, `fmtDay`, `L(lang, {th,en})` |
 | `src/lib/constants.ts` | Districts, interests, tags, signals, choice labels, report reasons, VisitBangkok routes; `label(list, value, lang)` |
 | `src/lib/qr.ts` | `qrSvg(data)`, `shortCode(passToken)` |
+| `src/lib/places.ts` | `eventPlace(e)`: where an event sits on the Discover map (map link → route start → district office), `coordsFromMapUrl(url)` |
+| `src/ui/discover-map.tsx` | The Discover map (`/events?view=map`): pins, category chips, key, sheet, near-me. See `docs/DISCOVER-MAP.md` |
 | `src/domain/rules.ts` | **All PRD rules as pure functions**: mutual consent, age, romance gates, strikes, seats, waitlist order, k-threshold, window timings. Use them; don't re-implement |
 | `src/domain/matching.ts` | `suggestGroups(attendees, opts)` (exchange-stable tables), `buddyRound(people)` (Irving + fallback) |
 | `src/ui/kit.tsx` | `page(c, {title, tab, admin, status}, body)`, `view(c)` → `{lang, t, user, path}`, and the components `Card`, `Tag`, `Notice`, `Field`, `TextArea`, `Select`, `Choices`, `Toggle`, `Button`, `LinkButton`, `Stat`, `Empty`; form helpers `str`, `list`, `int`, `safeNext` |

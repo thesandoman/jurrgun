@@ -698,7 +698,18 @@ function EventForm(props: {
         </div>
         <Field label={t("สถานที่", "Venue")} name="venueName" value={d.venueName} required maxlength={200} />
         <Field label={t("ที่อยู่", "Address")} name="venueAddress" value={d.venueAddress} maxlength={400} />
-        <Field label={t("ลิงก์แผนที่", "Map link")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
+        <Field
+          label={t("ลิงก์แผนที่", "Map link")}
+          name="mapUrl"
+          type="url"
+          value={d.mapUrl}
+          placeholder="https://maps.google.com/…"
+          maxlength={500}
+          hint={t(
+            "วางลิงก์ Google Maps แบบเต็ม (มี @ละติจูด,ลองจิจูด) เพื่อปักหมุดตรงสถานที่บนแผนที่ค้นหา ถ้าไม่มี จะแสดงเป็นระดับเขต",
+            "Paste a full Google Maps link (with @lat,lng) to pin the exact place on the Discover map; without one it shows at district level",
+          )}
+        />
         <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
       </Card>
       <Card>
