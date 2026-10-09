@@ -100,7 +100,7 @@ learnRoutes.get("/faq", (c) => {
   const { t, lang } = view(c);
   return page(
     c,
-    { title: t("คำถามที่พบบ่อย", "FAQ") },
+    { title: t("คำถามที่พบบ่อย", "FAQ"), tab: "learn" },
     <>
       <h1>{t("คำถามที่พบบ่อย", "Frequently asked questions")}</h1>
       <FaqList lang={lang} />
@@ -115,7 +115,7 @@ learnRoutes.get("/learn", (c) => {
   const { t, lang } = view(c);
   return page(
     c,
-    { title: t("เรียนรู้", "Learn") },
+    { title: t("เรียนรู้", "Learn"), tab: "learn" },
     <>
       <h1>{t("เรียนรู้", "Learn")}</h1>
       <p class="muted">
@@ -135,7 +135,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
   const { t, lang } = view(c);
   return page(
     c,
-    { title: L(lang, TYPES_CARD.title) },
+    { title: L(lang, TYPES_CARD.title), tab: "learn" },
     <article class="learn">
       <p>
         <a href="/learn">← {t("เรียนรู้", "Learn")}</a>
@@ -190,7 +190,7 @@ learnRoutes.get("/learn/:slug", (c) => {
   const others = TOPICS.filter((x) => x.slug !== topic.slug);
   return page(
     c,
-    { title: L(lang, topic.title) },
+    { title: L(lang, topic.title), tab: "learn" },
     <article class="learn">
       <p>
         <a href="/learn">← {t("เรียนรู้", "Learn")}</a>

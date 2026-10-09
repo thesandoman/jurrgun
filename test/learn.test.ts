@@ -7,7 +7,7 @@ import { FAQ, HELPLINES, TOPICS } from "../src/content/learn";
 
 describe("FAQ", () => {
   it("shows the first questions on the home page, below the hero", async () => {
-    const html = await (await app.request("/?lang=en")).text();
+    const html = await (await app.request("/?lang=en", { headers: { cookie: "jg_intro=seen" } })).text();
     const hero = html.indexOf("Small groups. Real places. No swiping.");
     const faq = html.indexOf(FAQ[0].q.en);
     expect(hero).toBeGreaterThan(-1);

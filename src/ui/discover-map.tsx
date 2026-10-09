@@ -3,7 +3,7 @@
  * (floodmap.apps.sv-academy.org) and built on its template package `sv-map`
  * (github:thesandoman/sv-map; browser files bundled and served at /vendor/…).
  *
- * Sanroo → BKK Social:
+ * Sanroo → Jurrgun:
  *   scrolling ticker (rain, heat, PM2.5, news) → rain, heat, PM2.5 from
  *     Open-Meteo plus this week's events, the next one, what's filling up,
  *     a Learn tip and the prototype notice
@@ -22,6 +22,7 @@
  * who is going; your own RSVP shows only to you. Location stays on the phone.
  */
 import type { Child } from "hono/jsx";
+import { BrandMark } from "./brand";
 import type { Lang, T } from "../lib/i18n";
 import type { Precision } from "../lib/places";
 import { BKK_CENTER, BKK_PAN_LIMIT } from "../lib/places";
@@ -173,9 +174,9 @@ export function FullDiscover(props: {
 
       {/* Floating header */}
       <header class="fd-top">
-        <a href="/events" class="fd-logo" aria-label="BKK Social">
-          <span aria-hidden="true">◐</span>
-          <small>BKK</small>
+        <a href="/events" class="fd-logo" aria-label="Jurrgun">
+          <BrandMark />
+          <small>Jurrgun</small>
         </a>
         <form method="get" action="/events" class="fd-search" role="search">
           <span aria-hidden="true">⌕</span>
@@ -390,15 +391,15 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 /* floating header */
 .fd-top{position:fixed;z-index:8;top:calc(var(--tk-h) + var(--gap));left:10px;right:10px;height:var(--top-h);display:flex;gap:8px;align-items:center}
 .fd-logo,.fd-round{flex:none;display:grid;place-items:center;width:var(--top-h);height:var(--top-h);border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);text-decoration:none;color:var(--ink);font-weight:700;cursor:pointer;font-size:1rem}
-.fd-logo{line-height:1;color:var(--brand)}.fd-logo span{font-size:1.35rem}.fd-logo small{font-size:.62rem;color:var(--ink-2)}
+.fd-logo{line-height:1;color:var(--brand);gap:2px;padding-top:4px}.fd-logo svg{width:26px;height:26px}.fd-logo small{font-size:.56rem;color:var(--ink-2);font-weight:700}
 .fd-round[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
 .fd-search{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:var(--top-h);padding:0 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);color:var(--ink-3)}
 .fd-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;min-height:0;padding:0;outline:none}
 .fd-search:focus-within{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent)}
 /* status card */
 .fd-status{position:fixed;z-index:7;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2);left:10px;right:10px;display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:16px;text-decoration:none;color:#fff;box-shadow:var(--shadow)}
-.fd-status.ok{background:linear-gradient(135deg,#1f8a5b,#2e9e6d)}
-.fd-status.calm{background:linear-gradient(135deg,#4b5652,#5f6b66)}
+.fd-status.ok{background:linear-gradient(135deg,#0a7a3d,#0f9a4c 60%,#16a34a)}
+.fd-status.calm{background:linear-gradient(135deg,#3d5a49,#5f7a69)}
 .fd-status{height:64px;justify-content:center;overflow:hidden}
 .fd-status strong{font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fd-status small{opacity:.92;font-size:.76rem;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fd-status small>i{flex:none}
@@ -406,10 +407,10 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(183,247,207,0)}100%{box-shadow:0 0 0 0 rgba(183,247,207,0)}}
 /* filters chip + panel */
 .fd-filters{background:none;border:0;padding:0;margin:0;border-radius:0;position:fixed;z-index:9;left:12px;top:calc(var(--tk-h) + var(--top-h) + 64px + var(--gap) * 3)}
-.fd-filters>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;background:#3b5bdb;color:#fff;font-weight:600;font-size:.88rem;cursor:pointer;box-shadow:var(--shadow);position:relative}
+.fd-filters>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:600;font-size:.88rem;cursor:pointer;box-shadow:var(--shadow);position:relative}
 .fd-filters>summary::-webkit-details-marker{display:none}
 .fd-dot{position:absolute;top:4px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold)}
-.fd-filters[open]>summary{background:var(--brand)}
+.fd-filters[open]>summary{background:var(--fresh);color:#04210f}
 .fd-filters-body{position:fixed;left:10px;right:10px;top:calc(var(--tk-h) + var(--top-h) + 116px + var(--gap) * 3);max-height:calc(100dvh - var(--tk-h) - var(--top-h) - 140px - var(--tab-h));overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 14px 12px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
 /* right rail */
 .fd-rail{position:fixed;z-index:6;right:10px;bottom:calc(var(--tab-h) + var(--sheet-h) + 14px);display:flex;flex-direction:column;gap:8px}

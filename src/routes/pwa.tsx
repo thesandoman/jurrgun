@@ -15,7 +15,7 @@ export const pwaRoutes = new Hono<AppEnv>();
 /** Bump when the precached files or this script's logic change. */
 export const SW_VERSION = "bkk-social-v1";
 
-const SW = `/* BKK Social service worker. Caches only public shell files, never member pages. */
+const SW = `/* Jurrgun service worker. Caches only public shell files, never member pages. */
 const CACHE = ${JSON.stringify(SW_VERSION)};
 const PRECACHE = ["/offline", "/icon.svg", "/manifest.webmanifest"];
 

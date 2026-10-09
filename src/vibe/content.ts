@@ -287,7 +287,7 @@ export const WHENS: Text[] = [
 ];
 
 export const COMPANIONS: Text[] = [
-  { en: "a new friend from a BKK Social event", th: "เพื่อนใหม่จากกิจกรรม BKK Social" },
+  { en: "a new friend from a Jurrgun event", th: "เพื่อนใหม่จากกิจกรรม Jurrgun" },
   { en: "a friend visiting from another province", th: "เพื่อนที่มาจากต่างจังหวัด" },
   { en: "a colleague who just moved to Bangkok", th: "เพื่อนร่วมงานที่เพิ่งย้ายมากรุงเทพฯ" },
   { en: "your small group from last week", th: "กลุ่มเล็ก ๆ จากอาทิตย์ที่แล้ว" },

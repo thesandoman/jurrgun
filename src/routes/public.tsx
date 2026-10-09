@@ -2,24 +2,30 @@
  * Public pages: landing, language switch, policies, PWA manifest and icon.
  */
 import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
 import { LEARN_CARDS } from "../content/learn";
 import { L } from "../lib/i18n";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { FaqList } from "./learn";
+import { BRAND, BrandMark, MARK_SVG } from "../ui/brand";
 
 export const publicRoutes = new Hono<AppEnv>();
+
+export const INTRO_COOKIE = "jg_intro";
 
 publicRoutes.get("/", (c) => {
   const { t, user, lang } = view(c);
   if (user?.profile?.onboardedAt) return c.redirect("/events");
+  // First visit: the intro first, once.
+  if (!user && !getCookie(c, INTRO_COOKIE)) return c.redirect("/intro");
   return page(
     c,
     { title: t("เพื่อนใหม่ในเมืองเดียวกัน", "Make friends in Bangkok") },
     <>
       <section class="hero-lite">
-        <h1>{t("เพื่อนใหม่ในเมืองเดียวกัน", "Bangkok's own way to make friends")}</h1>
+        <span class="hero-mark"><BrandMark /></span>
+        <h1>{t("เจอกัน! เพื่อนใหม่ในกรุงเทพฯ", "Jurrgun! Bangkok's own way to make friends")}</h1>
         <p>{t("กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา", "Small groups. Real places. No swiping.")}</p>
         <div class="row">
           {user ? (
@@ -68,6 +74,92 @@ publicRoutes.get("/", (c) => {
   );
 });
 
+/** The intro for first-time visitors: five swipeable slides, then sign up. */
+publicRoutes.get("/intro", (c) => {
+  const { t, user } = view(c);
+  setCookie(c, INTRO_COOKIE, "seen", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
+  const done = user ? (user.profile?.onboardedAt ? "/events" : "/onboarding") : "/signup";
+  const slides: { art: string; tone: string; title: string; body: string }[] = [
+    {
+      art: "mark",
+      tone: "s1",
+      title: t("เจอกัน 👋", "Jurrgun 👋"),
+      body: t("“เจอกัน” แปลว่า แล้วเจอกันนะ ที่นี่คือที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่จริง ๆ", "“Jurrgun” (เจอกัน) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
+    },
+    {
+      art: "🗺️",
+      tone: "s2",
+      title: t("สถานที่จริง กลุ่มเล็ก", "Real places, small groups"),
+      body: t("เดินเล่นย่านเก่า บอร์ดเกม แลกเปลี่ยนภาษา โต๊ะละ 4 ถึง 6 คน จัดให้อย่างยุติธรรม", "Old-town walks, board games, language tables. Tables of 4 to 6, seated fairly."),
+    },
+    {
+      art: "💚",
+      tone: "s3",
+      title: t("ไม่มีใครถูกปฏิเสธ", "Nobody gets rejected"),
+      body: t("หลังกิจกรรม คุณเลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "After an event you choose quietly who you'd like to see again. You only hear when it's mutual."),
+    },
+    {
+      art: "🧩",
+      tone: "s4",
+      title: t("คุณเป็นไทป์ไหน?", "What's your Bangkok Type?"),
+      body: t("แบบทดสอบสั้น ๆ 2 นาที ตัวละคร 16 แบบ ไม่มีเรื่องการเมือง ช่วยจัดโต๊ะให้เข้ากับคุณ", "A 2-minute quiz, 16 characters, nothing political. It helps seat you at the right table."),
+    },
+    {
+      art: "🌈",
+      tone: "s5",
+      title: t("สำหรับทุกคน", "For everyone"),
+      body: t("ทุกเพศ ทุกความหลากหลาย คนไทยและชาวต่างชาติ โหมดเพื่อนเป็นค่าเริ่มต้น ฟรี", "Any gender or orientation, Thai or expat. Friends-first by default. Free."),
+    },
+  ];
+  return page(
+    c,
+    { title: t("ยินดีต้อนรับ", "Welcome"), bare: true, fullscreen: true },
+    <div class="intro">
+      <a class="intro-skip" href={done}>
+        {t("ข้าม", "Skip")}
+      </a>
+      <div class="intro-track" id="intro-track" tabindex={0} aria-label={t("แนะนำ Jurrgun", "About Jurrgun")}>
+        {slides.map((sl, i) => (
+          <section class={`intro-slide ${sl.tone}`} aria-label={`${i + 1} / ${slides.length}`}>
+            <div class="intro-art" aria-hidden="true">
+              {sl.art === "mark" ? <span class="intro-mark" dangerouslySetInnerHTML={{ __html: MARK_SVG }} /> : <b>{sl.art}</b>}
+            </div>
+            <h1>{sl.title}</h1>
+            <p>{sl.body}</p>
+            {i === slides.length - 1 ? (
+              <div class="intro-cta">
+                <LinkButton href={done}>{user ? t("ไปต่อ", "Continue") : t("เริ่มเลย", "Get started")}</LinkButton>
+                {!user ? <a href="/login">{t("มีบัญชีแล้ว? เข้าสู่ระบบ", "Have an account? Sign in")}</a> : null}
+              </div>
+            ) : null}
+          </section>
+        ))}
+      </div>
+      <div class="intro-foot">
+        <div class="intro-dots" id="intro-dots" aria-hidden="true">
+          {slides.map((_, i) => <i class={i === 0 ? "on" : ""} />)}
+        </div>
+        <a href="#" class="btn primary intro-next" id="intro-next">
+          {t("ถัดไป", "Next")} →
+        </a>
+      </div>
+      <p class="intro-lang">
+        <a href="/lang/th?back=/intro" lang="th">ไทย</a> · <a href="/lang/en?back=/intro" lang="en">English</a>
+      </p>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var tr=document.getElementById("intro-track"),dots=document.querySelectorAll("#intro-dots i"),nx=document.getElementById("intro-next");
+var n=dots.length;function idx(){return Math.round(tr.scrollLeft/tr.clientWidth)}
+function upd(){var i=idx();for(var j=0;j<n;j++)dots[j].className=j===i?"on":"";nx.style.visibility=i===n-1?"hidden":"visible"}
+tr.addEventListener("scroll",function(){window.requestAnimationFrame(upd)});
+nx.addEventListener("click",function(e){e.preventDefault();var r=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;tr.scrollTo({left:(idx()+1)*tr.clientWidth,behavior:r?"auto":"smooth"})});
+tr.addEventListener("keydown",function(e){if(e.key==="ArrowRight"){e.preventDefault();nx.click()}if(e.key==="ArrowLeft"){e.preventDefault();tr.scrollTo({left:(idx()-1)*tr.clientWidth,behavior:"smooth"})}});upd()})();`,
+        }}
+      />
+    </div>,
+  );
+});
+
 publicRoutes.get("/lang/:code", (c) => {
   const code = c.req.param("code") === "en" ? "en" : "th";
   setCookie(c, "lang", code, { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
@@ -81,7 +173,7 @@ publicRoutes.get("/privacy", (c) => {
     { title: t("ความเป็นส่วนตัว", "Privacy") },
     <>
       <h1>{t("นโยบายความเป็นส่วนตัว (ฉบับร่างต้นแบบ)", "Privacy notice (prototype draft)")}</h1>
-      <p>{t("BKK Social เป็นโครงการต้นแบบของกรุงเทพมหานคร เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "BKK Social is a Bangkok Metropolitan Administration prototype. We collect only what's needed and keep it in three separate stores:")}</p>
+      <p>{t("Jurrgun เป็นโครงการต้นแบบของกรุงเทพมหานคร เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a Bangkok Metropolitan Administration prototype. We collect only what's needed and keep it in three separate stores:")}</p>
       <ul>
         <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัส) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
         <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม การเชื่อมต่อ", "Social: nickname, interests, events attended, connections.")}</li>
@@ -131,12 +223,13 @@ publicRoutes.get("/terms", (c) => {
 publicRoutes.get("/manifest.webmanifest", (c) =>
   c.json(
     {
-      name: "BKK Social",
-      short_name: "BKK Social",
+      name: "Jurrgun (เจอกัน)",
+      short_name: "Jurrgun",
+      description: BRAND.meaning.en,
       start_url: "/events",
       display: "standalone",
-      background_color: "#faf7f2",
-      theme_color: "#0f6b5c",
+      background_color: "#f3fbf5",
+      theme_color: "#0c8a45",
       lang: "th",
       icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
     },
@@ -147,7 +240,7 @@ publicRoutes.get("/manifest.webmanifest", (c) =>
 
 publicRoutes.get("/icon.svg", (c) =>
   c.body(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0f6b5c"/><circle cx="32" cy="32" r="16" fill="#faf7f2"/><path d="M32 16a16 16 0 0 1 0 32z" fill="#c08a1e"/></svg>`,
+    MARK_SVG,
     200,
     { "content-type": "image/svg+xml", "cache-control": "public, max-age=86400" },
   ),

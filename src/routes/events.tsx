@@ -788,7 +788,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <h2>{t("รายละเอียด", "Details")}</h2>
         <dl class="facts">
           <dt>{t("ผู้จัด / โฮสต์", "Host")}</dt>
-          <dd>{host[0]?.nickname ?? t("ทีม BKK Social", "BKK Social team")}</dd>
+          <dd>{host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</dd>
           <dt>{t("จำนวนที่นั่ง", "Capacity")}</dt>
           <dd>
             {event.capacity} · {left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็ม — มีคิวสำรอง", "Full — waitlist open")}

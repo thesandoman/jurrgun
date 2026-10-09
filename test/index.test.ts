@@ -8,22 +8,54 @@
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
 
+/** A returning visitor (has seen the intro). */
+const seen = { headers: { cookie: "jg_intro=seen" } };
+
 describe("GET /", () => {
-  it("serves the landing page as HTML", async () => {
+  it("sends a first-time visitor to the intro, once", async () => {
     const res = await app.request("/");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/intro");
+  });
+
+  it("serves the landing page as HTML to returning visitors", async () => {
+    const res = await app.request("/", seen);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
   });
 
-  it("shows the BKK Social landing page in Thai by default", async () => {
-    const body = await (await app.request("/")).text();
-    expect(body).toContain("BKK Social");
+  it("shows the Jurrgun landing page in Thai by default", async () => {
+    const body = await (await app.request("/", seen)).text();
+    expect(body).toContain("Jurrgun");
+    expect(body).toContain("เจอกัน");
     expect(body).toContain('lang="th"');
   });
 
   it("switches to English with ?lang=en", async () => {
-    const body = await (await app.request("/?lang=en")).text();
+    const body = await (await app.request("/?lang=en", seen)).text();
     expect(body).toContain("Small groups. Real places. No swiping.");
+  });
+});
+
+describe("GET /intro", () => {
+  it("explains the name, sets the seen cookie and ends in sign-up", async () => {
+    const res = await app.request("/intro?lang=en");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toContain("jg_intro=seen");
+    const html = await res.text();
+    expect(html).toContain("see you later");
+    expect(html.match(/class="intro-slide/g)?.length).toBe(5);
+    expect(html).toContain('href="/signup"');
+    expect(html).toContain('href="/login"');
+    expect(html).not.toContain('class="tabbar"');
+  });
+
+  it("serves the new app icon", async () => {
+    const svg = await (await app.request("/icon.svg")).text();
+    expect(svg).toContain("#22c55e");
+    const manifest = (await (await app.request("/manifest.webmanifest")).json()) as { name: string; theme_color: string };
+    expect(manifest.name).toContain("Jurrgun");
+    expect(manifest.theme_color).toBe("#0c8a45");
   });
 });
 
