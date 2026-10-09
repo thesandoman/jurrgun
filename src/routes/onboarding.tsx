@@ -6,7 +6,7 @@
  *   1 quiz         Bangkok Vibe quiz (skippable) → type reveal (/onboarding/type)
  *   2 basics       nickname, birth date (18+ gate), district, lives-in-Bangkok
  *   3 privacy      required consents + code of conduct, then optional extras
- *   4 you          languages, interests, social style, times, what you're here for
+ *   4 you          languages, interests (grouped, searchable), keeping in touch, social style, times, what you're here for
  *   5 connections  relationship (private), age preference, optional romance mode
  *   6 wellbeing    optional UCLA-3 baseline, only with research consent
  */
@@ -20,7 +20,6 @@ import {
   EVENT_STYLES,
   GENDER_IDENTITIES,
   INTENTS,
-  INTERESTS,
   LANGUAGES,
   RELATIONSHIP,
   SOCIAL_STYLES,
@@ -33,6 +32,8 @@ import { consents, profiles, wellbeing } from "../schema";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, LinkButton, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
+import { cleanBio, COMM_STYLES, INTEREST_VALUES, MAX_COMM, MAX_INTERESTS } from "../content/profile";
+import { CommPicker, InterestPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
 export const onboarding = new Hono<AppEnv>();
@@ -306,12 +307,22 @@ function YouForm(props: { v: View; error?: string }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   return (
+    <>
     <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("you")} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} need={1} needText={t("เลือกอย่างน้อย 1", "Pick at least one")}>
         <Pills name="languages" options={LANGUAGES} values={p?.languages.length ? p.languages : [lang]} lang={lang} />
       </FlowStep>
-      <FlowStep emoji="🍜" title={t("สนใจอะไรบ้าง?", "What are you into?")} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} need={1} needText={t("เลือกอย่างน้อย 1", "Pick at least one")}>
-        <Pills name="interests" options={INTERESTS} values={p?.interests} lang={lang} />
+      <FlowStep
+        emoji="🍜"
+        title={t("สนใจอะไรบ้าง?", "What are you into?")}
+        hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ค้นหาได้`, `Pick 1 to ${MAX_INTERESTS}. You can search.`)}
+        need={1}
+        needText={t("เลือกอย่างน้อย 1", "Pick at least one")}
+      >
+        <InterestPicker v={props.v} values={p?.interests} />
+      </FlowStep>
+      <FlowStep emoji="💬" title={t("ปกติติดต่อกับเพื่อนแบบไหน?", "How do you like to keep in touch?")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ ข้ามได้`, `Pick up to ${MAX_COMM}, or skip`)}>
+        <CommPicker v={props.v} values={cleanBio(p?.bio).comm} />
       </FlowStep>
       <FlowStep emoji="👥" title={t("ชอบเจอคนแบบไหน?", "How do you like to meet people?")}>
         <Pills name="socialStyles" options={SOCIAL_STYLES} values={p?.socialStyles} lang={lang} />
@@ -327,6 +338,8 @@ function YouForm(props: { v: View; error?: string }) {
         <Pills name="intents" options={INTENTS} values={p?.intents ?? ["friends"]} lang={lang} />
       </FlowStep>
     </Flow>
+    <ProfileFormScript />
+    </>
   );
 }
 
@@ -342,18 +355,34 @@ onboarding.post("/you", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const pickAll = (key: string, allowed: string[]) => list(body[key]).filter((x) => allowed.includes(x));
   const languages = pickAll("languages", values(LANGUAGES));
-  const interests = pickAll("interests", values(INTERESTS));
+  const interests = [...new Set(pickAll("interests", INTEREST_VALUES))];
+  const comm = [...new Set(pickAll("comm", COMM_STYLES.map((x) => x.value)))];
   const socialStyles = pickAll("socialStyles", values(SOCIAL_STYLES));
   const eventStyle = pickAll("eventStyle", values(EVENT_STYLES))[0] ?? null;
   const intents = pickAll("intents", values(INTENTS));
   if (languages.length === 0 || interests.length === 0) {
     return page(c, { title: TITLE, status: 400, bare: true }, <YouForm v={v} error={v.t("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.")} />);
   }
+  if (interests.length > MAX_INTERESTS || comm.length > MAX_COMM) {
+    return page(
+      c,
+      { title: TITLE, status: 400, bare: true },
+      <YouForm v={v} error={v.t(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} และสไตล์การสื่อสารไม่เกิน ${MAX_COMM}`, `Pick at most ${MAX_INTERESTS} interests and ${MAX_COMM} ways to keep in touch.`)} />,
+    );
+  }
   // Keep romance if it was already on; this form only edits non-romance intents.
   const keepRomance = user.profile.intents.includes("romance") ? ["romance"] : [];
   await getDb(c.env)
     .update(profiles)
-    .set({ languages, interests, socialStyles, eventStyle, intents: [...(intents.length ? intents : ["friends"]), ...keepRomance], updatedAt: new Date() })
+    .set({
+      languages,
+      interests,
+      socialStyles,
+      eventStyle,
+      intents: [...(intents.length ? intents : ["friends"]), ...keepRomance],
+      bio: { ...cleanBio(user.profile.bio), comm },
+      updatedAt: new Date(),
+    })
     .where(eq(profiles.accountId, user.account.id));
   return c.redirect("/onboarding/connections");
 });

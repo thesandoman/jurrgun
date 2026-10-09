@@ -25,6 +25,19 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+/** Shape of social_profiles.bio. Kept here so the schema has no app imports. */
+export type ProfileBio = {
+  comm?: string[];
+  headline?: string;
+  learning?: string;
+  learningLangs?: string[];
+  energy?: string;
+  weekend?: string;
+  deck?: string[];
+  skipped?: string[];
+  answers?: Record<string, { kind: string; value: string | number | string[]; photoKey?: string }>;
+};
+
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 const created = () => ts("created_at").notNull().defaultNow();
 
@@ -106,6 +119,12 @@ export const profiles = pgTable(
     ageMin: integer("age_min").notNull().default(18),
     ageMax: integer("age_max").notNull().default(99),
     prompts: jsonb("prompts").$type<Record<string, string>>().notNull().default({}),
+    /**
+     * The richer profile (src/content/profile.ts): communication styles, quick
+     * facts, the member's personal prompt deck and their answers. Never holds
+     * romance or identity data.
+     */
+    bio: jsonb("bio").$type<ProfileBio>().notNull().default({}),
     photoKey: text("photo_key"),
     newcomer: boolean("newcomer").notNull().default(false),
     locale: text("locale").notNull().default("th"),

@@ -284,6 +284,9 @@ function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; min
                 lang={lang}
                 type="radio"
               />
+              <p style="margin:12px 0 0">
+                <a href={`/people/${p.accountId}`}>👀 {t(`ดูโปรไฟล์ของ ${p.profile.nickname}`, `See ${p.profile.nickname}'s profile`)}</a>
+              </p>
             </Card>
           ))}
           <p class="muted">
@@ -535,7 +538,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         props.rows.map((r) => (
           <Card>
             <h2>
-              {r.other.name}
+              <a href={`/people/${r.other.id}`}>{r.other.name}</a>
               {r.other.resident ? (
                 <>
                   {" "}

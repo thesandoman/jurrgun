@@ -71,5 +71,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"identity_login_attempts_user_idx\" ON \"identity_login_attempts\" (\"username\",\"created_at\");",
       "CREATE INDEX \"identity_login_attempts_ip_idx\" ON \"identity_login_attempts\" (\"ip_hash\",\"created_at\");"
     ]
+  },
+  {
+    "id": "0002_purple_black_panther",
+    "statements": [
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"bio\" jsonb DEFAULT '{}'::jsonb NOT NULL;"
+    ]
   }
 ];

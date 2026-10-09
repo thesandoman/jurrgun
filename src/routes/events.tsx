@@ -1582,7 +1582,9 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
                   <li class="person">
                     <span class="avatar" aria-hidden="true">{m.nickname.slice(0, 1).toUpperCase()}</span>
                     <span>
-                      <strong>{m.nickname}</strong>
+                      <a href={`/people/${m.accountId}`}>
+                        <strong>{m.nickname}</strong>
+                      </a>
                       {m.pronouns ? <small> ({m.pronouns})</small> : null}
                       {m.resident ? (
                         <>

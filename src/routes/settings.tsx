@@ -21,7 +21,28 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, desc, eq, gt, inArray, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { passwordProblem } from "../domain/rules";
-import { DISTRICTS, EVENT_STYLES, INTENTS, INTERESTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
+import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
+import {
+  cleanBio,
+  COMM_STYLES,
+  currentDeck,
+  ENERGY,
+  HEADLINE_MAX,
+  INTEREST_VALUES,
+  interestLabel,
+  LEARNING_MAX,
+  MAX_COMM,
+  MAX_INTERESTS,
+  promptById,
+  rankFromPositions,
+  swapPrompt,
+  validateAnswer,
+  WEEKEND_RHYTHM,
+  type Answer,
+  type Bio,
+} from "../content/profile";
+import { CommPicker, InterestPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
+import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { audit } from "../lib/records";
@@ -44,7 +65,7 @@ import {
   type Profile,
 } from "../schema";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
-import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
+import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, Toggle, view, type View } from "../ui/kit";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch } from "./onboarding";
 import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
@@ -58,12 +79,6 @@ type C = Context<AppEnv>;
 const me = (c: C) => c.var.user!;
 
 // ------------------------------------------------------------- helpers --
-
-const PROMPTS: { key: "weekend" | "bkk_spot"; th: string; en: string }[] = [
-  { key: "weekend", th: "วันหยุดที่สมบูรณ์แบบของฉันคือ…", en: "My perfect Bangkok weekend is…" },
-  { key: "bkk_spot", th: "มุมโปรดในกรุงเทพฯ ของฉันคือ…", en: "My favourite Bangkok spot is…" },
-];
-const PROMPT_MAX = 120;
 
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -106,7 +121,7 @@ settingsRoutes.get("/settings", async (c) => {
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
   const links: [string, string, string, string][] = [
     ["/pulse", "💬", t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions that go straight to BMA")],
-    ["/settings/profile", "✏️", t("แก้ไขโปรไฟล์", "Edit profile"), t("ชื่อเล่น เขต ความสนใจ รูป", "Nickname, district, interests, photo")],
+    ["/settings/profile", "✏️", t("แก้ไขโปรไฟล์", "Edit profile"), t("รูป ความสนใจ สไตล์การสื่อสาร คำถามของคุณ", "Photo, interests, how you keep in touch, your prompts")],
     ["/settings/connections", "🤝", t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)")],
     ["/settings/privacy", "🔒", t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate")],
     ["/settings/password", "🔑", t("เปลี่ยนรหัสผ่าน", "Change password"), t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password")],
@@ -134,17 +149,17 @@ settingsRoutes.get("/settings", async (c) => {
         <div class="tags">
           {p.newcomer ? <Tag tone="accent">{t("มาใหม่ในกรุงเทพฯ", "New to Bangkok")}</Tag> : null}
           {p.interests.map((i) => (
-            <Tag>{label(INTERESTS, i, lang)}</Tag>
+            <Tag>{interestLabel(i, lang)}</Tag>
           ))}
           {p.languages.map((l) => (
             <Tag tone="muted">{label(LANGUAGES, l, lang)}</Tag>
           ))}
         </div>
-        {PROMPTS.filter((q) => p.prompts?.[q.key]).map((q) => (
-          <p>
-            <strong>{t(q.th, q.en)}</strong> {p.prompts[q.key]}
-          </p>
-        ))}
+        <div class="row" style="margin-top:14px">
+          <LinkButton href="/me/profile" kind="ghost">
+            👀 {t("ดูโปรไฟล์ของฉัน", "See my profile")}
+          </LinkButton>
+        </div>
       </Card>
       <Card>
         <div class="spread">
@@ -227,6 +242,10 @@ settingsRoutes.post("/settings/badge", async (c) => {
 });
 
 // -------------------------------------------------------------- profile --
+//
+// The richer profile: photo, basics, "here for", interests by group,
+// communication style, quick facts and the member's own prompt deck
+// (src/content/profile.ts). Every field is validated server-side by kind.
 
 type ProfileVals = {
   nickname: string;
@@ -238,54 +257,132 @@ type ProfileVals = {
   intents: string[];
   newcomer: boolean;
   locale: string;
-  weekend: string;
-  bkk_spot: string;
+  bio: Bio;
 };
 
-function ProfileForm(props: { v: View; vals: ProfileVals; photo: string | null; hasPhoto: boolean; error?: string }) {
+function Section(props: { id?: string; emoji: string; title: string; hint?: string; children: Child }) {
+  return (
+    <section class="pf-section" id={props.id}>
+      <h2>
+        <span aria-hidden="true">{props.emoji}</span> {props.title}
+      </h2>
+      {props.hint ? <p class="muted">{props.hint}</p> : null}
+      {props.children}
+    </section>
+  );
+}
+
+function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo: string | null; hasPhoto: boolean; promptPhoto: (id: string) => string | null; error?: string }) {
   const { t, lang } = props.v;
   const vals = props.vals;
+  const bio = vals.bio;
   return (
     <>
-      <p>
+      <p class="spread">
         <a href="/settings">← {t("ฉัน", "Me")}</a>
+        <a href="/me/profile">👀 {t("ดูโปรไฟล์ของฉัน", "Preview my profile")}</a>
       </p>
       <h1>{t("แก้ไขโปรไฟล์", "Edit profile")}</h1>
+      <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
-      <form method="post" enctype="multipart/form-data">
-        <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} />
-        <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={DISTRICTS} value={vals.district} lang={lang} required />
-        <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
-        <Choices legend={t("ความสนใจ", "Interests")} name="interests" options={INTERESTS} values={vals.interests} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
-        <Choices legend={t("ชอบเจอคนแบบไหน", "How do you like to meet people?")} name="socialStyles" options={SOCIAL_STYLES} values={vals.socialStyles} lang={lang} />
-        <Choices legend={t("เวลาที่สะดวก", "When suits you best?")} name="eventStyle" options={EVENT_STYLES} values={vals.eventStyle ? [vals.eventStyle] : []} lang={lang} type="radio" />
-        <Choices legend={t("มาที่นี่เพื่อ…", "I'm here for…")} name="intents" options={INTENTS} values={vals.intents} lang={lang} />
-        <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมากรุงเทพฯ", "I'm new to Bangkok")} checked={vals.newcomer} />
-        <Select
-          label={t("ภาษาที่ใช้ในแอป", "App language")}
-          name="locale"
-          options={[
-            { value: "th", th: "ไทย", en: "Thai" },
-            { value: "en", th: "อังกฤษ", en: "English" },
-          ]}
-          value={vals.locale}
-          lang={lang}
-        />
-        {PROMPTS.map((q) => (
-          <TextArea label={t(q.th, q.en)} name={q.key} value={vals[q.key]} rows={2} maxlength={PROMPT_MAX} hint={t(`ไม่บังคับ ไม่เกิน ${PROMPT_MAX} ตัวอักษร`, `Optional, up to ${PROMPT_MAX} characters`)} />
-        ))}
-        <fieldset class="choices">
-          <legend>{t("รูปโปรไฟล์ (ไม่บังคับ)", "Profile photo (optional)")}</legend>
-          {props.photo ? <img src={props.photo} alt={t("รูปโปรไฟล์ปัจจุบัน", "Current profile photo")} style="width:96px;height:96px;border-radius:50%;object-fit:cover" /> : null}
-          <div class="field">
-            <label for="f-photo">{t("อัปโหลดรูปใหม่", "Upload a new photo")}</label>
-            <input id="f-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
-            <small>{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB — ไม่ต้องใช้รูปจริงในช่วงทดลอง", "JPG, PNG or WebP, up to 5 MB. No real photos needed in the prototype.")}</small>
+      <form method="post" action="/settings/profile" enctype="multipart/form-data">
+        <Section emoji="📸" title={t("รูปโปรไฟล์", "Profile photo")} hint={t("ไม่บังคับ รูปที่เห็นหน้าชัด ๆ ช่วยให้จำกันได้ในงาน", "Optional. A clear, friendly photo helps people find you at events.")}>
+          <div class="pf-photo-main">
+            {props.photo ? (
+              <img src={props.photo} alt={t("รูปโปรไฟล์ปัจจุบัน", "Current profile photo")} />
+            ) : (
+              <div class="pf-initial" aria-hidden="true">
+                {[...(vals.nickname || "?")][0].toUpperCase()}
+              </div>
+            )}
+            <div class="field" style="margin:0;flex:1;min-width:200px">
+              <label for="f-photo">{t("อัปโหลดรูปใหม่", "Upload a new photo")}</label>
+              <input id="f-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+              <small>{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB ช่วงทดลองไม่ต้องใช้รูปจริง", "JPG, PNG or WebP, up to 5 MB. No real photos needed in the prototype.")}</small>
+            </div>
           </div>
           {props.hasPhoto ? <Toggle name="removePhoto" label={t("ลบรูปโปรไฟล์", "Remove my photo")} /> : null}
-        </fieldset>
-        <Button>{t("บันทึก", "Save")}</Button>
+        </Section>
+
+        <Section emoji="👋" title={t("ข้อมูลพื้นฐาน", "The basics")}>
+          <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} />
+          <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={DISTRICTS} value={vals.district} lang={lang} required />
+          <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
+          <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมากรุงเทพฯ", "I'm new to Bangkok")} checked={vals.newcomer} />
+          <Select
+            label={t("ภาษาที่ใช้ในแอป", "App language")}
+            name="locale"
+            options={[
+              { value: "th", th: "ไทย", en: "Thai" },
+              { value: "en", th: "อังกฤษ", en: "English" },
+            ]}
+            value={vals.locale}
+            lang={lang}
+          />
+        </Section>
+
+        <Section emoji="🎯" title={t("มาที่นี่เพื่อ", "Here for")}>
+          <Choices legend={t("มาที่นี่เพื่อ…", "I'm here for…")} name="intents" options={INTENTS} values={vals.intents} lang={lang} />
+          <Choices legend={t("ชอบเจอคนแบบไหน", "How do you like to meet people?")} name="socialStyles" options={SOCIAL_STYLES} values={vals.socialStyles} lang={lang} />
+          <Choices legend={t("เวลาที่สะดวก", "When suits you best?")} name="eventStyle" options={EVENT_STYLES} values={vals.eventStyle ? [vals.eventStyle] : []} lang={lang} type="radio" />
+        </Section>
+
+        <Section emoji="🍜" title={t("ความสนใจ", "Interests")} hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ใช้จัดโต๊ะให้เจอคนที่ชอบคล้ายกัน`, `Pick 1 to ${MAX_INTERESTS}. We use them to seat you with people who share them.`)}>
+          <InterestPicker v={props.v} values={vals.interests} />
+        </Section>
+
+        <Section emoji="💬" title={t("สไตล์การสื่อสาร", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
+          <CommPicker v={props.v} values={bio.comm} />
+        </Section>
+
+        <Section emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
+          <Field
+            label={t("ตอนนี้ทำอะไรอยู่", "What I do")}
+            name="headline"
+            value={bio.headline ?? ""}
+            maxlength={HEADLINE_MAX}
+            placeholder={t("เช่น ครูสอนศิลปะ นักศึกษาปีสาม", "e.g. Art teacher, third-year student")}
+            hint={t(`ไม่เกิน ${HEADLINE_MAX} ตัวอักษร`, `Up to ${HEADLINE_MAX} characters`)}
+          />
+          <Field
+            label={t("กำลังเรียนรู้", "Currently learning")}
+            name="learning"
+            value={bio.learning ?? ""}
+            maxlength={LEARNING_MAX}
+            placeholder={t("เช่น ทำขนมปัง ว่ายน้ำท่าผีเสื้อ", "e.g. Sourdough, butterfly stroke")}
+            hint={t(`ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `Up to ${LEARNING_MAX} characters`)}
+          />
+          <Choices legend={t("ภาษาที่กำลังหัด", "Languages I'm learning")} name="learningLangs" options={LANGUAGES} values={bio.learningLangs ?? []} lang={lang} />
+          <fieldset class="choices">
+            <legend>{t("ตอนเจอกันครั้งแรก ฉันมักจะ…", "My first-meet energy")}</legend>
+            <OptRadios v={props.v} name="energy" options={ENERGY} value={bio.energy} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("จังหวะวันหยุดของฉัน", "My weekend rhythm")}</legend>
+            <OptRadios v={props.v} name="weekendRhythm" options={WEEKEND_RHYTHM} value={bio.weekend} />
+          </fieldset>
+        </Section>
+
+        <Section
+          id="prompts"
+          emoji="🃏"
+          title={t("คำถามของฉัน", "My prompts")}
+          hint={t(
+            "ชุดคำถามนี้สุ่มมาเฉพาะคุณ ตอบข้อไหนก็ได้ ไม่ชอบข้อไหนกด ↻ เพื่อเปลี่ยน",
+            "This set was picked just for you. Answer any you like, and tap ↻ to swap one you don't.",
+          )}
+        >
+          {props.deck.map((id) => {
+            const p = promptById(id);
+            return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={props.promptPhoto(id)} /> : null;
+          })}
+        </Section>
+
+        <div class="pf-save">
+          <Button>{t("บันทึกโปรไฟล์", "Save profile")}</Button>
+        </div>
       </form>
+      <ProfileFormScript />
     </>
   );
 }
@@ -301,75 +398,179 @@ function profileVals(p: Profile): ProfileVals {
     intents: p.intents.filter((i) => i !== "romance"),
     newcomer: p.newcomer,
     locale: p.locale,
-    weekend: p.prompts?.weekend ?? "",
-    bkk_spot: p.prompts?.bkk_spot ?? "",
+    bio: cleanBio(p.bio),
   };
 }
 
-settingsRoutes.get("/settings/profile", async (c) => {
-  const p = me(c).profile!;
-  return page(c, { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me" }, <ProfileForm v={view(c)} vals={profileVals(p)} photo={await photoSrc(c, p.photoKey)} hasPhoto={!!p.photoKey} />);
-});
-
-settingsRoutes.post("/settings/profile", async (c) => {
-  const v = view(c);
-  const { t } = v;
+async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string; status?: 400 } = {}) {
   const user = me(c);
   const p = user.profile!;
-  const body = await c.req.parseBody({ all: true });
-  const pickAll = (key: string, allowed: string[]) => list(body[key]).filter((x) => allowed.includes(x));
+  const stored = cleanBio(p.bio);
+  const deck = currentDeck(user.account.id, stored);
+  const photo = await photoSrc(c, p.photoKey);
+  // Prompt photos come from the stored bio (the form never holds unsaved files).
+  const promptPhoto = (id: string) => (stored.answers?.[id]?.photoKey ? `/people/${user.account.id}/photo/${id}` : null);
+  return page(
+    c,
+    { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: opts.status },
+    <ProfileForm v={view(c)} vals={vals} deck={deck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} />,
+  );
+}
+
+settingsRoutes.get("/settings/profile", (c) => renderProfileForm(c, profileVals(me(c).profile!)));
+
+type Body = Record<string, string | File | (string | File)[]>;
+type Parsed =
+  | { ok: false; vals: ProfileVals; error: string }
+  | { ok: true; vals: ProfileVals; deck: string[]; mainFile: File | null; removePhoto: boolean; pending: { id: string; file: File }[]; dropKeys: string[] };
+
+const fileOf = (raw: unknown): File | null => {
+  const f = Array.isArray(raw) ? raw[0] : raw;
+  return f instanceof File && f.size > 0 ? f : null;
+};
+
+/** Read and validate the whole profile form. Touches nothing. */
+function parseProfileForm(c: C, body: Body): Parsed {
+  const { t } = view(c);
+  const user = me(c);
+  const p = user.profile!;
+  const stored = cleanBio(p.bio);
+  const deck = currentDeck(user.account.id, stored);
+  const pickAll = (key: string, allowed: string[]) => [...new Set(list(body[key]).filter((x) => allowed.includes(x)))];
+  const comm = pickAll("comm", COMM_STYLES.map((x) => x.value));
+  const energy = str(body.energy);
+  const weekend = str(body.weekendRhythm);
+  const bio: Bio = {
+    ...stored,
+    deck,
+    comm,
+    headline: str(body.headline),
+    learning: str(body.learning),
+    learningLangs: pickAll("learningLangs", values(LANGUAGES)),
+    energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,
+    weekend: WEEKEND_RHYTHM.some((x) => x.value === weekend) ? weekend : undefined,
+  };
   const vals: ProfileVals = {
     nickname: str(body.nickname),
     district: str(body.district),
     languages: pickAll("languages", values(LANGUAGES)),
-    interests: pickAll("interests", values(INTERESTS)),
+    interests: pickAll("interests", INTEREST_VALUES),
     socialStyles: pickAll("socialStyles", values(SOCIAL_STYLES)),
     eventStyle: pickAll("eventStyle", values(EVENT_STYLES))[0] ?? null,
     intents: pickAll("intents", values(INTENTS)),
     newcomer: str(body.newcomer) === "1",
     locale: str(body.locale) === "en" ? "en" : "th",
-    weekend: str(body.weekend),
-    bkk_spot: str(body.bkk_spot),
+    bio,
   };
-  const fail = async (error: string) =>
-    page(c, { title: t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: 400 }, <ProfileForm v={v} vals={vals} photo={await photoSrc(c, p.photoKey)} hasPhoto={!!p.photoKey} error={error} />);
+  const fail = (th: string, en: string): Parsed => ({ ok: false, vals, error: t(th, en) });
 
-  if (!vals.nickname) return fail(t("กรอกชื่อเล่น", "Please add a nickname."));
-  if (vals.nickname.length > 30) return fail(t("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters."));
-  if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."));
-  if (vals.languages.length === 0 || vals.interests.length === 0) {
-    return fail(t("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest."));
-  }
-  if (vals.weekend.length > PROMPT_MAX || vals.bkk_spot.length > PROMPT_MAX) {
-    return fail(t(`คำตอบสั้น ๆ ยาวได้ไม่เกิน ${PROMPT_MAX} ตัวอักษร`, `Prompt answers can be at most ${PROMPT_MAX} characters.`));
+  if (!vals.nickname) return fail("กรอกชื่อเล่น", "Please add a nickname.");
+  if (vals.nickname.length > 30) return fail("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters.");
+  if (!values(DISTRICTS).includes(vals.district)) return fail("เลือกเขต", "Please choose a district.");
+  if (vals.languages.length === 0 || vals.interests.length === 0) return fail("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.");
+  if (vals.interests.length > MAX_INTERESTS) return fail(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`);
+  if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การสื่อสารได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`);
+  if ((bio.headline ?? "").length > HEADLINE_MAX) return fail(`"ตอนนี้ทำอะไรอยู่" ยาวได้ไม่เกิน ${HEADLINE_MAX} ตัวอักษร`, `"What I do" can be at most ${HEADLINE_MAX} characters.`);
+  if ((bio.learning ?? "").length > LEARNING_MAX) return fail(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`);
+  if (!bio.headline) delete bio.headline;
+  if (!bio.learning) delete bio.learning;
+
+  const mainFile = fileOf(body.photo);
+  if (mainFile) {
+    if (!PHOTO_TYPES.includes(mainFile.type)) return fail("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP.");
+    if (mainFile.size > PHOTO_MAX_BYTES) return fail("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller.");
   }
 
-  // Optional photo. Server-generated key; bytes go straight to the file store.
-  const raw = Array.isArray(body.photo) ? body.photo[0] : body.photo;
-  const file = raw instanceof File && raw.size > 0 ? raw : null;
-  const removePhoto = str(body.removePhoto) === "1";
-  let photoKey = p.photoKey;
-  if (file) {
-    if (!PHOTO_TYPES.includes(file.type)) return fail(t("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP."));
-    if (file.size > PHOTO_MAX_BYTES) return fail(t("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller."));
-    const key = `uploads/${user.account.id}/${crypto.randomUUID()}`;
-    try {
-      await putObject(c.env, key, await file.arrayBuffer(), { contentType: file.type });
-    } catch {
-      return fail(t("อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง", "The photo couldn't be uploaded. Please try again."));
+  // Prompt answers: only for prompts in my deck. Answers to prompts no longer
+  // in the deck are dropped (with their photos).
+  const answers: Record<string, Answer> = {};
+  const dropKeys: string[] = [];
+  for (const [id, a] of Object.entries(stored.answers ?? {})) {
+    if (deck.includes(id)) answers[id] = a;
+    else if (a.photoKey) dropKeys.push(a.photoKey);
+  }
+  const pending: { id: string; file: File }[] = [];
+  for (const id of deck) {
+    const q = promptById(id)!;
+    const old = answers[id];
+    const inForm = str(body[`m_${id}`]) === "1";
+    if (str(body[`clear_${id}`]) === "1") {
+      if (old?.photoKey) dropKeys.push(old.photoKey);
+      delete answers[id];
+      continue;
     }
-    photoKey = key;
-  } else if (removePhoto) {
-    photoKey = null;
+    const title = t(q.th, q.en);
+    if (q.kind === "photo") {
+      const caption = validateAnswer(q, str(body[`a_${id}`]));
+      if (!caption.ok) return fail(`${title}: ${caption.error.th}`, `${title}: ${caption.error.en}`);
+      const file = fileOf(body[`f_${id}`]);
+      if (file) {
+        if (!PHOTO_TYPES.includes(file.type)) return fail(`${title}: รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP`, `${title}: photos must be JPG, PNG or WebP.`);
+        if (file.size > PHOTO_MAX_BYTES) return fail(`${title}: รูปต้องมีขนาดไม่เกิน 5 MB`, `${title}: photos must be 5 MB or smaller.`);
+        pending.push({ id, file });
+        if (old?.photoKey) dropKeys.push(old.photoKey);
+        answers[id] = { kind: "photo", value: (caption.value as string | null) ?? "" };
+      } else if (old?.photoKey) {
+        answers[id] = { ...old, value: inForm ? ((caption.value as string | null) ?? "") : old.value };
+      }
+      continue;
+    }
+    let raw: string | string[] | undefined;
+    if (q.kind === "rank") {
+      const positions: Record<string, string> = {};
+      for (const o of q.options ?? []) positions[o.value] = str(body[`r_${id}_${o.value}`]);
+      const order = rankFromPositions(q, positions);
+      if (order === "partial") return fail(`${title}: ให้อันดับไม่ซ้ำกันครบทุกข้อ`, `${title}: give every item a different place.`);
+      raw = order;
+    } else {
+      raw = list(body[`a_${id}`]);
+    }
+    const r = validateAnswer(q, raw);
+    if (!r.ok) return fail(`${title}: ${r.error.th}`, `${title}: ${r.error.en}`);
+    if (r.value === null) {
+      // Not answered. Only an explicit empty field (or a rendered prompt) clears it.
+      if (inForm || (q.kind === "text" && `a_${id}` in body)) delete answers[id];
+    } else {
+      answers[id] = { kind: q.kind, value: r.value };
+    }
+  }
+  bio.answers = answers;
+  return { ok: true, vals, deck, mainFile, removePhoto: str(body.removePhoto) === "1", pending, dropKeys };
+}
+
+/** Upload files, then write the profile. Returns an error message or null. */
+async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise<string | null> {
+  const { t } = view(c);
+  const user = me(c);
+  const p = user.profile!;
+  const { vals } = parsed;
+  // Server-generated keys only; bytes go straight to the file store.
+  const uploaded: string[] = [];
+  const put = async (key: string, file: File) => {
+    await putObject(c.env, key, await file.arrayBuffer(), { contentType: file.type });
+    uploaded.push(key);
+  };
+  let photoKey = p.photoKey;
+  try {
+    if (parsed.mainFile) {
+      photoKey = `uploads/${user.account.id}/${crypto.randomUUID()}`;
+      await put(photoKey, parsed.mainFile);
+    } else if (parsed.removePhoto) {
+      photoKey = null;
+    }
+    for (const { id, file } of parsed.pending) {
+      const key = `uploads/${user.account.id}/prompts/${crypto.randomUUID()}`;
+      await put(key, file);
+      vals.bio.answers![id] = { ...vals.bio.answers![id], photoKey: key };
+    }
+  } catch {
+    for (const k of uploaded) await deleteObject(c.env, k).catch(() => {});
+    return t("อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง", "The photo couldn't be uploaded. Please try again.");
   }
 
-  const prompts: Record<string, string> = {};
-  if (vals.weekend) prompts.weekend = vals.weekend;
-  if (vals.bkk_spot) prompts.bkk_spot = vals.bkk_spot;
   // This form only edits the non-romance intents; romance follows romance mode.
   const intents = [...(vals.intents.length ? vals.intents : ["friends"]), ...(p.romanceOn ? ["romance"] : [])];
-  const db = getDb(c.env);
-  await db
+  await getDb(c.env)
     .update(profiles)
     .set({
       nickname: vals.nickname,
@@ -381,14 +582,57 @@ settingsRoutes.post("/settings/profile", async (c) => {
       intents,
       newcomer: vals.newcomer,
       locale: vals.locale,
-      prompts,
+      bio: vals.bio,
       photoKey,
       updatedAt: new Date(),
     })
     .where(eq(profiles.accountId, user.account.id));
-  if (p.photoKey && p.photoKey !== photoKey) await deleteObject(c.env, p.photoKey).catch(() => {});
+  const drop = [...parsed.dropKeys, ...(p.photoKey && p.photoKey !== photoKey ? [p.photoKey] : [])];
+  for (const k of drop) await deleteObject(c.env, k).catch(() => {});
   if (vals.locale !== p.locale) setCookie(c, "lang", vals.locale, { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
+  // Keep the in-request copy current for anything rendered after this.
+  Object.assign(p, { ...vals, intents, photoKey, bio: vals.bio });
+  return null;
+}
+
+settingsRoutes.post("/settings/profile", async (c) => {
+  const body = (await c.req.parseBody({ all: true })) as Body;
+  const parsed = parseProfileForm(c, body);
+  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, status: 400 });
+  const err = await saveProfile(c, parsed);
+  if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400 });
   return c.redirect("/settings?notice=saved");
+});
+
+/**
+ * Swap one prompt in my deck for an unused one. When posted from the full
+ * edit form (the ↻ button), the rest of the form is saved first so nothing
+ * typed is lost.
+ */
+settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
+  const body = (await c.req.parseBody({ all: true })) as Body;
+  const user = me(c);
+  if ("nickname" in body) {
+    const parsed = parseProfileForm(c, body);
+    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, status: 400 });
+    const err = await saveProfile(c, parsed);
+    if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400 });
+  }
+  const p = user.profile!;
+  const bio = cleanBio(p.bio);
+  const deck = currentDeck(user.account.id, bio);
+  const id = str(body.promptId);
+  if (!deck.includes(id)) return c.text("Unknown prompt", 400);
+  const next = swapPrompt(deck, id, Math.random, bio.skipped ?? []);
+  if (next === deck) return c.redirect("/settings/profile#prompts");
+  const answers = { ...(bio.answers ?? {}) };
+  const dropKey = answers[id]?.photoKey;
+  delete answers[id];
+  const newBio: Bio = { ...bio, deck: next, answers, skipped: [...(bio.skipped ?? []).filter((x) => x !== id), id].slice(-40) };
+  await getDb(c.env).update(profiles).set({ bio: newBio, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+  if (dropKey) await deleteObject(c.env, dropKey).catch(() => {});
+  const fresh = next[deck.indexOf(id)];
+  return c.redirect(`/settings/profile?notice=saved#prompt-${fresh}`);
 });
 
 /** My own photo. Deployed: redirect to a signed URL. Locally: serve the bytes (dev only). */
@@ -726,13 +970,16 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
   const db = getDb(c.env);
   const id = user.account.id;
   const photoKey = user.profile?.photoKey ?? null;
+  const promptPhotos = Object.values(cleanBio(user.profile?.bio).answers ?? {})
+    .map((a) => a.photoKey)
+    .filter((k): k is string => !!k);
   await batch(c.env, [
     db.update(accounts).set({ status: "deactivated", deactivatedAt: new Date(), researchId: null }).where(eq(accounts.id, id)),
-    db.update(profiles).set({ photoKey: null, updatedAt: new Date() }).where(eq(profiles.accountId, id)),
+    db.update(profiles).set({ photoKey: null, bio: {}, updatedAt: new Date() }).where(eq(profiles.accountId, id)),
     db.delete(sessions).where(eq(sessions.accountId, id)),
     audit(db, id, "account.deactivated", { type: "account", id }),
   ]);
-  if (photoKey) await deleteObject(c.env, photoKey).catch(() => {});
+  for (const k of [...(photoKey ? [photoKey] : []), ...promptPhotos]) await deleteObject(c.env, k).catch(() => {});
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
   return c.redirect("/?notice=deactivated");
 });

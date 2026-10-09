@@ -61,12 +61,12 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(r.status).toBe(400);
     r = await req("/settings/profile", { cookie: m.cookie, form: { ...baseProfile, interests: [] } });
     expect(r.status).toBe(400);
-    r = await req("/settings/profile", { cookie: m.cookie, form: { ...baseProfile, weekend: "x".repeat(121) } });
+    r = await req("/settings/profile", { cookie: m.cookie, form: { ...baseProfile, headline: "x".repeat(61) } });
     expect(r.status).toBe(400);
 
     r = await req("/settings/profile", {
       cookie: m.cookie,
-      form: { ...baseProfile, nickname: "Mint2", district: "chatuchak", interests: ["art", "bogus"], intents: ["explore"], newcomer: "1", locale: "en", weekend: "Chatuchak market", bkk_spot: "Lumphini" },
+      form: { ...baseProfile, nickname: "Mint2", district: "chatuchak", interests: ["art", "bogus"], intents: ["explore"], newcomer: "1", locale: "en", headline: "Chatuchak market fan" },
     });
     expect(r.status).toBe(302);
     expect(r.headers.get("location")).toBe("/settings?notice=saved");
@@ -76,7 +76,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(p.interests).toEqual(["art"]);
     expect(p.newcomer).toBe(true);
     expect(p.locale).toBe("en");
-    expect(p.prompts).toEqual({ weekend: "Chatuchak market", bkk_spot: "Lumphini" });
+    expect((p.bio as { headline?: string }).headline).toBe("Chatuchak market fan");
     // Romance intent preserved while romance mode is on.
     expect(p.intents).toEqual(["explore", "romance"]);
   });
