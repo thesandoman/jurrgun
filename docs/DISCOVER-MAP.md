@@ -1,8 +1,17 @@
 # Discover map
 
-`/events?view=map` shows the same events as the Discover list (same filters, same
-members-only access) on a map of Bangkok. The **☰ List / 🗺️ Map** switch keeps the
-filters. Without JavaScript, or if the map can't load, the list is still there.
+Discover (`/events`) opens on the map, with the same events listed underneath (same
+filters, same members-only access). The map shows even when nothing matches, with an
+empty list below. **🗺️ Map / ☰ List** switches to a list-only view and keeps the filters.
+Without JavaScript, or if the map can't load, the list is still there.
+
+The map itself is the **`sv-map`** package (github:thesandoman/sv-map), pinned to a
+commit in `package.json`. Its browser files are bundled into the app by
+`npm run svmap` (→ `src/vendor/sv-map.generated.ts`) and served at `/vendor/sv-map.js`
+and `/vendor/sv-map.css`; `test/vendor.test.ts` fails if the bundle is stale. Server
+side, `src/lib/places.ts` uses the package's map-link reader, `placeFor` and Bangkok
+district preset. To update: change the commit in `package.json`, `npm install`,
+`npm run svmap`, `npm test`.
 
 It is the map from the Sanroo live map (floodmap.apps.sv-academy.org), carried over
 and changed for BKK Social.

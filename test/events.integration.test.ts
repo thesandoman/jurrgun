@@ -53,29 +53,51 @@ const loc = (r: Response) => r.headers.get("location") ?? "";
 const nick = (p: string) => `${p}${randomToken(4).replace(/[^A-Za-z0-9]/g, "x")}`;
 
 describe.skipIf(!HAS_DB)("events", () => {
-  it("map view: points for published events, keeps filters, lists events without a place", async () => {
+  it("map view (the default): sv-map points, the same events listed below, filters kept", async () => {
     const m = await createMember();
     const exact = await mkEvent({ district: "bang_bon", mapUrl: "https://maps.google.com/?q=13.6339,100.3687", tags: ["food"] });
     const area = await mkEvent({ district: "bang_bon", tags: ["walk"] });
     const nowhere = await mkEvent({ district: "wang_thonglang" });
     const draft = await mkEvent({ district: "bang_bon", status: "draft" });
-    const r = await req("/events?district=bang_bon&view=map", { cookie: m.cookie });
+    const r = await req("/events?district=bang_bon", { cookie: m.cookie });
     expect(r.status).toBe(200);
     const html = await r.text();
+    expect(html).toContain('/vendor/sv-map.js?v=');
     const data = JSON.parse(html.split('<script type="application/json" id="dmap-data">')[1].split("</script>")[0]);
     const ids = data.points.map((p: { id: string }) => p.id);
     expect(ids).toContain(exact);
     expect(ids).toContain(area);
     expect(ids).not.toContain(draft);
-    expect(data.points.find((p: { id: string }) => p.id === exact).precision).toBe("exact");
-    expect(data.points.find((p: { id: string }) => p.id === area).precision).toBe("area");
+    const pt = (id: string) => data.points.find((p: { id: string }) => p.id === id);
+    expect(pt(exact).precision).toBe("exact");
+    expect(pt(area).precision).toBe("area");
+    expect(pt(exact).href).toBe(`/events/${exact}`);
+    // The list section repeats the events under the map.
+    expect(html).toContain('id="discover-list"');
+    expect(html).toContain(`EV-${exact.slice(0, 8)}`);
     // Filters survive the switch, and nothing about other people is sent.
-    expect(html).toContain('name="view" value="map"');
-    expect(html).toContain('href="/events?district=bang_bon"');
+    expect(html).toContain('href="/events?district=bang_bon&amp;view=list"');
     expect(JSON.stringify(data)).not.toMatch(/accountId|nickname|attendees|researchId/);
-    const w = await req("/events?district=wang_thonglang&view=map", { cookie: m.cookie });
-    expect(await w.text()).toContain(nowhere);
-    expect((await req("/events?view=map")).status).toBe(302);
+    // Events without a place still appear in the list, with a note.
+    const w = await (await req("/events?district=wang_thonglang", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(w).toContain(`EV-${nowhere.slice(0, 8)}`);
+    expect(w).toContain("on the map yet");
+    // List view is list only.
+    const l = await (await req("/events?district=bang_bon&view=list", { cookie: m.cookie })).text();
+    expect(l).not.toContain('id="dmap-data"');
+    expect(l).toContain('name="view" value="list"');
+    expect((await req("/events")).status).toBe(302);
+  });
+
+  it("shows the map and an empty list section when no events match", async () => {
+    const m = await createMember();
+    const html = await (await req("/events?tag=festival&district=bang_bon&when=today&lang=en", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain('id="dmap"');
+    expect(html).toContain('id="discover-list"');
+    expect(html).toContain("No events on the map yet"); // sv-map's own empty line, set in its messages
+    expect(html).toContain("No events match these filters yet");
+    const data = JSON.parse(html.split('<script type="application/json" id="dmap-data">')[1].split("</script>")[0]);
+    expect(data.points).toEqual([]);
   });
 
   it("redirects signed-out visitors to /login", async () => {

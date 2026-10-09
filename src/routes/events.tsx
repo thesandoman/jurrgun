@@ -327,7 +327,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     fitsAge: c.req.query("fitsAge") === "1",
     resident: c.req.query("resident") === "1",
   };
-  const mapView = c.req.query("view") === "map";
+  const mapView = c.req.query("view") !== "list"; // the map is the default
 
   const where = [eq(events.status, "published"), gt(events.endsAt, now)];
   const win = whenWindow(q.when, now);
@@ -367,10 +367,11 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const params = new URLSearchParams(c.req.query());
   params.delete("view");
   params.delete("notice");
-  const listHref = `/events${params.size ? `?${params}` : ""}`;
-  params.set("view", "map");
-  const mapHref = `/events?${params}`;
+  const mapHref = `/events${params.size ? `?${params}` : ""}`;
+  params.set("view", "list");
+  const listHref = `/events?${params}`;
   const placed = mapView ? list.map((e) => ({ e, place: eventPlace(e) })) : [];
+  const unplaced = placed.filter((x) => !x.place).length;
 
   return page(
     c,
@@ -405,7 +406,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <details open={!!filtered}>
         <summary>{t("ตัวกรอง", "Filters")}</summary>
         <form method="get" action="/events" class="filters">
-          {mapView ? <input type="hidden" name="view" value="map" /> : null}
+          {mapView ? null : <input type="hidden" name="view" value="list" />}
           <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
           <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
           <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
@@ -417,37 +418,37 @@ eventRoutes.get("/events", requireMember, async (c) => {
           <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
           <div class="row">
             <Button>{t("ค้นหา", "Show events")}</Button>
-            {filtered ? <LinkButton href={mapView ? "/events?view=map" : "/events"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
+            {filtered ? <LinkButton href={mapView ? "/events" : "/events?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
           </div>
         </form>
       </details>
       <style dangerouslySetInnerHTML={{ __html: MAP_CSS }} />
       <nav class="view-toggle" aria-label={t("มุมมอง", "View")}>
-        <a href={listHref} class={mapView ? "" : "on"} aria-current={mapView ? undefined : "page"}>☰ {t("รายการ", "List")}</a>
         <a href={mapHref} class={mapView ? "on" : ""} aria-current={mapView ? "page" : undefined}>🗺️ {t("แผนที่", "Map")}</a>
+        <a href={listHref} class={mapView ? "" : "on"} aria-current={mapView ? undefined : "page"}>☰ {t("รายการ", "List")}</a>
       </nav>
-      {list.length === 0 ? (
-        <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้", "No events match these filters yet.")}</Empty>
-      ) : mapView ? (
-        <>
-          <DiscoverMap
-            points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
-            chips={mapChips(list, lang)}
-            t={t}
-            listHref={listHref}
-          />
-          {placed.some((x) => !x.place) ? (
-            <>
-              <h2>{t("ยังไม่มีตำแหน่งบนแผนที่", "Not on the map yet")}</h2>
-              {placed
-                .filter((x) => !x.place)
-                .map(({ e }) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)}
-            </>
-          ) : null}
-        </>
-      ) : (
-        list.map((e) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)
-      )}
+      {mapView ? (
+        <DiscoverMap
+          points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
+          chips={mapChips(list, lang)}
+          t={t}
+          lang={lang}
+          listHref={listHref}
+        />
+      ) : null}
+      <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
+        {mapView ? <h2>{t(`กิจกรรม (${list.length})`, `Events (${list.length})`)}</h2> : null}
+        {mapView && unplaced > 0 ? (
+          <p class="muted">
+            {t(`${unplaced} กิจกรรมยังไม่มีตำแหน่งบนแผนที่ แต่อยู่ในรายการนี้`, `${unplaced} event${unplaced === 1 ? " isn't" : "s aren't"} on the map yet, but ${unplaced === 1 ? "it's" : "they're"} in this list`)}
+          </p>
+        ) : null}
+        {list.length === 0 ? (
+          <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ กลับมาดูใหม่เร็ว ๆ นี้", "No events match these filters yet. Check back soon.")}</Empty>
+        ) : (
+          list.map((e) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)
+        )}
+      </section>
     </>,
   );
 });
