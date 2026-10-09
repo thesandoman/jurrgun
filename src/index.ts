@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { createLogger, type LoggerEnv } from "./logger";
 import { type StateEnv, verifyTaskWebhook } from "./state";
 import { getObject, getObjectUrl, type StorageEnv } from "./storage";
+import { generateSession, scoreSession, toPublic, type Answers } from "./vibe/generator";
 
 type Bindings = LoggerEnv & StorageEnv & StateEnv;
 
@@ -233,6 +234,54 @@ app.get("/api/hello", (c) => {
     return c.json({ error: "name must be 64 characters or fewer" }, 400);
   }
   return c.json({ message: `Hello, ${name || "world"}!` });
+});
+
+/**
+ * Bangkok Vibe quiz (prototype). Stateless: the session is rebuilt from its
+ * seed to score it, so nothing is stored. See design/reference/vibe-quiz-v3.md.
+ */
+const SEED_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+function parsePer(raw: unknown): number | null {
+  if (raw === undefined || raw === null || raw === "") return 3;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 2 && n <= 6 ? n : null;
+}
+
+app.get("/api/vibe/quiz", (c) => {
+  const seed = c.req.query("seed") ?? crypto.randomUUID().replaceAll("-", "");
+  const per = parsePer(c.req.query("per"));
+  const lang = c.req.query("lang");
+  if (!SEED_RE.test(seed)) return c.json({ error: "seed must be 1-64 letters, digits, - or _" }, 400);
+  if (per === null) return c.json({ error: "per must be an integer from 2 to 6" }, 400);
+  if (lang !== undefined && lang !== "th" && lang !== "en") {
+    return c.json({ error: "lang must be th or en" }, 400);
+  }
+  const questions = generateSession({ seed, perCategory: per }).map(toPublic);
+  if (!lang) return c.json({ seed, per, questions });
+  // Single-language view: flatten every { th, en } to one string.
+  const flat = JSON.parse(JSON.stringify(questions), (_k, v) =>
+    v && typeof v === "object" && "th" in v && "en" in v && Object.keys(v).length === 2 ? v[lang] : v,
+  );
+  return c.json({ seed, per, lang, questions: flat });
+});
+
+app.post("/api/vibe/score", async (c) => {
+  const body = await c.req.json<{ seed?: unknown; per?: unknown; answers?: unknown }>().catch(() => null);
+  if (!body || typeof body.seed !== "string" || !SEED_RE.test(body.seed)) {
+    return c.json({ error: "seed is required (1-64 letters, digits, - or _)" }, 400);
+  }
+  const per = parsePer(body.per);
+  if (per === null) return c.json({ error: "per must be an integer from 2 to 6" }, 400);
+  if (!body.answers || typeof body.answers !== "object" || Array.isArray(body.answers)) {
+    return c.json({ error: "answers must be an object of { questionId: number }" }, 400);
+  }
+  const answers: Answers = {};
+  for (const [id, v] of Object.entries(body.answers as Record<string, unknown>)) {
+    if (typeof v === "number") answers[id] = v;
+  }
+  const result = scoreSession(generateSession({ seed: body.seed, perCategory: per }), answers);
+  return c.json(result);
 });
 
 /**
