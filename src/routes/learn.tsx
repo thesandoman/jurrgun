@@ -3,10 +3,12 @@
  * information should be reachable by anyone).
  */
 import { Hono } from "hono";
-import { FAQ, HELPLINES, LAST_CHECKED, REVIEW_NOTE, TOPICS, type Block, type Source, type Topic } from "../content/learn";
+import { FAQ, HELPLINES, LAST_CHECKED, LEARN_CARDS, REVIEW_NOTE, TOPICS, TYPES_CARD, type Block, type Source, type Topic } from "../content/learn";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { Card, Notice, page, view } from "../ui/kit";
+import { ARCHETYPES, ARCHETYPE_KEYS, MATCH_LABELS } from "../vibe/archetypes";
+import { CodeChips, Legend, typeSlug } from "./quiz";
 
 export const learnRoutes = new Hono<AppEnv>();
 
@@ -28,7 +30,7 @@ export function FaqList(props: { lang: Lang; limit?: number }) {
 export function LearnCards(props: { lang: Lang }) {
   return (
     <div class="grid2">
-      {TOPICS.map((topic) => (
+      {LEARN_CARDS.map((topic) => (
         <Card href={`/learn/${topic.slug}`}>
           <h3>
             <span aria-hidden="true">{topic.icon}</span> {L(props.lang, topic.title)}
@@ -126,6 +128,58 @@ learnRoutes.get("/learn", (c) => {
       <Helplines lang={lang} />
       <p class="muted">{L(lang, REVIEW_NOTE)}</p>
     </>,
+  );
+});
+
+learnRoutes.get("/learn/bangkok-types", (c) => {
+  const { t, lang } = view(c);
+  return page(
+    c,
+    { title: L(lang, TYPES_CARD.title) },
+    <article class="learn">
+      <p>
+        <a href="/learn">← {t("เรียนรู้", "Learn")}</a>
+      </p>
+      <h1>
+        <span aria-hidden="true">{TYPES_CARD.icon}</span> {L(lang, TYPES_CARD.title)}
+      </h1>
+      <p class="muted">
+        {t(
+          "แบบทดสอบ Bangkok Vibe ดูว่าคุณชอบใช้เวลาในเมืองแบบไหน 6 ด้าน ไม่มีเรื่องการเมือง ตัวอักษร 4 ตัวคือไทป์ของคุณ อีก 2 ด้านเป็นสัญลักษณ์เพิ่มเติม ทั้ง 6 ด้านช่วยจัดโต๊ะให้เข้ากับคุณ",
+          "The Bangkok Vibe quiz looks at six sides of how you like to spend time in the city, nothing political. Four of them make your 4-letter type; the other two add a flavour badge. All six help seat you at the right table.",
+        )}
+      </p>
+      <Legend lang={lang} />
+      <h2>{t("ทั้ง 16 ไทป์", "All 16 types")}</h2>
+      <div class="type-grid">
+        {ARCHETYPE_KEYS.map((k) => (
+          <a href={`/types/${typeSlug(k)}`}>
+            <b aria-hidden="true">{ARCHETYPES[k].emoji}</b>
+            <strong>{L(lang, ARCHETYPES[k].name)}</strong>
+            <CodeChips lang={lang} archetype={k} />
+            <small class="muted">{L(lang, ARCHETYPES[k].description)}</small>
+          </a>
+        ))}
+      </div>
+      <h2>{t("คู่ที่เข้ากัน", "How types meet")}</h2>
+      <ul>
+        {(["natural", "complementary", "interesting"] as const).map((m) => (
+          <li>
+            {MATCH_LABELS[m].emoji} <strong>{L(lang, MATCH_LABELS[m].name)}</strong>: {L(lang, MATCH_LABELS[m].copy)}
+          </li>
+        ))}
+      </ul>
+      <Notice kind="info">
+        💡{" "}
+        {t(
+          "ไทป์เป็นเรื่องสนุกไว้ชวนคุย ไม่มีไทป์ไหนดีกว่ากัน และไม่ใช้ซ่อนหรือคัดใครออก ไทป์ของคุณเป็นความลับจนกว่าคุณจะเลือกแสดง",
+          "Types are for fun and conversation. No type is better, and they're never used to hide or exclude anyone. Yours stays private unless you choose to show it.",
+        )}
+      </Notice>
+      <p>
+        <a href="/quiz">{t("ทำแบบทดสอบ →", "Take the quiz →")}</a>
+      </p>
+    </article>,
   );
 });
 

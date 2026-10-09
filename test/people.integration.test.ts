@@ -383,9 +383,9 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     await optIn(a);
     await optIn(c2); // opted in but not verified: no badge
     await db().insert(vibes).values([
-      { accountId: d.id, vector: {}, archetype: "explore+", modifier: null, visible: true },
-      { accountId: b.id, vector: {}, archetype: "culture-", visible: false },
-      { accountId: me.id, vector: {}, archetype: "plan-", visible: false },
+      { accountId: d.id, vector: {}, archetype: "BDSH", modifier: null, visible: true },
+      { accountId: b.id, vector: {}, archetype: "CDSH", visible: false },
+      { accountId: me.id, vector: {}, archetype: "BDSN", visible: false },
     ]);
     const html = await (await req(`/events/${ev}/people`, { cookie: en(me) })).text();
     const cards = html.split('<section class="card').slice(1);
@@ -393,9 +393,9 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     expect(card(`${p}a`)).toContain("Bangkok resident");
     expect(card(`${p}b`)).not.toContain("Bangkok resident");
     expect(card(`${p}c`)).not.toContain("Bangkok resident");
-    expect(card(`${p}b`)).not.toContain("Heritage Lover");
-    expect(card(`${p}d`)).toContain("🧭 The Explorer");
-    expect(card(`${p}d`)).toContain("Complementary match"); // explorer + planner
+    expect(card(`${p}b`)).not.toContain("Story Collector");
+    expect(card(`${p}d`)).toContain("🍜 The Food Hunter");
+    expect(card(`${p}d`)).toContain("Complementary match"); // BDSH vs BDSN: one letter apart
     const order = [`${p}a`, `${p}b`, `${p}c`, `${p}d`].map((n) => html.indexOf(`<legend>${n}</legend>`));
     expect(order.every((x) => x > 0)).toBe(true);
     expect([...order].sort((x, y) => x - y)).toEqual(order);
@@ -412,16 +412,16 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     let html = await (await req("/connections", { cookie: en(y) })).text();
     expect(html).not.toContain("Bangkok resident");
     await optIn(x);
-    await db().insert(vibes).values({ accountId: x.id, vector: {}, archetype: "rhythm-", modifier: "explore+", visible: true });
+    await db().insert(vibes).values({ accountId: x.id, vector: {}, archetype: "CDMH", modifier: "rhythm-", visible: true });
     html = await (await req("/connections", { cookie: en(y) })).text();
     expect(html).toContain("Bangkok resident");
-    expect(html).toContain(`🌅 ${displayName("rhythm-", "explore+").en}`);
+    expect(html).toContain(`🛕 ${displayName("CDMH", "rhythm-").en}`);
     expect(html).not.toContain("Conversation spark");
-    await db().insert(vibes).values({ accountId: y.id, vector: {}, archetype: "motion+", visible: false });
+    await db().insert(vibes).values({ accountId: y.id, vector: {}, archetype: "CDSH", visible: false });
     html = await (await req("/connections", { cookie: en(y) })).text();
     expect(html).toContain("Conversation spark");
-    expect(html).toContain("Complementary match"); // mover + early riser
+    expect(html).toContain("Complementary match"); // CDMH vs CDSH: one letter apart
     // x's own view of y: y's type is hidden.
-    expect(await (await req("/connections", { cookie: en(x) })).text()).not.toContain("The Mover");
+    expect(await (await req("/connections", { cookie: en(x) })).text()).not.toContain("The Story Collector");
   });
 });

@@ -127,6 +127,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a festival with live music and crowds", th: "เทศกาลดนตรีสดที่คนเยอะ ๆ" },
       { en: "a team game with lots of cheering", th: "เกมทีมที่เชียร์กันเสียงดัง" },
       { en: "meeting ten new people in one evening", th: "รู้จักคนใหม่สิบคนในคืนเดียว" },
+      { en: "a street-food crawl with eight new faces", th: "ตระเวนกินสตรีทฟู้ดกับเพื่อนใหม่แปดคน" },
+      { en: "a karaoke room with the whole group", th: "ร้องคาราโอเกะยกแก๊ง" },
     ],
     minus: [
       { en: "a quiet corner in a small café", th: "มุมเงียบ ๆ ในคาเฟ่เล็ก ๆ" },
@@ -135,6 +137,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a small book or craft circle", th: "วงอ่านหนังสือหรืองานฝีมือเล็ก ๆ" },
       { en: "a peaceful picnic in the park", th: "ปิกนิกในสวนแบบสงบ ๆ" },
       { en: "a low-key board game table", th: "โต๊ะบอร์ดเกมชิล ๆ" },
+      { en: "a slow walk with one good friend", th: "เดินช้า ๆ กับเพื่อนสนิทหนึ่งคน" },
+      { en: "a tea tasting for four", th: "ชิมชาวงเล็กสี่คน" },
     ],
   },
   explore: {
@@ -145,6 +149,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a pop-up you saw online this morning", th: "ป๊อปอัปที่เพิ่งเห็นในโซเชียลเมื่อเช้า" },
       { en: "a district across the river you rarely visit", th: "ย่านฝั่งธนฯ ที่ไม่ค่อยได้ไป" },
       { en: "a class in something you've never tried", th: "คลาสสิ่งที่ไม่เคยลองมาก่อน" },
+      { en: "a ferry stop you've never got off at", th: "ท่าเรือที่ไม่เคยลงมาก่อน" },
+      { en: "a market in a district you've never visited", th: "ตลาดในเขตที่ไม่เคยไป" },
     ],
     minus: [
       { en: "your go-to noodle shop", th: "ร้านก๋วยเตี๋ยวประจำ" },
@@ -153,6 +159,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a favourite market you could walk blindfolded", th: "ตลาดโปรดที่หลับตาเดินก็ได้" },
       { en: "your usual running route, with company", th: "เส้นทางวิ่งประจำ แต่มีเพื่อนวิ่งด้วย" },
       { en: "a restaurant you'd recommend to anyone", th: "ร้านที่กล้าแนะนำให้ทุกคน" },
+      { en: "the café where you always sit by the window", th: "คาเฟ่ที่นั่งริมหน้าต่างประจำ" },
+      { en: "the street-food stall you've loved for years", th: "ร้านข้างทางที่รักมาหลายปี" },
     ],
   },
   rhythm: {
@@ -162,6 +170,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a midnight bike ride through the old town", th: "ปั่นจักรยานเที่ยงคืนรอบเมืองเก่า" },
       { en: "a night market after 9 pm", th: "ตลาดกลางคืนหลังสามทุ่ม" },
       { en: "a late movie and dessert after", th: "หนังรอบดึกแล้วไปต่อของหวาน" },
+      { en: "a rooftop that stays open past midnight", th: "รูฟท็อปที่เปิดเลยเที่ยงคืน" },
+      { en: "a late-night khao tom run", th: "ไปกินข้าวต้มรอบดึก" },
     ],
     minus: [
       { en: "a 6 am run in the park", th: "วิ่งในสวนตอนหกโมงเช้า" },
@@ -169,6 +179,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "sunrise by the river", th: "ดูพระอาทิตย์ขึ้นริมแม่น้ำ" },
       { en: "breakfast jok at 7 am", th: "โจ๊กมื้อเช้าตอนเจ็ดโมง" },
       { en: "a weekend morning yoga session", th: "โยคะเช้าวันหยุด" },
+      { en: "giving alms and coffee at dawn", th: "ตักบาตรแล้วจิบกาแฟยามเช้า" },
+      { en: "a sunrise bike ride by the river", th: "ปั่นจักรยานรับแสงเช้าริมแม่น้ำ" },
     ],
   },
   motion: {
@@ -179,6 +191,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a pickup badminton or football game", th: "แบดมินตันหรือฟุตบอลขาจร" },
       { en: "a hands-on cooking class", th: "คลาสทำอาหารลงมือเอง" },
       { en: "a dance class", th: "คลาสเต้น" },
+      { en: "a Muay Thai taster class", th: "คลาสมวยไทยสำหรับมือใหม่" },
+      { en: "a volunteer park clean-up", th: "อาสาเก็บขยะในสวน" },
     ],
     minus: [
       { en: "a long lunch where nobody rushes", th: "มื้อกลางวันยาว ๆ ไม่มีใครรีบ" },
@@ -187,6 +201,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a tasting table", th: "โต๊ะชิมอาหาร" },
       { en: "a film screening", th: "ฉายหนังแล้วนั่งดูด้วยกัน" },
       { en: "a long talk over Thai tea", th: "คุยยาว ๆ กับชาไทยสักแก้ว" },
+      { en: "a picnic with nothing to do but talk", th: "ปิกนิกที่มีแค่การนั่งคุย" },
+      { en: "an afternoon tea that runs long", th: "จิบชายามบ่ายแบบยาว ๆ" },
     ],
   },
   plan: {
@@ -196,6 +212,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "saying yes to a last-minute invite", th: "ตอบรับคำชวนกะทันหัน" },
       { en: "picking a random BTS stop and exploring", th: "สุ่มลงสถานี BTS แล้วเดินสำรวจ" },
       { en: "no itinerary, just vibes", th: "ไม่มีแพลน ไปตามฟีล" },
+      { en: "hopping on the first boat that comes", th: "ขึ้นเรือลำแรกที่มาถึง" },
+      { en: "letting the group pick on the spot", th: "ให้กลุ่มเลือกกันหน้างาน" },
     ],
     minus: [
       { en: "booking the table a week ahead", th: "จองโต๊ะล่วงหน้าหนึ่งอาทิตย์" },
@@ -203,6 +221,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "checking opening hours and reviews first", th: "เช็กเวลาเปิดและรีวิวก่อนไป" },
       { en: "a calendar invite with the whole plan", th: "นัดในปฏิทินพร้อมแพลนครบ" },
       { en: "knowing exactly how you're getting home", th: "รู้ชัดว่าจะกลับบ้านยังไง" },
+      { en: "a shared list of three places to try", th: "ลิสต์สามที่ที่จะลองแชร์ให้ทุกคน" },
+      { en: "tickets booked before anyone asks", th: "จองตั๋วไว้ก่อนใครจะถาม" },
     ],
   },
   culture: {
@@ -212,6 +232,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "an indie café with a great playlist", th: "คาเฟ่อินดี้เพลงเพราะ" },
       { en: "a street-art walk", th: "เดินชมสตรีทอาร์ต" },
       { en: "a live indie gig", th: "ดูวงอินดี้เล่นสด" },
+      { en: "a Bangkok Design Week installation", th: "งานจัดแสดงในบางกอกดีไซน์วีก" },
+      { en: "a new indie bookshop", th: "ร้านหนังสืออิสระเปิดใหม่" },
     ],
     minus: [
       { en: "an old-town temple walk", th: "เดินไหว้พระย่านเมืองเก่า" },
@@ -220,6 +242,8 @@ export const ACTIVITIES: Record<Category, { plus: Text[]; minus: Text[] }> = {
       { en: "a Thai craft workshop", th: "เวิร์กช็อปงานหัตถศิลป์ไทย" },
       { en: "a historic canal community", th: "ชุมชนริมคลองเก่าแก่" },
       { en: "a Thai classical music performance", th: "การแสดงดนตรีไทย" },
+      { en: "a shadow puppet show", th: "การแสดงหนังตะลุง" },
+      { en: "a walk through a century-old market", th: "เดินตลาดเก่าอายุร้อยปี" },
     ],
   },
 };
@@ -242,6 +266,13 @@ export const PLACES: Text[] = [
   { en: "Ari", th: "อารีย์" },
   { en: "Chatuchak", th: "จตุจักร" },
   { en: "Siam", th: "สยาม" },
+  { en: "Wat Arun riverside", th: "ริมน้ำวัดอรุณ" },
+  { en: "Bang Krachao", th: "บางกระเจ้า" },
+  { en: "Thonburi canals", th: "คลองฝั่งธนฯ" },
+  { en: "Sanam Luang", th: "สนามหลวง" },
+  { en: "Phra Athit Road", th: "ถนนพระอาทิตย์" },
+  { en: "Ratchada night market", th: "ตลาดนัดรัชดา" },
+  { en: "Song Wat Road", th: "ถนนทรงวาด" },
 ];
 
 export const WHENS: Text[] = [
@@ -251,6 +282,8 @@ export const WHENS: Text[] = [
   { en: "A rainy Friday evening", th: "เย็นวันศุกร์ที่ฝนตก" },
   { en: "A long weekend", th: "วันหยุดยาว" },
   { en: "A cool December evening", th: "เย็นวันที่อากาศเย็นในเดือนธันวาคม" },
+  { en: "A hot April afternoon", th: "บ่ายวันร้อน ๆ เดือนเมษายน" },
+  { en: "Late on a Saturday night", th: "ดึกคืนวันเสาร์" },
 ];
 
 export const COMPANIONS: Text[] = [

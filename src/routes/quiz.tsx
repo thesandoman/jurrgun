@@ -22,10 +22,17 @@ import { vibes } from "../schema";
 import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
 import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, POLES } from "../vibe/content";
+import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
 import {
   ARCHETYPES,
+  ARCHETYPE_KEYS,
+  DEFAULT_TYPE,
+  LEGEND,
   MATCH_LABELS,
+  codeLetters,
   displayName,
+  flavourBadges,
+  normalizeType,
   suggestedMatches,
   typeOf,
   type ArchetypeKey,
@@ -45,7 +52,7 @@ const SEEN_MAX = 400;
 
 export async function loadVibe(env: AppEnv["Bindings"], accountId: string): Promise<VibeRow | null> {
   const [row] = await getDb(env).select().from(vibes).where(eq(vibes.accountId, accountId)).limit(1);
-  return row ?? null;
+  return row ? { ...row, ...normalizeType(row) } : null;
 }
 
 /** Server-derived: never read from the client. */
@@ -66,7 +73,7 @@ export function typeSlug(key: ArchetypeKey): string {
     .replace(/^-|-$/g, "");
 }
 
-const BY_SLUG = new Map((Object.keys(ARCHETYPES) as ArchetypeKey[]).map((k) => [typeSlug(k), k]));
+const BY_SLUG = new Map(ARCHETYPE_KEYS.map((k) => [typeSlug(k), k]));
 
 export function isArchetype(key: string): key is ArchetypeKey {
   return Object.prototype.hasOwnProperty.call(ARCHETYPES, key);
@@ -110,6 +117,7 @@ export function QuizFlow(props: {
         ) : undefined
       }
     >
+      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS }} />
       <FlowStep
         emoji="🧭"
         title={t("คุณเป็นคนกรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
@@ -127,6 +135,7 @@ export function QuizFlow(props: {
       </FlowStep>
       {props.questions.map((q, i) => (
         <FlowStep title={L(lang, q.prompt)} auto class="q">
+          <QuestionArt art={q.art} lang={lang} />
           {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบ", "Tap an answer")}</span> : null}
           <span class="muted" style="display:block;font-size:.8rem">
             {i + 1} / {props.questions.length}
@@ -134,7 +143,7 @@ export function QuizFlow(props: {
           {q.format === "choice" ? (
             <div class="answers">
               {q.options.map((o, j) => (
-                <AnswerCard name={`a${i}`} value={String(j)} label={L(lang, o.label)} badge={j === 0 ? "A" : "B"} />
+                <AnswerCard name={`a${i}`} value={String(j)} label={L(lang, o.label)} emoji={o.icon} />
               ))}
             </div>
           ) : (
@@ -249,7 +258,7 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
 
 export function ResultView(props: { v: View; row: VibeRow; continueHref: string; continueLabel: string; visibilityNext: string; reveal?: boolean; retake?: boolean }) {
   const { t, lang } = props.v;
-  const key = (isArchetype(props.row.archetype) ? props.row.archetype : "allrounder") as ArchetypeKey;
+  const key = (isArchetype(props.row.archetype) ? props.row.archetype : DEFAULT_TYPE) as ArchetypeKey;
   const a = ARCHETYPES[key];
   return (
     <>
@@ -258,8 +267,10 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
         <h1>{L(lang, displayName(key, props.row.modifier))}</h1>
         <p>{L(lang, a.tagline)}</p>
+        <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
       </div>
       <Card>
+        <p>{L(lang, a.description)}</p>
         <Meter lang={lang} vector={props.row.vector} />
       </Card>
       <Card>
@@ -385,23 +396,73 @@ quizRoutes.get("/types", async (c) => {
   const mine = user ? (await loadVibe(c.env, user.account.id))?.archetype : undefined;
   return page(
     c,
-    { title: t("ไทป์กรุงเทพฯ ทั้ง 13 แบบ", "The 13 Bangkok Types"), tab: "me" },
+    { title: t("ไทป์กรุงเทพฯ ทั้ง 16 แบบ", "The 16 Bangkok Types"), tab: "me" },
     <>
-      <h1>{t("ไทป์กรุงเทพฯ ทั้ง 13 แบบ", "The 13 Bangkok Types")}</h1>
+      <h1>{t("ไทป์กรุงเทพฯ ทั้ง 16 แบบ", "The 16 Bangkok Types")}</h1>
       <p class="muted">{t("คุณเป็นแบบไหน? ไม่มีแบบไหนดีกว่ากัน", "Which one are you? No type is better.")}</p>
       <div class="type-grid">
-        {(Object.keys(ARCHETYPES) as ArchetypeKey[]).map((k) => (
+        {ARCHETYPE_KEYS.map((k) => (
           <a href={`/types/${typeSlug(k)}`} class={k === mine ? "me" : ""}>
             <b aria-hidden="true">{ARCHETYPES[k].emoji}</b>
             <strong>{L(lang, ARCHETYPES[k].name)}</strong>
+            <code class="type-code">{k}</code>
             <small class="muted">{L(lang, ARCHETYPES[k].tagline)}</small>
           </a>
         ))}
       </div>
+      <Legend lang={lang} />
       <TypeCta v={v} hasType={!!mine} />
     </>,
   );
 });
+
+/** What each letter and badge means. Used on type pages and in Learn. */
+export function Legend(props: { lang: Lang; highlight?: string[] }) {
+  const { lang } = props;
+  const on = new Set(props.highlight ?? []);
+  return (
+    <section class="legend" aria-label={lang === "en" ? "Legend" : "คำอธิบายสัญลักษณ์"}>
+      <h2>{lang === "en" ? "Legend" : "คำอธิบายสัญลักษณ์"}</h2>
+      <p class="muted">
+        {lang === "en"
+          ? "Four letters make your type; two badges add your flavour."
+          : "ตัวอักษร 4 ตัวคือไทป์ของคุณ และสัญลักษณ์ 2 แบบบอกสไตล์เพิ่มเติม"}
+      </p>
+      <ul>
+        {LEGEND.map((l) => (
+          <li class={on.has(l.key) ? "on" : ""}>
+            <b aria-hidden="true">{l.icon}</b>
+            <span>
+              <strong>{l.key.length === 1 ? `${l.key} · ` : ""}{L(lang, l.name)}</strong>
+              <small>{L(lang, l.meaning)}</small>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** The four letters of a code, each with its icon. */
+export function CodeChips(props: { lang: Lang; archetype: ArchetypeKey; modifier?: string | null }) {
+  const { lang } = props;
+  return (
+    <div class="code-chips">
+      {codeLetters(props.archetype).map((l) => (
+        <span title={L(lang, l.meaning)}>
+          <b aria-hidden="true">{l.icon}</b>
+          {l.key}
+        </span>
+      ))}
+      {flavourBadges(props.modifier ?? null).map((b) => (
+        <span class="flavour">
+          <b aria-hidden="true">{b.icon}</b>
+          {L(lang, b.name)}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function TypeCta(props: { v: View; hasType: boolean }) {
   const { t, user } = props.v;
@@ -432,6 +493,7 @@ quizRoutes.get("/types/:slug", async (c) => {
         <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
         <h1>{L(lang, a.name)}</h1>
         <p>{L(lang, a.tagline)}</p>
+        <CodeChips lang={lang} archetype={key} />
       </div>
       <Card>
         <p>{L(lang, a.description)}</p>
@@ -439,6 +501,7 @@ quizRoutes.get("/types/:slug", async (c) => {
         <p>💬 <strong>{t("เปิดบทสนทนา", "Conversation starter")}:</strong> {L(lang, a.starter)}</p>
       </Card>
       <Matches v={v} archetype={key} />
+      <Legend lang={lang} highlight={key.split("")} />
       <TypeCta v={v} hasType={!!mine} />
     </>,
   );

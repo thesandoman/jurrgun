@@ -26,8 +26,9 @@ import {
   type Text,
 } from "./content";
 import { createRng, hashString, pick, shuffle, type Rng } from "./rng";
+import { activityIcon, POLE_ICONS, PLACE_ICONS, WHEN_TONES, type Art } from "./visuals";
 
-export type ChoiceOption = { label: Text; pole: Pole };
+export type ChoiceOption = { label: Text; pole: Pole; icon: string };
 
 export type Question =
   | {
@@ -37,6 +38,7 @@ export type Question =
       template: string;
       prompt: Text;
       options: [ChoiceOption, ChoiceOption];
+      art: Art;
     }
   | {
       id: string;
@@ -44,6 +46,7 @@ export type Question =
       format: "scale";
       template: string;
       prompt: Text;
+      art: Art;
       /** The pole that a 5 ("very me") points to. */
       pole: Pole;
       minLabel: Text;
@@ -52,8 +55,8 @@ export type Question =
 
 /** What the browser gets: no category, no pole — nothing to game. */
 export type PublicQuestion =
-  | { id: string; format: "choice"; prompt: Text; options: Text[] }
-  | { id: string; format: "scale"; prompt: Text; min: 1; max: 5; minLabel: Text; maxLabel: Text };
+  | { id: string; format: "choice"; prompt: Text; options: Text[]; icons: string[]; art: Art }
+  | { id: string; format: "scale"; prompt: Text; min: 1; max: 5; minLabel: Text; maxLabel: Text; art: Art };
 
 export type SessionOptions = {
   seed: string;
@@ -77,8 +80,10 @@ function poleActivity(rng: Rng, category: Category, pole: Pole, used: Used): Tex
 
 /** Puts the "+" activity at A or B at random so position carries no signal. */
 function pair(rng: Rng, category: Category, used: Used): [ChoiceOption, ChoiceOption] {
-  const plus: ChoiceOption = { label: poleActivity(rng, category, 1, used), pole: 1 };
-  const minus: ChoiceOption = { label: poleActivity(rng, category, -1, used), pole: -1 };
+  const pl = poleActivity(rng, category, 1, used);
+  const mi = poleActivity(rng, category, -1, used);
+  const plus: ChoiceOption = { label: pl, pole: 1, icon: activityIcon(pl, category, 1) };
+  const minus: ChoiceOption = { label: mi, pole: -1, icon: activityIcon(mi, category, -1) };
   return rng() < 0.5 ? [plus, minus] : [minus, plus];
 }
 
@@ -103,6 +108,7 @@ const CHOICE_TEMPLATES: Record<string, ChoiceTemplate> = {
         `${when.th} คุณอยู่แถว${place.th} แบบไหนน่าสนใจกว่า?`,
       ),
       options,
+      art: { tone: WHEN_TONES[when.en] ?? "afternoon", icons: [PLACE_ICONS[place.en] ?? "📍"], caption: place, seed: hashString(place.en + when.en) },
     };
   },
   host(rng, category, used) {
@@ -119,6 +125,7 @@ const CHOICE_TEMPLATES: Record<string, ChoiceTemplate> = {
         `คุณพา${who.th}เที่ยวแถว${place.th} คุณจะชวนไป…`,
       ),
       options,
+      art: { tone: "afternoon", icons: [PLACE_ICONS[place.en] ?? "📍", "🧳"], caption: place, seed: hashString(place.en + who.en) },
     };
   },
   quick(rng, category, used) {
@@ -130,6 +137,7 @@ const CHOICE_TEMPLATES: Record<string, ChoiceTemplate> = {
       template: "quick",
       prompt: t("Quick one — which is more you?", "เร็ว ๆ — แบบไหนเป็นคุณมากกว่า?"),
       options,
+      art: { tone: POLE_ICONS[category].tone, icons: [options[0].icon, options[1].icon], seed: hashString(options[0].label.en) },
     };
   },
   /**
@@ -140,8 +148,8 @@ const CHOICE_TEMPLATES: Record<string, ChoiceTemplate> = {
   skip(rng, category, used) {
     const [a, b] = pair(rng, category, used);
     const options: [ChoiceOption, ChoiceOption] = [
-      { label: a.label, pole: (-a.pole) as Pole },
-      { label: b.label, pole: (-b.pole) as Pole },
+      { label: a.label, pole: (-a.pole) as Pole, icon: a.icon },
+      { label: b.label, pole: (-b.pole) as Pole, icon: b.icon },
     ];
     return {
       id: makeId("skip", category, [a.label, b.label]),
@@ -153,6 +161,7 @@ const CHOICE_TEMPLATES: Record<string, ChoiceTemplate> = {
         "วันหยุดนี้ทำได้แค่อย่างเดียว คุณจะ 'ข้าม' อันไหน?",
       ),
       options,
+      art: { tone: "afternoon", icons: [a.icon, "⚖️", b.icon], seed: hashString(a.label.en + b.label.en) },
     };
   },
 };
@@ -168,6 +177,7 @@ function scaleQuestion(rng: Rng, category: Category): Question {
     template: "scale",
     prompt: t(`How much is this you? “${statement.en}”`, `ตรงกับคุณแค่ไหน? “${statement.th}”`),
     pole,
+    art: { tone: POLE_ICONS[category].tone, icons: [pole === 1 ? POLE_ICONS[category].plus : POLE_ICONS[category].minus], seed: hashString(statement.en) },
     minLabel: t("Not me", "ไม่ใช่เลย"),
     maxLabel: t("So me", "ใช่เลย"),
   };
@@ -226,9 +236,9 @@ export function generateSession(options: SessionOptions): Question[] {
 
 export function toPublic(q: Question): PublicQuestion {
   if (q.format === "choice") {
-    return { id: q.id, format: "choice", prompt: q.prompt, options: q.options.map((o) => o.label) };
+    return { id: q.id, format: "choice", prompt: q.prompt, options: q.options.map((o) => o.label), icons: q.options.map((o) => o.icon), art: q.art };
   }
-  return { id: q.id, format: "scale", prompt: q.prompt, min: 1, max: 5, minLabel: q.minLabel, maxLabel: q.maxLabel };
+  return { id: q.id, format: "scale", prompt: q.prompt, min: 1, max: 5, minLabel: q.minLabel, maxLabel: q.maxLabel, art: q.art };
 }
 
 // ---------------------------------------------------------------- scoring --
@@ -301,4 +311,21 @@ export function vibeName(highlights: { category: Category; pole: Pole }[]): Text
   if (highlights.length === 1) return t(`Bangkok ${main.noun.en}`, `${main.noun.th}แห่งกรุงเทพฯ`);
   const second = poleInfo(highlights[1].category, highlights[1].pole);
   return t(`${second.adjective.en} ${main.noun.en}`, `${main.noun.th}${second.adjective.th}`);
+}
+
+/**
+ * How many distinct questions the generator can produce (by id), template by
+ * template. Order of the two options counts, as it changes the question.
+ */
+export function questionSpace(): number {
+  let total = 0;
+  for (const c of CATEGORIES) {
+    const pairs = ACTIVITIES[c].plus.length * ACTIVITIES[c].minus.length * 2;
+    total += WHENS.length * PLACES.length * pairs; // scene
+    total += COMPANIONS.length * PLACES.length * pairs; // host
+    total += pairs; // quick
+    total += pairs; // skip
+    total += STATEMENTS[c].plus.length + STATEMENTS[c].minus.length; // scale
+  }
+  return total;
 }
