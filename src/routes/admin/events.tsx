@@ -39,6 +39,7 @@ import {
   type Event,
 } from "../../schema";
 import { loadAttendees, refreshWaitlist, runBuddyRound } from "../../services/events";
+import { deleteObject, getObject, getObjectUrl, putObject } from "../../storage";
 import {
   Button,
   Card,
@@ -452,6 +453,48 @@ function applyRoute(d: Draft, routeValue: string | undefined): Draft {
   };
 }
 
+// --------------------------------------------------------- cover image --
+
+const COVER_MAX_BYTES = 5 * 1024 * 1024;
+const COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** The uploaded cover file, if one was chosen. */
+function coverFile(body: Record<string, unknown>): File | null {
+  const raw = Array.isArray(body.cover) ? body.cover[0] : body.cover;
+  return raw instanceof File && raw.size > 0 ? raw : null;
+}
+
+function coverError(file: File | null, v: View): string | null {
+  if (!file) return null;
+  if (!COVER_TYPES.includes(file.type)) return v.t("ภาพปกต้องเป็นไฟล์ JPG, PNG หรือ WebP", "The cover must be a JPG, PNG or WebP image");
+  if (file.size > COVER_MAX_BYTES) return v.t("ภาพปกต้องมีขนาดไม่เกิน 5 MB", "The cover must be 5 MB or smaller");
+  return null;
+}
+
+/** Store the cover under a server-generated key. Null when storage refused it. */
+async function uploadCover(c: Ctx, eventId: string, file: File): Promise<string | null> {
+  const key = `uploads/events/${eventId}/${crypto.randomUUID()}`;
+  try {
+    await putObject(c.env, key, await file.arrayBuffer(), { contentType: file.type });
+    return key;
+  } catch {
+    return null;
+  }
+}
+
+/** Where the form can preview the current cover. Deployed: a signed URL. Locally: the route below. */
+async function adminCoverSrc(c: Ctx, e: Event | null): Promise<string | null> {
+  if (!e?.coverKey) return null;
+  if (c.env.FILES) {
+    try {
+      return await getObjectUrl(c.env, e.coverKey);
+    } catch {
+      return null;
+    }
+  }
+  return c.env.BUCKET ? `${BASE}/${e.id}/cover` : null;
+}
+
 type HostOption = { id: string; username: string; nickname: string | null; role: string };
 type FormCtx = { hosts: HostOption[]; orgs: { id: string; name: string }[] };
 
@@ -591,7 +634,16 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   };
 }
 
-function EventForm(props: { v: View; a: Account; d: Draft; ctx: FormCtx; action: string; errors?: string[]; editing: boolean }) {
+function EventForm(props: {
+  v: View;
+  a: Account;
+  d: Draft;
+  ctx: FormCtx;
+  action: string;
+  errors?: string[];
+  editing: boolean;
+  cover?: { src: string | null; has: boolean };
+}) {
   const { v, d, ctx } = props;
   const { t, lang } = v;
   const hostOpts = ctx.hosts.map((h) => ({ value: h.id, th: `${h.nickname ?? h.username} (${h.username})`, en: `${h.nickname ?? h.username} (${h.username})` }));
@@ -601,7 +653,7 @@ function EventForm(props: { v: View; a: Account; d: Draft; ctx: FormCtx; action:
     { value: "published", th: "เผยแพร่", en: "Published" },
   ];
   return (
-    <form method="post" action={props.action}>
+    <form method="post" action={props.action} enctype="multipart/form-data">
       {props.errors?.length ? (
         <Notice kind="error">
           <ul>
@@ -625,6 +677,18 @@ function EventForm(props: { v: View; a: Account; d: Draft; ctx: FormCtx; action:
         <TextArea label={t("รายละเอียด (ไทย)", "Description (Thai)")} name="description" value={d.description} rows={4} maxlength={4000} />
         <TextArea label={t("รายละเอียด (อังกฤษ)", "Description (English)")} name="descriptionEn" value={d.descriptionEn} rows={4} maxlength={4000} />
         <Choices legend={t("แท็ก", "Tags")} name="tags" options={EVENT_TAGS} values={d.tags} lang={lang} />
+        <fieldset class="choices">
+          <legend>{t("ภาพปก (ไม่บังคับ)", "Cover image (optional)")}</legend>
+          {props.cover?.src ? (
+            <img src={props.cover.src} alt={t("ภาพปกปัจจุบัน", "Current cover image")} style="width:100%;max-width:360px;height:120px;object-fit:cover;border-radius:12px" />
+          ) : null}
+          <div class="field">
+            <label for="f-cover">{props.cover?.has ? t("เปลี่ยนภาพปก", "Replace the cover") : t("อัปโหลดภาพปก", "Upload a cover")}</label>
+            <input id="f-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" />
+            <small>{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB ถ้าไม่มีภาพ จะแสดงไอคอนตามหมวดแทน", "JPG, PNG or WebP, up to 5 MB. Without one, the event shows an icon for its category.")}</small>
+          </div>
+          {props.cover?.has ? <Toggle name="removeCover" label={t("ลบภาพปก", "Remove the cover")} /> : null}
+        </fieldset>
       </Card>
       <Card>
         <h2>{t("วันเวลาและสถานที่", "When and where")}</h2>
@@ -722,19 +786,27 @@ adminEvents.post("/new", async (c) => {
   if (!canCreate(a)) return forbidden(c);
   const db = getDb(c.env);
   const ctx = await loadFormCtx(db, a);
-  const d = draftFromBody(await c.req.parseBody({ all: true }));
+  const body = await c.req.parseBody({ all: true });
+  const d = draftFromBody(body);
   const { data, errors } = validate(d, v, a, ctx, null);
-  if (!data) {
-    return page(c, { title: v.t("สร้างกิจกรรม", "New event"), admin: true, status: 400 }, (
+  const file = coverFile(body);
+  const coverErr = coverError(file, v);
+  const id = newId();
+  const bad = (errs: string[]) =>
+    page(c, { title: v.t("สร้างกิจกรรม", "New event"), admin: true, status: 400 }, (
       <>
         <h1>{v.t("สร้างกิจกรรม", "New event")}</h1>
-        <EventForm v={v} a={a} d={d} ctx={ctx} action={`${BASE}/new`} errors={errors} editing={false} />
+        <EventForm v={v} a={a} d={d} ctx={ctx} action={`${BASE}/new`} errors={errs} editing={false} />
       </>
     ));
+  if (!data || coverErr) return bad([...errors, ...(coverErr ? [coverErr] : [])]);
+  let coverKey: string | null = null;
+  if (file) {
+    coverKey = await uploadCover(c, id, file);
+    if (!coverKey) return bad([v.t("อัปโหลดภาพปกไม่สำเร็จ ลองใหม่อีกครั้ง", "The cover couldn't be uploaded. Please try again.")]);
   }
-  const id = newId();
   await batch(c.env, [
-    db.insert(events).values({ ...data, id, createdBy: a.id }),
+    db.insert(events).values({ ...data, coverKey, id, createdBy: a.id }),
     audit(db, a.id, "event.create", { type: "event", id }, { title: data.title, status: data.status, partnerOrgId: data.partnerOrgId }),
   ]);
   return c.redirect(`${BASE}/${id}?notice=saved`);
@@ -752,7 +824,15 @@ adminEvents.get(
           <a href={`${BASE}/${e.id}`}>{v.t("← กลับ", "← Back")}</a>
         </p>
         <h1>{v.t("แก้ไขกิจกรรม", "Edit event")}</h1>
-        <EventForm v={v} a={a} d={draftFromEvent(e)} ctx={ctx} action={`${BASE}/${e.id}/edit`} editing />
+        <EventForm
+          v={v}
+          a={a}
+          d={draftFromEvent(e)}
+          ctx={ctx}
+          action={`${BASE}/${e.id}/edit`}
+          editing
+          cover={{ src: await adminCoverSrc(c, e), has: !!e.coverKey }}
+        />
       </>
     ));
   }, { edit: true }),
@@ -764,16 +844,36 @@ adminEvents.post(
     const v = view(c);
     const a = me(c);
     const ctx = await loadFormCtx(db, a);
-    const d = draftFromBody(await c.req.parseBody({ all: true }));
-    const { data, errors } = validate(d, v, a, ctx, e);
-    if (!data) {
-      return page(c, { title: v.t("แก้ไขกิจกรรม", "Edit event"), admin: true, status: 400 }, (
+    const body = await c.req.parseBody({ all: true });
+    const d = draftFromBody(body);
+    const { data: validated, errors } = validate(d, v, a, ctx, e);
+    const file = coverFile(body);
+    const coverErr = coverError(file, v);
+    const bad = async (errs: string[]) =>
+      page(c, { title: v.t("แก้ไขกิจกรรม", "Edit event"), admin: true, status: 400 }, (
         <>
           <h1>{v.t("แก้ไขกิจกรรม", "Edit event")}</h1>
-          <EventForm v={v} a={a} d={d} ctx={ctx} action={`${BASE}/${e.id}/edit`} errors={errors} editing />
+          <EventForm
+            v={v}
+            a={a}
+            d={d}
+            ctx={ctx}
+            action={`${BASE}/${e.id}/edit`}
+            errors={errs}
+            editing
+            cover={{ src: await adminCoverSrc(c, e), has: !!e.coverKey }}
+          />
         </>
       ));
+    if (!validated || coverErr) return bad([...errors, ...(coverErr ? [coverErr] : [])]);
+    let coverKey = e.coverKey;
+    if (file) {
+      coverKey = await uploadCover(c, e.id, file);
+      if (!coverKey) return bad([v.t("อัปโหลดภาพปกไม่สำเร็จ ลองใหม่อีกครั้ง", "The cover couldn't be uploaded. Please try again.")]);
+    } else if (str(body.removeCover) === "1") {
+      coverKey = null;
     }
+    const data = { ...validated, coverKey };
     const moved =
       e.startsAt.getTime() !== data.startsAt.getTime() ||
       e.endsAt.getTime() !== data.endsAt.getTime() ||
@@ -793,13 +893,32 @@ adminEvents.post(
         );
       }
     }
-    queries.push(audit(db, a.id, "event.update", { type: "event", id: e.id }, { moved, capacity: [e.capacity, data.capacity], status: [e.status, data.status] }));
+    queries.push(
+      audit(db, a.id, "event.update", { type: "event", id: e.id }, { moved, capacity: [e.capacity, data.capacity], status: [e.status, data.status], cover: coverKey !== e.coverKey }),
+    );
     await batch(c.env, queries);
+    // The old cover is unreferenced now: delete it (best effort).
+    if (e.coverKey && e.coverKey !== coverKey) await deleteObject(c.env, e.coverKey).catch(() => {});
     if (data.capacity > e.capacity || (e.status !== "published" && data.status === "published")) {
       await refreshWaitlist(c.env, e.id);
     }
     return c.redirect(`${BASE}/${e.id}?notice=saved`);
   }, { edit: true }),
+);
+
+/** Cover preview for staff. Deployed: redirect to a signed URL. Locally: serve the bytes (dev only). */
+adminEvents.get(
+  "/:id/cover",
+  withEvent(async (c, e) => {
+    if (!e.coverKey) return c.notFound();
+    if (c.env.FILES) {
+      return new Response(null, { status: 302, headers: { location: await getObjectUrl(c.env, e.coverKey), "cache-control": "private, max-age=60" } });
+    }
+    if (!c.env.BUCKET) return c.notFound();
+    const obj = await getObject(c.env, e.coverKey).catch(() => null);
+    if (!obj) return c.notFound();
+    return new Response(obj.body, { headers: { "content-type": obj.metadata.contentType ?? "application/octet-stream", "cache-control": "private, max-age=60" } });
+  }),
 );
 
 adminEvents.post(

@@ -2,7 +2,11 @@
  * Member event flows (PRD §7–§10, §13.1, §24):
  *
  *   GET  /events                     Discover — "What can I do in Bangkok this week?"
- *   GET  /events/:id                 Event detail, my registration state, buddy box
+ *                                    (also sends a pending bkk_invite cookie back to /invite/:token)
+ *   POST /events/quiz-hint/dismiss   Hide the "Find your Bangkok Type" card (cookie)
+ *   GET  /events/:id                 Event detail, my registration state, buddy box, invite box
+ *   GET  /events/:id/cover           Cover image (signed-URL redirect; bytes only locally)
+ *   POST /events/:id/invite          Create or reuse my +1 invite link (PRD §8.2)
  *   POST /events/:id/rsvp            RSVP (age, strikes, single-upcoming, seats, quota, +1, buddy)
  *   POST /events/:id/cancel          Cancel (late cancel = 1 strike)
  *   POST /events/:id/offer           Accept / decline a waitlist offer
@@ -17,7 +21,8 @@
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
 import { Hono, type Context } from "hono";
-import { type AnyColumn, and, asc, count, eq, gt, gte, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { type AnyColumn, and, asc, count, eq, gt, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   ageOn,
@@ -45,13 +50,17 @@ import {
   buddyPairs,
   events,
   feedback,
+  invites,
   profiles,
   registrations,
   strikes,
+  vibes,
   type Event,
   type Registration,
 } from "../schema";
 import { refreshWaitlist, runBuddyRound, seatState, SEAT_STATUSES } from "../services/events";
+import { getObject, getObjectUrl } from "../storage";
+import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 import {
   Button,
   Card,
@@ -114,11 +123,11 @@ export function whenWindow(when: string, now: Date = new Date()): [Date, Date] |
   return null;
 }
 
-function ageText(e: Event, t: T): string {
+export function ageText(e: Event, t: T): string {
   return e.ageMin <= 18 && e.ageMax >= 99 ? t("ผู้ใหญ่ทุกวัย", "All adults") : `${e.ageMin}–${e.ageMax} ${t("ปี", "yrs")}`;
 }
 
-function costText(e: Event, t: T): string {
+export function costText(e: Event, t: T): string {
   return e.costThb > 0 ? `฿${e.costThb}` : t("ฟรี", "Free");
 }
 
@@ -145,6 +154,38 @@ function coverEmoji(e: Event): string {
   return "🌆";
 }
 
+/** Cookie set by the public invite page so a new member lands back on it after onboarding. */
+export const INVITE_COOKIE = "bkk_invite";
+/** Invite tokens are randomToken(18): 24 base64url characters. */
+export const INVITE_TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
+const QUIZ_HINT_COOKIE = "bkk_quiz_hint";
+
+/**
+ * A URL a browser can load the event's cover image from, or null for the
+ * emoji fallback. Deployed: a short-lived signed URL straight from storage.
+ * Locally: a member route that serves the bytes (dev only). No storage
+ * binding at all (tests): null.
+ */
+export async function coverSrc(env: Ctx["env"], e: Pick<Event, "id" | "coverKey">): Promise<string | null> {
+  if (!e.coverKey) return null;
+  if (env.FILES) {
+    try {
+      return await getObjectUrl(env, e.coverKey);
+    } catch {
+      return null;
+    }
+  }
+  return env.BUCKET ? `/events/${e.id}/cover` : null;
+}
+
+function Cover(props: { e: Event; src?: string | null }) {
+  return (
+    <div class="event-cover" aria-hidden="true">
+      {props.src ? <img src={props.src} alt="" loading="lazy" /> : coverEmoji(props.e)}
+    </div>
+  );
+}
+
 function SpotsTag(props: { e: Event; taken: number; t: T }) {
   const left = Math.max(0, props.e.capacity - props.taken);
   return left > 0 ? (
@@ -154,13 +195,13 @@ function SpotsTag(props: { e: Event; taken: number; t: T }) {
   );
 }
 
-function EventCard(props: { e: Event; taken: number; v: View; mine?: string }) {
+function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null }) {
   const { e, v } = props;
   const { t, lang } = v;
   const quest = questLabel(e, lang);
   return (
     <Card href={`/events/${e.id}`}>
-      <div class="event-cover" aria-hidden="true">{coverEmoji(e)}</div>
+      <Cover e={e} src={props.cover} />
       <div class="spread">
         <h3>{title(e, lang)}</h3>
         {props.mine ? <Tag tone="accent">{statusLabel(props.mine, t)}</Tag> : null}
@@ -179,6 +220,7 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string }) {
         <SpotsTag e={e} taken={props.taken} t={t} />
         {quest ? <Tag tone="accent">🧭 City Quest</Tag> : null}
         {e.plusOneAllowed ? <Tag>{t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</Tag> : null}
+        {e.residentPriority || e.residentQuota > 0 ? <Tag tone="muted">{t("🏙️ สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "🏙️ Resident priority")}</Tag> : null}
         {e.tags.map((tag) => (
           <Tag tone="muted">{label(EVENT_TAGS, tag, lang)}</Tag>
         ))}
@@ -261,6 +303,12 @@ const WHEN_OPTS = [
 ];
 
 eventRoutes.get("/events", requireMember, async (c) => {
+  // Arrived from an invite link before signing up: go back to it, once.
+  const pending = getCookie(c, INVITE_COOKIE);
+  if (pending) {
+    deleteCookie(c, INVITE_COOKIE, { path: "/" });
+    if (INVITE_TOKEN_RE.test(pending)) return c.redirect(`/invite/${pending}`);
+  }
   const v = view(c);
   const { t, lang } = v;
   const user = me(c);
@@ -275,6 +323,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     intensity: c.req.query("intensity") ?? "",
     plusOne: c.req.query("plusOne") === "1",
     fitsAge: c.req.query("fitsAge") === "1",
+    resident: c.req.query("resident") === "1",
   };
 
   const where = [eq(events.status, "published"), gt(events.endsAt, now)];
@@ -286,6 +335,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (values(LANGUAGES).includes(q.language)) where.push(jsonHas(events.languages, q.language));
   if (values(INTENSITY).includes(q.intensity)) where.push(eq(events.intensity, q.intensity));
   if (q.plusOne) where.push(eq(events.plusOneAllowed, true));
+  // PRD §7.2: "Bangkok registered resident priority" (waitlist priority or a held quota).
+  if (q.resident) where.push(or(eq(events.residentPriority, true), gt(events.residentQuota, 0))!);
   if (q.fitsAge) {
     const age = ageOn(user.profile.birthDate, now);
     where.push(lte(events.ageMin, age), gte(events.ageMax, age));
@@ -293,7 +344,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
 
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(100);
   const ids = list.map((e) => e.id);
-  const [taken, mine] = await Promise.all([
+  const hintHidden = getCookie(c, QUIZ_HINT_COOKIE) === "hide";
+  const [taken, mine, myVibe, coverPairs] = await Promise.all([
     takenCounts(db, ids),
     ids.length
       ? db
@@ -302,9 +354,12 @@ eventRoutes.get("/events", requireMember, async (c) => {
           .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.eventId, ids), inArray(registrations.status, [...ACTIVE])))
           .limit(100)
       : Promise.resolve([] as { eventId: string; status: string }[]),
+    hintHidden ? Promise.resolve([{ id: "hidden" }]) : db.select({ id: vibes.accountId }).from(vibes).where(eq(vibes.accountId, user.account.id)).limit(1),
+    Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(c.env, e)] as const)),
   ]);
+  const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
-  const filtered = q.when !== "all" || q.district || q.tag || q.free || q.language || q.intensity || q.plusOne || q.fitsAge;
+  const filtered = q.when !== "all" || q.district || q.tag || q.free || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident;
 
   return page(
     c,
@@ -321,6 +376,21 @@ eventRoutes.get("/events", requireMember, async (c) => {
           </p>
         </Card>
       ) : null}
+      {myVibe.length === 0 ? (
+        <Card class="hint quiz-hint">
+          <div class="spread">
+            <a href="/quiz">
+              <strong>{t("🧭 ค้นหา Bangkok Type ของคุณ (2 นาที)", "🧭 Find your Bangkok Type (2 min)")}</strong>
+            </a>
+            <form method="post" action="/events/quiz-hint/dismiss">
+              <button type="submit" class="btn ghost" aria-label={t("ซ่อนการ์ดนี้", "Hide this card")}>
+                ✕
+              </button>
+            </form>
+          </div>
+          <p class="muted">{t("แบบทดสอบสั้น ๆ สนุก ๆ ไว้ใช้ชวนคุย ไม่มีผลต่อการจัดกลุ่ม", "A short, playful quiz for conversation starters. It never affects who you're grouped with.")}</p>
+        </Card>
+      ) : null}
       <details open={!!filtered}>
         <summary>{t("ตัวกรอง", "Filters")}</summary>
         <form method="get" action="/events" class="filters">
@@ -332,6 +402,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
           <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
           <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
           <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
+          <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
           <div class="row">
             <Button>{t("ค้นหา", "Show events")}</Button>
             {filtered ? <LinkButton href="/events" kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
@@ -341,10 +412,16 @@ eventRoutes.get("/events", requireMember, async (c) => {
       {list.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้", "No events match these filters yet.")}</Empty>
       ) : (
-        list.map((e) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} />)
+        list.map((e) => <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />)
       )}
     </>,
   );
+});
+
+/** Hide the "Find your Bangkok Type" card on Discover (per browser). */
+eventRoutes.post("/events/quiz-hint/dismiss", requireMember, (c) => {
+  setCookie(c, QUIZ_HINT_COOKIE, "hide", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax", httpOnly: true });
+  return c.redirect("/events");
 });
 
 // -------------------------------------------------------------- detail --
@@ -451,7 +528,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const db = getDb(c.env);
   const now = new Date();
 
-  const [reg, state, host, buddies, standingRows] = await Promise.all([
+  const [reg, state, host, buddies, standingRows, cover] = await Promise.all([
     myRegistration(db, event.id, user.account.id),
     seatState(db, event),
     event.hostAccountId
@@ -459,7 +536,19 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       : Promise.resolve([] as { nickname: string }[]),
     buddyNicknames(db, event, user.account.id, now),
     myStrikes(db, user.account.id),
+    coverSrc(c.env, event),
   ]);
+
+  // Bring-a-friend (PRD §8.2): my open invite link, if I have one.
+  let inviteUrl: string | null = null;
+  if (canInvite(event, reg, now)) {
+    const [inv] = await db
+      .select({ id: invites.id })
+      .from(invites)
+      .where(and(eq(invites.eventId, event.id), eq(invites.inviter, user.account.id), isNull(invites.usedBy)))
+      .limit(1);
+    if (inv) inviteUrl = `${new URL(c.req.url).origin}/invite/${inv.id}`;
+  }
 
   let waitPos: number | null = null;
   if (reg?.status === "waitlisted") {
@@ -486,7 +575,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       ) : null}
       {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง — ผู้ใช้ทั่วไปยังไม่เห็น", "Draft — members can't see this yet")}</Notice> : null}
       <Card>
-        <div class="event-cover" aria-hidden="true">{coverEmoji(event)}</div>
+        <Cover e={event} src={cover} />
         <h1>{title(event, lang)}</h1>
         {quest ? (
           <p>
@@ -571,9 +660,68 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <Card>
           <h2>{t("การลงทะเบียนของฉัน", "My registration")}</h2>
           <RegistrationBox event={event} reg={reg} v={v} waitPos={waitPos} started={started} ended={ended} standing={standing} />
+          {canInvite(event, reg, now) ? <InviteBox event={event} url={inviteUrl} v={v} /> : null}
         </Card>
       )}
     </>,
+  );
+}
+
+/** A confirmed attendee of a +1 event, without a +1 yet, before the start. */
+function canInvite(event: Event, reg: Registration | null, now = new Date()): boolean {
+  return (
+    event.status === "published" &&
+    event.plusOneAllowed &&
+    event.startsAt.getTime() > now.getTime() &&
+    reg?.status === "confirmed" &&
+    !reg.plusOneWith
+  );
+}
+
+/** Copy / LINE / native share for the invite link. Progressive: the link works without it. */
+const SHARE_JS = `(function(){
+var box=document.getElementById("invite");if(!box)return;
+var url=box.getAttribute("data-url"),text=box.getAttribute("data-text");
+var copy=box.querySelector("[data-copy]"),share=box.querySelector("[data-share]");
+if(copy&&navigator.clipboard){copy.hidden=false;copy.addEventListener("click",function(){navigator.clipboard.writeText(url).then(function(){copy.textContent=copy.getAttribute("data-done");});});}
+if(share&&navigator.share){share.hidden=false;share.addEventListener("click",function(){navigator.share({title:document.title,text:text,url:url}).catch(function(){});});}
+})();`;
+
+function InviteBox(props: { event: Event; url: string | null; v: View }) {
+  const { t, lang } = props.v;
+  const base = `/events/${props.event.id}`;
+  if (!props.url) {
+    return (
+      <form method="post" action={`${base}/invite`} id="invite">
+        <h3>{t("ชวนเพื่อนมาด้วย (+1)", "Invite a friend (+1)")}</h3>
+        <p class="muted">{t("สร้างลิงก์ให้เพื่อนลงทะเบียนเป็น +1 ของคุณ ใช้ได้ 1 ครั้ง", "Make a link your friend can use to sign up as your +1. It works once.")}</p>
+        <Button kind="ghost">{t("ชวนเพื่อน", "Invite a friend")}</Button>
+      </form>
+    );
+  }
+  const text = t(`มากิจกรรม "${title(props.event, "th")}" ด้วยกันไหม? ลงทะเบียนเป็น +1 ของฉันได้ที่ลิงก์นี้`, `Come to "${title(props.event, "en")}" with me? Sign up as my +1 here:`);
+  const line = `https://line.me/R/msg/text/?${encodeURIComponent(`${text} ${props.url}`)}`;
+  return (
+    <div id="invite" class="invite-box" data-url={props.url} data-text={text} lang={lang}>
+      <h3>{t("ชวนเพื่อนมาด้วย (+1)", "Invite a friend (+1)")}</h3>
+      <p class="muted">{t("ส่งลิงก์นี้ให้เพื่อน 1 คน เพื่อนจะลงทะเบียนเป็น +1 ของคุณ ลิงก์ใช้ได้ครั้งเดียว", "Send this link to one friend. They sign up as your +1. The link works once.")}</p>
+      <div class="field">
+        <label for="invite-url">{t("ลิงก์ชวนเพื่อน", "Invite link")}</label>
+        <input id="invite-url" type="url" readonly value={props.url} onfocus="this.select()" />
+      </div>
+      <div class="row">
+        <button type="button" class="btn ghost" data-copy data-done={t("คัดลอกแล้ว", "Copied")} hidden>
+          {t("คัดลอกลิงก์", "Copy link")}
+        </button>
+        <a class="btn ghost" href={line} target="_blank" rel="noopener noreferrer">
+          {t("แชร์ทาง LINE", "Share on LINE")}
+        </a>
+        <button type="button" class="btn ghost" data-share hidden>
+          {t("แชร์", "Share")}
+        </button>
+      </div>
+      <script dangerouslySetInnerHTML={{ __html: SHARE_JS }} />
+    </div>
   );
 }
 
@@ -696,33 +844,39 @@ eventRoutes.get("/events/:id", requireMember, async (c) => {
 
 // ---------------------------------------------------------------- RSVP --
 
-eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
-  const { t } = view(c);
-  const user = me(c);
-  const id = c.req.param("id");
-  const db = getDb(c.env);
-  const now = new Date();
-  const found = await visibleEvent(c, id);
-  if (!found) return notFound(c);
-  // Hand out freed seats to the waitlist before taking one ourselves.
-  await refreshWaitlist(c.env, id, now);
-  const event = (await visibleEvent(c, id)) ?? found;
-  const fail = (th: string, en: string, status: 400 | 403 | 409 = 400) => renderDetail(c, event, { error: t(th, en), status });
+/** Why an RSVP was refused, bilingual, with the HTTP status to answer. */
+export type RsvpRefusal = { th: string; en: string; status: 400 | 403 | 409 };
+type Member = CurrentUser & { profile: NonNullable<CurrentUser["profile"]> };
+type Query = Parameters<typeof batch>[1][number];
 
-  if (event.status !== "published") return fail("กิจกรรมนี้ไม่เปิดรับลงทะเบียน", "This event isn't open for registration.");
-  if (event.startsAt.getTime() <= now.getTime()) return fail("กิจกรรมเริ่มแล้ว", "This event has already started.");
+/**
+ * The RSVP rules shared by /events/:id/rsvp and invite acceptance
+ * (/invite/:token/accept): open for registration, age, strikes (blocked or
+ * the 1-upcoming cap). Returns my existing registration (if any) or a refusal.
+ * `active` means I already hold or wait for a place: the caller decides what
+ * that means.
+ */
+export async function rsvpGate(
+  db: Db,
+  event: Event,
+  user: Member,
+  now = new Date(),
+): Promise<{ refusal: RsvpRefusal } | { refusal: null; existing: Registration | null; active: boolean }> {
+  const no = (th: string, en: string, status: 400 | 403 | 409 = 400) => ({ refusal: { th, en, status } });
+  if (event.status !== "published") return no("กิจกรรมนี้ไม่เปิดรับลงทะเบียน", "This event isn't open for registration.");
+  if (event.startsAt.getTime() <= now.getTime()) return no("กิจกรรมเริ่มแล้ว", "This event has already started.");
 
   const age = ageOn(user.profile.birthDate, now);
   if (!withinRange(age, event.ageMin, event.ageMax)) {
-    return fail(`กิจกรรมนี้สำหรับอายุ ${event.ageMin}–${event.ageMax} ปี`, `This event is for ages ${event.ageMin}–${event.ageMax}.`, 403);
+    return no(`กิจกรรมนี้สำหรับอายุ ${event.ageMin}–${event.ageMax} ปี`, `This event is for ages ${event.ageMin}–${event.ageMax}.`, 403);
   }
 
-  const existing = await myRegistration(db, id, user.account.id);
-  if (existing && (ACTIVE as readonly string[]).includes(existing.status)) return c.redirect(`/events/${id}`);
+  const existing = await myRegistration(db, event.id, user.account.id);
+  if (existing && (ACTIVE as readonly string[]).includes(existing.status)) return { refusal: null, existing, active: true };
 
   const standing = strikeStanding(await myStrikes(db, user.account.id), now);
   if (standing.blockedUntil) {
-    return fail(
+    return no(
       `คุณมี ${standing.active} strikes จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(standing.blockedUntil, "th")}`,
       `You have ${standing.active} strikes, so you can RSVP again after ${fmtDate(standing.blockedUntil, "en")}.`,
       403,
@@ -737,19 +891,89 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
         and(
           eq(registrations.accountId, user.account.id),
           inArray(registrations.status, [...ACTIVE]),
-          ne(registrations.eventId, id),
+          ne(registrations.eventId, event.id),
           gt(events.endsAt, now),
         ),
       )
       .limit(standing.maxUpcoming);
     if (held.length >= standing.maxUpcoming) {
-      return fail(
+      return no(
         "คุณมี 2 strikes จึงจองล่วงหน้าได้ครั้งละ 1 กิจกรรม — ยกเลิกหรือรอให้กิจกรรมเดิมจบก่อน",
         "With 2 strikes you can hold only 1 upcoming RSVP at a time — cancel it or wait until it's over.",
         403,
       );
     }
   }
+  return { refusal: null, existing, active: false };
+}
+
+/**
+ * Take a seat (or a waitlist place) after `rsvpGate` passed: seats and the
+ * resident quota decide confirmed vs waitlisted. `extra(status)` adds the
+ * caller's own writes to the same batch.
+ */
+export async function commitRsvp(
+  c: Ctx,
+  event: Event,
+  user: Member,
+  existing: Registration | null,
+  opts: {
+    wantsBuddy: boolean;
+    plusOneUsername: string | null;
+    plusOneWith: string | null;
+    auditDetail: Record<string, unknown>;
+    extra?: (status: "confirmed" | "waitlisted") => Query[];
+  },
+): Promise<"confirmed" | "waitlisted"> {
+  const db = getDb(c.env);
+  const id = event.id;
+  const state = await seatState(db, event);
+  const status = seatAvailable(state, user.account.bkkRegistered === "verified") ? "confirmed" : "waitlisted";
+  const row = {
+    status,
+    offeredUntil: null,
+    plusOneUsername: opts.plusOneUsername,
+    plusOneWith: opts.plusOneWith,
+    wantsBuddy: opts.wantsBuddy,
+    passToken: randomToken(18),
+    checkedInAt: null,
+    checkedInBy: null,
+    checkInMethod: null,
+    groupNo: null,
+    socialSignal: null,
+    signalTopics: null,
+    cancelledAt: null,
+  };
+  const queries: Query[] = [
+    existing
+      ? db.update(registrations).set(row).where(eq(registrations.id, existing.id))
+      : db.insert(registrations).values({ id: newId(), eventId: id, accountId: user.account.id, ...row }),
+    audit(db, user.account.id, `event.rsvp_${status}`, { type: "event", id }, opts.auditDetail),
+    status === "confirmed"
+      ? notify(db, user.account.id, "rsvp", `ยืนยันแล้ว: ${event.title}`, `You're in: ${event.titleEn ?? event.title}`, `/me/events/${id}/pass`)
+      : notify(db, user.account.id, "waitlist", `อยู่ในรายชื่อสำรอง: ${event.title}`, `Waitlisted: ${event.titleEn ?? event.title}`, `/events/${id}`),
+    ...(opts.extra ? opts.extra(status) : []),
+  ];
+  await batch(c.env, queries);
+  return status;
+}
+
+eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
+  const { t } = view(c);
+  const user = me(c);
+  const id = c.req.param("id");
+  const db = getDb(c.env);
+  const now = new Date();
+  const found = await visibleEvent(c, id);
+  if (!found) return notFound(c);
+  // Hand out freed seats to the waitlist before taking one ourselves.
+  await refreshWaitlist(c.env, id, now);
+  const event = (await visibleEvent(c, id)) ?? found;
+  const fail = (th: string, en: string, status: 400 | 403 | 409 = 400) => renderDetail(c, event, { error: t(th, en), status });
+
+  const gate = await rsvpGate(db, event, user, now);
+  if (gate.refusal) return fail(gate.refusal.th, gate.refusal.en, gate.refusal.status);
+  if (gate.active) return c.redirect(`/events/${id}`);
 
   const body = await c.req.parseBody();
   const wantsBuddy = event.buddyEnabled && str(body.wantsBuddy) === "1";
@@ -771,36 +995,62 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
     }
   }
 
-  const state = await seatState(db, event);
-  const status = seatAvailable(state, user.account.bkkRegistered === "verified") ? "confirmed" : "waitlisted";
-  const regId = existing?.id ?? newId();
-  const row = {
-    status,
-    offeredUntil: null,
+  const status = await commitRsvp(c, event, user, gate.existing, {
+    wantsBuddy,
     plusOneUsername,
     plusOneWith: plusOnePartner?.accountId ?? null,
-    wantsBuddy,
-    passToken: randomToken(18),
-    checkedInAt: null,
-    checkedInBy: null,
-    checkInMethod: null,
-    groupNo: null,
-    socialSignal: null,
-    signalTopics: null,
-    cancelledAt: null,
-  };
-  const queries = [
-    existing
-      ? db.update(registrations).set(row).where(eq(registrations.id, existing.id))
-      : db.insert(registrations).values({ id: regId, eventId: id, accountId: user.account.id, ...row }),
-    ...(plusOnePartner ? [db.update(registrations).set({ plusOneWith: user.account.id }).where(eq(registrations.id, plusOnePartner.regId))] : []),
-    audit(db, user.account.id, `event.rsvp_${status}`, { type: "event", id }, { plusOne: !!plusOneUsername, buddy: wantsBuddy }),
-    status === "confirmed"
-      ? notify(db, user.account.id, "rsvp", `ยืนยันแล้ว: ${event.title}`, `You're in: ${event.titleEn ?? event.title}`, `/me/events/${id}/pass`)
-      : notify(db, user.account.id, "waitlist", `อยู่ในรายชื่อสำรอง: ${event.title}`, `Waitlisted: ${event.titleEn ?? event.title}`, `/events/${id}`),
-  ];
-  await batch(c.env, queries);
+    auditDetail: { plusOne: !!plusOneUsername, buddy: wantsBuddy },
+    extra: () =>
+      plusOnePartner ? [db.update(registrations).set({ plusOneWith: user.account.id }).where(eq(registrations.id, plusOnePartner.regId))] : [],
+  });
   return c.redirect(`/events/${id}?notice=${status === "confirmed" ? "rsvp_confirmed" : "rsvp_waitlisted"}`);
+});
+
+// -------------------------------------------------------------- invite --
+
+/** Create (or reuse my unused) invite link for a +1 event (PRD §8.2). */
+eventRoutes.post("/events/:id/invite", requireMember, async (c) => {
+  const { t } = view(c);
+  const user = me(c);
+  const id = c.req.param("id");
+  const db = getDb(c.env);
+  const event = await visibleEvent(c, id);
+  if (!event) return notFound(c);
+  const reg = await myRegistration(db, id, user.account.id);
+  if (!canInvite(event, reg)) {
+    return renderDetail(c, event, {
+      error: t("ชวนเพื่อนได้เมื่อคุณยืนยันที่นั่งในกิจกรรมที่รับ +1 และยังไม่มีเพื่อนมาด้วย", "You can invite a friend once you're confirmed for a +1 event and haven't brought someone yet."),
+      status: 403,
+    });
+  }
+  const [open] = await db
+    .select({ id: invites.id })
+    .from(invites)
+    .where(and(eq(invites.eventId, id), eq(invites.inviter, user.account.id), isNull(invites.usedBy)))
+    .limit(1);
+  if (!open) {
+    const token = randomToken(18);
+    await batch(c.env, [
+      db.insert(invites).values({ id: token, eventId: id, inviter: user.account.id }),
+      audit(db, user.account.id, "event.invite_create", { type: "event", id }),
+    ]);
+  }
+  return c.redirect(`/events/${id}#invite`);
+});
+
+// --------------------------------------------------------------- cover --
+
+/** The cover image. Deployed: redirect to a signed URL. Locally: serve the bytes (dev only). */
+eventRoutes.get("/events/:id/cover", requireMember, async (c) => {
+  const event = await visibleEvent(c, c.req.param("id"));
+  if (!event?.coverKey) return c.notFound();
+  if (c.env.FILES) {
+    return new Response(null, { status: 302, headers: { location: await getObjectUrl(c.env, event.coverKey), "cache-control": "private, max-age=60" } });
+  }
+  if (!c.env.BUCKET) return c.notFound();
+  const obj = await getObject(c.env, event.coverKey).catch(() => null);
+  if (!obj) return c.notFound();
+  return new Response(obj.body, { headers: { "content-type": obj.metadata.contentType ?? "application/octet-stream", "cache-control": "private, max-age=60" } });
 });
 
 // -------------------------------------------------------------- cancel --
@@ -1086,7 +1336,7 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
   if (!reg) return forbidden(c, "หน้านี้เปิดหลังจากโฮสต์เช็กอินให้คุณแล้ว", "This page opens once your host has checked you in.", `/events/${id}`);
   const eligible = romanceEligible(user.profile);
 
-  let mates: { nickname: string; pronouns: string | null; signal: string | null; topics: string[] }[] = [];
+  let mates: { accountId: string; nickname: string; pronouns: string | null; signal: string | null; topics: string[]; resident: boolean }[] = [];
   if (event.groupsPublishedAt && reg.groupNo !== null) {
     const rows = await db
       .select({
@@ -1096,9 +1346,12 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
         nickname: profiles.nickname,
         pronouns: profiles.pronouns,
         showPronouns: profiles.showPronouns,
+        showResidentBadge: profiles.showResidentBadge,
+        bkkRegistered: accounts.bkkRegistered,
       })
       .from(registrations)
       .innerJoin(profiles, eq(profiles.accountId, registrations.accountId))
+      .innerJoin(accounts, eq(accounts.id, registrations.accountId))
       .where(
         and(
           eq(registrations.eventId, id),
@@ -1112,6 +1365,8 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
     mates = rows
       .filter((r) => !hidden.has(r.accountId))
       .map((r) => ({
+        accountId: r.accountId,
+        resident: showsResidentBadge(r, r),
         nickname: r.nickname,
         pronouns: r.showPronouns ? r.pronouns : null,
         // Never show romance signals to someone who isn't romance-eligible.
@@ -1119,7 +1374,11 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
         topics: r.topics ?? [],
       }));
   }
-  const buddies = await buddyNicknames(db, event, user.account.id);
+  const [buddies, vibeMap] = await Promise.all([
+    buddyNicknames(db, event, user.account.id),
+    vibesFor(db, [...mates.map((m) => m.accountId), user.account.id]),
+  ]);
+  const myVibe = vibeMap.get(user.account.id);
   const opts = [{ value: "", th: "ไม่เลือก", en: "No signal" }, ...signalOptions(eligible)];
 
   return page(
@@ -1146,6 +1405,13 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
                     <span>
                       <strong>{m.nickname}</strong>
                       {m.pronouns ? <small> ({m.pronouns})</small> : null}
+                      {m.resident ? (
+                        <>
+                          {" "}
+                          <ResidentTag v={v} />
+                        </>
+                      ) : null}
+                      <TypeSpark v={v} theirs={vibeMap.get(m.accountId)} mine={myVibe} />
                       {m.signal ? (
                         <>
                           {" "}

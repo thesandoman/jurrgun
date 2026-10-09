@@ -1,13 +1,17 @@
 /**
- * Onboarding (PRD §5, §21): feels like a short quiz, not a government form.
+ * Onboarding (PRD §5, §21): a light personality quiz, not a government form.
+ * Every stage is a card flow (src/ui/flow.tsx): one decision per screen.
  *
- *   1 basics       nickname, birth date (18+ gate), district, lives-in-Bangkok
- *   2 privacy      consents + code of conduct
- *   3 you          languages, interests, social style, times, what you're here for
- *   4 connections  relationship (private), age preference, optional romance mode
- *   5 wellbeing    optional UCLA-3 baseline, only with research consent
+ *   0 welcome      one splash screen
+ *   1 quiz         Bangkok Vibe quiz (skippable) → type reveal (/onboarding/type)
+ *   2 basics       nickname, birth date (18+ gate), district, lives-in-Bangkok
+ *   3 privacy      required consents + code of conduct, then optional extras
+ *   4 you          languages, interests, social style, times, what you're here for
+ *   5 connections  relationship (private), age preference, optional romance mode
+ *   6 wellbeing    optional UCLA-3 baseline, only with research consent
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { and, desc, eq } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { ageOn, canSwitchToSingle, MIN_AGE } from "../domain/rules";
@@ -24,22 +28,31 @@ import {
 } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
+import type { Lang } from "../lib/i18n";
 import { consents, profiles, wellbeing } from "../schema";
 import { requireUser } from "../lib/session";
-import { Button, Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
+import { AnswerCard, Flow, FlowStep } from "../ui/flow";
+import { Choices, Field, list, LinkButton, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
+import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
 export const onboarding = new Hono<AppEnv>();
 onboarding.use("*", requireUser);
 
-const STEPS = ["basics", "privacy", "you", "connections", "wellbeing"] as const;
+const STEPS = ["welcome", "quiz", "basics", "privacy", "you", "connections", "wellbeing"] as const;
 type Step = (typeof STEPS)[number];
+const stage = (s: Step) => ({ at: STEPS.indexOf(s), of: STEPS.length });
 
 export const CONSENT_VERSION = "2026-10-proto";
+export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
 
 /** The first step this user hasn't completed. */
-async function nextStep(c: { env: AppEnv["Bindings"] }, user: CurrentUser): Promise<Step | "done"> {
+async function nextStep(c: Context<AppEnv>, user: CurrentUser): Promise<Step | "done"> {
   const p = user.profile;
-  if (!p) return "basics";
+  if (!p) {
+    // The quiz comes first; it counts as done once taken or skipped.
+    if (getCookie(c, QUIZ_SKIP_COOKIE) === "1") return "basics";
+    return (await loadVibe(c.env, user.account.id)) ? "basics" : "welcome";
+  }
   if (p.onboardedAt) return "done";
   const db = getDb(c.env);
   const rows = await db
@@ -52,54 +65,130 @@ async function nextStep(c: { env: AppEnv["Bindings"] }, user: CurrentUser): Prom
   return "connections";
 }
 
-function Progress(props: { step: Step }) {
-  const i = STEPS.indexOf(props.step);
-  return (
-    <div class="steps" aria-hidden="true">
-      {STEPS.map((_, j) => (
-        <i class={j <= i ? "on" : ""} />
-      ))}
-    </div>
-  );
-}
+const TITLE = "Onboarding";
 
 onboarding.get("/", async (c) => {
   const step = await nextStep(c, c.var.user!);
   return c.redirect(step === "done" ? "/events" : `/onboarding/${step}`);
 });
 
-// --------------------------------------------------------------- forms --
+// ------------------------------------------------------------- helpers --
 
-function BasicsForm(props: { v: View; values?: Record<string, string>; error?: string }) {
+type Opt = { value: string; th: string; en: string };
+
+/** Pills without their own legend (the flow step's title is the legend). */
+function Pills(props: { name: string; options: Opt[]; values?: string[]; lang: Lang; type?: "checkbox" | "radio" }) {
+  const selected = new Set(props.values ?? []);
+  return (
+    <div class="pills">
+      {props.options.map((o) => (
+        <label class="pill">
+          <input type={props.type ?? "checkbox"} name={props.name} value={o.value} checked={selected.has(o.value)} />
+          <span>{props.lang === "en" ? o.en : o.th}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/** A required checkbox styled as a toggle row (Toggle has no `required`). */
+function MustToggle(props: { name: string; label: string; checked?: boolean }) {
+  return (
+    <label class="toggle">
+      <input type="checkbox" name={props.name} value="1" checked={props.checked} required />
+      <span>{props.label}</span>
+    </label>
+  );
+}
+
+// ------------------------------------------------------------- welcome --
+
+onboarding.get("/welcome", (c) => {
+  const { t } = view(c);
+  return page(
+    c,
+    { title: TITLE, bare: true },
+    <>
+      <div class="flow-top">
+        <div class="flow-progress"><i style="width:4%" /></div>
+      </div>
+      <div class="splash">
+        <div class="splash-mark" aria-hidden="true">◐</div>
+        <h1>{t("ยินดีต้อนรับสู่ BKK Social", "Welcome to BKK Social")}</h1>
+        <p class="muted">{t("เจอเพื่อนใหม่ในกลุ่มเล็ก ที่สถานที่จริงในกรุงเทพฯ", "New friends, small groups, real Bangkok places.")}</p>
+      </div>
+      <div class="tiles">
+        <span class="tile"><b>🧭</b>{t("ค้นหาไทป์ของคุณ", "Find your type")}</span>
+        <span class="tile"><b>👥</b>{t("โต๊ะละ 4 ถึง 6 คน", "Tables of 4 to 6")}</span>
+        <span class="tile"><b>🔒</b>{t("เป็นส่วนตัวเสมอ", "Private by default")}</span>
+      </div>
+      <div class="flow-bar">
+        <LinkButton href="/onboarding/quiz">{t("ไปกันเลย", "Let's go")}</LinkButton>
+      </div>
+    </>,
+  );
+});
+
+// ---------------------------------------------------------------- quiz --
+
+onboarding.get("/quiz", async (c) => {
+  const v = view(c);
+  const user = v.user!;
+  const row = await loadVibe(c.env, user.account.id);
+  const seed = quizSeed(user.account.id, row);
+  return page(
+    c,
+    { title: TITLE, bare: true },
+    <QuizFlow v={v} questions={quizQuestions(seed, row)} seed={seed} next="/onboarding/type" stage={stage("quiz")} skipAction="/onboarding/quiz/skip" />,
+  );
+});
+
+onboarding.post("/quiz/skip", (c) => {
+  setCookie(c, QUIZ_SKIP_COOKIE, "1", { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
+  return c.redirect("/onboarding/basics");
+});
+
+onboarding.get("/type", async (c) => {
+  const v = view(c);
+  const row = await loadVibe(c.env, v.user!.account.id);
+  if (!row) return c.redirect("/onboarding/quiz");
+  return page(
+    c,
+    { title: TITLE, bare: true },
+    <ResultView v={v} row={row} reveal continueHref="/onboarding" continueLabel={v.t("ต่อไป", "Continue")} visibilityNext="/onboarding/type" />,
+  );
+});
+
+// --------------------------------------------------------------- basics --
+
+function BasicsForm(props: { v: View; values?: Record<string, string>; error?: string; start?: number }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   const val = props.values ?? {};
   return (
-    <>
-      <Progress step="basics" />
-      <h1>{t("กรุงเทพฯ กว้างมาก — เริ่มจากตัวคุณก่อน", "Bangkok is huge. Let's start with you.")}</h1>
-      {props.error ? <Notice kind="error">{props.error}</Notice> : null}
-      <form method="post">
-        <Field label={t("ชื่อเล่นที่อยากให้คนอื่นเรียก", "What should people call you?")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} />
-        <Field label={t("วันเกิด", "Date of birth")} name="birthDate" type="date" value={val.birthDate ?? p?.birthDate} required hint={t("ต้องอายุ 18 ปีขึ้นไป — ไม่แสดงต่อผู้อื่น", "You must be 18+. Never shown to others.")} />
-        <Select
-          label={t("ส่วนใหญ่ใช้ชีวิตอยู่เขตไหน?", "Which district do you spend most of your week in?")}
-          name="district"
-          options={DISTRICTS}
-          value={val.district ?? p?.district}
-          lang={lang}
-          required
-          blank={t("เลือกเขต", "Choose a district")}
-        />
-        <Toggle name="livesInBangkok" label={t("ฉันอาศัยอยู่ในกรุงเทพฯ ตอนนี้", "I currently live in Bangkok")} checked={val.livesInBangkok === "1" || !!p} hint={t("ไม่จำเป็นต้องมีทะเบียนบ้านในกรุงเทพฯ", "Your household registration can be anywhere.")} />
-        <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมากรุงเทพฯ", "I'm new to Bangkok")} checked={val.newcomer === "1" || !!p?.newcomer} hint={t("เราจะแนะนำกิจกรรมสำหรับคนมาใหม่", "We'll suggest newcomer meet-ups.")} />
-        <Button>{t("ต่อไป", "Next")}</Button>
-      </form>
-    </>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("basics")} start={props.start} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+      <FlowStep emoji="👋" title={t("อยากให้เพื่อนเรียกว่าอะไร?", "What should people call you?")}>
+        <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} autocomplete="nickname" />
+      </FlowStep>
+      <FlowStep emoji="🎂" title={t("วันเกิดของคุณ", "When's your birthday?")} hint={t("สำหรับ 18+ เท่านั้น ไม่แสดงต่อผู้อื่น", "18+ only. Never shown to others.")}>
+        <Field label={t("วันเกิด", "Date of birth")} name="birthDate" type="date" value={val.birthDate ?? p?.birthDate} required />
+      </FlowStep>
+      <FlowStep emoji="📍" title={t("ส่วนใหญ่อยู่เขตไหน?", "Where do you spend your week?")}>
+        <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={val.district ?? p?.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
+      </FlowStep>
+      <FlowStep
+        emoji="🏙️"
+        title={t("คุณอยู่กรุงเทพฯ ไหม?", "Do you live in Bangkok?")}
+        info={t("ช่วงทดลองนี้สำหรับคนที่อาศัยอยู่ในกรุงเทพฯ ตอนนี้ ทะเบียนบ้านอยู่ที่ไหนก็ได้", "This pilot is for people living in Bangkok now. Your household registration can be anywhere.")}
+      >
+        <MustToggle name="livesInBangkok" label={t("ฉันอาศัยอยู่ในกรุงเทพฯ ตอนนี้", "I currently live in Bangkok")} checked={val.livesInBangkok === "1" || !!p} />
+        <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมา", "I'm new in town")} checked={val.newcomer === "1" || !!p?.newcomer} />
+      </FlowStep>
+    </Flow>
   );
 }
 
-onboarding.get("/basics", (c) => page(c, { title: "Onboarding" }, <BasicsForm v={view(c)} />));
+onboarding.get("/basics", (c) => page(c, { title: TITLE, bare: true }, <BasicsForm v={view(c)} />));
 
 onboarding.post("/basics", async (c) => {
   const v = view(c);
@@ -113,13 +202,13 @@ onboarding.post("/basics", async (c) => {
     livesInBangkok: str(body.livesInBangkok),
     newcomer: str(body.newcomer),
   };
-  const fail = (error: string) => page(c, { title: "Onboarding", status: 400 }, <BasicsForm v={v} values={vals} error={error} />);
-  if (!vals.nickname) return fail(t("กรอกชื่อเล่น", "Please add a nickname."));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(vals.birthDate)) return fail(t("กรอกวันเกิด", "Please add your date of birth."));
+  const fail = (error: string, start: number) => page(c, { title: TITLE, status: 400, bare: true }, <BasicsForm v={v} values={vals} error={error} start={start} />);
+  if (!vals.nickname) return fail(t("กรอกชื่อเล่น", "Please add a nickname."), 0);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(vals.birthDate)) return fail(t("กรอกวันเกิด", "Please add your date of birth."), 1);
   const age = ageOn(vals.birthDate);
-  if (!(age >= MIN_AGE && age < 120)) return fail(t("BKK Social สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "BKK Social is for adults aged 18 and over."));
-  if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."));
-  if (vals.livesInBangkok !== "1") return fail(t("ช่วงทดลองนี้สำหรับคนที่อาศัยอยู่ในกรุงเทพฯ", "This pilot is for people who currently live in Bangkok."));
+  if (!(age >= MIN_AGE && age < 120)) return fail(t("BKK Social สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "BKK Social is for adults aged 18 and over."), 1);
+  if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."), 2);
+  if (vals.livesInBangkok !== "1") return fail(t("ช่วงทดลองนี้สำหรับคนที่อาศัยอยู่ในกรุงเทพฯ", "This pilot is for people who currently live in Bangkok."), 3);
 
   const db = getDb(c.env);
   const data = { nickname: vals.nickname, birthDate: vals.birthDate, district: vals.district, newcomer: vals.newcomer === "1", locale: v.lang, updatedAt: new Date() };
@@ -128,44 +217,64 @@ onboarding.post("/basics", async (c) => {
   return c.redirect("/onboarding/privacy");
 });
 
-const CONSENT_ITEMS: { key: string; required: boolean; th: string; en: string; hintTh: string; hintEn: string }[] = [
-  { key: "service", required: true, th: "บัญชีและบริการกิจกรรม", en: "Account and event service", hintTh: "จำเป็นเพื่อให้คุณใช้งานได้", hintEn: "Needed for the app to work." },
-  { key: "safety", required: true, th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation", hintTh: "ใช้ตรวจสอบรายงานและป้องกันการคุกคาม", hintEn: "Used to review reports and prevent harassment." },
-  { key: "personalization", required: false, th: "จัดกลุ่มและแนะนำกิจกรรมตามความสนใจ", en: "Personalised groups and event suggestions", hintTh: "ใช้ความสนใจและภาษาในการจัดโต๊ะ", hintEn: "Uses your interests and languages to seat you well." },
-  { key: "research", required: false, th: "City Pulse — ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse — anonymous city research", hintTh: "กทม. เห็นเฉพาะภาพรวมจากอย่างน้อย 10 คน", hintEn: "BMA only sees totals from 10+ people." },
-  { key: "notifications", required: false, th: "การแจ้งเตือนกิจกรรม", en: "Event notifications", hintTh: "เตือนก่อนงานและแจ้งเมื่อมีที่ว่าง", hintEn: "Reminders and waitlist updates." },
+// -------------------------------------------------------------- privacy --
+
+const CONSENT_ITEMS: { key: string; required: boolean; emoji: string; th: string; en: string }[] = [
+  { key: "service", required: true, emoji: "🎟️", th: "บัญชีและบริการกิจกรรม", en: "Account and events" },
+  { key: "safety", required: true, emoji: "🛡️", th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation" },
+  { key: "personalization", required: false, emoji: "🪑", th: "จัดโต๊ะตามความสนใจ", en: "Seat me by my interests" },
+  { key: "research", required: false, emoji: "📊", th: "City Pulse วิจัยเมืองแบบไม่ระบุตัวตน", en: "City Pulse anonymous research" },
+  { key: "notifications", required: false, emoji: "🔔", th: "แจ้งเตือนกิจกรรม", en: "Event reminders" },
 ];
 
 function PrivacyForm(props: { v: View; error?: string }) {
   const { t } = props.v;
   return (
-    <>
-      <Progress step="privacy" />
-      <h1>{t("ความเป็นส่วนตัวของคุณ คุณเลือกเอง", "Your privacy, your call")}</h1>
-      <p class="muted">{t("เปลี่ยนได้ทุกเมื่อในศูนย์ความเป็นส่วนตัว", "Change any of these later in the Privacy Center.")}</p>
-      {props.error ? <Notice kind="error">{props.error}</Notice> : null}
-      <form method="post">
-        {CONSENT_ITEMS.map((i) => (
-          <Toggle
-            name={`consent_${i.key}`}
-            label={`${t(i.th, i.en)}${i.required ? t(" (จำเป็น)", " (required)") : ""}`}
-            hint={t(i.hintTh, i.hintEn)}
-            checked={i.required}
-          />
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("privacy")} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+      <FlowStep
+        emoji="🤝"
+        title={t("สิ่งที่จำเป็น", "The must-haves")}
+        hint={t("ต้องมี 3 ข้อนี้เพื่อใช้งาน", "These three keep the app working and safe.")}
+        info={
+          <>
+            <p>
+              {t(
+                "บริการ: ใช้บัญชีและการจองกิจกรรมของคุณ ความปลอดภัย: ใช้ตรวจสอบรายงานและป้องกันการคุกคาม",
+                "Service: your account and bookings. Safety: used to review reports and prevent harassment.",
+              )}
+            </p>
+            <p>
+              <a href="/privacy" target="_blank">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a> ·{" "}
+              <a href="/code-of-conduct" target="_blank">{t("หลักปฏิบัติของชุมชน", "Code of conduct")}</a>
+            </p>
+          </>
+        }
+      >
+        {CONSENT_ITEMS.filter((i) => i.required).map((i) => (
+          <MustToggle name={`consent_${i.key}`} label={`${i.emoji} ${t(i.th, i.en)}`} checked />
         ))}
-        <Toggle name="conduct" label={t("ฉันยอมรับหลักปฏิบัติของชุมชน", "I agree to the community code of conduct")} hint={t("อ่านได้ที่ /code-of-conduct", "Read it at /code-of-conduct")} />
-        <p class="muted">
-          <a href="/privacy" target="_blank">{t("อ่านนโยบายความเป็นส่วนตัว", "Read the privacy notice")}</a>
-        </p>
-        <Button>{t("ต่อไป", "Next")}</Button>
-      </form>
-    </>
+        <MustToggle name="conduct" label={`📜 ${t("ฉันยอมรับหลักปฏิบัติของชุมชน", "I agree to the code of conduct")}`} />
+      </FlowStep>
+      <FlowStep
+        emoji="✨"
+        title={t("ตัวเลือกเพิ่มเติม", "Optional extras")}
+        hint={t("เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "Change any of these later in Settings.")}
+        info={t(
+          "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: กทม. เห็นเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนงานและเมื่อมีที่ว่าง",
+          "Seating uses your interests and languages. City Pulse: BMA only sees totals from 10 or more people. Reminders: before events and when a spot opens.",
+        )}
+      >
+        {CONSENT_ITEMS.filter((i) => !i.required).map((i) => (
+          <Toggle name={`consent_${i.key}`} label={`${i.emoji} ${t(i.th, i.en)}`} />
+        ))}
+      </FlowStep>
+    </Flow>
   );
 }
 
 onboarding.get("/privacy", (c) => {
   if (!c.var.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: "Onboarding" }, <PrivacyForm v={view(c)} />);
+  return page(c, { title: TITLE, bare: true }, <PrivacyForm v={view(c)} />);
 });
 
 onboarding.post("/privacy", async (c) => {
@@ -177,7 +286,7 @@ onboarding.post("/privacy", async (c) => {
   if (!granted("service") || !granted("safety") || str(body.conduct) !== "1") {
     return page(
       c,
-      { title: "Onboarding", status: 400 },
+      { title: TITLE, status: 400, bare: true },
       <PrivacyForm v={v} error={v.t("ต้องยอมรับบริการ ความปลอดภัย และหลักปฏิบัติ เพื่อใช้งานต่อ", "Service, safety and the code of conduct are needed to continue.")} />,
     );
   }
@@ -191,29 +300,39 @@ onboarding.post("/privacy", async (c) => {
   return c.redirect("/onboarding/you");
 });
 
+// ------------------------------------------------------------------ you --
+
 function YouForm(props: { v: View; error?: string }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   return (
-    <>
-      <Progress step="you" />
-      <h1>{t("คุณเป็นสายไหน? 🍜🏃🎨", "What's your vibe? 🍜🏃🎨")}</h1>
-      {props.error ? <Notice kind="error">{props.error}</Notice> : null}
-      <form method="post">
-        <Choices legend={t("พูดภาษาอะไรได้บ้าง", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={p?.languages.length ? p.languages : [lang]} lang={lang} />
-        <Choices legend={t("สนใจอะไรบ้าง", "What are you into?")} name="interests" options={INTERESTS} values={p?.interests} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
-        <Choices legend={t("ชอบเจอคนแบบไหน", "How do you like to meet people?")} name="socialStyles" options={SOCIAL_STYLES} values={p?.socialStyles} lang={lang} />
-        <Choices legend={t("เวลาที่สะดวก", "When suits you best?")} name="eventStyle" options={EVENT_STYLES} values={p?.eventStyle ? [p.eventStyle] : []} lang={lang} type="radio" />
-        <Choices legend={t("มาที่นี่เพื่อ…", "I'm here for…")} name="intents" options={INTENTS} values={p?.intents ?? ["friends"]} lang={lang} />
-        <Button>{t("ต่อไป", "Next")}</Button>
-      </form>
-    </>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("you")} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+      <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} need={1} needText={t("เลือกอย่างน้อย 1", "Pick at least one")}>
+        <Pills name="languages" options={LANGUAGES} values={p?.languages.length ? p.languages : [lang]} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="🍜" title={t("สนใจอะไรบ้าง?", "What are you into?")} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} need={1} needText={t("เลือกอย่างน้อย 1", "Pick at least one")}>
+        <Pills name="interests" options={INTERESTS} values={p?.interests} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="👥" title={t("ชอบเจอคนแบบไหน?", "How do you like to meet people?")}>
+        <Pills name="socialStyles" options={SOCIAL_STYLES} values={p?.socialStyles} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="🕐" title={t("เวลาไหนสะดวกที่สุด?", "When suits you best?")} auto>
+        <div class="answers">
+          {EVENT_STYLES.map((o) => (
+            <AnswerCard name="eventStyle" value={o.value} label={lang === "en" ? o.en : o.th} checked={p?.eventStyle === o.value} />
+          ))}
+        </div>
+      </FlowStep>
+      <FlowStep emoji="🎯" title={t("มาที่นี่เพื่อ…", "I'm here for…")}>
+        <Pills name="intents" options={INTENTS} values={p?.intents ?? ["friends"]} lang={lang} />
+      </FlowStep>
+    </Flow>
   );
 }
 
 onboarding.get("/you", (c) => {
   if (!c.var.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: "Onboarding" }, <YouForm v={view(c)} />);
+  return page(c, { title: TITLE, bare: true }, <YouForm v={view(c)} />);
 });
 
 onboarding.post("/you", async (c) => {
@@ -228,7 +347,7 @@ onboarding.post("/you", async (c) => {
   const eventStyle = pickAll("eventStyle", values(EVENT_STYLES))[0] ?? null;
   const intents = pickAll("intents", values(INTENTS));
   if (languages.length === 0 || interests.length === 0) {
-    return page(c, { title: "Onboarding", status: 400 }, <YouForm v={v} error={v.t("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.")} />);
+    return page(c, { title: TITLE, status: 400, bare: true }, <YouForm v={v} error={v.t("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.")} />);
   }
   // Keep romance if it was already on; this form only edits non-romance intents.
   const keepRomance = user.profile.intents.includes("romance") ? ["romance"] : [];
@@ -239,6 +358,9 @@ onboarding.post("/you", async (c) => {
   return c.redirect("/onboarding/connections");
 });
 
+// ---------------------------------------------------------- connections --
+
+/** Used by Settings (one form). Onboarding uses the same field names, split into screens. */
 export function ConnectionsFields(props: { v: View }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
@@ -259,25 +381,36 @@ export function ConnectionsFields(props: { v: View }) {
       <small>{t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events, and kept private.")}</small>
       <details open={!!p?.romanceOn}>
         <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ — เฉพาะคนโสด)", "Open to something more (optional — Single only)")}</summary>
-        <p class="muted">
-          {t(
-            "ค่าเริ่มต้นคือโหมดเพื่อนเท่านั้น หากเปิด คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' ได้หลังกิจกรรม และจะรู้ก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน ข้อมูลด้านล่างเป็นความลับ เจ้าหน้าที่ดูไม่ได้ และจะถูกลบเมื่อปิดโหมดนี้",
-            "Friends-only is the default. If you switch this on, you can choose 'open to something more' after events, and you'll only find out if it's mutual. The details below are private, invisible to staff, and deleted when you switch this off.",
-          )}
-        </p>
-        <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={!!p?.romanceOn} />
-        <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="—" />
-        <Choices
-          legend={t("เปิดใจที่จะพบ…", "Open to meeting…")}
-          name="romanceOpenTo"
-          options={[{ value: "everyone", th: "ทุกคน", en: "Everyone" }, ...GENDER_IDENTITIES.filter((g) => g.value !== "prefer_not" && g.value !== "self")]}
-          values={openTo === "everyone" ? ["everyone"] : Array.isArray(openTo) ? openTo : []}
-          lang={lang}
-        />
+        <p class="muted">{t(ROMANCE_INFO[0], ROMANCE_INFO[1])}</p>
+        <RomanceFields v={props.v} openTo={openTo} />
         <Field label={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")} name="pronouns" value={p?.pronouns} maxlength={30} />
         <Toggle name="showPronouns" label={t("แสดงสรรพนามในโปรไฟล์", "Show my pronouns on my profile")} checked={!!p?.showPronouns} />
         <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
       </details>
+    </>
+  );
+}
+
+const ROMANCE_INFO: [string, string] = [
+  "ค่าเริ่มต้นคือโหมดเพื่อนเท่านั้น หากเปิด คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' ได้หลังกิจกรรม และจะรู้ก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน ข้อมูลด้านล่างเป็นความลับ เจ้าหน้าที่ดูไม่ได้ และจะถูกลบเมื่อปิดโหมดนี้",
+  "Friends-only is the default. If you switch this on, you can choose 'open to something more' after events, and you'll only find out if it's mutual. The details below are private, invisible to staff, and deleted when you switch this off.",
+];
+
+function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | undefined }) {
+  const { t, lang } = props.v;
+  const p = props.v.user?.profile;
+  const openTo = props.openTo;
+  return (
+    <>
+      <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={!!p?.romanceOn} />
+      <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="—" />
+      <Choices
+        legend={t("เปิดใจที่จะพบ…", "Open to meeting…")}
+        name="romanceOpenTo"
+        options={[{ value: "everyone", th: "ทุกคน", en: "Everyone" }, ...GENDER_IDENTITIES.filter((g) => g.value !== "prefer_not" && g.value !== "self")]}
+        values={openTo === "everyone" ? ["everyone"] : Array.isArray(openTo) ? openTo : []}
+        lang={lang}
+      />
     </>
   );
 }
@@ -326,21 +459,46 @@ export async function connectionsPatch(
   return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null };
 }
 
+function ConnectionsFlow(props: { v: View; error?: string; start?: number }) {
+  const { t, lang } = props.v;
+  const p = props.v.user?.profile;
+  const rel = p?.relationship ?? "prefer_not";
+  return (
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("connections")} start={props.start} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+      <FlowStep emoji="💬" title={t("สถานะความสัมพันธ์", "Relationship status")} hint={t("ส่วนตัว ไม่แสดงต่อใคร", "Private. Never shown to anyone.")} auto>
+        <div class="answers">
+          {RELATIONSHIP.map((o) => (
+            <AnswerCard name="relationship" value={o.value} label={lang === "en" ? o.en : o.th} checked={rel === o.value} />
+          ))}
+        </div>
+      </FlowStep>
+      <FlowStep emoji="🎈" title={t("อยากเชื่อมต่อกับช่วงอายุไหน?", "Which ages would you like to connect with?")} hint={t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events. Private.")}>
+        <div class="grid2" style="grid-template-columns:1fr 1fr">
+          <Field label={t("ตั้งแต่", "From")} name="ageMin" type="number" min={18} max={99} value={p?.ageMin ?? 18} />
+          <Field label={t("ถึง", "To")} name="ageMax" type="number" min={18} max={99} value={p?.ageMax ?? 99} />
+        </div>
+      </FlowStep>
+      <FlowStep emoji="🏷️" title={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")}>
+        <Field label={t("สรรพนาม", "Pronouns")} name="pronouns" value={p?.pronouns} maxlength={30} placeholder={t("เช่น she/her", "e.g. they/them")} />
+        <Toggle name="showPronouns" label={t("แสดงในโปรไฟล์", "Show on my profile")} checked={!!p?.showPronouns} />
+      </FlowStep>
+      <FlowStep
+        emoji="💘"
+        title={t("เปิดใจมากกว่าเพื่อน?", "Open to something more?")}
+        hint={t("ไม่บังคับ เฉพาะคนโสด ค่าเริ่มต้นคือเพื่อน", "Optional, Single only. Friends-only by default.")}
+        info={t(ROMANCE_INFO[0], ROMANCE_INFO[1])}
+      >
+        <RomanceFields v={props.v} openTo={p?.romanceOpenTo} />
+        <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
+      </FlowStep>
+    </Flow>
+  );
+}
+
 onboarding.get("/connections", (c) => {
   const v = view(c);
   if (!v.user!.profile) return c.redirect("/onboarding/basics");
-  return page(
-    c,
-    { title: "Onboarding" },
-    <>
-      <Progress step="connections" />
-      <h1>{v.t("หลังกิจกรรม อยากเชื่อมต่อแบบไหน?", "After events, how would you like to connect?")}</h1>
-      <form method="post">
-        <ConnectionsFields v={v} />
-        <Button>{v.t("ต่อไป", "Next")}</Button>
-      </form>
-    </>,
-  );
+  return page(c, { title: TITLE, bare: true }, <ConnectionsFlow v={v} />);
 });
 
 onboarding.post("/connections", async (c) => {
@@ -351,18 +509,8 @@ onboarding.post("/connections", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const result = await connectionsPatch(body, p);
   if ("error" in result) {
-    return page(
-      c,
-      { title: "Onboarding", status: 400 },
-      <>
-        <Progress step="connections" />
-        <Notice kind="error">{v.t(...result.error)}</Notice>
-        <form method="post">
-          <ConnectionsFields v={v} />
-          <Button>{v.t("ต่อไป", "Next")}</Button>
-        </form>
-      </>,
-    );
+    const start = result.error[1].includes("consent") ? 3 : 0;
+    return page(c, { title: TITLE, status: 400, bare: true }, <ConnectionsFlow v={v} error={v.t(...result.error)} start={start} />);
   }
   const db = getDb(c.env);
   const intents = p.intents.filter((i) => i !== "romance");
@@ -375,6 +523,8 @@ onboarding.post("/connections", async (c) => {
   await batch(c.env, queries);
   return c.redirect("/onboarding/wellbeing");
 });
+
+// ------------------------------------------------------------ wellbeing --
 
 /** UCLA 3-item loneliness scale (1 hardly ever – 3 often). */
 export const UCLA3: [string, string][] = [
@@ -410,23 +560,37 @@ onboarding.get("/wellbeing", async (c) => {
     await finish(c, user.account.id);
     return c.redirect("/events?notice=welcome");
   }
+  const { t, lang } = v;
   return page(
     c,
-    { title: "Onboarding" },
-    <>
-      <Progress step="wellbeing" />
-      <h1>{v.t("คำถามสั้น ๆ 3 ข้อ (ไม่บังคับ)", "Three quick questions (optional)")}</h1>
-      <p class="muted">{v.t("ช่วยให้ กทม. รู้ว่ากิจกรรมช่วยให้คนเหงาน้อยลงหรือไม่ คำตอบไม่ผูกกับตัวตนของคุณ", "Helps BMA learn whether events reduce loneliness. Your answers aren't linked to your identity.")}</p>
-      <form method="post">
-        {UCLA3.map(([th, en], i) => (
-          <Choices legend={v.t(th, en)} name={`q${i + 1}`} options={UCLA_SCALE} lang={v.lang} type="radio" />
-        ))}
-        <div class="row">
-          <Button>{v.t("ส่งคำตอบ", "Submit")}</Button>
-          <Button kind="ghost" name="skip" value="1">{v.t("ข้าม", "Skip")}</Button>
-        </div>
-      </form>
-    </>,
+    { title: TITLE, bare: true },
+    <Flow
+      v={v}
+      submit={t("ส่งคำตอบ", "Submit")}
+      stage={stage("wellbeing")}
+      autoSubmit
+      extra={
+        <button type="submit" class="skip" name="skip" value="1" formnovalidate>
+          {t("ข้าม", "Skip")}
+        </button>
+      }
+    >
+      {UCLA3.map(([th, en], i) => (
+        <FlowStep
+          emoji={i === 0 ? "🌱" : undefined}
+          title={t(th, en)}
+          hint={i === 0 ? t("ไม่บังคับ คำตอบไม่ผูกกับตัวตนของคุณ", "Optional. Not linked to your identity.") : undefined}
+          info={i === 0 ? t("ช่วยให้ กทม. รู้ว่ากิจกรรมช่วยให้คนเหงาน้อยลงหรือไม่", "Helps BMA learn whether events reduce loneliness.") : undefined}
+          auto
+        >
+          <div class="answers">
+            {UCLA_SCALE.map((o) => (
+              <AnswerCard name={`q${i + 1}`} value={o.value} label={lang === "en" ? o.en : o.th} />
+            ))}
+          </div>
+        </FlowStep>
+      ))}
+    </Flow>,
   );
 });
 

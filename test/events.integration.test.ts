@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { blocks, buddyPairs, events, feedback, registrations, strikes } from "../src/schema";
+import { accounts, blocks, buddyPairs, events, feedback, profiles, registrations, strikes, vibes } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
 import { shortCode } from "../src/lib/qr";
 
@@ -350,5 +350,72 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(await r.text()).toContain("This event has been cancelled");
     const stranger = await createMember();
     expect((await req(`/events/${ev}`, { cookie: stranger.cookie })).status).toBe(404);
+  });
+  it("filters resident priority events and labels them", async () => {
+    const m = await createMember();
+    const base = { district: "lat_krabang", startsAt: new Date(Date.now() + 2 * HOUR) };
+    const prio = await mkEvent({ ...base, residentPriority: true });
+    const quota = await mkEvent({ ...base, residentQuota: 3 });
+    const plain = await mkEvent(base);
+    const html = await (await req("/events?district=lat_krabang&resident=1", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain(`EV-${prio.slice(0, 8)}`);
+    expect(html).toContain(`EV-${quota.slice(0, 8)}`);
+    expect(html).not.toContain(`EV-${plain.slice(0, 8)}`);
+    expect(html).toContain("Resident priority events");
+    expect(html).toContain("🏙️ Resident priority");
+  });
+
+  it("shows the Bangkok Type card until I take the quiz or hide it", async () => {
+    const m = await createMember();
+    const html = async (cookie = m.cookie) => (await req("/events", { cookie: `${cookie}; lang=en` })).text();
+    expect(await html()).toContain("Find your Bangkok Type (2 min)");
+    const hide = await req("/events/quiz-hint/dismiss", { cookie: m.cookie, method: "POST" });
+    expect(hide.status).toBe(302);
+    expect(hide.headers.get("set-cookie") ?? "").toContain("bkk_quiz_hint=hide");
+    expect(await html(`${m.cookie}; bkk_quiz_hint=hide`)).not.toContain("Find your Bangkok Type");
+    await db().insert(vibes).values({ accountId: m.id, vector: {}, archetype: "rhythm+", visible: false });
+    expect(await html()).not.toContain("Find your Bangkok Type");
+  });
+
+  it("falls back to the emoji cover when there is no storage binding", async () => {
+    const m = await createMember();
+    const ev = await mkEvent({ coverKey: `uploads/events/x/${newId()}`, tags: ["food"] });
+    const html = await (await req(`/events/${ev}`, { cookie: m.cookie })).text();
+    expect(html).toContain("🍜");
+    expect(html).not.toContain("<img");
+    expect((await req(`/events/${ev}/cover`, { cookie: m.cookie })).status).toBe(404);
+  });
+
+  it("live page: resident badge only when verified AND opted in; Bangkok Type only when visible; nobody hidden", async () => {
+    const [aNick, bNick, cNick] = [`A${nick("a")}`, `B${nick("b")}`, `C${nick("c")}`];
+    const me = await createMember({ nickname: nick("Me") });
+    const a = await createMember({ nickname: aNick, bkkRegistered: "verified" });
+    const b = await createMember({ nickname: bNick, bkkRegistered: "verified" });
+    const c = await createMember({ nickname: cNick });
+    const ev = await mkEvent({ startsAt: new Date(Date.now() - HOUR), groupsPublishedAt: new Date() });
+    const at = new Date();
+    for (const x of [me, a, b, c]) await mkReg(ev, x.id, { checkedInAt: at, groupNo: 1 });
+    // a: verified + opted in. b: verified, not opted in. c: opted in, not verified.
+    await db().update(profiles).set({ showResidentBadge: true }).where(eq(profiles.accountId, a.id));
+    await db().update(profiles).set({ showResidentBadge: true }).where(eq(profiles.accountId, c.id));
+    await db().update(accounts).set({ bkkRegistered: "not_verified" }).where(eq(accounts.id, c.id));
+    // Types: a hidden, b visible (Night Owl), me has one too (Early Riser: same axis = interesting).
+    await db().insert(vibes).values([
+      { accountId: a.id, vector: {}, archetype: "energy+", visible: false },
+      { accountId: b.id, vector: {}, archetype: "rhythm+", visible: true },
+      { accountId: me.id, vector: {}, archetype: "rhythm-", visible: false },
+    ]);
+    const html = await (await req(`/events/${ev}/live`, { cookie: `${me.cookie}; lang=en` })).text();
+    const items = html.split('<li class="person">').slice(1);
+    const item = (n: string) => items.find((x) => x.includes(n)) ?? "";
+    expect(item(aNick)).toContain("Bangkok resident");
+    expect(item(bNick)).not.toContain("Bangkok resident");
+    expect(item(cNick)).not.toContain("Bangkok resident");
+    expect(item(aNick)).not.toContain("The Connector");
+    expect(item(bNick)).toContain("🌙 The Night Owl");
+    expect(item(bNick)).toContain("Interesting match");
+    expect(item(bNick)).toContain("best late-night bite in Bangkok");
+    // Everyone is still listed (types never hide anyone).
+    for (const n of [aNick, bNick, cNick]) expect(html).toContain(n);
   });
 });

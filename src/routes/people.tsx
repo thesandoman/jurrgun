@@ -47,10 +47,12 @@ import {
   registrations,
   REPORT_REASONS,
   reports,
+  vibes,
   type Event,
   type Profile,
 } from "../schema";
-import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
+import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, type ArchetypeKey } from "../vibe/archetypes";
+import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -92,9 +94,73 @@ async function blockedSet(db: Db, me: string): Promise<Set<string>> {
   return new Set(rows.map((r) => (r.blocker === me ? r.blocked : r.blocker)));
 }
 
+// ------------------------------------------- badges and Bangkok Types --
+//
+// Shared with the live page in events.tsx. Both are DISPLAY ONLY: they never
+// order, filter or hide anyone (PRD §3.2 badge is opt-in; Bangkok Types are
+// conversation starters, never a ranking).
+
+/** The opt-in "Bangkok Registered Resident" badge: verified AND opted in. */
+export function showsResidentBadge(a: { bkkRegistered: string }, p: { showResidentBadge: boolean }): boolean {
+  return a.bkkRegistered === "verified" && p.showResidentBadge === true;
+}
+
+export function ResidentTag(props: { v: View }) {
+  return <Tag tone="ok">{props.v.t("🏙️ ผู้มีทะเบียนบ้านกรุงเทพฯ", "🏙️ Bangkok resident")}</Tag>;
+}
+
+export type VibeInfo = { archetype: ArchetypeKey; modifier: string | null; visible: boolean };
+
+/** Quiz results for these accounts, in ONE query. Unknown archetype keys are dropped. */
+export async function vibesFor(db: Db, ids: string[]): Promise<Map<string, VibeInfo>> {
+  const out = new Map<string, VibeInfo>();
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return out;
+  const rows = await db
+    .select({ accountId: vibes.accountId, archetype: vibes.archetype, modifier: vibes.modifier, visible: vibes.visible })
+    .from(vibes)
+    .where(inArray(vibes.accountId, unique))
+    .limit(unique.length);
+  for (const r of rows) {
+    if (!(r.archetype in ARCHETYPES)) continue;
+    out.set(r.accountId, { archetype: r.archetype as ArchetypeKey, modifier: r.modifier, visible: r.visible });
+  }
+  return out;
+}
+
+/**
+ * Their Bangkok Type (only if THEY made it visible) and, when I have taken
+ * the quiz, a light conversation spark: the match label between our types
+ * (if any) and their type's conversation starter.
+ */
+export function TypeSpark(props: { v: View; theirs: VibeInfo | undefined; mine: VibeInfo | undefined }) {
+  const { t, lang } = props.v;
+  const theirs = props.theirs;
+  if (!theirs || !theirs.visible) return null;
+  const a = ARCHETYPES[theirs.archetype];
+  const name = typeName(theirs.archetype, theirs.modifier)[lang];
+  const ml = props.mine ? matchLabel(props.mine.archetype, theirs.archetype) : null;
+  const m = ml ? MATCH_LABELS[ml] : null;
+  return (
+    <span class="type-spark">
+      {" "}
+      <Tag tone="muted">
+        {a.emoji} {name}
+      </Tag>
+      {props.mine ? (
+        <small class="muted" style="display:block">
+          {m ? `${m.emoji} ${m.name[lang]}: ${m.copy[lang]} ` : ""}
+          💬 {t("ชวนคุย: ", "Conversation spark: ")}
+          {a.starter[lang]}
+        </small>
+      ) : null}
+    </span>
+  );
+}
+
 // ----------------------------------------------------------- People I Met --
 
-type Candidate = { accountId: string; profile: Profile };
+type Candidate = { accountId: string; profile: Profile; resident: boolean };
 
 type PeopleState =
   | { kind: "missing" }
@@ -147,7 +213,7 @@ async function loadPeople(c: Ctx, eventId: string): Promise<PeopleState> {
     .filter((r) => isActive(r.account))
     .filter((r) => !blocked.has(r.account.id))
     .filter((r) => mutualAgeOk(myAge, { age: ageOn(r.profile.birthDate), ageMin: r.profile.ageMin, ageMax: r.profile.ageMax }))
-    .map((r) => ({ accountId: r.account.id, profile: r.profile }));
+    .map((r) => ({ accountId: r.account.id, profile: r.profile, resident: showsResidentBadge(r.account, r.profile) }));
   return { kind: "open", event, candidates };
 }
 
@@ -182,7 +248,7 @@ function PeopleClosed(props: { v: View; state: Exclude<PeopleState, { kind: "ope
   );
 }
 
-function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; mine: Map<string, Choice>; romance: boolean }) {
+function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; mine: Map<string, Choice>; romance: boolean; vibes: Map<string, VibeInfo>; myVibe?: VibeInfo }) {
   const { t, lang } = props.v;
   const allowed = new Set<string>(allowedChoices(props.romance));
   const options = CHOICE_LABELS.filter((o) => allowed.has(o.value));
@@ -204,6 +270,12 @@ function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; min
         <form method="post">
           {props.candidates.map((p) => (
             <Card>
+              {p.resident || props.vibes.get(p.accountId)?.visible ? (
+                <p class="person-extras">
+                  {p.resident ? <ResidentTag v={props.v} /> : null}
+                  <TypeSpark v={props.v} theirs={props.vibes.get(p.accountId)} mine={props.myVibe} />
+                </p>
+              ) : null}
               <Choices
                 legend={displayName(p.profile)}
                 name={`choice_${p.accountId}`}
@@ -248,10 +320,11 @@ peopleRoutes.get("/events/:id/people", requireMember, async (c) => {
   const romance = romanceEligible(me.profile!);
   // A stored "romance" from when the user was eligible is shown as "friend" now.
   if (!romance) for (const [k, ch] of mine) if (ch === "romance") mine.set(k, "friend");
+  const vibeMap = await vibesFor(getDb(c.env), [...ids, me.account.id]);
   return page(
     c,
     { title: v.t("คนที่ได้เจอ", "People I met"), tab: "mine" },
-    <PeopleForm v={v} event={state.event} candidates={state.candidates} mine={mine} romance={romance} />,
+    <PeopleForm v={v} event={state.event} candidates={state.candidates} mine={mine} romance={romance} vibes={vibeMap} myVibe={vibeMap.get(me.account.id)} />,
   );
 });
 
@@ -370,13 +443,13 @@ type CircleRow = {
   id: string;
   level: string;
   createdAt: Date;
-  other: { id: string; name: string };
+  other: { id: string; name: string; resident: boolean; vibe?: VibeInfo };
   event: { id: string; title: string; startsAt: Date } | null;
   mine: { method: string; value: string } | null;
   theirs: { method: string; value: string } | null;
 };
 
-async function loadCircle(c: Ctx): Promise<CircleRow[]> {
+async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInfo }> {
   const db = getDb(c.env);
   const me = c.var.user!.account.id;
   const lang = c.var.lang;
@@ -386,12 +459,21 @@ async function loadCircle(c: Ctx): Promise<CircleRow[]> {
     .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), isNull(connections.removedAt)))
     .orderBy(desc(connections.createdAt))
     .limit(200);
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return { rows: [] };
   const otherIds = [...new Set(rows.map((r) => (r.aAccount === me ? r.bAccount : r.aAccount)))];
   const eventIds = [...new Set(rows.map((r) => r.eventId))];
-  const [people, evs, shares] = await Promise.all([
+  const [people, evs, shares, vibeMap] = await Promise.all([
     db
-      .select({ id: accounts.id, status: accounts.status, suspendedUntil: accounts.suspendedUntil, nickname: profiles.nickname, pronouns: profiles.pronouns, showPronouns: profiles.showPronouns })
+      .select({
+        id: accounts.id,
+        status: accounts.status,
+        suspendedUntil: accounts.suspendedUntil,
+        bkkRegistered: accounts.bkkRegistered,
+        nickname: profiles.nickname,
+        pronouns: profiles.pronouns,
+        showPronouns: profiles.showPronouns,
+        showResidentBadge: profiles.showResidentBadge,
+      })
       .from(accounts)
       .innerJoin(profiles, eq(profiles.accountId, accounts.id))
       .where(inArray(accounts.id, otherIds))
@@ -402,6 +484,7 @@ async function loadCircle(c: Ctx): Promise<CircleRow[]> {
       .from(contactShares)
       .where(inArray(contactShares.connectionId, rows.map((r) => r.id)))
       .limit(400),
+    vibesFor(db, [...otherIds, me]),
   ]);
   const personById = new Map(people.map((p) => [p.id, p]));
   const eventById = new Map(evs.map((e) => [e.id, e]));
@@ -417,16 +500,16 @@ async function loadCircle(c: Ctx): Promise<CircleRow[]> {
       id: r.id,
       level: r.level,
       createdAt: r.createdAt,
-      other: { id: otherId, name: displayName(p) },
+      other: { id: otherId, name: displayName(p), resident: showsResidentBadge(p, p), vibe: vibeMap.get(otherId) },
       event: e ? { id: e.id, title: eventTitle(e, lang), startsAt: e.startsAt } : null,
       mine: mine ? { method: mine.method, value: mine.value } : null,
       theirs: theirs ? { method: theirs.method, value: theirs.value } : null,
     });
   }
-  return out;
+  return { rows: out, myVibe: vibeMap.get(me) };
 }
 
-function Circle(props: { v: View; rows: CircleRow[]; error?: { id: string; text: string } }) {
+function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string } }) {
   const { t, lang } = props.v;
   const method = (m: string) => label(CONTACT_METHODS, m, lang);
   return (
@@ -451,7 +534,16 @@ function Circle(props: { v: View; rows: CircleRow[]; error?: { id: string; text:
       ) : (
         props.rows.map((r) => (
           <Card>
-            <h2>{r.other.name}</h2>
+            <h2>
+              {r.other.name}
+              {r.other.resident ? (
+                <>
+                  {" "}
+                  <ResidentTag v={props.v} />
+                </>
+              ) : null}
+            </h2>
+            <TypeSpark v={props.v} theirs={r.other.vibe} mine={props.myVibe} />
             <p class="muted">
               {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : ""} · {label(CHOICE_LABELS, r.level, lang)}
             </p>
@@ -493,8 +585,8 @@ function Circle(props: { v: View; rows: CircleRow[]; error?: { id: string; text:
 
 peopleRoutes.get("/connections", requireMember, async (c) => {
   const v = view(c);
-  const rows = await loadCircle(c);
-  return page(c, { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections" }, <Circle v={v} rows={rows} />);
+  const { rows, myVibe } = await loadCircle(c);
+  return page(c, { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} />);
 });
 
 /** The connection, if I'm one of its two people and it's still active. */
@@ -513,11 +605,11 @@ peopleRoutes.post("/connections/:id/share", requireMember, async (c) => {
   const methodRaw = str(body.method);
   const value = cleanHandle(str(body.value));
   if (!CONTACT_METHODS.some((m) => m.value === methodRaw) || !value) {
-    const rows = await loadCircle(c);
+    const { rows, myVibe } = await loadCircle(c);
     return page(
       c,
       { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections", status: 400 },
-      <Circle v={v} rows={rows} error={{ id: found.row.id, text: v.t("ใส่ไอดีให้ถูกต้อง (ตัวอักษร ตัวเลข _ . - ไม่เกิน 60 ตัว)", "Please enter a valid handle (letters, numbers, _ . -, up to 60).") }} />,
+      <Circle v={v} rows={rows} myVibe={myVibe} error={{ id: found.row.id, text: v.t("ใส่ไอดีให้ถูกต้อง (ตัวอักษร ตัวเลข _ . - ไม่เกิน 60 ตัว)", "Please enter a valid handle (letters, numbers, _ . -, up to 60).") }} />,
     );
   }
   const db = getDb(c.env);
