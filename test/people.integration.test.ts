@@ -14,9 +14,12 @@ import {
   contactShares,
   events,
   notifications,
+  profiles,
   registrations,
   reports,
+  vibes,
 } from "../src/schema";
+import { displayName } from "../src/vibe/archetypes";
 
 const HOUR = 3_600_000;
 /** The profile locale beats ?lang=, so English pages need the lang cookie. */
@@ -361,5 +364,64 @@ describe.skipIf(!HAS_DB)("Bangkok circle, report, block, notifications", () => {
     expect((await notesFor(x)).every((n) => n.readAt !== null)).toBe(true);
     const fresh = await member();
     expect(await (await req("/notifications", { cookie: en(fresh) })).text()).toContain("No notifications yet");
+  });
+});
+
+describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () => {
+  const optIn = (m: Member) => db().update(profiles).set({ showResidentBadge: true }).where(eq(profiles.accountId, m.id));
+
+  it("People I Met: badge only when verified AND opted in; type only when visible; order stays by nickname", async () => {
+    const me = await member();
+    // Nicknames sort a < b < c < d; types must not change that order.
+    const p = nick();
+    const a = await createMember({ nickname: `${p}a`, bkkRegistered: "verified" });
+    const b = await createMember({ nickname: `${p}b`, bkkRegistered: "verified" });
+    const c2 = await createMember({ nickname: `${p}c` });
+    const d = await createMember({ nickname: `${p}d` });
+    const ev = await makeEvent({ endedHoursAgo: 1 });
+    for (const x of [me, a, b, c2, d]) await attend(ev, x);
+    await optIn(a);
+    await optIn(c2); // opted in but not verified: no badge
+    await db().insert(vibes).values([
+      { accountId: d.id, vector: {}, archetype: "explore+", modifier: null, visible: true },
+      { accountId: b.id, vector: {}, archetype: "culture-", visible: false },
+      { accountId: me.id, vector: {}, archetype: "plan-", visible: false },
+    ]);
+    const html = await (await req(`/events/${ev}/people`, { cookie: en(me) })).text();
+    const cards = html.split('<section class="card').slice(1);
+    const card = (n: string) => cards.find((x) => x.includes(`<legend>${n}</legend>`)) ?? "";
+    expect(card(`${p}a`)).toContain("Bangkok resident");
+    expect(card(`${p}b`)).not.toContain("Bangkok resident");
+    expect(card(`${p}c`)).not.toContain("Bangkok resident");
+    expect(card(`${p}b`)).not.toContain("Heritage Lover");
+    expect(card(`${p}d`)).toContain("🧭 The Explorer");
+    expect(card(`${p}d`)).toContain("Complementary match"); // explorer + planner
+    const order = [`${p}a`, `${p}b`, `${p}c`, `${p}d`].map((n) => html.indexOf(`<legend>${n}</legend>`));
+    expect(order.every((x) => x > 0)).toBe(true);
+    expect([...order].sort((x, y) => x - y)).toEqual(order);
+  });
+
+  it("My Bangkok circle shows the badge and a visible type; no spark line without my own quiz", async () => {
+    const x = await member({ bkkRegistered: "verified" });
+    const y = await member();
+    const ev = await makeEvent({ endedHoursAgo: 1 });
+    await attend(ev, x);
+    await attend(ev, y);
+    await choose(ev, x, { [y.id]: "friend" });
+    await choose(ev, y, { [x.id]: "friend" });
+    let html = await (await req("/connections", { cookie: en(y) })).text();
+    expect(html).not.toContain("Bangkok resident");
+    await optIn(x);
+    await db().insert(vibes).values({ accountId: x.id, vector: {}, archetype: "rhythm-", modifier: "explore+", visible: true });
+    html = await (await req("/connections", { cookie: en(y) })).text();
+    expect(html).toContain("Bangkok resident");
+    expect(html).toContain(`🌅 ${displayName("rhythm-", "explore+").en}`);
+    expect(html).not.toContain("Conversation spark");
+    await db().insert(vibes).values({ accountId: y.id, vector: {}, archetype: "motion+", visible: false });
+    html = await (await req("/connections", { cookie: en(y) })).text();
+    expect(html).toContain("Conversation spark");
+    expect(html).toContain("Complementary match"); // mover + early riser
+    // x's own view of y: y's type is hidden.
+    expect(await (await req("/connections", { cookie: en(x) })).text()).not.toContain("The Mover");
   });
 });

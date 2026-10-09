@@ -25,6 +25,8 @@ export type PageOpts = {
   /** Staff pages get a wider layout and the admin side menu. */
   admin?: boolean;
   status?: 200 | 400 | 403 | 404 | 409;
+  /** Focused task screens (onboarding, quiz): no tab bar, no footer. */
+  bare?: boolean;
 };
 
 /** `?notice=` keys pages can redirect with. */
@@ -53,6 +55,7 @@ const NOTICES: Record<string, [string, string]> = {
   answered: ["ขอบคุณ! คำตอบของคุณช่วยเมืองได้จริง", "Thanks! Your answer helps the city"],
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
+  vibe_saved: ["บันทึกแล้ว", "Saved"],
 };
 
 export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
@@ -94,7 +97,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         />
         <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       </head>
-      <body class={opts.admin ? "admin" : ""}>
+      <body class={opts.admin ? "admin" : opts.bare ? "bare" : ""}>
         <div class="proto-banner">
           {t("ต้นแบบ (Prototype) — ห้ามใช้ข้อมูลจริง", "Prototype — please don't use real personal data")}
         </div>
@@ -118,12 +121,19 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         {opts.admin ? <AdminNav v={v} /> : null}
         <main class={opts.admin ? "wrap wide" : "wrap"}>{props.children}</main>
         <footer class="foot">
+          <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a>
+          <a href="/learn">{t("เรียนรู้", "Learn")}</a>
           <a href="/privacy">{t("ความเป็นส่วนตัว", "Privacy")}</a>
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
           <span>{t("โครงการของกรุงเทพมหานคร", "A Bangkok Metropolitan Administration project")}</span>
         </footer>
-        {member && !opts.admin ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
+        {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,
+          }}
+        />
       </body>
     </html>
   );

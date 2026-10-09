@@ -20,6 +20,13 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
 
     expect((await req("/events", { cookie })).headers.get("location")).toBe("/onboarding");
 
+    // New order: welcome → quiz (skippable) → basics.
+    expect((await req("/onboarding", { cookie })).headers.get("location")).toBe("/onboarding/welcome");
+    const skip = await req("/onboarding/quiz/skip", { cookie, method: "POST" });
+    expect(skip.headers.get("location")).toBe("/onboarding/basics");
+    expect(skip.headers.get("set-cookie")).toContain("bkk_quiz_skip=1");
+    expect((await req("/onboarding", { cookie: `${cookie}; bkk_quiz_skip=1` })).headers.get("location")).toBe("/onboarding/basics");
+
     const under18 = await req("/onboarding/basics", { cookie, form: { nickname: "Kid", birthDate: "2015-01-01", district: "bang_rak", livesInBangkok: "1" } });
     expect(under18.status).toBe(400);
 
@@ -50,8 +57,10 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
   });
 
   it("rejects a wrong password with the same message as an unknown user", async () => {
-    const r1 = await req("/login", { form: { username: "nobody_here", password: "whatever12" } });
-    const r2 = await req("/login", { form: { username: "nobody_here", password: "x" } });
+    // A fresh name each run, so login throttling from earlier runs can't interfere.
+    const nobody = `nobody_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
+    const r1 = await req("/login", { form: { username: nobody, password: "whatever12" } });
+    const r2 = await req("/login", { form: { username: nobody, password: "x" } });
     expect(r1.status).toBe(400);
     expect(await r1.text()).toContain("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
     expect(r2.status).toBe(400);

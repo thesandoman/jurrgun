@@ -14,6 +14,7 @@
  *   POST /settings/deactivate
  *   GET  /settings/password
  *   POST /settings/password
+ *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -45,6 +46,9 @@ import {
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
 import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch } from "./onboarding";
+import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
+import { ARCHETYPES, displayName } from "../vibe/archetypes";
+import { L } from "../lib/i18n";
 
 export const settingsRoutes = new Hono<AppEnv>();
 settingsRoutes.use("/settings", requireMember);
@@ -96,8 +100,10 @@ async function currentConsents(c: C, accountId: string): Promise<Map<string, boo
 settingsRoutes.get("/settings", async (c) => {
   const v = view(c);
   const { t, lang } = v;
-  const p = me(c).profile!;
-  const src = await photoSrc(c, p.photoKey);
+  const user = me(c);
+  const p = user.profile!;
+  const [src, vibe] = await Promise.all([photoSrc(c, p.photoKey), loadVibe(c.env, user.account.id)]);
+  const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
   const links: [string, string, string, string][] = [
     ["/settings/profile", "✏️", t("แก้ไขโปรไฟล์", "Edit profile"), t("ชื่อเล่น เขต ความสนใจ รูป", "Nickname, district, interests, photo")],
     ["/settings/connections", "🤝", t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)")],
@@ -139,6 +145,44 @@ settingsRoutes.get("/settings", async (c) => {
           </p>
         ))}
       </Card>
+      <Card>
+        <div class="spread">
+          <h2 style="margin:0">{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</h2>
+          <a href="/types" class="muted">{t("ทุกไทป์", "All types")}</a>
+        </div>
+        {vibe && vibeKey ? (
+          <>
+            <a href="/quiz/result" class="teaser" style="margin:10px 0">
+              <b class="big" aria-hidden="true">{ARCHETYPES[vibeKey].emoji}</b>
+              <span>
+                <strong>{L(lang, displayName(vibeKey, vibe.modifier))}</strong>
+                <small class="muted">{L(lang, ARCHETYPES[vibeKey].tagline)}</small>
+              </span>
+            </a>
+            <VisibilityToggle v={v} visible={vibe.visible} next="/settings" />
+            <a href="/quiz">{t("ทำแบบทดสอบใหม่", "Retake the quiz")}</a>
+          </>
+        ) : (
+          <a href="/quiz" class="teaser" style="margin:10px 0 0">
+            <b class="big" aria-hidden="true">🧭</b>
+            <span>
+              <strong>{t("ค้นหาไทป์ของคุณ", "Find your type")}</strong>
+              <small class="muted">{t("แตะเลือก 18 ข้อ ราว 3 นาที", "18 quick taps, about 3 minutes")}</small>
+            </span>
+          </a>
+        )}
+      </Card>
+      {user.account.bkkRegistered === "verified" ? (
+        <form method="post" action="/settings/badge" class="card inline-toggle">
+          <label class="toggle" style="margin:0">
+            <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
+            <span>🏅 {t("แสดงตราผู้อยู่อาศัยที่ลงทะเบียนในกรุงเทพฯ", "Show my Bangkok Registered Resident badge")}</span>
+          </label>
+          <noscript>
+            <button type="submit" class="btn ghost">{t("บันทึก", "Save")}</button>
+          </noscript>
+        </form>
+      ) : null}
       {links.map(([href, icon, title, hint]) => (
         <Card href={href}>
           <strong>
@@ -168,6 +212,17 @@ settingsRoutes.get("/settings", async (c) => {
       </form>
     </>,
   );
+});
+
+settingsRoutes.post("/settings/badge", async (c) => {
+  const user = me(c);
+  if (user.account.bkkRegistered !== "verified") return c.text("Forbidden", 403);
+  const body = await c.req.parseBody();
+  await getDb(c.env)
+    .update(profiles)
+    .set({ showResidentBadge: str(body.show) === "1", updatedAt: new Date() })
+    .where(eq(profiles.accountId, user.account.id));
+  return c.redirect("/settings?notice=saved");
 });
 
 // -------------------------------------------------------------- profile --

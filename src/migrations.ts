@@ -59,5 +59,17 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_strikes_event_account_idx\" ON \"social_strikes\" (\"event_id\",\"account_id\");",
       "CREATE UNIQUE INDEX \"research_wellbeing_unique_idx\" ON \"research_wellbeing\" (\"research_id\",\"phase\");"
     ]
+  },
+  {
+    "id": "0001_burly_deathstrike",
+    "statements": [
+      "CREATE TABLE \"social_invites\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"event_id\" text NOT NULL,\n\t\"inviter\" text NOT NULL,\n\t\"used_by\" text,\n\t\"used_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"identity_login_attempts\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"username\" text NOT NULL,\n\t\"ip_hash\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_vibes\" (\n\t\"account_id\" text PRIMARY KEY NOT NULL,\n\t\"vector\" jsonb NOT NULL,\n\t\"archetype\" text NOT NULL,\n\t\"modifier\" text,\n\t\"seen\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"visible\" boolean DEFAULT false NOT NULL,\n\t\"taken_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"show_resident_badge\" boolean DEFAULT false NOT NULL;",
+      "CREATE INDEX \"social_invites_event_inviter_idx\" ON \"social_invites\" (\"event_id\",\"inviter\");",
+      "CREATE INDEX \"identity_login_attempts_user_idx\" ON \"identity_login_attempts\" (\"username\",\"created_at\");",
+      "CREATE INDEX \"identity_login_attempts_ip_idx\" ON \"identity_login_attempts\" (\"ip_hash\",\"created_at\");"
+    ]
   }
 ];

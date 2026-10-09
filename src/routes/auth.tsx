@@ -3,18 +3,101 @@
  * the prototype; the PRD's phone/email OTP slots in here later).
  */
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import type { Context } from "hono";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { normalizeUsername, passwordProblem, USERNAME_RE } from "../domain/rules";
-import { hashPassword, newId, verifyPassword } from "../lib/crypto";
+import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { accountUsable, endSession, startSession } from "../lib/session";
-import { accounts } from "../schema";
+import { accounts, loginAttempts } from "../schema";
 import { Button, Card, Field, Notice, page, safeNext, str, view } from "../ui/kit";
 
 export const authRoutes = new Hono<AppEnv>();
+
+// ------------------------------------------------------------ throttling --
+// PRD §11: rate limiting. Failed sign-ins and sign-ups are rows in
+// identity_login_attempts (the IP is stored only as a SHA-256). Retention
+// (src/services/retention.ts) deletes rows older than 24 hours.
+
+const MINUTE = 60_000;
+export const LOGIN_WINDOW_MS = 15 * MINUTE;
+export const LOGIN_MAX_PER_USER = 5;
+export const LOGIN_MAX_PER_IP = 20;
+export const SIGNUP_WINDOW_MS = 60 * MINUTE;
+export const SIGNUP_MAX_PER_IP = 10;
+const SIGNUP_PREFIX = "signup:";
+const UNKNOWN_IP = "unknown";
+
+/** The client IP as Cloudflare reports it, or "unknown" (local dev, tests). */
+function clientIp(c: Context<AppEnv>): string {
+  const cf = c.req.header("cf-connecting-ip")?.trim();
+  if (cf) return cf;
+  const xff = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+  return xff || UNKNOWN_IP;
+}
+
+async function ipKey(c: Context<AppEnv>): Promise<{ ipHash: string; known: boolean }> {
+  const ip = clientIp(c);
+  return { ipHash: await sha256(ip), known: ip !== UNKNOWN_IP };
+}
+
+/**
+ * True when this sign-in must be refused before the password is checked.
+ * One query for both counts. Signup rows (username "signup:…") never count
+ * against a username, and only count against an IP for the signup limit.
+ * Requests with no client IP at all (local dev, tests) skip the IP limit:
+ * deployed on Cloudflare every request carries cf-connecting-ip.
+ */
+async function loginThrottled(c: Context<AppEnv>, username: string, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
+  const since = new Date(now.getTime() - LOGIN_WINDOW_MS);
+  const [row] = await getDb(c.env)
+    .select({
+      byUser: sql<number>`count(*) filter (where ${loginAttempts.username} = ${username})`.mapWith(Number),
+      byIp: sql<number>`count(*) filter (where ${loginAttempts.ipHash} = ${ip.ipHash} and ${loginAttempts.username} not like ${SIGNUP_PREFIX + "%"})`.mapWith(Number),
+    })
+    .from(loginAttempts)
+    .where(and(gte(loginAttempts.createdAt, since), sql`(${loginAttempts.username} = ${username} or ${loginAttempts.ipHash} = ${ip.ipHash})`));
+  const byUser = Number(row?.byUser ?? 0);
+  const byIp = Number(row?.byIp ?? 0);
+  return byUser >= LOGIN_MAX_PER_USER || (ip.known && byIp >= LOGIN_MAX_PER_IP);
+}
+
+async function signupThrottled(c: Context<AppEnv>, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
+  if (!ip.known) return false;
+  const since = new Date(now.getTime() - SIGNUP_WINDOW_MS);
+  const [row] = await getDb(c.env)
+    .select({ n: sql<number>`count(*)`.mapWith(Number) })
+    .from(loginAttempts)
+    .where(and(eq(loginAttempts.ipHash, ip.ipHash), gte(loginAttempts.createdAt, since), sql`${loginAttempts.username} like ${SIGNUP_PREFIX + "%"}`));
+  return Number(row?.n ?? 0) >= SIGNUP_MAX_PER_IP;
+}
+
+async function tooMany(c: Context<AppEnv>, mode: "signup" | "login"): Promise<Response> {
+  const { t } = view(c);
+  // page() only takes the statuses kit.tsx lists, so re-wrap its response as a 429.
+  const res = await page(
+    c,
+    { title: mode === "login" ? t("เข้าสู่ระบบ", "Sign in") : t("สมัครสมาชิก", "Sign up") },
+    <>
+      <h1>{t("ลองหลายครั้งเกินไป", "Too many attempts")}</h1>
+      <Notice kind="error">
+        {mode === "login"
+          ? t("ลองหลายครั้งเกินไป โปรดลองใหม่ในอีก 15 นาที", "Too many attempts, try again in 15 minutes.")
+          : t("มีการสมัครจากเครือข่ายนี้มากเกินไป โปรดลองใหม่ในอีก 1 ชั่วโมง", "Too many sign-ups from this network, try again in an hour.")}
+      </Notice>
+      <p class="muted">
+        {t("หากต้องการความช่วยเหลือเร่งด่วน โทร ", "If you need urgent help, call ")}
+        <a href="tel:191">191</a> / <a href="tel:1669">1669</a>
+      </p>
+    </>,
+  );
+  const headers = new Headers(res.headers);
+  headers.set("retry-after", String((mode === "login" ? LOGIN_WINDOW_MS : SIGNUP_WINDOW_MS) / 1000));
+  return new Response(res.body, { status: 429, headers });
+}
 
 function AuthForm(props: {
   mode: "signup" | "login";
@@ -91,6 +174,10 @@ authRoutes.post("/signup", async (c) => {
   if (pwIssue) return fail(t("รหัสผ่านต้องยาว 8–200 ตัวอักษร", "Password must be 8–200 characters."));
   if (password !== confirm) return fail(t("รหัสผ่านไม่ตรงกัน", "Passwords don't match."));
 
+  const now = new Date();
+  const ip = await ipKey(c);
+  if (await signupThrottled(c, ip, now)) return tooMany(c, "signup");
+
   const db = getDb(c.env);
   const [taken] = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.username, username)).limit(1);
   if (taken) return fail(t("ชื่อผู้ใช้นี้ถูกใช้แล้ว", "That username is taken."));
@@ -103,6 +190,8 @@ authRoutes.post("/signup", async (c) => {
     // Unique index race: someone took it between the check and the insert.
     return fail(t("ชื่อผู้ใช้นี้ถูกใช้แล้ว", "That username is taken."));
   }
+  // Counts toward the per-IP signup limit ("signup:" can never be a real username).
+  await db.insert(loginAttempts).values({ id: newId(), username: `${SIGNUP_PREFIX}${id}`, ipHash: ip.ipHash, createdAt: now });
   await startSession(c, id);
   return c.redirect("/onboarding");
 });
@@ -143,11 +232,20 @@ authRoutes.post("/login", async (c) => {
   if (!username || !password) return fail(t("กรอกชื่อผู้ใช้และรหัสผ่าน", "Enter your username and password."));
 
   const db = getDb(c.env);
+  const now = new Date();
+  const ip = await ipKey(c);
+  // Checked before the account lookup, so the answer is the same whether or
+  // not the username exists, and the password is never verified once locked.
+  if (await loginThrottled(c, username, ip, now)) return tooMany(c, "login");
+
   const [acct] = await db.select().from(accounts).where(eq(accounts.username, username)).limit(1);
   // Same message whether the username or the password was wrong.
   if (!acct || !(await verifyPassword(password, acct.passwordHash, acct.passwordSalt))) {
+    await db.insert(loginAttempts).values({ id: newId(), username, ipHash: ip.ipHash, createdAt: now });
     return fail(t("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "Wrong username or password."));
   }
+  // Correct password: forget this username's failures.
+  await db.delete(loginAttempts).where(eq(loginAttempts.username, username));
   if (!accountUsable(acct)) {
     if (acct.status === "suspended" && acct.suspendedUntil) {
       return fail(t(`บัญชีถูกระงับถึง ${fmtDay(acct.suspendedUntil, lang)}`, `This account is suspended until ${fmtDay(acct.suspendedUntil, lang)}.`), 403);

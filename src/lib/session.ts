@@ -69,7 +69,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
 };
 
 export function accountUsable(a: { status: string; suspendedUntil: Date | null }, now = new Date()): boolean {
-  if (a.status === "banned" || a.status === "deactivated") return false;
+  if (a.status === "banned" || a.status === "deactivated" || a.status === "deleted") return false;
   if (a.status === "suspended" && a.suspendedUntil && a.suspendedUntil.getTime() > now.getTime()) return false;
   return true;
 }

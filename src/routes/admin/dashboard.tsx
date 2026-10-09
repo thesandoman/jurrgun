@@ -8,18 +8,71 @@
  *
  * Operational counts only (events, registrations, reports); the k ≥ 10
  * research threshold applies on the Insights and City Pulse pages.
+ *
+ * bma_admin also sees data retention (PRD §12.4): a manual "Run retention
+ * cleanup" button (POST /admin/retention), and a lazy run at most once per
+ * 24 hours when they open this page (no cron on this platform).
  */
 import { Hono } from "hono";
 import { and, asc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
+import { requireRole } from "../../lib/session";
+import { retentionIfDue, runRetention, type RetentionRun } from "../../services/retention";
 import { events, registrations, reports } from "../../schema";
-import { Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
+import { Button, Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
 
 export const adminDashboard = new Hono<AppEnv>();
 
 const DAY = 86_400_000;
+
+adminDashboard.post("/retention", requireRole("bma_admin"), async (c) => {
+  await runRetention(c.env, new Date(), c.var.user!.account.id);
+  return c.redirect("/admin?notice=done#retention");
+});
+
+function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: string) => string; lang: "th" | "en" }) {
+  const { run, t, lang } = props;
+  const n = (k: keyof RetentionRun["counts"]) => Number(run?.counts[k] ?? 0);
+  return (
+    <section id="retention">
+      <h2>{t("การเก็บรักษาข้อมูล", "Data retention")}</h2>
+      <Card>
+        <p class="muted">
+          {t(
+            "ลบข้อมูลตามตารางระยะเวลาเก็บรักษา (PRD §12.4): สัญญาณทางสังคมหลัง 7 วัน, ตัวเลือกที่ไม่ตรงกันเมื่อหน้าต่าง 72 ชม. ปิด, เซสชันที่หมดอายุ, บันทึกการเข้าสู่ระบบหลัง 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้อัตโนมัติวันละไม่เกิน 1 ครั้งเมื่อผู้ดูแลเปิดหน้านี้",
+            "Deletes data on the retention schedule (PRD §12.4): social signals after 7 days, pending choices when the 72h window closes, expired sessions, sign-in attempts after 24h and accounts deactivated over 30 days ago. It also runs by itself at most once a day when an admin opens this page.",
+          )}
+        </p>
+        {run ? (
+          <>
+            <p>
+              {t("รันล่าสุด: ", "Last run: ")}
+              <strong>{fmtDate(run.at, lang)}</strong>
+            </p>
+            <div class="stats">
+              <Stat label={t("สัญญาณที่ล้าง", "Signals cleared")} value={n("signalsCleared")} />
+              <Stat label={t("ตัวเลือกที่ลบ", "Pending choices deleted")} value={n("choicesDeleted")} />
+              <Stat label={t("เซสชันที่ลบ", "Sessions deleted")} value={n("sessionsDeleted")} />
+              <Stat label={t("บันทึกเข้าสู่ระบบที่ลบ", "Sign-in attempts deleted")} value={n("loginAttemptsDeleted")} />
+              <Stat
+                label={t("บัญชีที่ลบถาวร", "Accounts deleted")}
+                value={n("accountsDeleted")}
+                hint={run.counts.accountsRemaining ? t("ยังมีอีก รันอีกครั้ง", "More waiting, run again") : undefined}
+              />
+            </div>
+          </>
+        ) : (
+          <p>{t("ยังไม่เคยรัน", "Not run yet")}</p>
+        )}
+        <form method="post" action="/admin/retention" style="margin-top:12px">
+          <Button kind="ghost">{t("รันการล้างข้อมูลตามระยะเวลาเก็บรักษา", "Run retention cleanup")}</Button>
+        </form>
+      </Card>
+    </section>
+  );
+}
 
 adminDashboard.get("/", async (c) => {
   const { t, lang, user } = view(c);
@@ -40,6 +93,9 @@ adminDashboard.get("/", async (c) => {
   else if (role === "partner_admin") {
     hostWhere = acct.partnerOrgId ? or(eq(events.partnerOrgId, acct.partnerOrgId), eq(events.hostAccountId, acct.id)) : eq(events.hostAccountId, acct.id);
   }
+
+  // Lazy timer: at most one retention run per 24 hours, triggered by an admin visit.
+  const retention = isAdmin ? await retentionIfDue(c.env, acct.id, now) : null;
 
   const [adminStats, reportStats, mine] = await Promise.all([
     isAdmin
@@ -119,6 +175,7 @@ adminDashboard.get("/", async (c) => {
             <LinkButton href="/admin/insights" kind="ghost">{t("ข้อมูลเชิงลึก", "City Insight")}</LinkButton>
             <LinkButton href="/admin/pulse" kind="ghost">City Pulse</LinkButton>
           </div>
+          <RetentionCard run={retention} t={t} lang={lang} />
         </>
       ) : null}
 

@@ -4,53 +4,66 @@
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
-import { Card, LinkButton, page, safeNext, view } from "../ui/kit";
+import { TOPICS } from "../content/learn";
+import { L } from "../lib/i18n";
+import { LinkButton, page, safeNext, view } from "../ui/kit";
+import { FaqList } from "./learn";
 
 export const publicRoutes = new Hono<AppEnv>();
 
 publicRoutes.get("/", (c) => {
-  const { t, user } = view(c);
+  const { t, user, lang } = view(c);
   if (user?.profile?.onboardedAt) return c.redirect("/events");
   return page(
     c,
     { title: t("เพื่อนใหม่ในเมืองเดียวกัน", "Make friends in Bangkok") },
     <>
-      <Card class="hero">
+      <section class="hero-lite">
         <h1>{t("เพื่อนใหม่ในเมืองเดียวกัน", "Bangkok's own way to make friends")}</h1>
         <p>{t("กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา", "Small groups. Real places. No swiping.")}</p>
-        <div class="row" style="margin-top:12px">
+        <div class="row">
           {user ? (
-            <LinkButton href="/onboarding" kind="ghost">{t("ทำโปรไฟล์ต่อ", "Continue setting up")}</LinkButton>
+            <LinkButton href="/onboarding">{t("ทำโปรไฟล์ต่อ", "Continue setting up")}</LinkButton>
           ) : (
             <>
-              <LinkButton href="/signup" kind="ghost">{t("เริ่มเลย", "Get started")}</LinkButton>
-              <a href="/login" style="align-self:center">{t("มีบัญชีแล้ว? เข้าสู่ระบบ", "Have an account? Sign in")}</a>
+              <LinkButton href="/signup">{t("เริ่มเลย", "Get started")}</LinkButton>
+              <a href="/login">{t("มีบัญชีแล้ว? เข้าสู่ระบบ", "Have an account? Sign in")}</a>
             </>
           )}
         </div>
-      </Card>
-      <h2>{t("ทำไมต้อง BKK Social", "Why BKK Social")}</h2>
-      <div class="grid2">
-        <Card>
-          <h3>🏙️ {t("เมืองเป็นเจ้าภาพ", "The city is the host")}</h3>
-          <p class="muted">{t("กิจกรรมในสวน พิพิธภัณฑ์ ย่านเก่า และเส้นทางจาก VisitBangkok", "Events in parks, museums, old-town routes from VisitBangkok and city festivals.")}</p>
-        </Card>
-        <Card>
-          <h3>👥 {t("กลุ่มเล็ก 4–6 คน", "Small groups of 4–6")}</h3>
-          <p class="muted">{t("จัดโต๊ะอย่างยุติธรรม ไม่มีใครอยากสลับกลุ่มกัน", "Fairly matched tables — no two people would both rather swap.")}</p>
-        </Card>
-        <Card>
-          <h3>🔒 {t("ไม่มีใครถูกปฏิเสธ", "Never rejected, never exposed")}</h3>
-          <p class="muted">{t("จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น ไม่มีการส่งข้อความหาคนแปลกหน้า", "You only hear when it's mutual. No browsing, no cold DMs.")}</p>
-        </Card>
-        <Card>
-          <h3>🌈 {t("สำหรับทุกคน", "For everyone")}</h3>
-          <p class="muted">{t("ทุกเพศ ทุกความหลากหลาย ชาวไทยและชาวต่างชาติ — โหมดเพื่อนเป็นค่าเริ่มต้น", "Any gender or orientation, Thai or expat — friends-only by default.")}</p>
-        </Card>
+      </section>
+      <div class="tiles">
+        <span class="tile"><b aria-hidden="true">🏙️</b>{t("เมืองเป็นเจ้าภาพ", "Hosted by the city")}</span>
+        <span class="tile"><b aria-hidden="true">👥</b>{t("โต๊ะละ 4 ถึง 6 คน", "Tables of 4 to 6")}</span>
+        <span class="tile"><b aria-hidden="true">🔒</b>{t("รู้เมื่อเลือกตรงกัน", "Mutual matches only")}</span>
       </div>
-      <p class="muted" style="margin-top:16px">
-        {t("ทุกครั้งที่คุณออกไปพบผู้คน ความคิดเห็นแบบไม่ระบุตัวตนของคุณช่วยให้กรุงเทพฯ น่าอยู่ขึ้น", "Every outing helps: your anonymous City Pulse feedback goes straight to BMA.")}
+      <a href="/types" class="teaser">
+        <b class="big" aria-hidden="true">🧭</b>
+        <span>
+          <strong>{t("ค้นหาไทป์กรุงเทพฯ ของคุณ", "Find your Bangkok Type")}</strong>
+          <small class="muted">{t("13 ไทป์ คุณเป็นแบบไหน?", "13 types. Which one are you?")}</small>
+        </span>
+      </a>
+      <h2>{t("คำถามที่พบบ่อย", "FAQ")}</h2>
+      <FaqList lang={lang} limit={5} />
+      <p>
+        <a href="/faq">{t("ดูคำถามทั้งหมด →", "See all questions →")}</a>
       </p>
+      <h2>
+        {t("เรียนรู้ก่อนออกไปเจอคนใหม่", "Learn before you meet")}
+        <span class="swipe-hint" aria-hidden="true">{t("ปัดดู →", "Swipe →")}</span>
+      </h2>
+      <div class="rail-wrap">
+        <div class="rail" role="list">
+          {TOPICS.map((topic) => (
+            <a href={`/learn/${topic.slug}`} role="listitem">
+              <b aria-hidden="true">{topic.icon}</b>
+              <strong>{L(lang, topic.title)}</strong>
+              <small class="muted">{L(lang, topic.summary)}</small>
+            </a>
+          ))}
+        </div>
+      </div>
     </>,
   );
 });

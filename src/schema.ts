@@ -101,6 +101,8 @@ export const profiles = pgTable(
     romanceOpenTo: jsonb("romance_open_to").$type<string[] | "everyone">(),
     pronouns: text("pronouns"),
     showPronouns: boolean("show_pronouns").notNull().default(false),
+    /** Opt-in "Bangkok Registered Resident" badge (only meaningful when verified). */
+    showResidentBadge: boolean("show_resident_badge").notNull().default(false),
     ageMin: integer("age_min").notNull().default(18),
     ageMax: integer("age_max").notNull().default(99),
     prompts: jsonb("prompts").$type<Record<string, string>>().notNull().default({}),
@@ -442,6 +444,52 @@ export const wellbeing = pgTable(
     createdAt: created(),
   },
   (t) => [uniqueIndex("research_wellbeing_unique_idx").on(t.researchId, t.phase)],
+);
+
+/**
+ * Bangkok Vibe quiz result (non-political, 6 lifestyle categories). Its own
+ * table so the quiz can run first in onboarding, before a profile exists.
+ */
+export const vibes = pgTable("social_vibes", {
+  accountId: text("account_id").primaryKey(),
+  /** −1..+1 per category (energy, explore, rhythm, motion, plan, culture). */
+  vector: jsonb("vector").$type<Record<string, number>>().notNull(),
+  /** Archetype key, e.g. "rhythm+" or "allrounder". */
+  archetype: text("archetype").notNull(),
+  /** Second-strongest pole for the name modifier, e.g. "explore+". */
+  modifier: text("modifier"),
+  /** Question ids answered so far, so retakes get fresh questions. */
+  seen: jsonb("seen").$type<string[]>().notNull().default([]),
+  /** Shown on profile / to groupmates only if the user opts in. */
+  visible: boolean("visible").notNull().default(false),
+  takenAt: ts("taken_at").notNull().defaultNow(),
+});
+
+/** Invite-a-friend links for +1 events (PRD §8.2). Token is the id. */
+export const invites = pgTable(
+  "social_invites",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").notNull(),
+    inviter: text("inviter").notNull(),
+    usedBy: text("used_by"),
+    usedAt: ts("used_at"),
+    createdAt: created(),
+  },
+  (t) => [index("social_invites_event_inviter_idx").on(t.eventId, t.inviter)],
+);
+
+/** Failed sign-ins, for throttling (PRD §11 rate limiting). */
+export const loginAttempts = pgTable(
+  "identity_login_attempts",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull(),
+    /** SHA-256 of the client IP — never the raw address. */
+    ipHash: text("ip_hash").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("identity_login_attempts_user_idx").on(t.username, t.createdAt), index("identity_login_attempts_ip_idx").on(t.ipHash, t.createdAt)],
 );
 
 // ------------------------------------------------------------------- audit --

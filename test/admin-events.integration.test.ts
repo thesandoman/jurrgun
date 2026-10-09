@@ -443,4 +443,58 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     const adminHtml = await (await req(`/admin/events/${id}`, { cookie: admin.cookie })).text();
     expect(adminHtml).toContain(m.username);
   });
+  /** POST multipart/form-data (file uploads), which `req` doesn't do. */
+  async function multipart(path: string, cookie: string, fields: Record<string, string | string[]>, file?: { name: string; type: string; bytes: number }) {
+    const { default: app } = await import("../src/index");
+    const { ENV } = await import("./helpers");
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(fields)) for (const x of Array.isArray(v) ? v : [v]) fd.append(k, x);
+    if (file) fd.append("cover", new File([new Uint8Array(file.bytes)], file.name, { type: file.type }));
+    return app.request(path, { method: "POST", headers: { cookie }, body: fd }, ENV);
+  }
+
+  it("cover image: the form is multipart, bad type / size is 400, and no storage binding fails gracefully", async () => {
+    await setup();
+    const form = await (await req("/admin/events/new", { cookie: admin.cookie })).text();
+    expect(form).toContain('enctype="multipart/form-data"');
+    expect(form).toContain('name="cover"');
+
+    const titleOf = (x: string) => db().select().from(events).where(eq(events.title, x)).limit(1);
+    const f1 = validForm();
+    const badType = await multipart("/admin/events/new", `${admin.cookie}; lang=en`, f1, { name: "x.gif", type: "image/gif", bytes: 10 });
+    expect(badType.status).toBe(400);
+    expect(await badType.text()).toContain("JPG, PNG or WebP");
+    expect(await titleOf(f1.title as string)).toHaveLength(0);
+
+    const f2 = validForm();
+    const tooBig = await multipart("/admin/events/new", `${admin.cookie}; lang=en`, f2, { name: "x.jpg", type: "image/jpeg", bytes: 5 * 1024 * 1024 + 1 });
+    expect(tooBig.status).toBe(400);
+    expect(await tooBig.text()).toContain("5 MB or smaller");
+
+    // Tests have no storage binding: a valid image can't be stored, and nothing is created.
+    const f3 = validForm();
+    const noStore = await multipart("/admin/events/new", `${admin.cookie}; lang=en`, f3, { name: "x.png", type: "image/png", bytes: 100 });
+    expect(noStore.status).toBe(400);
+    expect(await noStore.text()).toContain("be uploaded. Please try again");
+    expect(await titleOf(f3.title as string)).toHaveLength(0);
+
+    // Multipart without a file still creates the event (no cover).
+    const f4 = validForm();
+    const ok = await multipart("/admin/events/new", admin.cookie, f4);
+    expect(ok.status).toBe(302);
+    const [created] = await titleOf(f4.title as string);
+    expect(created.coverKey).toBeNull();
+
+    // Edit: remove an existing cover (deleting the old object is best effort).
+    await db().update(events).set({ coverKey: `uploads/events/${created.id}/old` }).where(eq(events.id, created.id));
+    const edit = await (await req(`/admin/events/${created.id}/edit`, { cookie: `${admin.cookie}; lang=en` })).text();
+    expect(edit).toContain("Remove the cover");
+    const removed = await multipart(`/admin/events/${created.id}/edit`, admin.cookie, { ...f4, removeCover: "1" });
+    expect(removed.status).toBe(302);
+    const [after] = await db().select().from(events).where(eq(events.id, created.id)).limit(1);
+    expect(after.coverKey).toBeNull();
+    const badEdit = await multipart(`/admin/events/${created.id}/edit`, admin.cookie, f4, { name: "x.txt", type: "text/plain", bytes: 5 });
+    expect(badEdit.status).toBe(400);
+    expect((await req(`/admin/events/${created.id}/cover`, { cookie: admin.cookie })).status).toBe(404);
+  });
 });
