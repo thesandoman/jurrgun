@@ -27,8 +27,12 @@ export function FlowStep(props: {
   auto?: boolean;
   /** At least this many checkboxes in the step must be ticked before Next. */
   need?: number;
-  /** Message when `need` is not met. */
+  /** Message when `need`, `sum` or `allOrNone` is not met. */
   needText?: string;
+  /** Number inputs in the step must add up to this (or all be 0, which skips). */
+  sum?: number;
+  /** Every select in the step must be set, or none (which skips). */
+  allOrNone?: boolean;
   class?: string;
   /** Label for the main button on this step (default: Next). */
   cta?: string;
@@ -41,6 +45,8 @@ export function FlowStep(props: {
       data-auto={props.auto ? "1" : undefined}
       data-need={props.need ? String(props.need) : undefined}
       data-need-text={props.needText}
+      data-sum={props.sum ? String(props.sum) : undefined}
+      data-all-or-none={props.allOrNone ? "1" : undefined}
     >
       <fieldset>
         <legend class="flow-title">
@@ -177,8 +183,11 @@ function show(n,dir,push){
 function valid(st){
   var els=[].slice.call(st.querySelectorAll("input,select,textarea"));
   for(var k=0;k<els.length;k++){if(!els[k].checkValidity()){els[k].reportValidity();return false}}
-  var need=+(st.dataset.need||0),msg=st.querySelector(".flow-need");
-  if(need){var c=st.querySelectorAll("input:checked").length;if(c<need){if(msg){msg.textContent=st.dataset.needText||"";msg.hidden=false}st.classList.remove("shake");void st.offsetWidth;st.classList.add("shake");return false}}
+  var need=+(st.dataset.need||0),sum=+(st.dataset.sum||0),msg=st.querySelector(".flow-need");
+  function fail(){if(msg){msg.textContent=st.dataset.needText||"";msg.hidden=false}st.classList.remove("shake");void st.offsetWidth;st.classList.add("shake");return false}
+  if(need&&st.querySelectorAll("input:checked").length<need)return fail();
+  if(sum){var tot=0;[].forEach.call(st.querySelectorAll("input[type=number]"),function(x){tot+=+x.value||0});if(tot!==0&&tot!==sum)return fail()}
+  if(st.dataset.allOrNone==="1"){var sel=st.querySelectorAll("select"),set=0;[].forEach.call(sel,function(x){if(x.value)set++});if(set&&set<sel.length)return fail()}
   if(msg)msg.hidden=true;return true;
 }
 function go(){if(busy)return;if(!valid(steps[i]))return;if(i<steps.length-1)show(i+1,1,true);else submit()}

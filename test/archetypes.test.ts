@@ -71,3 +71,31 @@ describe("match labels", () => {
     expect(suggestedMatches("BDMN")).toEqual({ natural: "BDMN", complementary: "BDSN", interesting: "CFSH" });
   });
 });
+
+describe("reachability through the v3.1 quiz", () => {
+  it("every one of the 16 codes comes out of a real mixed session (slider, rank, coins and all)", async () => {
+    const { generateSession, scoreSession, COINS } = await import("../src/vibe/generator");
+    const { CODE_AXES } = await import("../src/vibe/archetypes");
+    for (const [seed, personal] of [["reach-a", undefined], ["reach-b", { district: "bang_rak", interests: ["food", "art"] }]] as const) {
+      const qs = generateSession({ seed, formats: "mixed", personal });
+      for (const code of ARCHETYPE_KEYS) {
+        const want: Record<string, 1 | -1> = {};
+        CODE_AXES.forEach((axis, i) => (want[axis.category] = code[i] === axis.plus ? 1 : -1));
+        const answers: Record<string, number | number[]> = {};
+        for (const q of qs) {
+          const pole = want[q.category] ?? 1;
+          if (q.format === "scale") answers[q.id] = q.pole === pole ? 5 : 1;
+          else if (q.format === "slider") answers[q.id] = q.options[1].pole === pole ? 100 : 0;
+          else if (q.format === "rank") answers[q.id] = q.options.map((_, j) => j).sort((a, b) => (q.options[b].pole === pole ? 1 : 0) - (q.options[a].pole === pole ? 1 : 0));
+          else if (q.format === "budget") {
+            const mine = q.options.map((o, j) => (o.pole === pole ? j : -1)).filter((j) => j >= 0);
+            answers[q.id] = q.options.map((_, j) => (j === mine[0] ? COINS : 0));
+          } else answers[q.id] = q.options.findIndex((o) => o.pole === pole);
+        }
+        const r = scoreSession(qs, answers);
+        expect(r.answered).toBe(qs.length);
+        expect(typeOf(r.vector).archetype).toBe(code);
+      }
+    }
+  });
+});

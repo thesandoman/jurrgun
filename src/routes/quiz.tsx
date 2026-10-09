@@ -5,7 +5,7 @@
  *   POST /quiz              score, save to `vibes`, redirect to the result
  *   GET  /quiz/result       my type
  *   POST /quiz/visibility   show / hide my type to groupmates
- *   GET  /types             public gallery of all 13 types
+ *   GET  /types             public gallery of all 16 types
  *   GET  /types/:slug       public type page (shareable)
  *
  * The seed is derived on the server from the account and how many questions
@@ -37,7 +37,7 @@ import {
   typeOf,
   type ArchetypeKey,
 } from "../vibe/archetypes";
-import { generateSession, scoreSession, strengthOf, type Answers, type Question } from "../vibe/generator";
+import { generateSession, itemScore, scoreSession, strengthOf, type Answer, type Answers, type Personal, type Question } from "../vibe/generator";
 
 export const quizRoutes = new Hono<AppEnv>();
 
@@ -60,8 +60,21 @@ export function quizSeed(accountId: string, row: Pick<VibeRow, "seen"> | null): 
   return `${accountId}:${row ? row.seen.length : 0}`;
 }
 
-export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null): Question[] {
-  return generateSession({ seed, perCategory: PER_CATEGORY, seen: new Set(row?.seen ?? []) });
+/**
+ * The member's session: the full v3.1 mix of formats, personalised by their
+ * district and interests when known, so even the same seed reads differently
+ * for different people.
+ */
+export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal): Question[] {
+  return generateSession({ seed, perCategory: PER_CATEGORY, seen: new Set(row?.seen ?? []), formats: "mixed", personal });
+}
+
+/** Personalisation from a profile (null before onboarding basics). */
+export function personalOf(profile: { district?: string | null; interests?: readonly string[] | null } | null | undefined): Personal | undefined {
+  if (!profile) return undefined;
+  const interests = Array.isArray(profile.interests) ? profile.interests.filter((x): x is string => typeof x === "string") : [];
+  if (!profile.district && interests.length === 0) return undefined;
+  return { district: profile.district ?? null, interests };
 }
 
 /** "The Connector" → "connector": readable, shareable URLs. */
@@ -87,6 +100,191 @@ const STRENGTH: Record<string, [string, string]> = {
 
 // ------------------------------------------------------------ the quiz --
 
+/** Tap formats advance on their own; the rest wait for Next. */
+const TAP_FORMATS = new Set(["choice", "bothers", "scale"]);
+
+function FormatHint(props: { v: View; q: Question; first: boolean }) {
+  const { t } = props.v;
+  const q = props.q;
+  if (q.format === "slider") return <span class="tap-hint">↔️ {t("เลื่อนไปยังจุดที่ใช่ แล้วกดต่อไป", "Slide to your spot, then tap Next")}</span>;
+  if (q.format === "rank") return <span class="tap-hint">🏅 {t("แตะตามลำดับ จากที่ชอบที่สุด", "Tap in order, favourite first")}</span>;
+  if (q.format === "budget") return <span class="tap-hint">🪙 {t(`ใช้ + และ − วางเหรียญให้ครบ ${q.coins} เหรียญ`, `Use + and − to place all ${q.coins} coins`)}</span>;
+  return props.first ? <span class="tap-hint">👆 {t("แตะคำตอบ", "Tap an answer")}</span> : null;
+}
+
+function SliderField(props: { v: View; q: Extract<Question, { format: "slider" }>; i: number }) {
+  const { t, lang } = props.v;
+  const [left, right] = props.q.options;
+  const id = `q${props.i}-slider`;
+  return (
+    <div
+      class="q-slider"
+      data-slider
+      data-left={L(lang, left.label)}
+      data-right={L(lang, right.label)}
+      data-mid={t("ตรงกลางพอดี", "Right in the middle")}
+      data-lean={t("ค่อนไปทาง", "Leaning to")}
+      data-all={t("สุดทางที่", "All the way to")}
+    >
+      <div class="q-slider-ends">
+        <span>
+          <b aria-hidden="true">{left.icon}</b>
+          {L(lang, left.label)}
+        </span>
+        <span>
+          {L(lang, right.label)}
+          <b aria-hidden="true">{right.icon}</b>
+        </span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        name={`a${props.i}`}
+        min="0"
+        max="100"
+        step="1"
+        value="50"
+        aria-label={`${L(lang, left.label)} ↔ ${L(lang, right.label)}`}
+        aria-valuetext={t("ตรงกลางพอดี", "Right in the middle")}
+      />
+      <output for={id} class="q-slider-read" aria-live="polite">
+        {t("ตรงกลางพอดี", "Right in the middle")}
+      </output>
+    </div>
+  );
+}
+
+function RankField(props: { v: View; q: Extract<Question, { format: "rank" }>; i: number }) {
+  const { t, lang } = props.v;
+  const n = props.q.options.length;
+  return (
+    <div
+      class="q-rank"
+      data-rank
+      data-start={t("แตะอันที่ชอบที่สุดก่อน", "Tap your favourite first")}
+      data-more={t("ต่อไปคืออันดับ {n}", "Now number {n}")}
+      data-done={t("ครบแล้ว กดต่อไปได้เลย", "All set. Tap Next")}
+    >
+      <ol class="q-rank-list">
+        {props.q.options.map((o, j) => (
+          <li>
+            <button type="button" class="q-rank-btn" data-j={String(j)} aria-pressed="false">
+              <b class="q-rank-badge" aria-hidden="true" />
+              <b class="answer-emoji" aria-hidden="true">
+                {o.icon}
+              </b>
+              <span>{L(lang, o.label)}</span>
+            </button>
+            <label class="q-rank-pick">
+              <b class="answer-emoji" aria-hidden="true">
+                {o.icon}
+              </b>
+              <span>{L(lang, o.label)}</span>
+              <select name={`a${props.i}_${j}`} aria-label={t(`อันดับของ: ${L(lang, o.label)}`, `Position for: ${L(lang, o.label)}`)}>
+                <option value="">·</option>
+                {Array.from({ length: n }, (_, k) => (
+                  <option value={String(k + 1)}>{k + 1}</option>
+                ))}
+              </select>
+            </label>
+          </li>
+        ))}
+      </ol>
+      <div class="q-rank-tools">
+        <button type="button" class="btn ghost q-rank-undo" disabled>
+          ↶ {t("ย้อนหนึ่งขั้น", "Undo")}
+        </button>
+        <span class="q-rank-status" aria-live="polite">
+          {t(`ใส่เลข 1 ถึง ${n} ไม่ซ้ำกัน (1 คือชอบที่สุด)`, `Number them 1 to ${n}, each once (1 is your favourite)`)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function BudgetField(props: { v: View; q: Extract<Question, { format: "budget" }>; i: number }) {
+  const { t, lang } = props.v;
+  const coins = props.q.coins;
+  return (
+    <div
+      class="q-budget"
+      data-budget
+      data-coins={String(coins)}
+      data-left={t("เหลืออีก {n} เหรียญ", "{n} coins left")}
+      data-over={t("เกินมา {n} เหรียญ", "{n} too many")}
+      data-full={t(`ครบ ${coins} เหรียญแล้ว`, `All ${coins} coins placed`)}
+    >
+      <div class="q-coins" aria-hidden="true">
+        {Array.from({ length: coins }, () => (
+          <i class="q-coin" />
+        ))}
+      </div>
+      <p class="q-budget-left" aria-live="polite">
+        {t(`วางเหรียญให้ครบ ${coins} เหรียญพอดี`, `Place exactly ${coins} coins`)}
+      </p>
+      <ul class="q-budget-list">
+        {props.q.options.map((o, j) => {
+          const id = `q${props.i}-c${j}`;
+          const label = L(lang, o.label);
+          return (
+            <li class="q-budget-row">
+              <b class="answer-emoji" aria-hidden="true">
+                {o.icon}
+              </b>
+              <label for={id}>{label}</label>
+              <span class="q-budget-ctl">
+                <button type="button" class="q-budget-btn" data-d="-1" aria-label={t(`ลดหนึ่งเหรียญ: ${label}`, `One coin less: ${label}`)}>
+                  −
+                </button>
+                <input id={id} type="number" name={`a${props.i}_${j}`} min="0" max={String(coins)} step="1" value="0" inputmode="numeric" />
+                <button type="button" class="q-budget-btn" data-d="1" aria-label={t(`เพิ่มหนึ่งเหรียญ: ${label}`, `One coin more: ${label}`)}>
+                  +
+                </button>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function AnswerField(props: { v: View; q: Question; i: number }) {
+  const { lang } = props.v;
+  const { q, i } = props;
+  switch (q.format) {
+    case "choice":
+    case "bothers":
+      return (
+        <div class="answers">
+          {q.options.map((o, j) => (
+            <AnswerCard name={`a${i}`} value={String(j)} label={L(lang, o.label)} emoji={o.icon} />
+          ))}
+        </div>
+      );
+    case "scale":
+      return (
+        <>
+          <div class="scale">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <AnswerCard name={`a${i}`} value={String(n)} label={String(n)} />
+            ))}
+          </div>
+          <div class="scale-ends">
+            <span>1 · {L(lang, q.minLabel)}</span>
+            <span>{L(lang, q.maxLabel)} · 5</span>
+          </div>
+        </>
+      );
+    case "slider":
+      return <SliderField v={props.v} q={q} i={i} />;
+    case "rank":
+      return <RankField v={props.v} q={q} i={i} />;
+    case "budget":
+      return <BudgetField v={props.v} q={q} i={i} />;
+  }
+}
+
 export function QuizFlow(props: {
   v: View;
   questions: Question[];
@@ -97,8 +295,12 @@ export function QuizFlow(props: {
   /** "Skip for now" target (onboarding only). */
   skipAction?: string;
   error?: string;
+  /** Open on this question (0-based), e.g. the one a server-side error refers to. */
+  startAt?: number;
 }) {
   const { t, lang } = props.v;
+  const firstTap = props.questions.findIndex((q) => TAP_FORMATS.has(q.format));
+  const n = props.questions.length;
   return (
     <Flow
       v={props.v}
@@ -108,6 +310,7 @@ export function QuizFlow(props: {
       stage={props.stage}
       close={props.close}
       autoSubmit
+      start={props.startAt !== undefined ? props.startAt + 1 : undefined}
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={
         props.skipAction ? (
@@ -128,51 +331,137 @@ export function QuizFlow(props: {
         cta={t("เริ่มเลย", "Start")}
       >
         <div class="tiles" aria-hidden="true">
-          <span class="tile"><b>👆</b>{t(`${props.questions.length} ข้อ แตะเลือก`, `${props.questions.length} quick taps`)}</span>
-          <span class="tile"><b>⏱️</b>{t("ราว 3 นาที", "About 3 min")}</span>
+          <span class="tile"><b>👆</b>{t(`${n} ข้อ แตะ เลื่อน เรียง`, `${n} questions: tap, slide, rank`)}</span>
+          <span class="tile"><b>⏱️</b>{t("ราว 4 นาที", "About 4 min")}</span>
           <span class="tile"><b>🔒</b>{t("เป็นความลับ", "Private")}</span>
         </div>
       </FlowStep>
-      {props.questions.map((q, i) => (
-        <FlowStep title={L(lang, q.prompt)} auto class="q">
-          <QuestionArt art={q.art} lang={lang} />
-          {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบ", "Tap an answer")}</span> : null}
-          <span class="muted" style="display:block;font-size:.8rem">
-            {i + 1} / {props.questions.length}
-          </span>
-          {q.format === "choice" ? (
-            <div class="answers">
-              {q.options.map((o, j) => (
-                <AnswerCard name={`a${i}`} value={String(j)} label={L(lang, o.label)} emoji={o.icon} />
-              ))}
-            </div>
-          ) : (
-            <>
-              <div class="scale">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <AnswerCard name={`a${i}`} value={String(n)} label={String(n)} />
-                ))}
-              </div>
-              <div class="scale-ends">
-                <span>1 · {L(lang, q.minLabel)}</span>
-                <span>{L(lang, q.maxLabel)} · 5</span>
-              </div>
-            </>
-          )}
-        </FlowStep>
-      ))}
+      {props.questions.map((q, i) => {
+        const tap = TAP_FORMATS.has(q.format);
+        return (
+          <FlowStep
+            title={L(lang, q.prompt)}
+            auto={tap}
+            class={`q q-${q.format}`}
+            sum={q.format === "budget" ? q.coins : undefined}
+            allOrNone={q.format === "rank"}
+            needText={
+              q.format === "budget"
+                ? t(`วางให้ครบ ${q.coins} เหรียญพอดี หรือไม่วางเลยเพื่อข้าม`, `Place exactly ${q.coins} coins, or none to skip.`)
+                : q.format === "rank"
+                  ? t("จัดอันดับให้ครบทุกข้อ หรือกดย้อนจนว่างเพื่อข้าม", "Rank all of them, or undo them all to skip.")
+                  : undefined
+            }
+          >
+            <QuestionArt art={q.art} lang={lang} />
+            <FormatHint v={props.v} q={q} first={i === firstTap} />
+            <span class="muted q-count">
+              {i + 1} / {n}
+            </span>
+            <AnswerField v={props.v} q={q} i={i} />
+          </FlowStep>
+        );
+      })}
+      <script dangerouslySetInnerHTML={{ __html: QUIZ_WIDGETS_JS }} />
     </Flow>
   );
 }
 
-export function answersFrom(body: Record<string, unknown>, questions: Question[]): Answers {
+/**
+ * Turns the posted form into answers. Each question i posts:
+ *   choice / bothers / scale  a{i} = one digit
+ *   slider                    a{i} = 0..100
+ *   rank                      a{i}_{j} = position (1..n) of option j, or a{i} = "2,0,3,1" (option indices, favourite first)
+ *   budget                    a{i}_{j} = coins on option j (blank counts as 0)
+ * A question with nothing filled in is just unanswered. Anything filled in but
+ * not valid (a half-done ranking, coins not adding up, out-of-range values)
+ * goes into `invalid` so the route can answer 400.
+ */
+export function parseAnswers(body: Record<string, unknown>, questions: Question[]): { answers: Answers; invalid: number[] } {
   const answers: Answers = {};
+  const invalid: number[] = [];
   questions.forEach((q, i) => {
     const raw = str(body[`a${i}`]);
-    if (raw !== "" && /^\d$/.test(raw)) answers[q.id] = Number(raw);
+    const parts = q.format === "rank" || q.format === "budget" ? q.options.map((_, j) => str(body[`a${i}_${j}`])) : [];
+    let answer: Answer | undefined;
+    switch (q.format) {
+      case "choice":
+      case "bothers":
+      case "scale":
+      case "slider":
+        if (raw === "") return;
+        if (/^\d{1,3}$/.test(raw)) answer = Number(raw);
+        break;
+      case "rank":
+        if (raw !== "") {
+          if (/^\d(,\d){0,9}$/.test(raw)) answer = raw.split(",").map(Number);
+        } else {
+          if (parts.every((p) => p === "")) return;
+          if (parts.every((p) => /^\d{1,2}$/.test(p))) {
+            const order: number[] = new Array(parts.length).fill(-1);
+            parts.forEach((p, j) => {
+              const pos = Number(p) - 1;
+              if (pos >= 0 && pos < order.length && order[pos] === -1) order[pos] = j;
+            });
+            if (!order.includes(-1)) answer = order;
+          }
+        }
+        break;
+      case "budget":
+        if (parts.every((p) => p === "" || p === "0")) return;
+        if (parts.every((p) => p === "" || /^\d{1,2}$/.test(p))) answer = parts.map((p) => (p === "" ? 0 : Number(p)));
+        break;
+    }
+    if (answer !== undefined && itemScore(q, answer) !== null) answers[q.id] = answer;
+    else invalid.push(i);
   });
-  return answers;
+  return { answers, invalid };
 }
+
+export function answersFrom(body: Record<string, unknown>, questions: Question[]): Answers {
+  return parseAnswers(body, questions).answers;
+}
+
+/**
+ * Slider live label, rank taps with numbered badges and undo, and coin
+ * buttons with a remaining counter. Without JS the same fields work as a plain
+ * range, number selects and number inputs.
+ */
+const QUIZ_WIDGETS_JS = `(function(){
+var f=document.currentScript&&document.currentScript.closest("form");if(!f||f.dataset.quizReady)return;f.dataset.quizReady="1";
+function each(sel,fn){[].forEach.call(f.querySelectorAll(sel),fn)}
+each("[data-slider]",function(w){
+  var r=w.querySelector("input[type=range]"),o=w.querySelector("output"),d=w.dataset;
+  function upd(){var v=+r.value,txt;if(v>=40&&v<=60)txt=d.mid;else txt=(v<=10||v>=90?d.all:d.lean)+" "+(v<50?d.left:d.right);o.textContent=txt;r.setAttribute("aria-valuetext",txt);w.style.setProperty("--v",v+"%")}
+  r.addEventListener("input",upd);upd();
+});
+each("[data-rank]",function(w){
+  var btns=[].slice.call(w.querySelectorAll(".q-rank-btn")),sels=[].slice.call(w.querySelectorAll("select")),undo=w.querySelector(".q-rank-undo"),st=w.querySelector(".q-rank-status"),order=[];
+  var pre=sels.map(function(s,j){return [+s.value||0,j]}).filter(function(x){return x[0]>0}).sort(function(a,b){return a[0]-b[0]});
+  if(pre.length===sels.length)order=pre.map(function(x){return x[1]});
+  function draw(){
+    btns.forEach(function(b,j){var k=order.indexOf(j);b.querySelector(".q-rank-badge").textContent=k<0?"":String(k+1);b.setAttribute("aria-pressed",k<0?"false":"true");b.classList.toggle("on",k>=0)});
+    sels.forEach(function(s,j){var k=order.indexOf(j);s.value=k<0?"":String(k+1)});
+    undo.disabled=!order.length;
+    st.textContent=order.length===btns.length?w.dataset.done:(order.length?w.dataset.more.replace("{n}",order.length+1):w.dataset.start);
+  }
+  btns.forEach(function(b,j){b.addEventListener("click",function(){var k=order.indexOf(j);if(k<0)order.push(j);else order.splice(k,1);draw()})});
+  undo.addEventListener("click",function(){order.pop();draw()});
+  draw();
+});
+each("[data-budget]",function(w){
+  var max=+w.dataset.coins||10,ins=[].slice.call(w.querySelectorAll("input[type=number]")),left=w.querySelector(".q-budget-left"),coins=[].slice.call(w.querySelectorAll(".q-coin"));
+  function val(x){return Math.max(0,Math.floor(+x.value)||0)}
+  function draw(){var tot=ins.reduce(function(t,x){return t+val(x)},0),rem=max-tot;
+    left.textContent=rem===0?w.dataset.full:(rem>0?w.dataset.left:w.dataset.over).replace("{n}",String(Math.abs(rem)));
+    left.classList.toggle("over",rem<0);left.classList.toggle("full",rem===0);
+    coins.forEach(function(c,k){c.classList.toggle("spent",k<tot)});
+    [].forEach.call(w.querySelectorAll(".q-budget-btn"),function(b){var x=b.parentNode.querySelector("input");b.disabled=b.dataset.d==="1"?rem<=0:val(x)<=0});
+  }
+  w.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".q-budget-btn");if(!b||b.disabled)return;var x=b.parentNode.querySelector("input");x.value=String(Math.max(0,Math.min(max,val(x)+(+b.dataset.d))));draw()});
+  w.addEventListener("input",draw);draw();
+});
+})();`;
 
 // ---------------------------------------------------------- the result --
 
@@ -305,7 +594,7 @@ quizRoutes.get("/quiz", async (c) => {
   return page(
     c,
     { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row)} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
+    <QuizFlow v={v} questions={quizQuestions(seed, row, personalOf(user.profile))} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
   );
 });
 
@@ -326,9 +615,19 @@ quizRoutes.post("/quiz", async (c) => {
       </>,
     );
   }
-  const questions = quizQuestions(seed, row);
-  const result = scoreSession(questions, answersFrom(body, questions));
-  if (result.answered < MIN_ANSWERED) {
+  // The onboarding quiz (onboarding.tsx) is built without personalisation; match it.
+  const questions = quizQuestions(seed, row, next === "/onboarding/type" ? undefined : personalOf(user.profile));
+  const { answers, invalid } = parseAnswers(body, questions);
+  const result = scoreSession(questions, answers);
+  if (invalid.length > 0 || result.answered < MIN_ANSWERED) {
+    const bad = invalid[0];
+    const error =
+      bad !== undefined
+        ? v.t(
+            `ข้อ ${bad + 1} ยังไม่ครบ: การจัดอันดับใช้เลขละครั้ง และเหรียญต้องรวมกันได้พอดี`,
+            `Question ${bad + 1} needs another look: rankings use each number once, and coins must add up exactly.`,
+          )
+        : v.t(`ตอบอย่างน้อย ${MIN_ANSWERED} ข้อ`, `Please answer at least ${MIN_ANSWERED} questions.`);
     return page(
       c,
       { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), status: 400, bare: true },
@@ -340,7 +639,8 @@ quizRoutes.post("/quiz", async (c) => {
         close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
         skipAction={next === "/onboarding/type" ? "/onboarding/quiz/skip" : undefined}
         stage={next === "/onboarding/type" ? { at: 1, of: 7 } : undefined}
-        error={v.t(`ตอบอย่างน้อย ${MIN_ANSWERED} ข้อ`, `Please answer at least ${MIN_ANSWERED} questions.`)}
+        error={error}
+        startAt={bad}
       />,
     );
   }

@@ -94,3 +94,54 @@ For each category: score = the mean of its item scores, from −1 to +1. Skipped
 1. Thai copy review by a native writer. The current Thai text is a working draft.  
 2. Pilot with 300+ people. Check each category's internal consistency (α ≥ 0.6) and retest stability (≥ 70% keep the same pole on non-balanced categories). Prune weak items.  
 3. Grow the place bank directly from the VisitBangkok directory. Its categories (photo, food, heritage, art, café, walking street) map onto the Exploring and Culture categories.
+
+## v3.1: richer formats, a bigger bank, a quiz nobody else gets
+
+*Code: `src/vibe/content.ts`, `generator.ts`, `visuals.ts`, `src/routes/quiz.tsx`. Tests: `test/vibe.test.ts`, `test/archetypes.test.ts`, `test/quiz.integration.test.ts`.*
+
+The owner asked for "lots for the quiz", more comprehensive than simple questions, genuine and positive, and that no user receives the same quiz. v3.1 brings in the **response formats** and the **everyday Bangkok scenarios** of the original City Values draft (`city-values-quiz-v1.md`), reframed around how people like to spend time. It stays non-political: every item still feeds table matching, so every item is about time, people and places.
+
+### Formats (all scored onto the same 6 categories, each item −1..+1)
+
+| Format | What the member does | Scoring |
+|---|---|---|
+| `choice` | Taps one of two (templates `scene`, `host`, `quick`, `skip`, plus new `moment` and `power`) | The option's pole (`skip` reversed) |
+| `bothers` | "Which would bother you more?" two light annoyances | Reversed: the text describes the other side, so "A 7 am meet-up" scores Night owl |
+| `scale` | 1–5 "how much is this you?" | (answer − 3) / 2 × pole |
+| `slider` | Drags 0–100 between two pole phrases ("A table of three ↔ A table of twenty"), live label, then Next | (value − 50) / 50 × the right end's pole |
+| `rank` | Taps four activities in order, favourite first (two from each pole), numbered badges and Undo; without JS, number selects | Weights 3, 1, −1, −3 by position × pole, ÷ 8 |
+| `budget` | Spreads 10 coins over four activities with − / + and a remaining counter; must total 10 (or 0 to skip); without JS, number inputs checked on the server | Σ coins × pole ÷ 10 |
+
+A member session (`formats: "mixed"`, 3 per category = 18 items) always has **2 sliders, 1 rank, 1 budget, 2 bothers, 3 scales and 9 choices**, spread so no category gets two of rank/budget, and ordered so neither the **category nor the format** repeats back to back (checked over 300 seeds). `perCategory` 2–6 scales the mix (`mixCounts()`). The public `/api/vibe` prototype keeps the classic scale + choice mix (`formats` defaults to `"classic"`), so its numeric-answer contract is unchanged.
+
+The POST rejects anything malformed with **400** (a half-done or duplicated ranking, coins that don't add to 10, out-of-range values) and reopens the flow on that question. An untouched rank or coin question is simply skipped.
+
+### Bank (exact counts)
+
+| Bank | Size |
+|---|---|
+| Activities | 168 (14 per pole × 12 poles) |
+| Statements (scale) | 72 (6 per pole) |
+| Slider ends | 72 (6 per pole) |
+| "Bothers" items | 60 (5 per pole) |
+| Superpowers | 36 (3 per pole) |
+| Places | 39, each tagged with its district(s) and interests (VisitBangkok routes plus everyday spots across the city, from Hua Takhe and Min Buri to Bang Khun Thian's seaside) |
+| Situations | 19 ("A free Sunday with nothing booked", "A friend is visiting Bangkok for the weekend", "It's raining hard on a Friday evening", "You just moved to a new neighbourhood", "It's a festival night in the city"…) |
+| Times | 15 |
+| Companions | 18, some tagged with interests ("a friend from your running club") |
+
+Every item is bilingual and has its own icon or sky tone (tested). New copy has no em or en dashes.
+
+### What we took from the md, and what we left out
+
+**Used:** forced choice (`choice`), "Which bothers you MORE?" (`bothers`, now everyday annoyances instead of neighbourhood change), the 10-coin budget game (`budget`, coins of time and energy across ways to spend a day, not across city services), ranking (`rank`, tap-to-order instead of drag, so it works on any phone and with a keyboard), the scenario slider (`slider`), "Pick your Bangkok superpower" (`power`), the "free Sunday" scenario and the md's real-situation style (`moment`, `SITUATIONS`), and its principles: both options reasonable, mixed categories so the scoring axis isn't visible, a large rotating bank.
+
+**Left out on purpose:** everything civic. No CCTV or police, no rules or regulation trade-offs, no "who should decide" (residents vs experts, majority vs negotiation), no public money, subsidies or taxes, no development vs preservation, no diversity or norms questions, no elections or religion (v3's "giving alms at dawn" was replaced with "coffee on a quiet pier at dawn", and the temple walk is a heritage walk). These reveal political or religious opinion, which is sensitive data under PDPA s.26 and has no place in matching people for a dinner table. The md's "inconvenience you'd delete" (traffic, flooding, sidewalks) was also left out: it is a city-services question and belongs in City Pulse. A test bans these topics in English and Thai across every bank and every generated prompt.
+
+### "No user receives the same quiz"
+
+• **Per account and attempt:** the seed is `accountId:answeredCount`, derived on the server, so every account and every retake gets its own session.  
+• **Personalised:** `generateSession({ personal: { district, interests } })` leans scenes toward places in the member's district ("Songkran afternoon, close to home near Sam Yan") and toward places and companions that match their interests, and mixes the personalisation into the seed. The same seed with different personalisation gives a different session (tested). The onboarding quiz runs before the profile exists, so it is not personalised.  
+• **Retakes** avoid question ids already seen; ids never repeat inside a session (tested over 5,000 seeds), and situations, places, times and companions are not reused within a session where the bank allows.  
+• **Numbers (tested):** 5,000 different seeds → 5,000 distinct sessions. `questionSpace()` ≈ **93.7 million** distinct questions (was ~10,000). 1,500 simulated member sessions reach about 16,000 distinct questions.  
+• All 16 Bangkok Types stay reachable through real answers in classic and mixed sessions, with and without personalisation.
