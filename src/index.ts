@@ -18,6 +18,7 @@ import { pwaRoutes } from "./routes/pwa";
 import { quizRoutes } from "./routes/quiz";
 import { settingsRoutes } from "./routes/settings";
 import { setup } from "./routes/setup";
+import { vendorRoutes } from "./routes/vendor";
 
 const app = new Hono<AppEnv>();
 
@@ -30,6 +31,7 @@ app.route("/api/setup", setup);
 app.route("/", publicRoutes);
 app.route("/", learnRoutes);
 app.route("/", pwaRoutes);
+app.route("/", vendorRoutes);
 app.route("/", inviteRoutes);
 app.route("/", quizRoutes);
 app.route("/", authRoutes);
