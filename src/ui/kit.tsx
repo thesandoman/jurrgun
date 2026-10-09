@@ -126,6 +126,11 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           <span>{t("โครงการของกรุงเทพมหานคร", "A Bangkok Metropolitan Administration project")}</span>
         </footer>
         {member && !opts.admin ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,
+          }}
+        />
       </body>
     </html>
   );

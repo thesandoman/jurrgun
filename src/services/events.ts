@@ -11,7 +11,7 @@ import { buddyRound, type Attendee } from "../domain/matching";
 import { ageOn, OFFER_HOURS, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { audit, notify } from "../lib/records";
-import { accounts, blocks, buddyPairs, events, profiles, registrations, strikes, type Event } from "../schema";
+import { accounts, blocks, buddyPairs, events, profiles, registrations, strikes, vibes, type Event } from "../schema";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -97,14 +97,16 @@ export async function refreshWaitlist(env: DatabaseEnv, eventId: string, now = n
 /** Attendees in the shape the matching code wants, blocks included. */
 export async function loadAttendees(db: Db, accountIds: string[], now = new Date()): Promise<Attendee[]> {
   if (accountIds.length === 0) return [];
-  const [profs, blockRows] = await Promise.all([
+  const [profs, blockRows, vibeRows] = await Promise.all([
     db.select().from(profiles).where(inArray(profiles.accountId, accountIds)).limit(5000),
     db
       .select({ blocker: blocks.blocker, blocked: blocks.blocked })
       .from(blocks)
       .where(or(inArray(blocks.blocker, accountIds), inArray(blocks.blocked, accountIds)))
       .limit(10_000),
+    db.select({ accountId: vibes.accountId, vector: vibes.vector }).from(vibes).where(inArray(vibes.accountId, accountIds)).limit(5000),
   ]);
+  const vibeOf = new Map(vibeRows.map((v) => [v.accountId, v.vector]));
   return profs.map((p) => ({
     accountId: p.accountId,
     age: ageOn(p.birthDate, now),
@@ -117,6 +119,7 @@ export async function loadAttendees(db: Db, accountIds: string[], now = new Date
     blocked: blockRows
       .filter((b) => b.blocker === p.accountId || b.blocked === p.accountId)
       .map((b) => (b.blocker === p.accountId ? b.blocked : b.blocker)),
+    vibe: vibeOf.get(p.accountId) ?? null,
   }));
 }
 

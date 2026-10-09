@@ -8,6 +8,13 @@
       "when": 1791532965236,
       "tag": "0000_happy_azazel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791536544288,
+      "tag": "0001_burly_deathstrike",
+      "breakpoints": true
     }
   ]
 }

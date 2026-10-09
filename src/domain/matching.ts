@@ -1,9 +1,9 @@
 /**
  * Glue between app profiles and the matching experiment in src/match/.
  *
- * The Vibe quiz is on hold, so every vibe is neutral (0) for now and matching
- * runs on interests, social styles and languages. When the quiz returns, set
- * `vibe` from the stored vector and nothing else changes.
+ * Uses the Bangkok Vibe vector when the person has taken the quiz; anyone who
+ * hasn't is treated as neutral (0) on every category, so matching then runs
+ * on interests, social styles and languages alone.
  */
 import { CATEGORIES, type Category } from "../vibe/content";
 import { formGroups, type GroupResult } from "../match/clearinghouse";
@@ -20,6 +20,8 @@ export type Attendee = {
   socialStyles: string[];
   intents: string[];
   blocked: string[];
+  /** Bangkok Vibe vector, if the quiz was taken. */
+  vibe?: Record<string, number> | null;
 };
 
 const NEUTRAL_VIBE = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<Category, number>;
@@ -28,7 +30,7 @@ export function toMatchProfile(a: Attendee): MatchProfile {
   const intents = a.intents.filter((i) => i !== "romance") as MatchProfile["intents"];
   return {
     id: a.accountId,
-    vibe: NEUTRAL_VIBE,
+    vibe: a.vibe ? (Object.fromEntries(CATEGORIES.map((c) => [c, a.vibe?.[c] ?? 0])) as Record<Category, number>) : NEUTRAL_VIBE,
     interests: [...a.interests, ...a.socialStyles.map((s) => `style:${s}`)],
     languages: a.languages.length ? a.languages : ["th"],
     age: a.age,

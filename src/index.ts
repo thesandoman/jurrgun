@@ -8,11 +8,14 @@ import { generateSession, scoreSession, toPublic, type Answers } from "./vibe/ge
 import { adminRoutes } from "./routes/admin";
 import { authRoutes } from "./routes/auth";
 import { eventRoutes } from "./routes/events";
+import { inviteRoutes } from "./routes/invite";
 import { learnRoutes } from "./routes/learn";
 import { onboarding } from "./routes/onboarding";
 import { peopleRoutes } from "./routes/people";
 import { publicRoutes } from "./routes/public";
 import { pulseRoutes } from "./routes/pulse";
+import { pwaRoutes } from "./routes/pwa";
+import { quizRoutes } from "./routes/quiz";
 import { settingsRoutes } from "./routes/settings";
 import { setup } from "./routes/setup";
 
@@ -26,6 +29,9 @@ app.use("*", loadUser);
 app.route("/api/setup", setup);
 app.route("/", publicRoutes);
 app.route("/", learnRoutes);
+app.route("/", pwaRoutes);
+app.route("/", inviteRoutes);
+app.route("/", quizRoutes);
 app.route("/", authRoutes);
 app.route("/onboarding", onboarding);
 app.route("/", eventRoutes);

@@ -28,7 +28,8 @@ export const setup = new Hono<AppEnv>();
 export function resumable(statement: string): string {
   return statement
     .replace(/^CREATE TABLE (?!IF NOT EXISTS)/i, "CREATE TABLE IF NOT EXISTS ")
-    .replace(/^CREATE (UNIQUE )?INDEX (?!IF NOT EXISTS)/i, (_m, u: string | undefined) => `CREATE ${u ?? ""}INDEX IF NOT EXISTS `);
+    .replace(/^CREATE (UNIQUE )?INDEX (?!IF NOT EXISTS)/i, (_m, u: string | undefined) => `CREATE ${u ?? ""}INDEX IF NOT EXISTS `)
+    .replace(/^(ALTER TABLE "[^"]+" ADD COLUMN )(?!IF NOT EXISTS)/i, "$1IF NOT EXISTS ");
 }
 
 setup.use("*", async (c, next) => {

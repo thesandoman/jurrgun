@@ -64,5 +64,6 @@ describe("resumable()", () => {
     expect(resumable('CREATE UNIQUE INDEX "i" ON "a" ("id")')).toBe('CREATE UNIQUE INDEX IF NOT EXISTS "i" ON "a" ("id")');
     expect(resumable('CREATE INDEX "j" ON "a" ("id")')).toBe('CREATE INDEX IF NOT EXISTS "j" ON "a" ("id")');
     expect(resumable('CREATE TABLE IF NOT EXISTS "a" (id text)')).toBe('CREATE TABLE IF NOT EXISTS "a" (id text)');
+    expect(resumable('ALTER TABLE "p" ADD COLUMN "x" boolean')).toBe('ALTER TABLE "p" ADD COLUMN IF NOT EXISTS "x" boolean');
   });
 });
