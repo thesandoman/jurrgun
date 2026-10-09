@@ -48,22 +48,29 @@ setup.post("/migrate", async (c) => {
   const applied: string[] = [];
   for (const m of MIGRATIONS) {
     if (done.has(m.id)) continue;
-    let unlocked = false;
     for (const statement of m.statements) {
-      // New tables start schema-locked; indexes and ALTERs need them unlocked.
-      if (!unlocked && !/^CREATE TABLE/i.test(statement)) {
-        await unlockTables(c.env);
-        unlocked = true;
+      const isCreateTable = /^CREATE TABLE/i.test(statement);
+      // New tables start schema-locked, and the database may re-lock after a
+      // schema change, so unlock before every non-table step and retry once.
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (!isCreateTable) await unlockTables(c.env);
+          await db.execute(sql.raw(resumable(statement)));
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
       }
-      try {
-        await db.execute(sql.raw(resumable(statement)));
-      } catch (err) {
+      if (lastErr) {
         // Guarded route, owner-only: return the database's own message so a
         // failed step can be diagnosed, and stop before marking it applied.
-        return c.json({ error: "migration step failed", migration: m.id, statement: statement.slice(0, 200), detail: String(err) }, 500);
+        const e = lastErr as { cause?: unknown };
+        return c.json({ error: "migration step failed", migration: m.id, statement: statement.slice(0, 200), detail: String(e.cause ?? lastErr) }, 500);
       }
     }
-    if (!unlocked) await unlockTables(c.env);
+    await unlockTables(c.env);
     await db.execute(sql`INSERT INTO app_migrations (id) VALUES (${m.id})`);
     applied.push(m.id);
   }
