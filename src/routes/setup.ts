@@ -21,6 +21,16 @@ import { audit } from "../lib/records";
 
 export const setup = new Hono<AppEnv>();
 
+/**
+ * Makes a generated statement safe to re-run, so a migration that stopped
+ * halfway (e.g. tables created, an index failed) can simply be called again.
+ */
+export function resumable(statement: string): string {
+  return statement
+    .replace(/^CREATE TABLE (?!IF NOT EXISTS)/i, "CREATE TABLE IF NOT EXISTS ")
+    .replace(/^CREATE (UNIQUE )?INDEX (?!IF NOT EXISTS)/i, (_m, u: string | undefined) => `CREATE ${u ?? ""}INDEX IF NOT EXISTS `);
+}
+
 setup.use("*", async (c, next) => {
   const key = c.env.SETUP_KEY;
   if (!key) return c.json({ error: "Not found" }, 404);
@@ -45,7 +55,13 @@ setup.post("/migrate", async (c) => {
         await unlockTables(c.env);
         unlocked = true;
       }
-      await db.execute(sql.raw(statement));
+      try {
+        await db.execute(sql.raw(resumable(statement)));
+      } catch (err) {
+        // Guarded route, owner-only: return the database's own message so a
+        // failed step can be diagnosed, and stop before marking it applied.
+        return c.json({ error: "migration step failed", migration: m.id, statement: statement.slice(0, 200), detail: String(err) }, 500);
+      }
     }
     if (!unlocked) await unlockTables(c.env);
     await db.execute(sql`INSERT INTO app_migrations (id) VALUES (${m.id})`);

@@ -56,3 +56,13 @@ describe.skipIf(!HAS_DB)("POST /api/setup/migrate", () => {
     expect(await res.json()).toEqual({ ok: true, username: "first_admin", role: "bma_admin" });
   });
 });
+
+describe("resumable()", () => {
+  it("adds IF NOT EXISTS to tables and indexes, once", async () => {
+    const { resumable } = await import("../src/routes/setup");
+    expect(resumable('CREATE TABLE "a" (id text)')).toBe('CREATE TABLE IF NOT EXISTS "a" (id text)');
+    expect(resumable('CREATE UNIQUE INDEX "i" ON "a" ("id")')).toBe('CREATE UNIQUE INDEX IF NOT EXISTS "i" ON "a" ("id")');
+    expect(resumable('CREATE INDEX "j" ON "a" ("id")')).toBe('CREATE INDEX IF NOT EXISTS "j" ON "a" ("id")');
+    expect(resumable('CREATE TABLE IF NOT EXISTS "a" (id text)')).toBe('CREATE TABLE IF NOT EXISTS "a" (id text)');
+  });
+});
