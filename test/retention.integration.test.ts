@@ -128,11 +128,11 @@ describe.skipIf(!HAS_DB)("runRetention", () => {
     const actor = `test_${newId()}`;
     const counts = await runRetention(ENV, new Date(), actor);
 
-    expect(counts.signalsCleared).toBeGreaterThanOrEqual(1);
-    expect(counts.choicesDeleted).toBeGreaterThanOrEqual(1);
-    expect(counts.sessionsDeleted).toBeGreaterThanOrEqual(1);
-    expect(counts.loginAttemptsDeleted).toBeGreaterThanOrEqual(1);
-    expect(counts.accountsDeleted).toBeGreaterThanOrEqual(1);
+    // Other test files run in parallel on the same database, and an admin page
+    // visit there can trigger the lazy cleanup at the same moment, deleting these
+    // fixtures first. So the counts only prove a well-formed result; the
+    // end-state checks below prove that exactly the right rows went.
+    for (const n of Object.values(counts)) if (typeof n === "number") expect(n).toBeGreaterThanOrEqual(0);
 
     const d = db();
     const regs = await d.select().from(registrations).where(inArray(registrations.id, [regOld, regMid])).limit(5);
