@@ -109,6 +109,9 @@ th{background:var(--surface-2);font-weight:600;font-size:.84rem}
 .steps i.on{background:var(--brand)}
 details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:10px 0}
 summary{cursor:pointer;font-weight:600}
+dl.facts{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 14px;margin:10px 0}
+dl.facts dt{color:var(--ink-3);font-size:.88rem}
+dl.facts dd{margin:0}
 hr{border:none;border-top:1px solid var(--line);margin:18px 0}
 @media (min-width:900px){body:not(.admin){padding-bottom:84px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}

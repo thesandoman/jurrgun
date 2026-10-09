@@ -59,7 +59,8 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     const row = rows[0];
     if (row && accountUsable(row.account)) {
       c.set("user", { account: row.account, profile: row.profile });
-      if (!getCookie(c, "lang") && row.profile) c.set("lang", pickLang(row.profile.locale));
+      // An explicit ?lang= or language cookie wins; otherwise use the profile's.
+      if (!c.req.query("lang") && !getCookie(c, "lang") && row.profile) c.set("lang", pickLang(row.profile.locale));
     } else {
       deleteCookie(c, SESSION_COOKIE, { path: "/" });
     }
