@@ -15,9 +15,15 @@ describe("GET /", () => {
     expect(res.headers.get("content-type")).toContain("text/html");
   });
 
-  it("shows the app is live", async () => {
+  it("shows the BKK Social landing page in Thai by default", async () => {
     const body = await (await app.request("/")).text();
-    expect(body).toContain("Your app is live");
+    expect(body).toContain("BKK Social");
+    expect(body).toContain('lang="th"');
+  });
+
+  it("switches to English with ?lang=en", async () => {
+    const body = await (await app.request("/?lang=en")).text();
+    expect(body).toContain("Small groups. Real places. No swiping.");
   });
 });
 
