@@ -399,7 +399,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
               </button>
             </form>
           </div>
-          <p class="muted">{t("แบบทดสอบสั้น ๆ สนุก ๆ ไว้ใช้ชวนคุย ไม่มีผลต่อการจัดกลุ่ม", "A short, playful quiz for conversation starters. It never affects who you're grouped with.")}</p>
+          <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยจัดโต๊ะให้เข้ากับคุณ ไม่มีเรื่องการเมือง เป็นความลับจนกว่าคุณจะเลือกแสดง", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
         </Card>
       ) : null}
       <details open={!!filtered}>
