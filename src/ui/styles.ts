@@ -12,7 +12,8 @@ export const STYLES = `
   --ok:#15803d;--ok-soft:#dcfce7;--warn:#a35a00;--warn-soft:#fff1cc;--err:#c2261d;--err-soft:#fde8e6;
   --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(12,138,69,.08);
   --hero:linear-gradient(135deg,#0c8a45 0%,#22c55e 55%,#a3e635 120%);
-  --font:'IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  /* Inter for Latin; Thai has no Inter glyphs, so it falls back to IBM Plex Sans Thai. */
+  --font:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#0b1610;--surface:#122019;--surface-2:#192b21;--ink:#eaf7ef;--ink-2:#b5cfbe;--ink-3:#84a190;
@@ -27,8 +28,8 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:radial-gradient(1200px 500px at 50% -120px,var(--brand-soft),transparent 70%),var(--bg);background-attachment:fixed;color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;padding-bottom:84px}
 body.admin{padding-bottom:0}
 a{color:var(--brand)}
-h1{font-size:1.55rem;line-height:1.3;margin:.4rem 0 .8rem}
-h2{font-size:1.2rem;margin:1.4rem 0 .6rem}
+h1{font-size:1.6rem;line-height:1.25;margin:.5rem 0 1rem;letter-spacing:-.02em}
+h2{font-size:1.2rem;margin:1.8rem 0 .8rem;letter-spacing:-.01em}
 h3{font-size:1.02rem;margin:.2rem 0 .3rem}
 p{margin:.4rem 0}
 small,.muted{color:var(--ink-3);font-size:.86rem}
@@ -40,7 +41,7 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 .top-actions{display:flex;gap:6px;align-items:center}
 .chip{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:.82rem;color:var(--ink-2);text-decoration:none;background:var(--surface)}
 .icon-link{text-decoration:none;font-size:1.1rem;padding:2px 6px}
-.wrap{max-width:640px;margin:0 auto;padding:12px 16px 24px}
+.wrap{max-width:640px;margin:0 auto;padding:20px 20px 36px}
 .wrap.wide{max-width:1100px}
 .foot{max-width:1100px;margin:24px auto 0;padding:16px;display:flex;flex-wrap:wrap;gap:12px;font-size:.82rem;color:var(--ink-3)}
 .foot a{color:var(--ink-3)}
@@ -49,12 +50,13 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 .tabbar a span{font-size:1.15rem}
 .tabbar a.center{position:relative;margin:-22px 6px 0;min-height:64px;border-radius:18px;background:var(--brand);color:var(--brand-ink);font-weight:700;box-shadow:0 8px 22px color-mix(in srgb,var(--brand) 45%,transparent)}
 .tabbar a.center span{font-size:1.5rem}
+.tabbar a{white-space:nowrap}.tabbar a.center{font-size:.68rem;padding:4px 2px}
 .tabbar a.center.on{background:var(--brand);color:var(--brand-ink);outline:3px solid color-mix(in srgb,var(--gold) 70%,transparent)}
 .tabbar a.on{color:var(--brand);font-weight:600;background:var(--brand-soft)}
 .adminnav{max-width:1100px;margin:8px auto 0;padding:0 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .adminnav a{white-space:nowrap;padding:6px 12px;border-radius:999px;text-decoration:none;color:var(--ink-2);border:1px solid var(--line);background:var(--surface);font-size:.88rem}
 .adminnav a.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
-.card{display:block;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:10px 0;box-shadow:var(--shadow);color:inherit}
+.card{display:block;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 20px;margin:16px 0;box-shadow:var(--shadow);color:inherit}
 .card.link{text-decoration:none;transition:transform .12s ease}
 .card.link:hover{transform:translateY(-1px)}
 .card.hero{background:var(--hero);color:#fff;border:none}
@@ -75,7 +77,7 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 .notice.warn{background:var(--warn-soft);color:var(--warn)}
 .empty{color:var(--ink-3);text-align:center;padding:24px 8px}
 form{margin:0}
-.field{display:flex;flex-direction:column;gap:4px;margin:12px 0}
+.field{display:flex;flex-direction:column;gap:6px;margin:18px 0}
 .field label,fieldset legend{font-weight:600;font-size:.94rem}
 input[type=text],input[type=password],input[type=date],input[type=datetime-local],input[type=number],input[type=search],input[type=url],select,textarea{
   width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
@@ -188,9 +190,9 @@ main.wrap{animation:page-in .22s ease both}
 .proto-banner{padding:2px 12px;font-size:.72rem}
 @media (max-width:520px){
   h1{font-size:1.4rem;margin:.3rem 0 .6rem}
-  h2{margin:1.1rem 0 .5rem}
-  .card{padding:12px 14px;margin:8px 0}
-  .wrap{padding:10px 16px 20px}
+  h2{margin:1.5rem 0 .7rem}
+  .card{padding:18px 18px;margin:14px 0}
+  .wrap{padding:16px 18px 28px}
 }
 body.bare{padding-bottom:0}
 body.bare .foot{display:none}

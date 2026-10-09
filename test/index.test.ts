@@ -52,7 +52,7 @@ describe("GET /intro", () => {
 
   it("serves the new app icon", async () => {
     const svg = await (await app.request("/icon.svg")).text();
-    expect(svg).toContain("#22c55e");
+    expect(svg).toContain("#16a34a"); // waving-hand mark
     const manifest = (await (await app.request("/manifest.webmanifest")).json()) as { name: string; theme_color: string };
     expect(manifest.name).toContain("Jurrgun");
     expect(manifest.theme_color).toBe("#0c8a45");
