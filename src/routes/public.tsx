@@ -5,11 +5,12 @@ import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
 import { Card, LinkButton, page, safeNext, view } from "../ui/kit";
+import { FaqList, LearnCards } from "./learn";
 
 export const publicRoutes = new Hono<AppEnv>();
 
 publicRoutes.get("/", (c) => {
-  const { t, user } = view(c);
+  const { t, user, lang } = view(c);
   if (user?.profile?.onboardedAt) return c.redirect("/events");
   return page(
     c,
@@ -29,6 +30,11 @@ publicRoutes.get("/", (c) => {
           )}
         </div>
       </Card>
+      <h2>{t("คำถามที่พบบ่อย", "FAQ")}</h2>
+      <FaqList lang={lang} limit={6} />
+      <p>
+        <a href="/faq">{t("ดูคำถามทั้งหมด →", "See all questions →")}</a>
+      </p>
       <h2>{t("ทำไมต้อง BKK Social", "Why BKK Social")}</h2>
       <div class="grid2">
         <Card>
@@ -48,6 +54,8 @@ publicRoutes.get("/", (c) => {
           <p class="muted">{t("ทุกเพศ ทุกความหลากหลาย ชาวไทยและชาวต่างชาติ — โหมดเพื่อนเป็นค่าเริ่มต้น", "Any gender or orientation, Thai or expat — friends-only by default.")}</p>
         </Card>
       </div>
+      <h2>{t("เรียนรู้ก่อนออกไปเจอคนใหม่", "Learn before you meet")}</h2>
+      <LearnCards lang={lang} />
       <p class="muted" style="margin-top:16px">
         {t("ทุกครั้งที่คุณออกไปพบผู้คน ความคิดเห็นแบบไม่ระบุตัวตนของคุณช่วยให้กรุงเทพฯ น่าอยู่ขึ้น", "Every outing helps: your anonymous City Pulse feedback goes straight to BMA.")}
       </p>

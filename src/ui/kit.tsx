@@ -118,6 +118,8 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         {opts.admin ? <AdminNav v={v} /> : null}
         <main class={opts.admin ? "wrap wide" : "wrap"}>{props.children}</main>
         <footer class="foot">
+          <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a>
+          <a href="/learn">{t("เรียนรู้", "Learn")}</a>
           <a href="/privacy">{t("ความเป็นส่วนตัว", "Privacy")}</a>
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>

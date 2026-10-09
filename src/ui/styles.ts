@@ -112,6 +112,19 @@ summary{cursor:pointer;font-weight:600}
 dl.facts{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 14px;margin:10px 0}
 dl.facts dt{color:var(--ink-3);font-size:.88rem}
 dl.facts dd{margin:0}
+.faq details{margin:8px 0}
+.faq summary{list-style:none;display:flex;justify-content:space-between;gap:10px;min-height:28px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--brand);font-weight:700}
+.faq details[open] summary::after{content:"−"}
+.faq details p{color:var(--ink-2);margin:8px 0 2px}
+.helplines{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.helplines li{display:flex;gap:12px;align-items:center}
+.helplines small{display:block}
+.hotline{flex:none;min-width:64px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:1.1rem;text-decoration:none}
+.learn section{margin-top:6px}
+.learn ul{padding-left:20px}
+.learn li{margin:6px 0}
 hr{border:none;border-top:1px solid var(--line);margin:18px 0}
 @media (min-width:900px){body:not(.admin){padding-bottom:84px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}

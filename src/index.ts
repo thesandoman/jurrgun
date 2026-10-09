@@ -8,6 +8,7 @@ import { generateSession, scoreSession, toPublic, type Answers } from "./vibe/ge
 import { adminRoutes } from "./routes/admin";
 import { authRoutes } from "./routes/auth";
 import { eventRoutes } from "./routes/events";
+import { learnRoutes } from "./routes/learn";
 import { onboarding } from "./routes/onboarding";
 import { peopleRoutes } from "./routes/people";
 import { publicRoutes } from "./routes/public";
@@ -24,6 +25,7 @@ app.use("*", loadUser);
 
 app.route("/api/setup", setup);
 app.route("/", publicRoutes);
+app.route("/", learnRoutes);
 app.route("/", authRoutes);
 app.route("/onboarding", onboarding);
 app.route("/", eventRoutes);
