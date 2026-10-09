@@ -1,5 +1,5 @@
 /**
- * BKK Social database tables.
+ * Jurrgun database tables.
  *
  * Three logical stores, as the PRD (§12.3) asks, kept apart by table prefix:
  *

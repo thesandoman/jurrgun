@@ -81,7 +81,7 @@ export const TOPICS: Topic[] = [
       {
         heading: t("ความหลากหลายในเมืองของเรา", "A diverse city"),
         blocks: [
-          p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 23 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม คู่รักทุกเพศอายุ 18 ปีขึ้นไปจดทะเบียนสมรสได้ที่สำนักงานเขต ใน BKK Social ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 23 January 2025 Thailand recognises marriage equality — couples of any gender aged 18+ can register at any district office. On BKK Social everyone gets the same respect."),
+          p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 23 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม คู่รักทุกเพศอายุ 18 ปีขึ้นไปจดทะเบียนสมรสได้ที่สำนักงานเขต ใน Jurrgun ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 23 January 2025 Thailand recognises marriage equality — couples of any gender aged 18+ can register at any district office. On Jurrgun everyone gets the same respect."),
           p("ถ้าคุณมาจากต่างประเทศ: วัฒนธรรมการเดตอาจต่างกัน — คนไทยหลายคนค่อย ๆ ทำความรู้จัก ให้ความสำคัญกับความสุภาพและครอบครัว ถามและฟังกันมากกว่าเดา", "If you're from abroad: dating culture may differ — many Thais take things slowly and value politeness and family. Ask and listen rather than assume."),
           tip("ไม่ต้องรีบ เพื่อนที่ดีหลายคนเริ่มจากการเจอกันในกลุ่มเล็ก ๆ", "No rush — many great relationships start as friends in a small group."),
         ],
@@ -124,7 +124,7 @@ export const TOPICS: Topic[] = [
         ],
       },
       {
-        heading: t("ความยินยอมใน BKK Social", "Consent on BKK Social"),
+        heading: t("ความยินยอมใน Jurrgun", "Consent on Jurrgun"),
         blocks: [
           p("แอปของเราออกแบบบนหลักความยินยอม: คุณจะเชื่อมต่อกับใครได้ก็ต่อเมื่อเลือกตรงกันทั้งสองฝ่าย ไม่มีใครรู้ว่าคุณไม่ได้เลือกเขา และไม่มีการส่งข้อความหาคนแปลกหน้า", "The app is built on consent: you only connect when both people choose each other, nobody learns that you didn't choose them, and there are no cold messages."),
           p("การกดดัน ตามตื๊อ หรือสัมผัสโดยไม่ได้รับอนุญาตในกิจกรรม เป็นการละเมิดหลักปฏิบัติ — กด ‘รายงาน’ ได้ทันที หรือโทร 191 หากอยู่ในอันตราย", "Pressure, persistence or unwanted touching at an event breaks our code of conduct — use Report straight away, or call 191 if you're in danger."),
@@ -210,7 +210,7 @@ export const TOPICS: Topic[] = [
         heading: t("ดูแลตัวเอง", "Look after yourself"),
         blocks: [
           list(
-            ["นัดเจอที่สาธารณะ โดยเฉพาะครั้งแรก ๆ — กิจกรรม BKK Social จัดในที่สาธารณะเสมอ", "Meet in public, especially the first few times — BKK Social events are always in public places."],
+            ["นัดเจอที่สาธารณะ โดยเฉพาะครั้งแรก ๆ — กิจกรรม Jurrgun จัดในที่สาธารณะเสมอ", "Meet in public, especially the first few times — Jurrgun events are always in public places."],
             ["ดูแลแก้วเครื่องดื่มของตัวเอง อย่าวางทิ้งไว้ และดื่มแต่พอดี", "Keep your drink with you, never leave it unattended, and drink in moderation."],
             ["เก็บข้อมูลส่วนตัวไว้ก่อน (ที่อยู่ ที่ทำงาน การเงิน) จนกว่าจะไว้ใจกัน", "Keep personal details (address, workplace, finances) to yourself until you trust someone."],
             ["เชื่อสัญชาตญาณ — ถ้ารู้สึกไม่สบายใจ ขอตัวกลับได้เลย ไม่ต้องขอโทษ", "Trust your gut — if something feels off, leave. You don't owe anyone an explanation."],
@@ -257,7 +257,7 @@ export const TOPICS: Topic[] = [
 
 export const FAQ: { q: Text; a: Text }[] = [
   {
-    q: t("BKK Social คืออะไร?", "What is BKK Social?"),
+    q: t("Jurrgun คืออะไร?", "What is Jurrgun?"),
     a: t("แพลตฟอร์มของกรุงเทพมหานครที่ช่วยให้คนในเมืองได้รู้จักเพื่อนใหม่ผ่านกิจกรรมจริงในกลุ่มเล็ก 4–6 คน เช่น เดินสำรวจย่านเก่า บอร์ดเกม หรือแลกเปลี่ยนภาษา", "A Bangkok Metropolitan Administration platform that helps people meet through real activities in small groups of 4–6 — old-town walks, board games, language exchanges and more."),
   },
   {

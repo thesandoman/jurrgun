@@ -1,5 +1,5 @@
 /**
- * BKK Social business rules as pure functions — no database, no request.
+ * Jurrgun business rules as pure functions — no database, no request.
  * Every rule the PRD states precisely lives here so it can be tested
  * exhaustively (test/rules.test.ts) and reused by every route.
  */

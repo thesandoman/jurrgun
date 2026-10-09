@@ -105,6 +105,7 @@ settingsRoutes.get("/settings", async (c) => {
   const [src, vibe] = await Promise.all([photoSrc(c, p.photoKey), loadVibe(c.env, user.account.id)]);
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
   const links: [string, string, string, string][] = [
+    ["/pulse", "💬", t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions that go straight to BMA")],
     ["/settings/profile", "✏️", t("แก้ไขโปรไฟล์", "Edit profile"), t("ชื่อเล่น เขต ความสนใจ รูป", "Nickname, district, interests, photo")],
     ["/settings/connections", "🤝", t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)")],
     ["/settings/privacy", "🔒", t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate")],

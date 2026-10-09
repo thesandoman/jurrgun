@@ -1,5 +1,5 @@
 /**
- * BKK Social UI kit: one layout and a handful of components, server-rendered
+ * Jurrgun UI kit: one layout and a handful of components, server-rendered
  * with Hono JSX. Mobile-first, Thai-first, light and dark themes.
  *
  * Every page goes through `page(c, opts, body)`.
@@ -9,6 +9,7 @@ import type { Child } from "hono/jsx";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import { tr, type Lang, type T } from "../lib/i18n";
 import { STYLES } from "./styles";
+import { BrandMark } from "./brand";
 
 export type View = { lang: Lang; t: T; user: CurrentUser | null; path: string };
 
@@ -17,7 +18,7 @@ export function view(c: Context<AppEnv>): View {
   return { lang, t: tr(lang), user: c.var.user ?? null, path: new URL(c.req.url).pathname };
 }
 
-type Tab = "events" | "mine" | "connections" | "pulse" | "me" | "admin" | "none";
+type Tab = "events" | "learn" | "mine" | "connections" | "pulse" | "me" | "admin" | "none";
 
 export type PageOpts = {
   title: string;
@@ -34,7 +35,7 @@ export type PageOpts = {
 /** `?notice=` keys pages can redirect with. */
 const NOTICES: Record<string, [string, string]> = {
   saved: ["บันทึกแล้ว", "Saved"],
-  welcome: ["ยินดีต้อนรับสู่ BKK Social!", "Welcome to BKK Social!"],
+  welcome: ["ยินดีต้อนรับสู่ Jurrgun!", "Welcome to Jurrgun!"],
   rsvp_confirmed: ["ยืนยันที่นั่งแล้ว — บัตรเข้างานอยู่ใน 'กิจกรรมของฉัน'", "You're in — your pass is in My events"],
   rsvp_waitlisted: ["คุณอยู่ในรายชื่อสำรอง เราจะแจ้งเมื่อมีที่ว่าง", "You're on the waitlist — we'll tell you if a spot opens"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
@@ -86,9 +87,9 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <title>{`${opts.title} · BKK Social`}</title>
-        <meta name="description" content="BKK Social — เพื่อนใหม่ในเมืองเดียวกัน กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา" />
-        <meta name="theme-color" content="#0f6b5c" />
+        <title>{`${opts.title} · Jurrgun`}</title>
+        <meta name="description" content="Jurrgun (เจอกัน) — เพื่อนใหม่ในกรุงเทพฯ กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา · Meet new friends in Bangkok: small groups, real places, no swiping." />
+        <meta name="theme-color" content="#0c8a45" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -104,7 +105,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           }}
         />
       </head>
-      <body class={opts.admin ? "admin" : opts.bare ? "bare" : opts.fullscreen ? "fullmap-body" : ""}>
+      <body class={[opts.admin && "admin", opts.bare && "bare", opts.fullscreen && "fullmap-body"].filter(Boolean).join(" ") || undefined}>
         {opts.fullscreen ? (
           <main class="fullmap">{props.children}</main>
         ) : (
@@ -113,8 +114,8 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           {t("ต้นแบบ (Prototype) — ห้ามใช้ข้อมูลจริง", "Prototype — please don't use real personal data")}
         </div>
         <header class="topbar">
-          <a href={member ? "/events" : "/"} class="brand" aria-label="BKK Social">
-            <span class="brand-mark" aria-hidden="true">◐</span> BKK Social
+          <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">
+            <BrandMark /> Jurrgun <small lang="th">เจอกัน</small>
           </a>
           <nav class="top-actions">
             {staff ? <a href="/admin" class="chip">{t("ทีมงาน", "Staff")}</a> : null}
@@ -158,15 +159,16 @@ function TabBar(props: { v: View; tab: Tab }) {
   // (your pass lives there), like the Sanroo map's centre action.
   const items: [Tab, string, string, string][] = [
     ["events", "/events", "🗺️", t("ค้นหา", "Discover")],
-    ["connections", "/connections", "🤝", t("คนรู้จัก", "Circle")],
+    ["learn", "/learn", "📚", t("เรียนรู้", "Learn")],
     ["mine", "/me/events", "🎟️", t("ของฉัน", "My events")],
-    ["pulse", "/pulse", "💬", t("City Pulse", "City Pulse")],
+    ["connections", "/connections", "🤝", t("คนรู้จัก", "Circle")],
+    // City Pulse lives under Me (and in the Discover ticker).
     ["me", "/settings", "👤", t("ฉัน", "Me")],
   ];
   return (
     <nav class="tabbar" aria-label={t("เมนูหลัก", "Main")}>
       {items.map(([key, href, icon, text]) => (
-        <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
+        <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && props.tab === "pulse") ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
           <span aria-hidden="true">{icon}</span>
           {text}
         </a>

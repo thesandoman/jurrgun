@@ -114,7 +114,7 @@ onboarding.get("/welcome", (c) => {
       </div>
       <div class="splash">
         <div class="splash-mark" aria-hidden="true">◐</div>
-        <h1>{t("ยินดีต้อนรับสู่ BKK Social", "Welcome to BKK Social")}</h1>
+        <h1>{t("ยินดีต้อนรับสู่ Jurrgun", "Welcome to Jurrgun")}</h1>
         <p class="muted">{t("เจอเพื่อนใหม่ในกลุ่มเล็ก ที่สถานที่จริงในกรุงเทพฯ", "New friends, small groups, real Bangkok places.")}</p>
       </div>
       <div class="tiles">
@@ -206,7 +206,7 @@ onboarding.post("/basics", async (c) => {
   if (!vals.nickname) return fail(t("กรอกชื่อเล่น", "Please add a nickname."), 0);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(vals.birthDate)) return fail(t("กรอกวันเกิด", "Please add your date of birth."), 1);
   const age = ageOn(vals.birthDate);
-  if (!(age >= MIN_AGE && age < 120)) return fail(t("BKK Social สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "BKK Social is for adults aged 18 and over."), 1);
+  if (!(age >= MIN_AGE && age < 120)) return fail(t("Jurrgun สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "Jurrgun is for adults aged 18 and over."), 1);
   if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."), 2);
   if (vals.livesInBangkok !== "1") return fail(t("ช่วงทดลองนี้สำหรับคนที่อาศัยอยู่ในกรุงเทพฯ", "This pilot is for people who currently live in Bangkok."), 3);
 
