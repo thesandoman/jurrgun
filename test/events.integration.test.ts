@@ -398,7 +398,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(hide.status).toBe(302);
     expect(hide.headers.get("set-cookie") ?? "").toContain("bkk_quiz_hint=hide");
     expect(await html(`${m.cookie}; bkk_quiz_hint=hide`)).not.toContain("Find your Bangkok Type");
-    await db().insert(vibes).values({ accountId: m.id, vector: {}, archetype: "rhythm+", visible: false });
+    await db().insert(vibes).values({ accountId: m.id, vector: {}, archetype: "BDMN", visible: false });
     expect(await html()).not.toContain("Find your Bangkok Type");
   });
 
@@ -424,11 +424,11 @@ describe.skipIf(!HAS_DB)("events", () => {
     await db().update(profiles).set({ showResidentBadge: true }).where(eq(profiles.accountId, a.id));
     await db().update(profiles).set({ showResidentBadge: true }).where(eq(profiles.accountId, c.id));
     await db().update(accounts).set({ bkkRegistered: "not_verified" }).where(eq(accounts.id, c.id));
-    // Types: a hidden, b visible (Night Owl), me has one too (Early Riser: same axis = interesting).
+    // Types: a hidden, b visible (Food Hunter BDSH), me has the full opposite (CFMN = interesting).
     await db().insert(vibes).values([
-      { accountId: a.id, vector: {}, archetype: "energy+", visible: false },
-      { accountId: b.id, vector: {}, archetype: "rhythm+", visible: true },
-      { accountId: me.id, vector: {}, archetype: "rhythm-", visible: false },
+      { accountId: a.id, vector: {}, archetype: "BFSN", visible: false },
+      { accountId: b.id, vector: {}, archetype: "BDSH", visible: true },
+      { accountId: me.id, vector: {}, archetype: "CFMN", visible: false },
     ]);
     const html = await (await req(`/events/${ev}/live`, { cookie: `${me.cookie}; lang=en` })).text();
     const items = html.split('<li class="person">').slice(1);
@@ -436,10 +436,10 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(item(aNick)).toContain("Bangkok resident");
     expect(item(bNick)).not.toContain("Bangkok resident");
     expect(item(cNick)).not.toContain("Bangkok resident");
-    expect(item(aNick)).not.toContain("The Connector");
-    expect(item(bNick)).toContain("🌙 The Night Owl");
+    expect(item(aNick)).not.toContain("The Party Host");
+    expect(item(bNick)).toContain("🍜 The Food Hunter");
     expect(item(bNick)).toContain("Interesting match");
-    expect(item(bNick)).toContain("best late-night bite in Bangkok");
+    expect(item(bNick)).toContain("queue longest for");
     // Everyone is still listed (types never hide anyone).
     for (const n of [aNick, bNick, cNick]) expect(html).toContain(n);
   });

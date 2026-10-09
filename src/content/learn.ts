@@ -301,3 +301,14 @@ export const FAQ: { q: Text; a: Text }[] = [
     a: t("แจ้งโฮสต์ทันที กด ‘รายงาน’ หรือ ‘บล็อก’ ในแอป หากอยู่ในอันตรายโทร 191 (ตำรวจ) หรือ 1669 (เจ็บป่วยฉุกเฉิน)", "Tell your host straight away and use Report or Block in the app. If you're in danger, call 191 (police) or 1669 (medical emergency)."),
   },
 ];
+
+/** The Bangkok Types topic is generated from the archetypes, so it only needs a card. */
+export const TYPES_CARD = {
+  slug: "bangkok-types",
+  icon: "🧩",
+  title: t("ไทป์กรุงเทพฯ 16 แบบ", "The 16 Bangkok Types"),
+  summary: t("ตัวละคร 16 แบบจากไลฟ์สไตล์ พร้อมคำอธิบายสัญลักษณ์", "16 lifestyle characters, with a legend for every letter and icon"),
+};
+
+/** Every Learn card, in order: the four guides, then Bangkok Types. */
+export const LEARN_CARDS = [...TOPICS.map((x) => ({ slug: x.slug, icon: x.icon, title: x.title, summary: x.summary })), TYPES_CARD];

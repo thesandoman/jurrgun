@@ -4,7 +4,7 @@
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
-import { TOPICS } from "../content/learn";
+import { LEARN_CARDS } from "../content/learn";
 import { L } from "../lib/i18n";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { FaqList } from "./learn";
@@ -55,7 +55,7 @@ publicRoutes.get("/", (c) => {
       </h2>
       <div class="rail-wrap">
         <div class="rail" role="list">
-          {TOPICS.map((topic) => (
+          {LEARN_CARDS.map((topic) => (
             <a href={`/learn/${topic.slug}`} role="listitem">
               <b aria-hidden="true">{topic.icon}</b>
               <strong>{L(lang, topic.title)}</strong>

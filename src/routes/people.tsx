@@ -51,7 +51,7 @@ import {
   type Event,
   type Profile,
 } from "../schema";
-import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, type ArchetypeKey } from "../vibe/archetypes";
+import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
 
 export const peopleRoutes = new Hono<AppEnv>();
@@ -117,13 +117,13 @@ export async function vibesFor(db: Db, ids: string[]): Promise<Map<string, VibeI
   const unique = [...new Set(ids)];
   if (unique.length === 0) return out;
   const rows = await db
-    .select({ accountId: vibes.accountId, archetype: vibes.archetype, modifier: vibes.modifier, visible: vibes.visible })
+    .select({ accountId: vibes.accountId, archetype: vibes.archetype, modifier: vibes.modifier, visible: vibes.visible, vector: vibes.vector })
     .from(vibes)
     .where(inArray(vibes.accountId, unique))
     .limit(unique.length);
   for (const r of rows) {
-    if (!(r.archetype in ARCHETYPES)) continue;
-    out.set(r.accountId, { archetype: r.archetype as ArchetypeKey, modifier: r.modifier, visible: r.visible });
+    const { archetype, modifier } = normalizeType(r);
+    out.set(r.accountId, { archetype, modifier, visible: r.visible });
   }
   return out;
 }

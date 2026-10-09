@@ -108,3 +108,48 @@ describe("scoring", () => {
     expect(r.name.en).toBe("Bangkok All-Rounder");
   });
 });
+
+describe("procedural question space and visuals", () => {
+  it("can generate well over 10,000 distinct questions, and real sessions reach them", async () => {
+    const { questionSpace } = await import("../src/vibe/generator");
+    expect(questionSpace()).toBeGreaterThanOrEqual(10_000);
+    const ids = new Set<string>();
+    for (let i = 0; i < 1500; i++) for (const q of generateSession({ seed: `space${i}` })) ids.add(q.id);
+    expect(ids.size).toBeGreaterThanOrEqual(10_000);
+  });
+
+  it("every bank item has an icon or a sky tone", async () => {
+    const { ACTIVITY_ICONS, PLACE_ICONS, WHEN_TONES } = await import("../src/vibe/visuals");
+    const { PLACES, WHENS } = await import("../src/vibe/content");
+    for (const p of Object.values(ACTIVITIES)) for (const a of [...p.plus, ...p.minus]) expect(ACTIVITY_ICONS[a.en], a.en).toBeTruthy();
+    for (const p of PLACES) expect(PLACE_ICONS[p.en], p.en).toBeTruthy();
+    for (const w of WHENS) expect(WHEN_TONES[w.en], w.en).toBeTruthy();
+  });
+
+  it("every question carries a picture and every option an icon", () => {
+    for (let i = 0; i < 50; i++) {
+      for (const q of generateSession({ seed: `art${i}` })) {
+        expect(q.art.icons.length).toBeGreaterThan(0);
+        expect(q.art.tone).toBeTruthy();
+        if (q.format === "choice") for (const o of q.options) expect(o.icon).toBeTruthy();
+        const pub = toPublic(q);
+        expect(pub.art).toEqual(q.art);
+      }
+    }
+  });
+
+  it("every one of the 16 Bangkok Types is reachable through real answers", async () => {
+    const { ARCHETYPE_KEYS, CODE_AXES, typeOf } = await import("../src/vibe/archetypes");
+    const qs = generateSession({ seed: "reach" });
+    for (const code of ARCHETYPE_KEYS) {
+      const want: Record<string, 1 | -1> = {};
+      CODE_AXES.forEach((axis, i) => (want[axis.category] = code[i] === axis.plus ? 1 : -1));
+      const answers: Answers = {};
+      for (const q of qs) {
+        const pole = want[q.category] ?? 1;
+        answers[q.id] = q.format === "scale" ? (q.pole === pole ? 5 : 1) : q.options.findIndex((o) => o.pole === pole);
+      }
+      expect(typeOf(scoreSession(qs, answers).vector).archetype).toBe(code);
+    }
+  });
+});

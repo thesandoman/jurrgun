@@ -115,7 +115,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(gallery.status).toBe(200);
     const html = await gallery.text();
     const keys = Object.keys(ARCHETYPES) as ArchetypeKey[];
-    expect(keys).toHaveLength(13);
+    expect(keys).toHaveLength(16);
     for (const k of keys) expect(html).toContain(`/types/${typeSlug(k)}`);
     for (const k of keys) {
       const r = await req(`/types/${typeSlug(k)}?lang=en`);
