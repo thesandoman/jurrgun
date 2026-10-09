@@ -15,16 +15,18 @@ export const REVIEW_NOTE = t(
   "This is general education, not medical or legal advice. If in doubt, talk to a doctor or one of the helplines below. (Prototype draft — pending review by BMA's Health Department and legal team.)",
 );
 
-export type Helpline = { number: string; name: Text; when: Text };
+export type Helpline = { number: string; name: Text; when: Text; hours: Text; source: string };
+
+const H24 = t("ตลอด 24 ชม.", "24 hours");
 
 export const HELPLINES: Helpline[] = [
-  { number: "191", name: t("ตำรวจ", "Police"), when: t("เหตุฉุกเฉิน อันตรายตอนนี้", "Emergency, danger right now") },
-  { number: "1669", name: t("เจ็บป่วยฉุกเฉิน", "Medical emergency"), when: t("บาดเจ็บ หมดสติ ต้องการรถพยาบาล", "Injury, unconsciousness, ambulance") },
-  { number: "1300", name: t("ศูนย์ช่วยเหลือสังคม", "Social assistance centre"), when: t("ความรุนแรง การล่วงละเมิด การคุกคาม", "Violence, abuse, harassment") },
-  { number: "1663", name: t("สายด่วนเอชไอวี/โรคติดต่อทางเพศสัมพันธ์ และท้องไม่พร้อม", "HIV/STI & unplanned pregnancy counselling"), when: t("ปรึกษาเรื่องเพศ การตรวจ การป้องกัน", "Sexual health questions, testing, prevention") },
-  { number: "1323", name: t("สายด่วนสุขภาพจิต", "Mental health hotline"), when: t("เครียด เศร้า ไม่ไหว อยากมีคนคุยด้วย", "Stress, low mood, need someone to talk to") },
-  { number: "1441", name: t("ศูนย์ต่อต้านการฉ้อโกงออนไลน์", "Anti online-scam centre"), when: t("ถูกหลอกโอนเงิน หลอกรัก", "Money or romance scams") },
-  { number: "1155", name: t("ตำรวจท่องเที่ยว (มีภาษาอังกฤษ)", "Tourist Police (English spoken)"), when: t("ชาวต่างชาติที่ต้องการความช่วยเหลือ", "Help for foreign residents and visitors") },
+  { number: "191", name: t("ตำรวจ", "Police"), when: t("เหตุฉุกเฉิน อันตรายตอนนี้", "Emergency, danger right now"), hours: H24, source: "https://www.pattayamail.com/thailandnews/24-hour-emergency-hotlines-and-services-to-assist-residents-and-visitors-in-thailand-485355" },
+  { number: "1669", name: t("เจ็บป่วยฉุกเฉิน", "Medical emergency"), when: t("บาดเจ็บ หมดสติ ต้องการรถพยาบาล", "Injury, unconsciousness, ambulance"), hours: H24, source: "https://www.pattayamail.com/thailandnews/24-hour-emergency-hotlines-and-services-to-assist-residents-and-visitors-in-thailand-485355" },
+  { number: "1300", name: t("ศูนย์ช่วยเหลือสังคม (กระทรวง พม.)", "Social assistance centre (Ministry of Social Development)"), when: t("ความรุนแรง การล่วงละเมิด การคุกคาม", "Violence, abuse, harassment"), hours: t("ตลอด 24 ชม. มีล่ามภาษาอังกฤษ", "24 hours, English interpreters"), source: "https://data.unwomen.org/global-database-on-violence-against-women/country-profile/Thailand/measures/24-Hour%20Hotline%20Service%20at%20the%20Prachabodi%20Centre" },
+  { number: "1663", name: t("สายปรึกษาเอดส์และท้องไม่พร้อม", "AIDS & unplanned pregnancy counselling"), when: t("สุขภาพทางเพศ การตรวจ การป้องกัน ท้องไม่พร้อม", "Sexual health, testing, prevention, unplanned pregnancy"), hours: t("ทุกวัน 09.00–21.00 น. ไม่ต้องบอกชื่อ", "Daily 09:00–21:00, anonymous"), source: "https://rsathai.org/en/contents/25730" },
+  { number: "1323", name: t("สายด่วนสุขภาพจิต (กรมสุขภาพจิต)", "Mental health hotline (Dept. of Mental Health)"), when: t("เครียด เศร้า ไม่ไหว อยากมีคนคุยด้วย", "Stress, low mood, need someone to talk to"), hours: H24, source: "https://thailand.go.th/event-detail/--3---24-" },
+  { number: "1441", name: t("ศูนย์ต่อต้านการฉ้อโกงออนไลน์ (AOC)", "Anti Online Scam Operation Centre (AOC)"), when: t("ถูกหลอกโอนเงิน หลอกรัก — ขออายัดบัญชีได้", "Money or romance scams — can request an account freeze"), hours: H24, source: "https://www.bangkokpost.com/thailand/general/2924862/govt-hails-use-of-1441-hotline" },
+  { number: "1155", name: t("ตำรวจท่องเที่ยว", "Tourist Police"), when: t("ชาวต่างชาติที่ต้องการความช่วยเหลือ (หลายภาษา)", "Help for foreign residents and visitors (several languages)"), hours: H24, source: "https://www.touristpolice.go.th/post/tpbnews2025110903" },
 ];
 
 export type Block =
@@ -32,13 +34,19 @@ export type Block =
   | { kind: "list"; items: Text[] }
   | { kind: "tip"; text: Text };
 
+export type Source = { label: string; url: string };
+
 export type Topic = {
   slug: string;
   icon: string;
   title: Text;
   summary: Text;
   sections: { heading: Text; blocks: Block[] }[];
+  sources: Source[];
 };
+
+/** When the facts and numbers here were last checked against their sources. */
+export const LAST_CHECKED = "2026-10-09";
 
 const p = (th: string, en: string): Block => ({ kind: "p", text: t(th, en) });
 const list = (...items: [string, string][]): Block => ({ kind: "list", items: items.map(([th, en]) => t(th, en)) });
@@ -73,11 +81,16 @@ export const TOPICS: Topic[] = [
       {
         heading: t("ความหลากหลายในเมืองของเรา", "A diverse city"),
         blocks: [
-          p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 22 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม ใน BKK Social ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 22 January 2025 Thailand recognises marriage equality. On BKK Social everyone gets the same respect."),
+          p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 23 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม คู่รักทุกเพศอายุ 18 ปีขึ้นไปจดทะเบียนสมรสได้ที่สำนักงานเขต ใน BKK Social ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 23 January 2025 Thailand recognises marriage equality — couples of any gender aged 18+ can register at any district office. On BKK Social everyone gets the same respect."),
           p("ถ้าคุณมาจากต่างประเทศ: วัฒนธรรมการเดตอาจต่างกัน — คนไทยหลายคนค่อย ๆ ทำความรู้จัก ให้ความสำคัญกับความสุภาพและครอบครัว ถามและฟังกันมากกว่าเดา", "If you're from abroad: dating culture may differ — many Thais take things slowly and value politeness and family. Ask and listen rather than assume."),
           tip("ไม่ต้องรีบ เพื่อนที่ดีหลายคนเริ่มจากการเจอกันในกลุ่มเล็ก ๆ", "No rush — many great relationships start as friends in a small group."),
         ],
       },
+    ],
+    sources: [
+      { label: "Thailand PRD: Equal marriage law takes effect 23 January 2025", url: "https://thailand.prd.go.th/en/content/category/detail/id/48/iid/356609" },
+      { label: "Al Jazeera: Thailand's marriage equality law comes into effect", url: "https://www.aljazeera.com/news/2025/1/23/jubilation-as-thailands-marriage-equality-law-comes-into-effect" },
+      { label: "VisitBangkok, BMA's official city guide", url: "https://visit.bangkok.go.th/th" },
     ],
   },
   {
@@ -124,6 +137,11 @@ export const TOPICS: Topic[] = [
         ],
       },
     ],
+    sources: [
+      { label: "UN Women: 1300 hotline (Prachabodi Centre)", url: "https://data.unwomen.org/global-database-on-violence-against-women/country-profile/Thailand/measures/24-Hour%20Hotline%20Service%20at%20the%20Prachabodi%20Centre" },
+      { label: "UN Women: Thailand's One Stop Crisis Centres", url: "https://asiapacific.unwomen.org/en/news-and-events/stories/2013/4/thailand-launches-one-stop-crisis-centre" },
+      { label: "WHO: HIV post-exposure prophylaxis guidelines (2024)", url: "https://www.who.int/news/item/22-07-2024-who-updates-guidelines-to-enhance-access-to-hiv-post-exposure-prophylaxis" },
+    ],
   },
   {
     slug: "sexual-health",
@@ -137,7 +155,7 @@ export const TOPICS: Topic[] = [
           list(
             ["ถุงยางอนามัยช่วยป้องกันทั้งการตั้งครรภ์และโรคติดต่อทางเพศสัมพันธ์ส่วนใหญ่ ใช้ทุกครั้งตั้งแต่เริ่ม", "Condoms help prevent both pregnancy and most sexually transmitted infections (STIs). Use one every time, from the start."],
             ["มีวิธีคุมกำเนิดหลายแบบ (ยาเม็ด ยาฉีด ยาฝัง ห่วงอนามัย) ปรึกษาแพทย์หรือเภสัชกรเพื่อเลือกวิธีที่เหมาะกับคุณ", "There are many kinds of contraception (pill, injection, implant, IUD). Ask a doctor or pharmacist which suits you."],
-            ["ยาคุมฉุกเฉินซื้อได้ที่ร้านขายยา ยิ่งกินเร็วยิ่งได้ผล ควรกินภายใน 72 ชั่วโมงหลังมีเพศสัมพันธ์ที่ไม่ได้ป้องกัน", "Emergency contraception is sold at pharmacies. The sooner the better — ideally within 72 hours of unprotected sex."],
+            ["ยาคุมฉุกเฉินซื้อได้ที่ร้านขายยา ยิ่งกินเร็วยิ่งได้ผล และไม่เกิน 72 ชั่วโมงหลังมีเพศสัมพันธ์ที่ไม่ได้ป้องกัน ไม่ควรใช้เป็นวิธีคุมกำเนิดประจำ และไม่ป้องกันโรคติดต่อทางเพศสัมพันธ์", "Emergency contraception is sold at pharmacies. The sooner the better — no later than 72 hours after unprotected sex. It isn't for regular use and doesn't protect against STIs."],
           ),
         ],
       },
@@ -146,8 +164,8 @@ export const TOPICS: Topic[] = [
         blocks: [
           list(
             ["PrEP คือยาที่กินก่อนมีความเสี่ยง ช่วยป้องกันเอชไอวีได้สูงมากเมื่อกินสม่ำเสมอ", "PrEP is medicine taken before possible exposure; it's highly effective against HIV when taken consistently."],
-            ["PEP คือยาฉุกเฉินหลังมีความเสี่ยง ต้องเริ่มให้เร็วที่สุด และภายใน 72 ชั่วโมง", "PEP is emergency medicine after a possible exposure — start as soon as possible, within 72 hours."],
-            ["ทั้งสองอย่างรับได้ที่โรงพยาบาลรัฐและคลินิกเฉพาะทางในกรุงเทพฯ สอบถามสิทธิการรักษาและค่าใช้จ่ายได้ที่ 1663", "Both are available at public hospitals and specialist clinics in Bangkok. Ask 1663 about eligibility and cost."],
+            ["PEP คือยาฉุกเฉินหลังมีความเสี่ยง กินต่อเนื่อง 28 วัน ต้องเริ่มให้เร็วที่สุด ดีที่สุดภายใน 24 ชั่วโมง และไม่เกิน 72 ชั่วโมง", "PEP is a 28-day emergency course after a possible exposure — start as soon as possible, ideally within 24 hours and no later than 72."],
+            ["PrEP ฟรีสำหรับคนไทยที่มีสิทธิหลักประกันสุขภาพถ้วนหน้า (บัตรทอง) ทั้งสองอย่างรับได้ที่โรงพยาบาลรัฐ คลินิกนิรนามสภากาชาดไทย และคลินิกชุมชน ผู้ที่ไม่มีสิทธิ รวมถึงชาวต่างชาติ สอบถามค่าใช้จ่ายได้ที่ 1663", "PrEP is free for eligible Thai citizens under Universal Health Coverage. Both are available at public hospitals, the Thai Red Cross Anonymous Clinic and community clinics. If you aren't covered (including foreign residents), ask 1663 about cost."],
             ["PrEP และ PEP ไม่ป้องกันโรคติดต่อทางเพศสัมพันธ์อื่นหรือการตั้งครรภ์ ใช้ร่วมกับถุงยางอนามัย", "PrEP and PEP don't prevent other STIs or pregnancy — use them with condoms."],
           ),
         ],
@@ -162,7 +180,8 @@ export const TOPICS: Topic[] = [
       {
         heading: t("ท้องไม่พร้อม", "Unplanned pregnancy"),
         blocks: [
-          p("คุณมีทางเลือกและมีคนพร้อมรับฟังโดยไม่ตัดสิน โทรสายด่วน 1663 เพื่อปรึกษาเรื่องทางเลือกทั้งหมด รวมถึงบริการที่ถูกกฎหมายและปลอดภัยในประเทศไทย", "You have options, and people ready to listen without judgement. Call 1663 to talk through all of them, including legal and safe services in Thailand."),
+          p("คุณมีทางเลือกและมีคนพร้อมรับฟังโดยไม่ตัดสิน โทรสายด่วน 1663 (ไม่ต้องบอกชื่อ) เพื่อปรึกษาทางเลือกทั้งหมด", "You have options, and people ready to listen without judgement. Call 1663 (anonymous) to talk them all through."),
+          p("ในประเทศไทย การยุติการตั้งครรภ์ทำได้ถูกกฎหมายเมื่ออายุครรภ์ไม่เกิน 12 สัปดาห์ และ 12–20 สัปดาห์หลังรับคำปรึกษาจากแพทย์ (ตามกฎหมายปี 2565) ที่สถานพยาบาลที่ได้รับอนุญาต", "In Thailand, abortion is legal up to 12 weeks, and from 12 to 20 weeks after counselling with a doctor (2022 rules), at licensed health facilities."),
         ],
       },
       {
@@ -171,6 +190,14 @@ export const TOPICS: Topic[] = [
           p("สุขภาพทางเพศเป็นเรื่องของทุกคน — คู่ชายหญิง คู่เพศเดียวกัน คนข้ามเพศ และนอนไบนารี คลินิกในกรุงเทพฯ หลายแห่งให้บริการที่เป็นมิตรกับ LGBTQ+ รวมถึงบริการสำหรับคนข้ามเพศ", "Sexual health is for everyone — straight, gay, lesbian, bi, trans and non-binary people alike. Many Bangkok clinics are LGBTQ+-friendly, including trans-specific services."),
         ],
       },
+    ],
+    sources: [
+      { label: "WHO: HIV post-exposure prophylaxis guidelines (2024)", url: "https://www.who.int/news/item/22-07-2024-who-updates-guidelines-to-enhance-access-to-hiv-post-exposure-prophylaxis" },
+      { label: "WHO: Emergency contraception (levonorgestrel) product information", url: "https://extranet.who.int/prequal/sites/default/files/whopar_files/RH069part4v1.pdf" },
+      { label: "Thai Red Cross AIDS Research Centre: free PrEP under UHC", url: "https://english.redcross.or.th/news/medical-and-health-care-services/5794/" },
+      { label: "Frontiers in Public Health (2022): PrEP in Thailand's UHC", url: "https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2022.1019553/epub" },
+      { label: "RSAT: 1663 AIDS & unplanned pregnancy counselling line", url: "https://rsathai.org/en/contents/25730" },
+      { label: "Heinrich Böll Stiftung: Abortion in Thailand after the 2022 law", url: "https://th.boell.org/en/2023/02/13/abortions-thailand" },
     ],
   },
   {
@@ -219,6 +246,11 @@ export const TOPICS: Topic[] = [
           p("การเจอคนใหม่อาจทั้งสนุกและเหนื่อย ถ้าผิดหวังหรือรู้สึกเหงา คุณไม่ได้อยู่คนเดียว พักได้ เริ่มใหม่ได้ และโทรคุยกับสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชั่วโมง", "Meeting new people can be fun and tiring. If you feel let down or lonely, you're not alone — take a break, try again, and call the mental health hotline 1323 any time, 24 hours."),
         ],
       },
+    ],
+    sources: [
+      { label: "Bangkok Post: 1441 anti-scam hotline", url: "https://www.bangkokpost.com/thailand/general/2924862/govt-hails-use-of-1441-hotline" },
+      { label: "Thai Government: mental health hotline 1323, 24/7", url: "https://thailand.go.th/event-detail/--3---24-" },
+      { label: "Royal Thai Police online crime reporting", url: "https://www.thaipoliceonline.go.th" },
     ],
   },
 ];

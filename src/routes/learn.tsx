@@ -3,9 +3,9 @@
  * information should be reachable by anyone).
  */
 import { Hono } from "hono";
-import { FAQ, HELPLINES, REVIEW_NOTE, TOPICS, type Block, type Topic } from "../content/learn";
+import { FAQ, HELPLINES, LAST_CHECKED, REVIEW_NOTE, TOPICS, type Block, type Source, type Topic } from "../content/learn";
 import type { AppEnv } from "../lib/env";
-import { L, type Lang } from "../lib/i18n";
+import { fmtDay, L, type Lang } from "../lib/i18n";
 import { Card, Notice, page, view } from "../ui/kit";
 
 export const learnRoutes = new Hono<AppEnv>();
@@ -51,12 +51,39 @@ function Helplines(props: { lang: Lang }) {
             <a href={`tel:${h.number}`} class="hotline">{h.number}</a>
             <span>
               <strong>{L(lang, h.name)}</strong>
-              <small>{L(lang, h.when)}</small>
+              <small>
+                {L(lang, h.when)} · {L(lang, h.hours)} ·{" "}
+                <a href={h.source} target="_blank" rel="noopener noreferrer">
+                  {lang === "en" ? "source" : "แหล่งที่มา"}
+                </a>
+              </small>
             </span>
           </li>
         ))}
       </ul>
     </Card>
+  );
+}
+
+function Sources(props: { sources: Source[]; lang: Lang }) {
+  const { lang } = props;
+  return (
+    <section class="sources">
+      <h2>{lang === "en" ? "Sources" : "แหล่งที่มา"}</h2>
+      <ol>
+        {props.sources.map((s) => (
+          <li>
+            <a href={s.url} target="_blank" rel="noopener noreferrer">
+              {s.label}
+            </a>
+          </li>
+        ))}
+      </ol>
+      <small>
+        {lang === "en" ? "Facts and numbers last checked " : "ตรวจสอบข้อมูลและหมายเลขล่าสุด "}
+        {fmtDay(`${LAST_CHECKED}T12:00:00+07:00`, lang)}
+      </small>
+    </section>
   );
 }
 
@@ -127,6 +154,7 @@ learnRoutes.get("/learn/:slug", (c) => {
         </section>
       ))}
       <Helplines lang={lang} />
+      <Sources sources={topic.sources} lang={lang} />
       <p class="muted">{L(lang, REVIEW_NOTE)}</p>
       <h2>{t("หัวข้ออื่น", "More topics")}</h2>
       <ul>

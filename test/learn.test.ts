@@ -41,6 +41,16 @@ describe("Learn", () => {
     expect(th).toContain(topic.sections[0].heading.th);
   });
 
+  it("cites sources on every topic and links every helpline to its source", async () => {
+    for (const topic of TOPICS) {
+      expect(topic.sources.length).toBeGreaterThan(0);
+      const html = await (await app.request(`/learn/${topic.slug}?lang=en`)).text();
+      expect(html).toContain("Sources");
+      for (const src of topic.sources) expect(html).toContain(src.url.replaceAll("&", "&amp;"));
+    }
+    for (const h of HELPLINES) expect(h.source).toMatch(/^https:\/\//);
+  });
+
   it("404s an unknown topic", async () => {
     expect((await app.request("/learn/nope")).status).toBe(404);
   });
