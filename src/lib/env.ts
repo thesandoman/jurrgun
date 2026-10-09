@@ -12,6 +12,8 @@ import type { Lang } from "./i18n";
 export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   /** Guards the one-time deployed migration route (src/routes/setup.ts). */
   SETUP_KEY?: string;
+  /** Set in tests: skip calls to outside services (weather). */
+  NO_EXTERNAL?: string;
 };
 
 export type CurrentUser = {

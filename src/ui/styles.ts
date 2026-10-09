@@ -40,6 +40,9 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:6;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
 .tabbar a{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:.72rem;color:var(--ink-3);text-decoration:none;padding:4px 2px;border-radius:10px;min-height:44px;justify-content:center}
 .tabbar a span{font-size:1.15rem}
+.tabbar a.center{position:relative;margin:-22px 6px 0;min-height:64px;border-radius:18px;background:var(--brand);color:var(--brand-ink);font-weight:700;box-shadow:0 8px 22px color-mix(in srgb,var(--brand) 45%,transparent)}
+.tabbar a.center span{font-size:1.5rem}
+.tabbar a.center.on{background:var(--brand);color:var(--brand-ink);outline:3px solid color-mix(in srgb,var(--gold) 70%,transparent)}
 .tabbar a.on{color:var(--brand);font-weight:600;background:var(--brand-soft)}
 .adminnav{max-width:1100px;margin:8px auto 0;padding:0 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .adminnav a{white-space:nowrap;padding:6px 12px;border-radius:999px;text-decoration:none;color:var(--ink-2);border:1px solid var(--line);background:var(--surface);font-size:.88rem}

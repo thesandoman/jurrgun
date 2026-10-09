@@ -1,6 +1,12 @@
 # Discover map
 
-Discover (`/events`) opens on the map, with the same events listed underneath (same
+Discover (`/events`) is a full-screen map modelled on the Sanroo live map: a ticker
+(Bangkok rain, feels-like heat and PM2.5 from Open-Meteo, cached 15 min; then this
+week's events, the next one, what's filling up, a Learn tip, the prototype notice), a
+floating header (logo, search, Aa text size, language), a status card, Filters and
+category chips, right-hand tools (Ask, Map style, Quests, Saved, Me), the key, an
+Events sheet over the map, and the big centre "My events" button in the tab bar.
+It opens on the map, with the same events listed in the sheet (same
 filters, same members-only access). The map shows even when nothing matches, with an
 empty list below. **🗺️ Map / ☰ List** switches to a list-only view and keeps the filters.
 Without JavaScript, or if the map can't load, the list is still there.

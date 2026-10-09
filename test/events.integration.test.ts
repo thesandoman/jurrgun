@@ -89,6 +89,33 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect((await req("/events")).status).toBe(302);
   });
 
+  it("Discover is a full-screen map with ticker, status card, tools, events sheet and centre button", async () => {
+    const m = await createMember();
+    const ev = await mkEvent({ district: "bang_bon", tags: ["city_quest"], startsAt: new Date(Date.now() + 2 * HOUR) });
+    const html = await (await req("/events?district=bang_bon", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain('class="fullmap-body"');
+    expect(html).toContain('class="fd-ticker"');
+    expect(html).toContain("events this week");
+    expect(html).toContain('class="fd-status ok"');
+    for (const id of ['id="fd-q"', 'id="fd-text"', 'id="fd-style"', 'id="fd-quests"', 'id="fd-me"', 'id="discover-sheet"', 'id="fd-filters"']) expect(html).toContain(id);
+    expect(html).toContain('class="center');
+    expect(html).toContain(`EV-${ev.slice(0, 8)}`);
+    expect(html).not.toContain('class="topbar"'); // the page draws its own floating header
+    expect(html).not.toContain("Open-Meteo"); // no weather in tests (NO_EXTERNAL)
+  });
+
+  it("searches events by title or venue, on the server too", async () => {
+    const m = await createMember();
+    const tag = `Zq${Date.now().toString(36)}`;
+    const hit = await mkEvent({ district: "bang_bon" });
+    await db().update(events).set({ venueName: `${tag} Hall` }).where(eq(events.id, hit));
+    const miss = await mkEvent({ district: "bang_bon" });
+    const html = await (await req(`/events?q=${tag.toLowerCase()}`, { cookie: m.cookie })).text();
+    expect(html).toContain(`EV-${hit.slice(0, 8)}`);
+    expect(html).not.toContain(`EV-${miss.slice(0, 8)}`);
+    expect((await req("/events?q=%25%25", { cookie: m.cookie })).status).toBe(200); // wildcards are escaped
+  });
+
   it("shows the map and an empty list section when no events match", async () => {
     const m = await createMember();
     const html = await (await req("/events?tag=festival&district=bang_bon&when=today&lang=en", { cookie: `${m.cookie}; lang=en` })).text();
