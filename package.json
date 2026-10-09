@@ -14,12 +14,15 @@
     "assets:check": "node scripts/assets-manifest.mjs --check",
     "assets:local": "node scripts/assets-manifest.mjs --seed-local",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "migrations": "node scripts/build-migrations.mjs",
+    "seed": "vite-node scripts/seed.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.27",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "qrcode-generator": "^1.4.4"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",
