@@ -9,8 +9,13 @@ import {
   deckFor,
   ENERGY,
   INTEREST_GROUPS,
+  BKK_STORY,
+  BKK_TIME,
   EDUCATION,
   educationLabel,
+  parseBangkok,
+  sameUniversity,
+  universityKey,
   OCCUPATIONS,
   occupationLabel,
   parseEducation,
@@ -25,6 +30,7 @@ import {
   type Prompt,
 } from "../src/content/profile";
 import { INTERESTS } from "../src/lib/constants";
+import { searchUniversities } from "../src/content/universities";
 
 const bilingual = (x: { th: string; en: string }) => x.th.trim().length > 0 && x.en.trim().length > 0;
 const kindOf = (id: string) => promptById(id)!.kind;
@@ -77,18 +83,69 @@ describe("occupation", () => {
 });
 
 describe("education", () => {
-  it("keeps a listed level with an optional school or field, and drops unknown levels", () => {
+  const now = new Date("2026-10-10T00:00:00Z");
+  it("keeps a listed degree, a known university by id, a year in range and the field", () => {
     for (const o of EDUCATION) expect(bilingual(o)).toBe(true);
-    expect(parseEducation("bachelors", "  Chula, engineering ")).toEqual({ education: "bachelors", educationDetail: "Chula, engineering" });
-    expect(parseEducation("masters", "")).toEqual({ education: "masters", educationDetail: undefined });
-    expect(parseEducation("wizardry", "Hogwarts")).toEqual({ education: undefined, educationDetail: undefined });
-    expect(parseEducation("studying", "x".repeat(90)).educationDetail).toHaveLength(60);
+    const chula = searchUniversities("chula")[0];
+    expect(parseEducation({ level: "beng", detail: " Computer engineering ", university: chula.id, universityName: chula.name, gradYear: "2019" }, now)).toEqual({
+      education: "beng",
+      educationDetail: "Computer engineering",
+      university: chula.id,
+      universityName: undefined,
+      gradYear: 2019,
+    });
   });
 
-  it("shows the level, then the school or field", () => {
-    expect(educationLabel({ education: "bachelors", educationDetail: "Chula" }, "en")!.text).toBe("Bachelor's degree · Chula");
-    expect(educationLabel({ education: "vocational" }, "th")!.text).toBe("อาชีวะ (ปวช. / ปวส.)");
-    expect(educationLabel({}, "en")).toBeNull();
+  it("resolves a typed name to the known university, keeps unknown names as typed, drops bad values", () => {
+    expect(parseEducation({ level: "", detail: "", universityName: "mahidol university" }, now).university).toBe(searchUniversities("mahidol")[0].id);
+    const typed = parseEducation({ level: "wizardry", detail: "", universityName: "Hogwarts", gradYear: "1066" }, now);
+    expect(typed).toMatchObject({ education: undefined, university: undefined, universityName: "Hogwarts", gradYear: undefined });
+    // A picked id, then the box retyped: the typed text wins.
+    const chula = searchUniversities("chula")[0];
+    expect(parseEducation({ level: "", detail: "", university: chula.id, universityName: "Hogwarts" }, now).universityName).toBe("Hogwarts");
+  });
+
+  it("writes one line, and says 'graduating' for a future year", () => {
+    const chula = searchUniversities("chula")[0];
+    expect(educationLabel({ education: "beng", university: chula.id, gradYear: 2019, educationDetail: "CompE" }, "en", now)!.text).toBe("B.Eng. (Engineering) · Chulalongkorn University · class of 2019 · CompE");
+    expect(educationLabel({ university: chula.id }, "th", now)!.text).toBe("จุฬาลงกรณ์มหาวิทยาลัย");
+    expect(educationLabel({ universityName: "Hogwarts", gradYear: 2029 }, "en", now)!.text).toBe("Hogwarts · graduating 2029");
+    expect(educationLabel({}, "en", now)).toBeNull();
+  });
+
+  it("matches people from the same university, by id or by typed name", () => {
+    const id = searchUniversities("kmitl")[0].id;
+    expect(sameUniversity({ university: id }, { university: id })).toBe(true);
+    expect(sameUniversity({ universityName: "Hogwarts " }, { universityName: "hogwarts" })).toBe(true);
+    expect(sameUniversity({}, {})).toBe(false);
+    expect(universityKey({ university: id })).toBe(id);
+  });
+});
+
+describe("university search", () => {
+  it("finds Thai universities by English, Thai and abbreviation, Thai ones first", () => {
+    expect(searchUniversities("chula")[0].name).toBe("Chulalongkorn University");
+    expect(searchUniversities("จุฬา")[0].name).toBe("Chulalongkorn University");
+    expect(searchUniversities("kmitl")[0].name).toBe("King Mongkut's Institute of Technology Ladkrabang");
+    expect(searchUniversities("abac")[0].name).toBe("Assumption University of Thailand");
+    expect(searchUniversities("suan sunandha")[0].name).toBe("Suan Sunandha Rajabhat University");
+    expect(searchUniversities("institute of technology")[0].cc).toBe("TH"); // Bangkok first
+  });
+
+  it("covers the world and stays small", () => {
+    expect(searchUniversities("seoul national").some((u) => u.cc === "KR")).toBe(true);
+    expect(searchUniversities("oxford").some((u) => u.cc === "GB")).toBe(true);
+    expect(searchUniversities("university", 8)).toHaveLength(8);
+    expect(searchUniversities(" ")).toEqual([]);
+  });
+});
+
+describe("Bangkok story", () => {
+  it("keeps listed picks, trims the hometown, and only sets 'guide' when ticked", () => {
+    for (const o of [...BKK_STORY, ...BKK_TIME]) expect(bilingual(o)).toBe(true);
+    expect(parseBangkok("province", "1to3", "  Khon Kaen ", "1")).toEqual({ story: "province", bkkTime: "1to3", hometown: "Khon Kaen", guide: true });
+    expect(parseBangkok("alien", "forever", "", "")).toEqual({ story: undefined, bkkTime: undefined, hometown: undefined, guide: undefined });
+    expect(parseBangkok("expat", "", "x".repeat(60), "").hometown).toHaveLength(40);
   });
 });
 

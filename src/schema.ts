@@ -32,6 +32,13 @@ export type ProfileBio = {
   occupationOther?: string;
   education?: string;
   educationDetail?: string;
+  university?: string;
+  universityName?: string;
+  gradYear?: number;
+  story?: string;
+  bkkTime?: string;
+  hometown?: string;
+  guide?: boolean;
   learning?: string;
   learningLangs?: string[];
   energy?: string;

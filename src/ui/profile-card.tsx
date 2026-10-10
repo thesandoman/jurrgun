@@ -19,7 +19,10 @@ import {
   type Answer,
   type Bio,
   type Prompt,
+  BKK_STORY,
+  BKK_TIME,
   educationLabel,
+  universityKey,
   occupationLabel,
 } from "../content/profile";
 import { DISTRICTS, INTENTS, LANGUAGES, label } from "../lib/constants";
@@ -59,6 +62,8 @@ export function ProfileCard(props: {
   badges?: Child;
   /** The viewer's interests, to highlight shared ones. Null on my own card. */
   viewerInterests?: string[] | null;
+  /** The viewer's university key, to say "same university". */
+  viewerUniversity?: string | null;
   /** Extra actions under the header (Edit button on my own card). */
   actions?: Child;
 }) {
@@ -88,6 +93,14 @@ export function ProfileCard(props: {
   const energy = ENERGY.find((x) => x.value === bio.energy);
   const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
   const facts: [string, string, string][] = [];
+  const story = BKK_STORY.find((x) => x.value === bio.story);
+  const time = BKK_TIME.find((x) => x.value === bio.bkkTime);
+  if (story || time) {
+    const parts = [story ? L(lang, story) : "", time && time.value !== "always" ? t(`อยู่มา ${L(lang, time)}`, `here ${L(lang, time).toLowerCase()}`) : time ? L(lang, time) : ""].filter(Boolean);
+    facts.push([story?.emoji ?? time!.emoji, t("กรุงเทพฯ ของฉัน", "My Bangkok"), parts.join(" · ")]);
+  }
+  if (bio.hometown) facts.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
+  if (bio.guide) facts.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
   const occupation = occupationLabel(bio, lang);
   if (occupation) facts.push([occupation.emoji, t("อาชีพ", "Work"), occupation.text]);
   const education = educationLabel(bio, lang);
@@ -186,6 +199,7 @@ export function ProfileCard(props: {
         <section class="pc-sec">
           <h2>{t("ความสนใจ", "Interests")}</h2>
           {props.viewerInterests && sharedCount ? <p class="muted pc-shared-note">✨ {t(`ชอบเหมือนกัน ${sharedCount} อย่าง`, `${sharedCount} in common`)}</p> : null}
+          {props.viewerUniversity && universityKey(bio) === props.viewerUniversity ? <p class="muted pc-shared-note">🎓 {t("มหาวิทยาลัยเดียวกับคุณ", "Same university as you")}</p> : null}
           <div class="pc-chips">
             {sharedFirst.map((x) => (
               <span class={`pc-chip ${shared.has(x.value) ? "pc-shared" : ""}`}>

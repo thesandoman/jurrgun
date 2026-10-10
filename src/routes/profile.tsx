@@ -16,7 +16,7 @@
 import { Hono, type Context } from "hono";
 import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { getDb } from "../db";
-import { cleanBio, currentDeck } from "../content/profile";
+import { cleanBio, currentDeck, universityKey } from "../content/profile";
 import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, connections, profiles, registrations, type Account, type Profile } from "../schema";
@@ -145,6 +145,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         promptPhoto={(id) => photoUrl(target.account.id, id)}
         badges={badges}
         viewerInterests={self ? null : (me.profile?.interests ?? [])}
+        viewerUniversity={self ? null : universityKey(cleanBio(me.profile?.bio))}
         actions={
           self ? (
             <>

@@ -8,6 +8,7 @@ import { generateSession, scoreSession, toPublic, type Answers } from "./vibe/ge
 import { adminRoutes } from "./routes/admin";
 import { authRoutes } from "./routes/auth";
 import { oauthRoutes } from "./routes/oauth";
+import { universityRoutes } from "./routes/universities";
 import { eventRoutes } from "./routes/events";
 import { inviteRoutes } from "./routes/invite";
 import { learnRoutes } from "./routes/learn";
@@ -38,6 +39,7 @@ app.route("/", inviteRoutes);
 app.route("/", quizRoutes);
 app.route("/", authRoutes);
 app.route("/", oauthRoutes);
+app.route("/", universityRoutes);
 app.route("/onboarding", onboarding);
 app.route("/", eventRoutes);
 app.route("/", peopleRoutes);

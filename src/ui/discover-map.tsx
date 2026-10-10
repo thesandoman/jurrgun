@@ -120,8 +120,8 @@ export function FullDiscover(props: {
     ],
     messages:
       lang === "en"
-        ? { none: "No events on the map yet", areaNote: "District area: address on the event page", key: "Key" }
-        : { none: "ยังไม่มีกิจกรรมบนแผนที่", areaNote: "ระดับเขต ดูที่อยู่ในหน้ากิจกรรม", key: "คำอธิบาย" },
+        ? { none: "No events on the map yet", areaNote: "District area: address on the event page", key: "Key", keyDrag: "Drag to move. Double-tap to put it back." }
+        : { none: "ยังไม่มีกิจกรรมบนแผนที่", areaNote: "ระดับเขต ดูที่อยู่ในหน้ากิจกรรม", key: "คำอธิบาย", keyDrag: "ลากเพื่อย้าย แตะสองครั้งเพื่อกลับที่เดิม" },
     center: BKK_CENTER,
     panLimit: BKK_PAN_LIMIT,
     words: {
@@ -290,7 +290,56 @@ async function start() {
     // sv-map fits the pins to the whole box; refit around the floating controls.
     onFilter: (shown) => setTimeout(() => refit(shown), 0),
   });
+  movableKey(document.querySelector(".svm-key"));
   refit(visible(), true);
+}
+
+/**
+ * The Key can be dragged anywhere by its header (mouse, touch or pen) and
+ * stays where it was left. A short tap still opens and closes it; a drag
+ * doesn't. Kept inside the screen, also after rotating or resizing.
+ */
+let keyListeners = null;
+function movableKey(key) {
+  // The map is rebuilt on theme/style changes: drop the previous Key's window listeners.
+  keyListeners?.abort();
+  if (!key) return;
+  keyListeners = new AbortController();
+  const signal = keyListeners.signal;
+  const head = key.querySelector("summary");
+  const clamp = (x, y) => [Math.min(Math.max(4, x), innerWidth - key.offsetWidth - 4), Math.min(Math.max(4, y), innerHeight - key.offsetHeight - 4)];
+  const place = (x, y) => { [x, y] = clamp(x, y); key.style.left = x + "px"; key.style.top = y + "px"; key.classList.add("moved"); return [x, y]; };
+  try { const saved = JSON.parse(store.get("bkk-key-pos") || "null"); if (saved) place(saved[0], saved[1]); } catch {}
+  let start = null, moved = false;
+  head.title = cfg.messages.keyDrag || "";
+  head.addEventListener("pointerdown", (e) => {
+    if (e.button) return;
+    const r = key.getBoundingClientRect();
+    start = { x: e.clientX, y: e.clientY, left: r.left, top: r.top, id: e.pointerId };
+    moved = false;
+  });
+  // On the window, not the header: a quick flick leaves the header before the first move.
+  addEventListener("pointermove", (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
+    if (!moved) { moved = true; key.classList.add("dragging"); }
+    e.preventDefault();
+    place(start.left + dx, start.top + dy);
+  }, { signal });
+  const end = () => {
+    if (!start) return;
+    start = null;
+    key.classList.remove("dragging");
+    if (moved) { const r = key.getBoundingClientRect(); store.set("bkk-key-pos", JSON.stringify([Math.round(r.left), Math.round(r.top)])); }
+  };
+  addEventListener("pointerup", end, { signal });
+  addEventListener("pointercancel", end, { signal });
+  // A drag ends with a click on the header: don't let it toggle the Key.
+  head.addEventListener("click", (e) => { if (moved) { e.preventDefault(); moved = false; } });
+  // Double-tap the header to send it home.
+  head.addEventListener("dblclick", (e) => { e.preventDefault(); store.set("bkk-key-pos", ""); key.style.left = key.style.top = ""; key.classList.remove("moved"); });
+  addEventListener("resize", () => { if (key.classList.contains("moved")) place(key.getBoundingClientRect().left, key.getBoundingClientRect().top); }, { signal });
 }
 /** Keep pins clear of the header, chips, right-hand buttons and the sheet. */
 function refit(points, instant = false) {
@@ -299,7 +348,9 @@ function refit(points, instant = false) {
   const top = (document.querySelector(".svm-chips")?.getBoundingClientRect().bottom ?? 220) + 24;
   const rail = document.querySelector(".fd-rail")?.getBoundingClientRect();
   const sheetTop = document.getElementById("discover-sheet")?.getBoundingClientRect().top ?? innerHeight - 120;
-  const keyTop = document.querySelector(".svm-key")?.getBoundingClientRect().top ?? sheetTop;
+  const keyEl = document.querySelector(".svm-key");
+  // A Key the member dragged elsewhere no longer sits above the sheet.
+  const keyTop = keyEl && !keyEl.classList.contains("moved") ? keyEl.getBoundingClientRect().top : sheetTop;
   const wide = innerWidth >= 900;
   const pad = { top, bottom: Math.max(40, innerHeight - (wide ? sheetTop : Math.min(sheetTop, keyTop)) + 24), left: wide ? 440 : 40, right: rail ? innerWidth - rail.left + 16 : 80 };
   let s = 90, w = 180, n = -90, e = -180;
@@ -366,6 +417,11 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fullmap .svm-chips{position:fixed;z-index:6;left:0;right:0;top:calc(var(--tk-h) + var(--top-h) + 64px + var(--gap) * 3);padding:0 12px 4px 118px;scroll-padding-left:118px}
 .fullmap .svm-chip{box-shadow:var(--shadow)}
 .fullmap .svm-key{position:fixed;left:10px;bottom:calc(var(--tab-h) + var(--sheet-h) + 14px);z-index:5;max-width:60%}
+.fullmap .svm-key.moved{bottom:auto}
+.fullmap .svm-key summary{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.fullmap .svm-key summary::after{content:"⠿";margin-left:8px;opacity:.5;font-weight:400}
+.fullmap .svm-key.dragging{opacity:.9;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.fullmap .svm-key.dragging summary{cursor:grabbing}
 .fullmap .svm-sheet{z-index:12;bottom:calc(var(--tab-h) + 8px)!important}
 .fullmap .maplibregl-ctrl-bottom-right{bottom:calc(var(--tab-h) + var(--sheet-h) + 6px)}
 /* ticker */

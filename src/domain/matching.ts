@@ -22,6 +22,8 @@ export type Attendee = {
   blocked: string[];
   /** Bangkok Vibe vector, if the quiz was taken. */
   vibe?: Record<string, number> | null;
+  /** Same key = same university (src/content/profile.ts universityKey). */
+  university?: string | null;
 };
 
 const NEUTRAL_VIBE = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<Category, number>;
@@ -31,7 +33,8 @@ export function toMatchProfile(a: Attendee): MatchProfile {
   return {
     id: a.accountId,
     vibe: a.vibe ? (Object.fromEntries(CATEGORIES.map((c) => [c, a.vibe?.[c] ?? 0])) as Record<Category, number>) : NEUTRAL_VIBE,
-    interests: [...a.interests, ...a.socialStyles.map((s) => `style:${s}`)],
+    // A shared university counts like a shared interest.
+    interests: [...a.interests, ...a.socialStyles.map((s) => `style:${s}`), ...(a.university ? [`uni:${a.university}`] : [])],
     languages: a.languages.length ? a.languages : ["th"],
     age: a.age,
     ageRange: [a.ageMin, a.ageMax],

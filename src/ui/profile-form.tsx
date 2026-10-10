@@ -13,16 +13,23 @@ import {
   INTEREST_GROUPS,
   MAX_COMM,
   MAX_INTERESTS,
-  EDUCATION,
+  BKK_STORY,
+  BKK_TIME,
+  DEGREE_GROUPS,
   EDUCATION_DETAIL_MAX,
+  gradYears,
+  UNIVERSITY_NAME_MAX,
+  HOMETOWN_MAX,
   OCCUPATION_OTHER_MAX,
   OCCUPATIONS,
   TEXT_MAX,
   type Answer,
+  type Bio,
   type Opt,
   type Prompt,
 } from "../content/profile";
 import type { View } from "./kit";
+import { universityById, universityName } from "../content/universities";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
 
@@ -153,33 +160,106 @@ export function OccupationPicker(props: { v: View; value?: string; other?: strin
   );
 }
 
-/** Education: highest level (or studying now), and an optional school or field. */
-export function EducationPicker(props: { v: View; value?: string; detail?: string }) {
+/**
+ * Education: degree (grouped), university (search-as-you-type over ~10,000,
+ * or just type the name), graduation year and field of study.
+ * Without JS the university box is a plain text field matched on save.
+ */
+export function EducationPicker(props: { v: View; bio: Bio }) {
   const { t, lang } = props.v;
+  const b = props.bio;
+  const uni = universityById(b.university);
+  const uniText = uni ? universityName(uni, lang) : (b.universityName ?? "");
   return (
     <div class="edu">
       <div class="field">
-        <label for="f-education">{t("การศึกษา", "Education")}</label>
+        <label for="f-education">{t("วุฒิการศึกษา", "Degree")}</label>
         <select id="f-education" name="education">
           <option value="">{t("ไม่ระบุ", "Prefer not to say")}</option>
-          {EDUCATION.map((o) => (
-            <option value={o.value} selected={o.value === props.value}>
+          {DEGREE_GROUPS.map((g) => (
+            <optgroup label={L(lang, g)}>
+              {g.items.map((o) => (
+                <option value={o.value} selected={o.value === b.education}>
+                  {L(lang, o)}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      <div class="field uni" data-uni>
+        <label for="f-universityName">{t("มหาวิทยาลัย / สถาบัน", "University or school")}</label>
+        <input
+          id="f-universityName"
+          name="universityName"
+          type="text"
+          value={uniText}
+          maxlength={UNIVERSITY_NAME_MAX}
+          autocomplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="uni-list"
+          placeholder={t("พิมพ์ค้นหา เช่น จุฬา มหิดล KMITL", "Start typing, e.g. Chula, Mahidol, NUS")}
+        />
+        <input type="hidden" name="university" value={b.university ?? ""} />
+        <ul id="uni-list" class="uni-list" role="listbox" hidden />
+        <small>{t("กว่า 10,000 แห่งทั่วโลก หาไม่เจอ? พิมพ์ชื่อเต็มได้เลย", "Over 10,000 worldwide. Can't find yours? Just type the full name.")}</small>
+      </div>
+      <div class="edu-row">
+        <div class="field">
+          <label for="f-gradYear">{t("ปีที่จบ", "Graduation year")}</label>
+          <select id="f-gradYear" name="gradYear">
+            <option value="">{t("ไม่ระบุ", "Prefer not to say")}</option>
+            {gradYears().map((y) => (
+              <option value={String(y)} selected={y === b.gradYear}>
+                {String(y)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-educationDetail">{t("สาขา (ไม่บังคับ)", "Field of study (optional)")}</label>
+          <input id="f-educationDetail" name="educationDetail" type="text" value={b.educationDetail ?? ""} maxlength={EDUCATION_DETAIL_MAX} placeholder={t("เช่น วิศวกรรมคอมพิวเตอร์", "e.g. Computer engineering")} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** "My Bangkok": how they came to the city, how long, where from, and whether they'll help newcomers. */
+export function BangkokStory(props: { v: View; story?: string; time?: string; hometown?: string; guide?: boolean; compact?: boolean }) {
+  const { t, lang } = props.v;
+  return (
+    <div class="bkk-story">
+      <fieldset class="choices">
+        <legend>{t("เรื่องของฉันกับกรุงเทพฯ", "My Bangkok story")}</legend>
+        <OptRadios v={props.v} name="story" options={BKK_STORY} value={props.story} />
+      </fieldset>
+      <div class="field">
+        <label for="f-bkkTime">{t("อยู่กรุงเทพฯ มานานแค่ไหน", "Time in Bangkok")}</label>
+        <select id="f-bkkTime" name="bkkTime">
+          <option value="">{t("ไม่ระบุ", "Prefer not to say")}</option>
+          {BKK_TIME.map((o) => (
+            <option value={o.value} selected={o.value === props.time}>
               {`${o.emoji} ${L(lang, o)}`}
             </option>
           ))}
         </select>
       </div>
       <div class="field">
-        <label for="f-educationDetail">{t("สถาบันหรือสาขา (ไม่บังคับ)", "School or field (optional)")}</label>
-        <input
-          id="f-educationDetail"
-          name="educationDetail"
-          type="text"
-          value={props.detail ?? ""}
-          maxlength={EDUCATION_DETAIL_MAX}
-          placeholder={t("เช่น จุฬาฯ วิศวกรรม", "e.g. Chulalongkorn, engineering")}
-        />
+        <label for="f-hometown">{t("บ้านเกิด (ไม่บังคับ)", "Originally from (optional)")}</label>
+        <input id="f-hometown" name="hometown" type="text" value={props.hometown ?? ""} maxlength={HOMETOWN_MAX} placeholder={t("เช่น เชียงใหม่ ขอนแก่น โซล", "e.g. Chiang Mai, Khon Kaen, Seoul")} />
       </div>
+      {props.compact ? null : (
+        <label class="toggle">
+          <input type="checkbox" name="guide" value="1" checked={!!props.guide} />
+          <span>
+            🧭 {t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ", "Happy to help people who are new to Bangkok")}
+            <small>{t("แสดงบนโปรไฟล์ เพื่อให้คนมาใหม่รู้ว่าถามคุณได้", "Shown on your profile, so newcomers know they can ask you")}</small>
+          </span>
+        </label>
+      )}
     </div>
   );
 }
@@ -357,11 +437,50 @@ export function ProfileFormScript() {
     <>
       <style dangerouslySetInnerHTML={{ __html: PROFILE_FORM_CSS }} />
       <script dangerouslySetInnerHTML={{ __html: PROFILE_FORM_JS }} />
+      <script dangerouslySetInnerHTML={{ __html: UNI_PICKER_JS }} />
     </>
   );
 }
 
+/** University search box: asks the server for matches as you type (debounced), keyboard and screen-reader friendly. */
+const UNI_PICKER_JS = `(function(){
+[].forEach.call(document.querySelectorAll("[data-uni]"),function(box){
+  if(box.dataset.ready)return;box.dataset.ready="1";
+  var input=box.querySelector("input[role=combobox]"),hidden=box.querySelector("input[name=university]"),list=box.querySelector("[role=listbox]");
+  var items=[],active=-1,timer=0,seq=0;
+  function close(){list.hidden=true;input.setAttribute("aria-expanded","false");input.removeAttribute("aria-activedescendant");active=-1}
+  function mark(i){active=i;[].forEach.call(list.children,function(li,j){li.setAttribute("aria-selected",j===i?"true":"false")});if(i>=0){input.setAttribute("aria-activedescendant","uni-opt-"+i);list.children[i].scrollIntoView({block:"nearest"})}}
+  function pick(i){var u=items[i];if(!u)return;input.value=u.name;hidden.value=u.id;close()}
+  function render(){
+    while(list.firstChild)list.removeChild(list.firstChild);
+    items.forEach(function(u,i){var li=document.createElement("li");li.id="uni-opt-"+i;li.setAttribute("role","option");li.setAttribute("aria-selected","false");
+      var b=document.createElement("b");b.textContent=u.name;var s=document.createElement("small");s.textContent=u.sub;li.appendChild(b);li.appendChild(s);
+      li.addEventListener("mousedown",function(e){e.preventDefault();pick(i)});list.appendChild(li)});
+    if(items.length){list.hidden=false;input.setAttribute("aria-expanded","true");mark(-1)}else close();
+  }
+  input.addEventListener("input",function(){
+    hidden.value="";clearTimeout(timer);var q=input.value.trim();if(q.length<2){items=[];close();return}
+    timer=setTimeout(function(){var my=++seq;fetch("/universities/search?q="+encodeURIComponent(q),{credentials:"same-origin"}).then(function(r){return r.ok?r.json():[]}).then(function(rows){if(my!==seq)return;items=rows;render()}).catch(function(){})},160);
+  });
+  input.addEventListener("keydown",function(e){
+    if(list.hidden)return;
+    if(e.key==="ArrowDown"){e.preventDefault();mark(Math.min(items.length-1,active+1))}
+    else if(e.key==="ArrowUp"){e.preventDefault();mark(Math.max(0,active-1))}
+    else if(e.key==="Enter"){e.preventDefault();pick(active<0?0:active)}
+    else if(e.key==="Escape"){e.preventDefault();close()}
+  });
+  input.addEventListener("blur",function(){setTimeout(close,120)});
+});
+})();`;
+
 export const PROFILE_FORM_CSS = `
+.uni{position:relative}
+.uni-list{position:absolute;left:0;right:0;top:calc(100% - 22px);z-index:20;margin:0;padding:6px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.18);max-height:300px;overflow-y:auto}
+.uni-list li{display:flex;flex-direction:column;padding:9px 12px;border-radius:12px;cursor:pointer}
+.uni-list li small{color:var(--ink-3);font-size:.8rem}
+.uni-list li[aria-selected=true],.uni-list li:hover{background:var(--surface-2)}
+.edu-row{display:grid;grid-template-columns:minmax(120px,.8fr) 1.2fr;gap:12px}
+@media (max-width:420px){.edu-row{grid-template-columns:1fr}}
 .occ:not(:has(option[value=other]:checked)) .occ-other{display:none}
 .pf-section{margin:36px 0}
 .pf-section>h2{display:flex;align-items:center;gap:10px;margin:0 0 6px;font-size:1.15rem}

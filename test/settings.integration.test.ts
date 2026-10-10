@@ -124,7 +124,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
 
     r = await req("/settings/profile", {
       cookie: m.cookie,
-      form: { ...baseProfile, nickname: "Mint2", district: "chatuchak", interests: ["art", "bogus"], intents: ["explore"], newcomer: "1", locale: "en", occupation: "other", occupationOther: "Drone pilot", education: "bachelors", educationDetail: "KMITL" },
+      form: { ...baseProfile, nickname: "Mint2", district: "chatuchak", interests: ["art", "bogus"], intents: ["explore"], newcomer: "1", locale: "en", occupation: "other", occupationOther: "Drone pilot", education: "bachelors", educationDetail: "Design", universityName: "kmitl", gradYear: "2018", story: "province", bkkTime: "3to10", hometown: "Udon Thani", guide: "1" },
     });
     expect(r.status).toBe(302);
     expect(r.headers.get("location")).toBe("/settings?notice=saved");
@@ -134,7 +134,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(p.interests).toEqual(["art"]);
     expect(p.newcomer).toBe(true);
     expect(p.locale).toBe("en");
-    expect(p.bio).toMatchObject({ occupation: "other", occupationOther: "Drone pilot", education: "bachelors", educationDetail: "KMITL" });
+    expect(p.bio).toMatchObject({ occupation: "other", occupationOther: "Drone pilot", education: "bachelors", educationDetail: "Design", universityName: "kmitl", gradYear: 2018, story: "province", bkkTime: "3to10", hometown: "Udon Thani", guide: true });
     // Romance intent preserved while romance mode is on.
     expect(p.intents).toEqual(["explore", "romance"]);
   });

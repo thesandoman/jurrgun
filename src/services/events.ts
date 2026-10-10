@@ -10,6 +10,7 @@ import { batch, getDb, type DatabaseEnv } from "../db";
 import { buddyRound, type Attendee } from "../domain/matching";
 import { ageOn, OFFER_HOURS, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
 import { newId } from "../lib/crypto";
+import { cleanBio, universityKey } from "../content/profile";
 import { audit, notify } from "../lib/records";
 import { accounts, blocks, buddyPairs, events, profiles, registrations, strikes, vibes, type Event } from "../schema";
 
@@ -143,6 +144,7 @@ export async function loadAttendees(db: Db, accountIds: string[], now = new Date
       .filter((b) => b.blocker === p.accountId || b.blocked === p.accountId)
       .map((b) => (b.blocker === p.accountId ? b.blocked : b.blocker)),
     vibe: vibeOf.get(p.accountId) ?? null,
+    university: universityKey(cleanBio(p.bio)),
   }));
 }
 

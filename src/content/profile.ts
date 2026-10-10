@@ -11,6 +11,7 @@
  * here so the routes and the tests share one set of rules.
  */
 import { createRng, shuffle } from "../vibe/rng";
+import { universityById, universityByName, universityName } from "./universities";
 
 export type L2 = { th: string; en: string };
 export type Opt = { value: string; th: string; en: string; emoji: string };
@@ -608,32 +609,158 @@ export const OCCUPATIONS: Opt[] = [
 ];
 export const OCCUPATION_OTHER_MAX = 40;
 
-/** Education: the highest level (or "studying now"), plus an optional school or field. */
-export const EDUCATION: Opt[] = [
-  o("high_school", "🏫", "มัธยมศึกษา", "High school"),
-  o("vocational", "🛠️", "อาชีวะ (ปวช. / ปวส.)", "Vocational (ปวช. / ปวส.)"),
-  o("bachelors", "🎓", "ปริญญาตรี", "Bachelor's degree"),
-  o("masters", "📘", "ปริญญาโท", "Master's degree"),
-  o("doctorate", "🔬", "ปริญญาเอก", "Doctorate"),
-  o("studying", "📚", "กำลังเรียนอยู่", "Studying now"),
-  o("self_taught", "🧠", "เรียนรู้ด้วยตัวเอง", "Self-taught"),
+/**
+ * Education: a degree (grouped, so the list stays short to scan), the
+ * university (searched from ~10,000, see src/content/universities.ts),
+ * a graduation year and a field of study. All optional.
+ *
+ * The generic values (vocational, bachelors, masters, doctorate, studying,
+ * self_taught, high_school) are kept from the first version of this list.
+ */
+export type DegreeGroup = { key: string; th: string; en: string; items: Opt[] };
+export const DEGREE_GROUPS: DegreeGroup[] = [
+  { key: "school", th: "มัธยมและอาชีวะ", en: "School and vocational", items: [
+    o("high_school", "🏫", "มัธยมศึกษา", "High school"),
+    o("vocational_cert", "🛠️", "ปวช.", "Vocational certificate (ปวช.)"),
+    o("vocational_dip", "🛠️", "ปวส.", "High vocational diploma (ปวส.)"),
+    o("vocational", "🛠️", "อาชีวะ (อื่น ๆ)", "Vocational (other)"),
+  ] },
+  { key: "bachelors", th: "ปริญญาตรี", en: "Bachelor's", items: [
+    o("ba", "🎓", "ศิลปศาสตรบัณฑิต (B.A.)", "B.A. (Arts)"),
+    o("bsc", "🎓", "วิทยาศาสตรบัณฑิต (B.Sc.)", "B.Sc. (Science)"),
+    o("beng", "🎓", "วิศวกรรมศาสตรบัณฑิต (B.Eng.)", "B.Eng. (Engineering)"),
+    o("bba", "🎓", "บริหารธุรกิจบัณฑิต (B.B.A.)", "B.B.A. (Business)"),
+    o("bacc", "🎓", "บัญชีบัณฑิต (B.Acc.)", "B.Acc. (Accounting)"),
+    o("bcomarts", "🎓", "นิเทศศาสตรบัณฑิต", "Communication Arts"),
+    o("barch", "🎓", "สถาปัตยกรรมศาสตรบัณฑิต (B.Arch.)", "B.Arch. (Architecture)"),
+    o("bfa", "🎓", "ศิลปกรรมศาสตรบัณฑิต (B.F.A.)", "B.F.A. (Fine Arts)"),
+    o("bed", "🎓", "ครุศาสตรบัณฑิต / ศึกษาศาสตรบัณฑิต (B.Ed.)", "B.Ed. (Education)"),
+    o("llb", "🎓", "นิติศาสตรบัณฑิต (LL.B.)", "LL.B. (Law)"),
+    o("bpa", "🎓", "รัฐประศาสนศาสตรบัณฑิต / รัฐศาสตรบัณฑิต", "Political science / public administration"),
+    o("bns", "🎓", "พยาบาลศาสตรบัณฑิต (B.N.S.)", "B.N.S. (Nursing)"),
+    o("bachelors", "🎓", "ปริญญาตรี (อื่น ๆ)", "Bachelor's (other)"),
+  ] },
+  { key: "professional", th: "วิชาชีพสุขภาพ", en: "Health professions", items: [
+    o("md", "🩺", "แพทยศาสตรบัณฑิต (M.D.)", "M.D. (Medicine)"),
+    o("dds", "🦷", "ทันตแพทยศาสตรบัณฑิต (D.D.S.)", "D.D.S. (Dentistry)"),
+    o("pharmd", "💊", "เภสัชศาสตรบัณฑิต (Pharm.D.)", "Pharm.D. (Pharmacy)"),
+    o("dvm", "🐾", "สัตวแพทยศาสตรบัณฑิต (D.V.M.)", "D.V.M. (Veterinary)"),
+  ] },
+  { key: "masters", th: "ปริญญาโท", en: "Master's", items: [
+    o("ma", "📘", "ศิลปศาสตรมหาบัณฑิต (M.A.)", "M.A."),
+    o("msc", "📘", "วิทยาศาสตรมหาบัณฑิต (M.Sc.)", "M.Sc."),
+    o("meng", "📘", "วิศวกรรมศาสตรมหาบัณฑิต (M.Eng.)", "M.Eng."),
+    o("mba", "📘", "บริหารธุรกิจมหาบัณฑิต (MBA)", "MBA"),
+    o("med", "📘", "ครุศาสตรมหาบัณฑิต / ศึกษาศาสตรมหาบัณฑิต (M.Ed.)", "M.Ed."),
+    o("llm", "📘", "นิติศาสตรมหาบัณฑิต (LL.M.)", "LL.M."),
+    o("mpa", "📘", "รัฐประศาสนศาสตรมหาบัณฑิต (MPA)", "MPA"),
+    o("masters", "📘", "ปริญญาโท (อื่น ๆ)", "Master's (other)"),
+  ] },
+  { key: "doctorate", th: "ปริญญาเอก", en: "Doctorate", items: [
+    o("phd", "🔬", "ปรัชญาดุษฎีบัณฑิต (Ph.D.)", "Ph.D."),
+    o("edd", "🔬", "ครุศาสตรดุษฎีบัณฑิต (Ed.D.)", "Ed.D."),
+    o("doctorate", "🔬", "ปริญญาเอก (อื่น ๆ)", "Doctorate (other)"),
+  ] },
+  { key: "other", th: "อื่น ๆ", en: "Other paths", items: [
+    o("studying", "📚", "กำลังเรียนอยู่", "Studying now"),
+    o("certificate", "📜", "ประกาศนียบัตร / บูตแคมป์", "Certificate or bootcamp"),
+    o("self_taught", "🧠", "เรียนรู้ด้วยตัวเอง", "Self-taught"),
+  ] },
 ];
+export const EDUCATION: Opt[] = DEGREE_GROUPS.flatMap((g) => g.items);
 export const EDUCATION_DETAIL_MAX = 60;
+export const UNIVERSITY_NAME_MAX = 80;
+export const GRAD_YEAR_MIN = 1950;
+/** Graduation years offered: 1950 up to eight years ahead (for current students). */
+export function gradYears(now = new Date()): number[] {
+  const last = now.getUTCFullYear() + 8;
+  return Array.from({ length: last - GRAD_YEAR_MIN + 1 }, (_, i) => last - i);
+}
 
-/** What to show for education, or null: the level, then the school or field if given. */
-export function educationLabel(bio: Bio, lang: "th" | "en"): { emoji: string; text: string } | null {
+/** The university a member picked (by id) or typed, comparable across members. */
+export function universityKey(bio: Bio): string | null {
+  if (bio.university) return bio.university;
+  const typed = (bio.universityName ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return typed ? `typed:${typed}` : null;
+}
+
+/** Did these two go to the same university? (For "same university" badges and seating.) */
+export const sameUniversity = (a: Bio, b: Bio) => {
+  const ka = universityKey(a);
+  return !!ka && ka === universityKey(b);
+};
+
+/** One line for the profile card: degree · university · class of · field. Null when nothing is set. */
+export function educationLabel(bio: Bio, lang: "th" | "en", now = new Date()): { emoji: string; text: string } | null {
   const ed = EDUCATION.find((x) => x.value === bio.education);
-  if (!ed) return null;
-  const level = lang === "en" ? ed.en : ed.th;
-  return { emoji: ed.emoji, text: bio.educationDetail ? `${level} · ${bio.educationDetail}` : level };
+  const uni = universityById(bio.university);
+  const uniText = uni ? universityName(uni, lang) : bio.universityName;
+  const year = bio.gradYear
+    ? bio.gradYear > now.getUTCFullYear()
+      ? lang === "en" ? `graduating ${bio.gradYear}` : `จะจบปี ${bio.gradYear}`
+      : lang === "en" ? `class of ${bio.gradYear}` : `รุ่นปี ${bio.gradYear}`
+    : "";
+  const parts = [ed ? (lang === "en" ? ed.en : ed.th) : "", uniText ?? "", year, bio.educationDetail ?? ""].filter(Boolean);
+  if (parts.length === 0) return null;
+  return { emoji: ed?.emoji ?? "🎓", text: parts.join(" · ") };
 }
 
-/** Read the education pair off a form. An unknown level clears both. */
-export function parseEducation(level: string, detail: string): Pick<Bio, "education" | "educationDetail"> {
-  if (!EDUCATION.some((x) => x.value === level)) return { education: undefined, educationDetail: undefined };
-  const text = detail.trim().slice(0, EDUCATION_DETAIL_MAX);
-  return { education: level, educationDetail: text || undefined };
+/**
+ * Read the education fields off a form. The university comes as a picked id
+ * (from search) or as typed text; typed text that exactly names a known
+ * university is resolved to it, so it still matches. Unknown values clear.
+ */
+export function parseEducation(f: { level: string; detail: string; university?: string; universityName?: string; gradYear?: string }, now = new Date()): Pick<Bio, "education" | "educationDetail" | "university" | "universityName" | "gradYear"> {
+  const detail = f.detail.trim().slice(0, EDUCATION_DETAIL_MAX);
+  const typed = (f.universityName ?? "").trim().replace(/\s+/g, " ").slice(0, UNIVERSITY_NAME_MAX);
+  const picked = universityById(f.university);
+  // Picked from search, unless they then typed something else in the box.
+  const known = picked && (!typed || typed === picked.name || typed === picked.th) ? picked : typed ? universityByName(typed) : undefined;
+  const year = Number(f.gradYear);
+  return {
+    education: EDUCATION.some((x) => x.value === f.level) ? f.level : undefined,
+    educationDetail: detail || undefined,
+    university: known?.id,
+    universityName: known ? undefined : typed || undefined,
+    gradYear: Number.isInteger(year) && year >= GRAD_YEAR_MIN && year <= now.getUTCFullYear() + 8 ? year : undefined,
+  };
 }
+
+// ------------------------------------------------------- Bangkok story --
+// Jurrgun is for everyone in the city: locals, people from the provinces,
+// Thais back from abroad, expats, students, nomads and visitors. All optional.
+
+export const BKK_STORY: Opt[] = [
+  o("local", "🏙️", "คนกรุงเทพฯ โดยกำเนิด", "Born and raised in Bangkok"),
+  o("province", "🚌", "ย้ายมาจากต่างจังหวัด", "Moved here from another province"),
+  o("returnee", "🛬", "คนไทยกลับจากต่างประเทศ", "Thai, back from abroad"),
+  o("expat", "🌏", "ชาวต่างชาติที่อยู่กรุงเทพฯ", "Expat living in Bangkok"),
+  o("student", "🎒", "มาเรียนที่กรุงเทพฯ", "Here to study"),
+  o("nomad", "💻", "ดิจิทัลโนแมด", "Digital nomad"),
+  o("visiting", "🧳", "มาอยู่กรุงเทพฯ ช่วงหนึ่ง", "In Bangkok for a while"),
+];
+
+export const BKK_TIME: Opt[] = [
+  o("lt6m", "🌱", "ไม่ถึง 6 เดือน", "Under 6 months"),
+  o("lt1y", "🌿", "6–12 เดือน", "6 to 12 months"),
+  o("1to3", "🌳", "1–3 ปี", "1 to 3 years"),
+  o("3to10", "🏡", "3–10 ปี", "3 to 10 years"),
+  o("10plus", "🏯", "มากกว่า 10 ปี", "Over 10 years"),
+  o("always", "💚", "ทั้งชีวิต", "All my life"),
+];
+export const HOMETOWN_MAX = 40;
+
+/** Read the Bangkok story fields off a form. Unknown picks are dropped. */
+export function parseBangkok(story: string, time: string, hometown: string, guide: string): Pick<Bio, "story" | "bkkTime" | "hometown" | "guide"> {
+  const from = hometown.trim().slice(0, HOMETOWN_MAX);
+  return {
+    story: BKK_STORY.some((x) => x.value === story) ? story : undefined,
+    bkkTime: BKK_TIME.some((x) => x.value === time) ? time : undefined,
+    hometown: from || undefined,
+    guide: guide === "1" ? true : undefined,
+  };
+}
+
 
 /** The occupation to show, or null: "other" shows the member's own words. */
 export function occupationLabel(bio: Bio, lang: "th" | "en"): { emoji: string; text: string } | null {
@@ -971,7 +1098,17 @@ export type Bio = {
   occupationOther?: string;
   /** A value from EDUCATION, plus an optional school or field. */
   education?: string;
+  /** Field of study. */
   educationDetail?: string;
+  /** A university id from src/content/universities.ts, or the name as typed when it isn't in the list. */
+  university?: string;
+  universityName?: string;
+  gradYear?: number;
+  /** Bangkok story (BKK_STORY), time in the city (BKK_TIME), where they're from, and "happy to help newcomers". */
+  story?: string;
+  bkkTime?: string;
+  hometown?: string;
+  guide?: boolean;
   learning?: string;
   learningLangs?: string[];
   energy?: string;
@@ -1065,6 +1202,13 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.occupationOther)) out.occupationOther = s(b.occupationOther);
   if (s(b.education)) out.education = s(b.education);
   if (s(b.educationDetail)) out.educationDetail = s(b.educationDetail);
+  if (s(b.university)) out.university = s(b.university);
+  if (s(b.universityName)) out.universityName = s(b.universityName);
+  if (typeof b.gradYear === "number" && Number.isInteger(b.gradYear)) out.gradYear = b.gradYear;
+  if (s(b.story)) out.story = s(b.story);
+  if (s(b.bkkTime)) out.bkkTime = s(b.bkkTime);
+  if (s(b.hometown)) out.hometown = s(b.hometown);
+  if (b.guide === true) out.guide = true;
   if (s(b.learning)) out.learning = s(b.learning);
   if (strs(b.learningLangs)) out.learningLangs = strs(b.learningLangs);
   if (s(b.energy)) out.energy = s(b.energy);

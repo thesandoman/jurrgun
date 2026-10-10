@@ -38,11 +38,12 @@ import {
   WEEKEND_RHYTHM,
   type Answer,
   type Bio,
+  parseBangkok,
   parseEducation,
   parseOccupation,
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
-import { CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
+import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -150,6 +151,7 @@ settingsRoutes.get("/settings", async (c) => {
     { done: !!vibeKey, label: t("ค้นหาไทป์ของคุณ", "Find your type"), href: "/quiz" },
     { done: p.interests.length >= 3, label: t("ความสนใจอีกนิด", "A few more interests"), href: "/settings/profile#interests" },
     { done: !!bio.occupation, label: t("บอกว่าทำงานอะไร", "What you do"), href: "/settings/profile#facts" },
+    { done: !!bio.story, label: t("เรื่องของคุณกับกรุงเทพฯ", "Your Bangkok story"), href: "/settings/profile#bangkok" },
     { done: !!bio.comm?.length, label: t("สไตล์การคุย", "How you keep in touch"), href: "/settings/profile#comm" },
     { done: !!(bio.energy || bio.weekend), label: t("ข้อมูลสั้น ๆ", "Quick facts"), href: "/settings/profile#facts" },
     { done: Object.keys(bio.answers ?? {}).length >= 2, label: t("ตอบคำถามของคุณ", "Answer your prompts"), href: "/settings/profile#prompts" },
@@ -345,9 +347,13 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
           <CommPicker v={props.v} values={bio.comm} />
         </Section>
 
+        <Section id="bangkok" emoji="🛺" title={t("กรุงเทพฯ ของฉัน", "My Bangkok")} hint={t("ไม่บังคับทั้งหมด ช่วยให้คนในโต๊ะรู้จักคุณมากขึ้น", "All optional. Helps your table get to know you.")}>
+          <BangkokStory v={props.v} story={bio.story} time={bio.bkkTime} hometown={bio.hometown} guide={bio.guide} />
+        </Section>
+
         <Section id="facts" emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
           <OccupationPicker v={props.v} value={bio.occupation} other={bio.occupationOther} />
-          <EducationPicker v={props.v} value={bio.education} detail={bio.educationDetail} />
+          <EducationPicker v={props.v} bio={bio} />
           <Field
             label={t("กำลังเรียนรู้", "Currently learning")}
             name="learning"
@@ -449,7 +455,8 @@ function parseProfileForm(c: C, body: Body): Parsed {
     deck,
     comm,
     ...parseOccupation(str(body.occupation), str(body.occupationOther)),
-    ...parseEducation(str(body.education), str(body.educationDetail)),
+    ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }),
+    ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)),
     learning: str(body.learning),
     learningLangs: pickAll("learningLangs", values(LANGUAGES)),
     energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,

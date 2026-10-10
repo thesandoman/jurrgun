@@ -32,8 +32,8 @@ import { consents, profiles, wellbeing } from "../schema";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, LinkButton, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
-import { cleanBio, COMM_STYLES, INTEREST_VALUES, MAX_COMM, MAX_INTERESTS, parseEducation, parseOccupation } from "../content/profile";
-import { CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
+import { cleanBio, COMM_STYLES, INTEREST_VALUES, MAX_COMM, MAX_INTERESTS, parseBangkok, parseEducation, parseOccupation } from "../content/profile";
+import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
 export const onboarding = new Hono<AppEnv>();
@@ -330,9 +330,12 @@ function YouForm(props: { v: View; error?: string }) {
       >
         <InterestPicker v={props.v} values={p?.interests} />
       </FlowStep>
+      <FlowStep emoji="🛺" title={t("คุณกับกรุงเทพฯ", "You and Bangkok")} hint={t("คนกรุงเทพฯ คนต่างจังหวัด หรือคนจากที่ไกล ทุกคนยินดีต้อนรับ ไม่บังคับ", "Locals, people from the provinces, from abroad: everyone's welcome. Optional.")}>
+        <BangkokStory v={props.v} story={cleanBio(p?.bio).story} time={cleanBio(p?.bio).bkkTime} hometown={cleanBio(p?.bio).hometown} compact />
+      </FlowStep>
       <FlowStep emoji="💼" title={t("ทำงานและเรียนอะไร?", "Work and study")} hint={t("ไม่บังคับ ข้ามได้", "Optional. You can skip this.")}>
         <OccupationPicker v={props.v} value={cleanBio(p?.bio).occupation} other={cleanBio(p?.bio).occupationOther} />
-        <EducationPicker v={props.v} value={cleanBio(p?.bio).education} detail={cleanBio(p?.bio).educationDetail} />
+        <EducationPicker v={props.v} bio={cleanBio(p?.bio)} />
       </FlowStep>
       <FlowStep emoji="💬" title={t("ปกติติดต่อกับเพื่อนแบบไหน?", "How do you like to keep in touch?")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ ข้ามได้`, `Pick up to ${MAX_COMM}, or skip`)}>
         <CommPicker v={props.v} values={cleanBio(p?.bio).comm} />
@@ -393,7 +396,7 @@ onboarding.post("/you", async (c) => {
       socialStyles,
       eventStyle,
       intents: [...(intents.length ? intents : ["friends"]), ...keepRomance],
-      bio: { ...cleanBio(user.profile.bio), comm, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation(str(body.education), str(body.educationDetail)) },
+      bio: { ...cleanBio(user.profile.bio), comm, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }), ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)) },
       updatedAt: new Date(),
     })
     .where(eq(profiles.accountId, user.account.id));
