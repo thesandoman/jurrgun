@@ -872,8 +872,10 @@ peopleRoutes.get("/notifications/panel", requireMember, async (c) => {
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
   const rows = await db.select().from(notifications).where(eq(notifications.accountId, me)).orderBy(desc(notifications.createdAt)).limit(12);
-  if (rows.some((r) => !r.readAt)) {
-    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), isNull(notifications.readAt)));
+  // Only what the dropdown actually shows becomes read; older unread ones keep the badge.
+  const shown = rows.filter((r) => !r.readAt).map((r) => r.id);
+  if (shown.length) {
+    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), inArray(notifications.id, shown)));
   }
   c.header("cache-control", "no-store");
   return c.html(<NotifItems t={t} lang={lang} rows={rows} />);

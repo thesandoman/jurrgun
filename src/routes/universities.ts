@@ -24,6 +24,8 @@ universityRoutes.get("/universities/search", requireUser, (c) => {
     const other = name === u.name ? u.th : u.name;
     return { id: u.id, name, sub: [country?.of(u.cc) ?? u.cc, other].filter(Boolean).join(" · ") };
   });
+  // Names follow the reader's language (a cookie), so caches must key on it.
   c.header("cache-control", "private, max-age=300");
+  c.header("vary", "Cookie");
   return c.json(rows);
 });

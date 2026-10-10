@@ -124,21 +124,27 @@ const ALIASES: Record<string, string[]> = {
   "Massachusetts Institute of Technology": ["mit"],
   "University of California, Los Angeles": ["ucla"],
   "University of California, Berkeley": ["berkeley", "ucb"],
-  "London School of Economics and Political Science": ["lse"],
-  "University College London": ["ucl"],
+  "London School of Economics and Political Science, University of London": ["lse"],
+  "University College London, University of London": ["ucl"],
   "National University of Singapore": ["nus"],
   "Nanyang Technological University": ["ntu"],
 };
 
-export type University = { id: string; name: string; cc: string; th?: string; search: string };
+export type University = { id: string; name: string; cc: string; th?: string; search: string; thFold?: string };
 
+/**
+ * Lower-case, drop Latin accents and punctuation, collapse spaces. Thai vowel
+ * and tone marks are combining marks (\p{M}) and must stay: NFD (not NFKD,
+ * which splits ำ) and keeping \p{M} leaves Thai words whole.
+ */
 const fold = (s: string) =>
   s
-    .normalize("NFKD")
+    .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
+    .normalize("NFC")
     .toLowerCase()
     .replace(/['’.]/g, "")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
     .trim();
 
 export const uniId = (name: string, cc: string) => `${cc.toLowerCase()}:${fold(name).replace(/ /g, "-")}`;
@@ -152,7 +158,8 @@ const ALL: University[] = (() => {
     if (seen.has(id)) continue;
     seen.add(id);
     const th = cc === "TH" ? THAI_NAMES[name] : undefined;
-    out.push({ id, name, cc, th, search: ` ${fold(name)} ${th ?? ""} ${(ALIASES[name] ?? []).join(" ")} ` });
+    const aliases = (ALIASES[name] ?? []).map(fold);
+    out.push({ id, name, cc, th, thFold: th ? fold(th) : undefined, search: ` ${fold(name)} ${th ? fold(th) : ""} ${aliases.join(" ")} ` });
   }
   return out;
 })();
@@ -180,12 +187,13 @@ export function searchUniversities(q: string, limit = 8): University[] {
   if (words.length === 0) return [];
   const scored: [number, University][] = [];
   for (const u of ALL) {
-    if (!words.every((w) => u.search.includes(` ${w}`) || (u.th && u.th.includes(w)))) continue;
+    // Thai is written without spaces between words, so Thai text may match anywhere in the Thai name.
+    if (!words.every((w) => u.search.includes(` ${w}`) || (u.thFold && u.thFold.includes(w)))) continue;
     let score = 0;
     if (u.cc === "TH") score += 3;
     const whole = fold(q);
-    if (fold(u.name).startsWith(whole) || (u.th ?? "").startsWith(whole)) score += 2;
-    if ((ALIASES[u.name] ?? []).includes(whole)) score += 5;
+    if (fold(u.name).startsWith(whole) || (u.thFold ?? "").includes(whole)) score += 2;
+    if ((ALIASES[u.name] ?? []).some((a) => fold(a) === whole)) score += 5;
     scored.push([score, u]);
   }
   scored.sort((a, b) => b[0] - a[0] || a[1].name.length - b[1].name.length);

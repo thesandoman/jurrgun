@@ -715,7 +715,9 @@ export function parseEducation(f: { level: string; detail: string; university?: 
   const typed = (f.universityName ?? "").trim().replace(/\s+/g, " ").slice(0, UNIVERSITY_NAME_MAX);
   const picked = universityById(f.university);
   // Picked from search, unless they then typed something else in the box.
-  const known = picked && (!typed || typed === picked.name || typed === picked.th) ? picked : typed ? universityByName(typed) : undefined;
+  // Long names are cut to the box's length, so compare like with like.
+  const cut = (n?: string) => (n ?? "").replace(/\s+/g, " ").slice(0, UNIVERSITY_NAME_MAX);
+  const known = picked && (!typed || typed === cut(picked.name) || typed === cut(picked.th)) ? picked : typed ? universityByName(typed) : undefined;
   const year = Number(f.gradYear);
   return {
     education: EDUCATION.some((x) => x.value === f.level) ? f.level : undefined,

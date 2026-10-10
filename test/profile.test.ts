@@ -132,6 +132,21 @@ describe("university search", () => {
     expect(searchUniversities("institute of technology")[0].cc).toBe("TH"); // Bangkok first
   });
 
+  it("keeps Thai vowel and tone marks when searching in Thai", () => {
+    expect(searchUniversities("รามคำแหง")[0].name).toBe("Ramkhamhaeng University");
+    expect(searchUniversities("มหาวิทยาลัยรามคำแหง")[0].name).toBe("Ramkhamhaeng University");
+    expect(searchUniversities("จุฬาฯ")[0].name).toBe("Chulalongkorn University");
+    expect(searchUniversities("นิด้า")[0].name).toBe("National Institute of Development Administration");
+    expect(searchUniversities("ธรรมศาสตร์")[0].name).toBe("Thammasat University");
+    expect(searchUniversities("lse")[0].name).toBe("London School of Economics and Political Science, University of London");
+  });
+
+  it("keeps a picked university whose name is longer than the box", () => {
+    const long = searchUniversities("evangelische fachhochschule berlin sozialarbeit")[0];
+    expect(long.name.length).toBeGreaterThan(80);
+    expect(parseEducation({ level: "", detail: "", university: long.id, universityName: long.name.slice(0, 80) }).university).toBe(long.id);
+  });
+
   it("covers the world and stays small", () => {
     expect(searchUniversities("seoul national").some((u) => u.cc === "KR")).toBe(true);
     expect(searchUniversities("oxford").some((u) => u.cc === "GB")).toBe(true);

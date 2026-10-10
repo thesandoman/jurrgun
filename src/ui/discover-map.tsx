@@ -339,7 +339,10 @@ function movableKey(key) {
   head.addEventListener("click", (e) => { if (moved) { e.preventDefault(); moved = false; } });
   // Double-tap the header to send it home.
   head.addEventListener("dblclick", (e) => { e.preventDefault(); store.set("bkk-key-pos", ""); key.style.left = key.style.top = ""; key.classList.remove("moved"); });
-  addEventListener("resize", () => { if (key.classList.contains("moved")) place(key.getBoundingClientRect().left, key.getBoundingClientRect().top); }, { signal });
+  const reclamp = () => { if (key.classList.contains("moved")) place(key.getBoundingClientRect().left, key.getBoundingClientRect().top); };
+  addEventListener("resize", reclamp, { signal });
+  // Opening a moved Key makes it taller: keep it on screen.
+  key.addEventListener("toggle", () => requestAnimationFrame(reclamp));
 }
 /** Keep pins clear of the header, chips, right-hand buttons and the sheet. */
 function refit(points, instant = false) {

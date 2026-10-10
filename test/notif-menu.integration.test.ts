@@ -36,6 +36,17 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
     expect(html).not.toContain('class="notif-dot"');
   });
 
+  it("only marks what the dropdown showed as read", async () => {
+    const m = await createMember();
+    const old = Date.now() - 86_400_000;
+    await db().insert(notifications).values(
+      Array.from({ length: 14 }, (_, i) => ({ id: newId(), accountId: m.id, kind: "test", titleTh: `แจ้ง ${i}`, titleEn: `Note ${i}`, createdAt: new Date(old + i * 60_000) })),
+    );
+    await req("/notifications/panel", { cookie: m.cookie });
+    const unread = await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), isNull(notifications.readAt)));
+    expect(unread).toHaveLength(2); // the 12 newest were shown; the 2 oldest keep the badge
+  });
+
   it("needs a signed-in member", async () => {
     const r = await req("/notifications/panel");
     expect(r.status).toBe(302);
