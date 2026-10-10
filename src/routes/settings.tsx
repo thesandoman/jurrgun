@@ -70,6 +70,7 @@ import { CONSENT_VERSION, ConnectionsFields, connectionsPatch } from "./onboardi
 import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { L } from "../lib/i18n";
+import { releaseUpcomingSeats } from "../services/events";
 
 export const settingsRoutes = new Hono<AppEnv>();
 settingsRoutes.use("/settings", requireMember);
@@ -127,7 +128,7 @@ settingsRoutes.get("/settings", async (c) => {
       .select({ n: count() })
       .from(registrations)
       .innerJoin(events, eq(events.id, registrations.eventId))
-      .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now))),
+      .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now), ne(events.status, "cancelled"))),
     // A crew = the people I met at one event; the circle is all of them.
     db
       .select({ n: count(), crews: countDistinct(connections.eventId) })
@@ -966,6 +967,7 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.delete(sessions).where(eq(sessions.accountId, id)),
     audit(db, id, "account.deactivated", { type: "account", id }),
   ]);
+  await releaseUpcomingSeats(c.env, id);
   for (const k of [...(photoKey ? [photoKey] : []), ...promptPhotos]) await deleteObject(c.env, k).catch(() => {});
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
   return c.redirect("/?notice=deactivated");

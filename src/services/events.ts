@@ -5,7 +5,7 @@
  * All timers are LAZY: these run when someone loads or changes the event,
  * comparing timestamps — no cron, no polling (SVAGENTS hard rule 10).
  */
-import { and, eq, inArray, lt, or } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { buddyRound, type Attendee } from "../domain/matching";
 import { ageOn, OFFER_HOURS, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
@@ -82,7 +82,8 @@ export async function refreshWaitlist(env: DatabaseEnv, eventId: string, now = n
     }
     const w = waiting.find((x) => x.id === entry.id)!;
     queries.push(
-      db.update(registrations).set({ status: "offered", offeredUntil: offerUntil }).where(eq(registrations.id, entry.id)),
+      // Only if still waiting: the member may have cancelled since we read the list.
+      db.update(registrations).set({ status: "offered", offeredUntil: offerUntil }).where(and(eq(registrations.id, entry.id), eq(registrations.status, "waitlisted"))),
       notify(db, w.accountId, "waitlist_offer", "มีที่ว่างแล้ว! ยืนยันภายใน 12 ชม.", "A spot opened up! Confirm within 12 hours.", `/events/${eventId}`),
     );
     state.taken += 1;
@@ -92,6 +93,28 @@ export async function refreshWaitlist(env: DatabaseEnv, eventId: string, now = n
   if (queries.length) await batch(env, queries);
   void expired;
   return offers;
+}
+
+/**
+ * Give back every upcoming seat and waitlist place this account holds (on
+ * deactivation or a ban), then offer the freed seats to the next people
+ * waiting. Past events are left alone so attendance history stays intact.
+ */
+export async function releaseUpcomingSeats(env: DatabaseEnv, accountId: string, now = new Date()): Promise<number> {
+  const db = getDb(env);
+  const held = await db
+    .select({ id: registrations.id, eventId: registrations.eventId })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(and(eq(registrations.accountId, accountId), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now)))
+    .limit(500);
+  if (held.length === 0) return 0;
+  await db
+    .update(registrations)
+    .set({ status: "cancelled", offeredUntil: null })
+    .where(inArray(registrations.id, held.map((h) => h.id)));
+  for (const eventId of new Set(held.map((h) => h.eventId))) await refreshWaitlist(env, eventId, now);
+  return held.length;
 }
 
 /** Attendees in the shape the matching code wants, blocks included. */

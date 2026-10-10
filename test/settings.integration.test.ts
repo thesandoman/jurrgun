@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { and, desc, eq } from "drizzle-orm";
 import { ENV, HAS_DB, TEST_PASSWORD, createMember, db, req } from "./helpers";
 import app from "../src/index";
-import { accounts, auditLog, connections, consents, profiles, pulseQuestions, pulseResponses, sessions } from "../src/schema";
-import { newId } from "../src/lib/crypto";
+import { accounts, auditLog, connections, consents, events, profiles, registrations, pulseQuestions, pulseResponses, sessions } from "../src/schema";
+import { newId, randomToken } from "../src/lib/crypto";
 
 const baseProfile = {
   nickname: "Mint",
@@ -49,6 +49,27 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(html).toContain("Hubby");
     expect(html).toContain('action="/logout"');
     expect(html).toContain("/settings/privacy");
+  });
+
+  it("gives a deactivated member's upcoming seat to the next person waiting", async () => {
+    const [leaver, waiting] = await Promise.all([createMember(), createMember()]);
+    const eventId = newId();
+    const startsAt = new Date(Date.now() + 3 * 86_400_000);
+    await db().insert(events).values({
+      id: eventId, title: "เต็ม", titleEn: "Full", startsAt, endsAt: new Date(startsAt.getTime() + 7_200_000),
+      venueName: "Venue", district: "bang_rak", capacity: 1, status: "published", createdBy: leaver.id,
+    });
+    const seat = newId();
+    const wait = newId();
+    await db().insert(registrations).values([
+      { id: seat, eventId, accountId: leaver.id, status: "confirmed", passToken: randomToken() },
+      { id: wait, eventId, accountId: waiting.id, status: "waitlisted", passToken: randomToken() },
+    ]);
+    const r = await req("/settings/deactivate", { cookie: leaver.cookie, form: { confirm: "1" } });
+    expect(r.status).toBe(302);
+    const rows = await db().select().from(registrations).where(eq(registrations.eventId, eventId)).limit(5);
+    expect(rows.find((x) => x.id === seat)?.status).toBe("cancelled");
+    expect(rows.find((x) => x.id === wait)?.status).toBe("offered");
   });
 
   it("hides Change password for Google / LINE accounts, which have no password", async () => {

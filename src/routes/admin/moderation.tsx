@@ -23,6 +23,7 @@ import { requireRole } from "../../lib/session";
 import { accounts, events, moderationActions, profiles, registrations, reports, sessions } from "../../schema";
 import { Button, Card, Empty, Field, int, Notice, page, str, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
+import { releaseUpcomingSeats } from "../../services/events";
 
 export const adminModeration = new Hono<AppEnv>();
 adminModeration.use("*", requireRole("moderator"));
@@ -516,5 +517,7 @@ adminModeration.post("/:id/action", async (c) => {
     }),
   );
   await batch(c.env, ops);
+  // A banned member's seats go to the waitlist.
+  if (target && action === "ban") await releaseUpcomingSeats(c.env, target.id);
   return c.redirect(`/admin/moderation/${encodeURIComponent(r.id)}?notice=saved`);
 });

@@ -39,6 +39,15 @@ import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz"
 export const onboarding = new Hono<AppEnv>();
 onboarding.use("*", requireUser);
 
+// Once onboarded, the onboarding steps are closed: they would otherwise let a
+// member rewrite fields Settings deliberately locks (birth date, which drives
+// event age ranges and the private age preference).
+const STEP_PATHS = new Set(["/onboarding/basics", "/onboarding/privacy", "/onboarding/you", "/onboarding/connections", "/onboarding/wellbeing"]);
+onboarding.use("*", async (c, next) => {
+  if (c.var.user?.profile?.onboardedAt && STEP_PATHS.has(new URL(c.req.url).pathname)) return c.redirect("/events");
+  await next();
+});
+
 const STEPS = ["welcome", "quiz", "basics", "privacy", "you", "connections", "wellbeing"] as const;
 type Step = (typeof STEPS)[number];
 const stage = (s: Step) => ({ at: STEPS.indexOf(s), of: STEPS.length });
@@ -584,10 +593,17 @@ async function finish(c: { env: AppEnv["Bindings"] }, accountId: string) {
   await getDb(c.env).update(profiles).set({ onboardedAt: new Date() }).where(eq(profiles.accountId, accountId));
 }
 
+/** The last step can only finish onboarding once consents and interests are in. */
+async function unfinishedStep(c: Context<AppEnv>, user: CurrentUser): Promise<Step | null> {
+  const step = await nextStep(c, user);
+  return step === "connections" || step === "done" ? null : step;
+}
+
 onboarding.get("/wellbeing", async (c) => {
   const v = view(c);
   const user = v.user!;
-  if (!user.profile) return c.redirect("/onboarding/basics");
+  const missing = await unfinishedStep(c, user);
+  if (missing) return c.redirect(`/onboarding/${missing}`);
   if (!(await hasResearchConsent(c.env, user.account.id))) {
     await finish(c, user.account.id);
     return c.redirect("/events?notice=welcome");
@@ -628,7 +644,8 @@ onboarding.get("/wellbeing", async (c) => {
 
 onboarding.post("/wellbeing", async (c) => {
   const user = c.var.user!;
-  if (!user.profile) return c.redirect("/onboarding/basics");
+  const missing = await unfinishedStep(c, user);
+  if (missing) return c.redirect(`/onboarding/${missing}`);
   const body = await c.req.parseBody();
   const answers = [body.q1, body.q2, body.q3].map((x) => Number(str(x)));
   if (str(body.skip) !== "1" && answers.every((n) => n >= 1 && n <= 3) && user.account.researchId) {

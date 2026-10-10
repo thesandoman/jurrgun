@@ -336,6 +336,22 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     expect(lateRow.groupNo).toBe(expected);
   });
 
+  it("never seats a late arrival in a group with someone they blocked", async () => {
+    await setup();
+    const id = await mkEvent(admin.id, { hostAccountId: host.id, groupsPublishedAt: new Date() });
+    const [a, b, c, late] = await Promise.all([createMember(), createMember(), createMember(), createMember()]);
+    const now = new Date();
+    await register(id, a.id, { checkedInAt: now, checkInMethod: "scan", groupNo: 1 });
+    await register(id, b.id, { checkedInAt: now, checkInMethod: "scan", groupNo: 2 });
+    await register(id, c.id, { checkedInAt: now, checkInMethod: "scan", groupNo: 2 });
+    const lateReg = await register(id, late.id);
+    // Group 1 is smaller, but A blocked the late arrival.
+    await db().insert(blocks).values({ id: newId(), blocker: a.id, blocked: late.id });
+    const res = await checkinJson(host.cookie, id, { token: lateReg.passToken });
+    expect(res.status).toBe(200);
+    expect(res.body.groupNo).toBe(2);
+  });
+
   it("records no-shows once, only after the end, and lets the host waive a strike", async () => {
     await setup();
     const future = await mkEvent(admin.id, { hostAccountId: host.id });

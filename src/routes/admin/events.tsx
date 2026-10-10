@@ -29,6 +29,7 @@ import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import {
   accounts,
+  blocks,
   buddyPairs,
   events,
   partnerOrgs,
@@ -1586,19 +1587,35 @@ adminEvents.post(
       return fail(403, t("อยู่นอกช่วงเวลาเช็กอิน", "Outside the check-in window"));
     }
 
-    // Late arrival after groups are out: smallest group, ties → lowest number.
+    // Late arrival after groups are out: smallest group, ties → lowest number,
+    // never a group with someone they blocked or who blocked them (PRD §8.1).
+    // If every group has one, they stay ungrouped and staff seat them by hand.
     let groupNo: number | null = null;
     if (e.groupsPublishedAt) {
-      const sizes = await db
-        .select({ groupNo: registrations.groupNo, n: sql<number>`count(*)` })
-        .from(registrations)
-        .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.groupNo), isNotNull(registrations.checkedInAt)))
-        .groupBy(registrations.groupNo)
-        .limit(200);
-      const best = sizes
-        .map((s) => ({ g: Number(s.groupNo), n: Number(s.n) }))
-        .sort((x, y) => x.n - y.n || x.g - y.g)[0];
-      groupNo = best ? best.g : null;
+      const [seated, blockRows] = await Promise.all([
+        db
+          .select({ accountId: registrations.accountId, groupNo: registrations.groupNo })
+          .from(registrations)
+          .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.groupNo), isNotNull(registrations.checkedInAt)))
+          .limit(MAX_REGS),
+        db
+          .select({ blocker: blocks.blocker, blocked: blocks.blocked })
+          .from(blocks)
+          .where(or(eq(blocks.blocker, reg.accountId), eq(blocks.blocked, reg.accountId)))
+          .limit(1000),
+      ]);
+      const avoid = new Set(blockRows.map((b) => (b.blocker === reg!.accountId ? b.blocked : b.blocker)));
+      const groups = new Map<number, { n: number; clash: boolean }>();
+      for (const row of seated) {
+        const g = groups.get(Number(row.groupNo)) ?? { n: 0, clash: false };
+        g.n += 1;
+        if (avoid.has(row.accountId)) g.clash = true;
+        groups.set(Number(row.groupNo), g);
+      }
+      const best = [...groups]
+        .filter(([, g]) => !g.clash)
+        .sort(([ga, a], [gb, b]) => a.n - b.n || ga - gb)[0];
+      groupNo = best ? best[0] : null;
     }
 
     const queries: Parameters<typeof batch>[1] = [
