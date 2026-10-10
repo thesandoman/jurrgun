@@ -18,7 +18,7 @@
  */
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { and, count, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { passwordProblem } from "../domain/rules";
 import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
@@ -128,12 +128,14 @@ settingsRoutes.get("/settings", async (c) => {
       .from(registrations)
       .innerJoin(events, eq(events.id, registrations.eventId))
       .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now))),
+    // A crew = the people I met at one event; the circle is all of them.
     db
-      .select({ n: count() })
+      .select({ n: count(), crews: countDistinct(connections.eventId) })
       .from(connections)
       .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
   ]);
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
+  const crews = Number(circle?.crews ?? 0);
   const bio = cleanBio(p.bio);
   const steps: MeStep[] = [
     { done: !!p.photoKey, label: t("ใส่รูป", "Add a photo"), href: "/settings/profile#photo" },
@@ -197,7 +199,14 @@ settingsRoutes.get("/settings", async (c) => {
       interests={p.interests}
       stats={[
         { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events", tint: "green" },
-        { emoji: "🤝", n: Number(circle?.n ?? 0), label: t("คนรู้จัก", "In my circle"), href: "/connections", tint: "teal" },
+        {
+          emoji: "🤝",
+          n: Number(circle?.n ?? 0),
+          label: t("คนในวงของฉัน", "In my circle"),
+          sub: crews > 0 ? t(`จาก ${crews} แก๊ง`, `across ${crews} ${crews === 1 ? "crew" : "crews"}`) : undefined,
+          href: "/connections",
+          tint: "teal",
+        },
         { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events", tint: "lime" },
       ]}
       steps={steps}

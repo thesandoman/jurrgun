@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { and, desc, eq } from "drizzle-orm";
 import { ENV, HAS_DB, TEST_PASSWORD, createMember, db, req } from "./helpers";
 import app from "../src/index";
-import { accounts, auditLog, consents, profiles, pulseQuestions, pulseResponses, sessions } from "../src/schema";
+import { accounts, auditLog, connections, consents, profiles, pulseQuestions, pulseResponses, sessions } from "../src/schema";
 import { newId } from "../src/lib/crypto";
 
 const baseProfile = {
@@ -49,6 +49,20 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(html).toContain("Hubby");
     expect(html).toContain('action="/logout"');
     expect(html).toContain("/settings/privacy");
+  });
+
+  it("counts my circle and the crews (events) it came from", async () => {
+    const [me, a, b, c] = await Promise.all([createMember(), createMember(), createMember(), createMember()]);
+    const pair = (x: string, y: string) => (x < y ? { aAccount: x, bAccount: y } : { aAccount: y, bAccount: x });
+    const ev1 = newId();
+    const ev2 = newId();
+    await db().insert(connections).values([
+      { id: newId(), ...pair(me.id, a.id), level: "friend", eventId: ev1 },
+      { id: newId(), ...pair(me.id, b.id), level: "friend", eventId: ev1 },
+      { id: newId(), ...pair(me.id, c.id), level: "activity", eventId: ev2 },
+    ]);
+    const html = await (await req("/settings", { cookie: `${me.cookie}; lang=en` })).text();
+    expect(html).toMatch(/<b>3<\/b><small>In my circle<\/small><small class="me-stat-sub">across 2 crews<\/small>/);
   });
 
   it("shows my numbers and nudges what my profile is missing", async () => {

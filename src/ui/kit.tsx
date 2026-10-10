@@ -95,7 +95,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Anuphan:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
         <style dangerouslySetInnerHTML={{ __html: STYLES }} />

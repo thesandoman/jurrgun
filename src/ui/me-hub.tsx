@@ -11,7 +11,8 @@ import type { Child } from "hono/jsx";
 import { interestOpt } from "../content/profile";
 import type { View } from "./kit";
 
-export type MeStat = { emoji: string; n: number; label: string; href: string; tint: Tint };
+/** `sub`: an optional breakdown under the label (e.g. "across 3 crews"). */
+export type MeStat = { emoji: string; n: number; label: string; sub?: string; href: string; tint: Tint };
 export type MeStep = { done: boolean; label: string; href: string };
 export type MeLink = { href: string; emoji: string; title: string; hint: string; tint: Tint };
 export type Tint = "green" | "lime" | "teal" | "mint" | "sky" | "sun";
@@ -65,6 +66,7 @@ export function MeHub(props: {
             <span class="me-stat-emoji" aria-hidden="true">{s.emoji}</span>
             <b>{s.n}</b>
             <small>{s.label}</small>
+            {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
           </a>
         ))}
       </nav>
@@ -174,6 +176,7 @@ const ME_CSS = `
 .me-stat:nth-child(2){border-radius:22px 30px 20px 28px/30px 20px 28px 22px;transform:translateY(6px)}
 .me-stat:active{transform:scale(.97)}
 .me-stat-emoji{font-size:1.3rem;line-height:1}
+.me-stat-sub{margin-top:4px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--tint) 22%,var(--surface));font-weight:600}
 .me-stat b{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;line-height:1.2;margin-top:4px}
 .me-stat small{font-size:.78rem;color:var(--ink-2);text-align:center;line-height:1.25}
 
