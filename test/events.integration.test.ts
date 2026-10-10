@@ -196,6 +196,27 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect((await regOf(ev, b.id)).status).toBe("waitlisted");
   });
 
+  it("never overbooks when several members RSVP for the last seats at once", async () => {
+    const people = await Promise.all(Array.from({ length: 6 }, () => createMember()));
+    const ev = await mkEvent({ capacity: 2 });
+    const results = await Promise.all(people.map((p) => req(`/events/${ev}/rsvp`, { cookie: p.cookie, method: "POST", form: {} })));
+    for (const r of results) expect(r.status).toBe(302);
+    const rows = await db().select().from(registrations).where(eq(registrations.eventId, ev)).limit(20);
+    expect(rows).toHaveLength(6);
+    expect(rows.filter((r) => r.status === "confirmed" || r.status === "offered").length).toBeLessThanOrEqual(2);
+  });
+
+  it("a double-tapped RSVP makes one registration and no error", async () => {
+    const m = await createMember();
+    const ev = await mkEvent();
+    const [r1, r2] = await Promise.all([1, 2].map(() => req(`/events/${ev}/rsvp`, { cookie: m.cookie, method: "POST", form: {} })));
+    expect(r1.status).toBe(302);
+    expect(r2.status).toBe(302);
+    const rows = await db().select().from(registrations).where(and(eq(registrations.eventId, ev), eq(registrations.accountId, m.id))).limit(5);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("confirmed");
+  });
+
   it("keeps the resident quota for verified Bangkok residents", async () => {
     const [n1, n2] = [await createMember(), await createMember()];
     const resident = await createMember({ bkkRegistered: "verified" });
@@ -231,6 +252,9 @@ describe.skipIf(!HAS_DB)("events", () => {
     const second = await mkEvent();
     expect(loc(await req(`/events/${first}/rsvp`, { cookie: two.cookie, method: "POST", form: {} }))).toContain("rsvp_confirmed");
     expect((await req(`/events/${second}/rsvp`, { cookie: two.cookie, method: "POST", form: {} })).status).toBe(403);
+    // Once staff cancel that event, it no longer uses up the one place.
+    await db().update(events).set({ status: "cancelled" }).where(eq(events.id, first));
+    expect(loc(await req(`/events/${second}/rsvp`, { cookie: two.cookie, method: "POST", form: {} }))).toContain("rsvp_confirmed");
     // Strikes are shown privately in My events.
     expect(await (await req("/me/events", { cookie: `${two.cookie}; lang=en` })).text()).toContain("Active strikes: 2");
   });

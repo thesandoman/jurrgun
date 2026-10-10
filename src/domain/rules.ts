@@ -190,6 +190,17 @@ export function seatAvailable(s: SeatState, isResident: boolean): boolean {
   return s.takenByNonResidents < s.capacity - Math.max(0, Math.min(s.residentQuota, s.capacity));
 }
 
+/**
+ * After taking a seat: did that push the event past capacity (or past the
+ * non-resident share)? Two people racing for the last seat both see a free
+ * seat; this re-check after the write is what keeps the event from overbooking.
+ */
+export function seatsOverbooked(s: SeatState, isResident: boolean): boolean {
+  if (s.taken > s.capacity) return true;
+  if (isResident) return false;
+  return s.takenByNonResidents > s.capacity - Math.max(0, Math.min(s.residentQuota, s.capacity));
+}
+
 export type WaitlistEntry = {
   id: string;
   createdAt: Date;

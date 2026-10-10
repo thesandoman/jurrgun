@@ -22,13 +22,14 @@
  */
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   ageOn,
   isLateCancel,
   romanceEligible,
   seatAvailable,
+  seatsOverbooked,
   strikeExpiry,
   strikeStanding,
   USERNAME_RE,
@@ -1071,6 +1072,8 @@ export async function rsvpGate(
           eq(registrations.accountId, user.account.id),
           inArray(registrations.status, [...ACTIVE]),
           ne(registrations.eventId, event.id),
+          // A cancelled event doesn't hold a place.
+          ne(events.status, "cancelled"),
           gt(events.endsAt, now),
         ),
       )
@@ -1090,6 +1093,12 @@ export async function rsvpGate(
  * Take a seat (or a waitlist place) after `rsvpGate` passed: seats and the
  * resident quota decide confirmed vs waitlisted. `extra(status)` adds the
  * caller's own writes to the same batch.
+ *
+ * There are no transactions here, so the seat is taken first and checked
+ * after: if a simultaneous RSVP pushed the event over capacity, this one
+ * steps back to the waitlist and any seat that frees up goes to the waitlist
+ * as usual. A double-submit (same member, same moment) writes nothing twice:
+ * the second request sees the row the first one wrote and stops.
  */
 export async function commitRsvp(
   c: Ctx,
@@ -1106,8 +1115,9 @@ export async function commitRsvp(
 ): Promise<"confirmed" | "waitlisted"> {
   const db = getDb(c.env);
   const id = event.id;
+  const resident = user.account.bkkRegistered === "verified";
   const state = await seatState(db, event);
-  const status = seatAvailable(state, user.account.bkkRegistered === "verified") ? "confirmed" : "waitlisted";
+  let status: "confirmed" | "waitlisted" = seatAvailable(state, resident) ? "confirmed" : "waitlisted";
   const row = {
     status,
     offeredUntil: null,
@@ -1123,10 +1133,34 @@ export async function commitRsvp(
     signalTopics: null,
     cancelledAt: null,
   };
+  // 1. Write the row, unless a parallel request from this member already did.
+  const regId = existing?.id ?? newId();
+  const written = existing
+    ? await db
+        .update(registrations)
+        .set(row)
+        .where(and(eq(registrations.id, existing.id), notInArray(registrations.status, [...ACTIVE])))
+        .returning({ id: registrations.id })
+    : await db
+        .insert(registrations)
+        .values({ id: regId, eventId: id, accountId: user.account.id, ...row })
+        .onConflictDoNothing()
+        .returning({ id: registrations.id });
+  if (written.length === 0) {
+    const current = await myRegistration(db, id, user.account.id);
+    return current?.status === "waitlisted" ? "waitlisted" : "confirmed";
+  }
+
+  // 2. Re-count now that our seat is in; step back if we overbooked.
+  let freed = false;
+  if (status === "confirmed" && seatsOverbooked(await seatState(db, event), resident)) {
+    await db.update(registrations).set({ status: "waitlisted" }).where(and(eq(registrations.id, regId), eq(registrations.status, "confirmed")));
+    status = "waitlisted";
+    freed = true;
+  }
+
+  // 3. Tell them, once, with the status they actually got.
   const queries: Query[] = [
-    existing
-      ? db.update(registrations).set(row).where(eq(registrations.id, existing.id))
-      : db.insert(registrations).values({ id: newId(), eventId: id, accountId: user.account.id, ...row }),
     audit(db, user.account.id, `event.rsvp_${status}`, { type: "event", id }, opts.auditDetail),
     status === "confirmed"
       ? notify(db, user.account.id, "rsvp", `ยืนยันแล้ว: ${event.title}`, `You're in: ${event.titleEn ?? event.title}`, `/me/events/${id}/pass`)
@@ -1134,6 +1168,8 @@ export async function commitRsvp(
     ...(opts.extra ? opts.extra(status) : []),
   ];
   await batch(c.env, queries);
+  // If two of us stepped back at once, a seat may now be free: offer it on.
+  if (freed) await refreshWaitlist(c.env, id);
   return status;
 }
 

@@ -15,6 +15,7 @@ import {
   romanceEligible,
   safeCount,
   seatAvailable,
+  seatsOverbooked,
   strikeStanding,
   waitlistOrder,
   type Choice,
@@ -130,6 +131,13 @@ describe("seats and waitlist", () => {
     expect(seatAvailable(st, false)).toBe(false);
     expect(seatAvailable(st, true)).toBe(true);
     expect(seatAvailable({ ...st, taken: 10 }, true)).toBe(false);
+  });
+  it("spots an overbooking after the seat is taken", () => {
+    const st = { capacity: 10, residentQuota: 3, taken: 10, takenByNonResidents: 7 };
+    expect(seatsOverbooked(st, false)).toBe(false); // exactly full is fine
+    expect(seatsOverbooked({ ...st, taken: 11 }, true)).toBe(true);
+    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 8 }, false)).toBe(true); // ate into the resident quota
+    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 8 }, true)).toBe(false);
   });
   it("orders priority, then residents (if prioritised), then first come", () => {
     const e = (id: string, mins: number, isResident: boolean, priority = true) => ({ id, createdAt: new Date(mins * 60_000), isResident, priority });
