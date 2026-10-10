@@ -13,6 +13,7 @@ import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { accountUsable, endSession, startSession } from "../lib/session";
 import { accounts, loginAttempts } from "../schema";
+import { enabledProviders, SocialSignIn } from "./oauth";
 import { Button, Card, Field, Notice, page, safeNext, str, view } from "../ui/kit";
 
 export const authRoutes = new Hono<AppEnv>();
@@ -28,7 +29,7 @@ export const LOGIN_MAX_PER_USER = 5;
 export const LOGIN_MAX_PER_IP = 20;
 export const SIGNUP_WINDOW_MS = 60 * MINUTE;
 export const SIGNUP_MAX_PER_IP = 10;
-const SIGNUP_PREFIX = "signup:";
+export const SIGNUP_PREFIX = "signup:";
 const UNKNOWN_IP = "unknown";
 
 /** The client IP as Cloudflare reports it, or "unknown" (local dev, tests). */
@@ -39,7 +40,7 @@ function clientIp(c: Context<AppEnv>): string {
   return xff || UNKNOWN_IP;
 }
 
-async function ipKey(c: Context<AppEnv>): Promise<{ ipHash: string; known: boolean }> {
+export async function ipKey(c: Context<AppEnv>): Promise<{ ipHash: string; known: boolean }> {
   const ip = clientIp(c);
   return { ipHash: await sha256(ip), known: ip !== UNKNOWN_IP };
 }
@@ -65,7 +66,7 @@ async function loginThrottled(c: Context<AppEnv>, username: string, ip: { ipHash
   return byUser >= LOGIN_MAX_PER_USER || (ip.known && byIp >= LOGIN_MAX_PER_IP);
 }
 
-async function signupThrottled(c: Context<AppEnv>, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
+export async function signupThrottled(c: Context<AppEnv>, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
   if (!ip.known) return false;
   const since = new Date(now.getTime() - SIGNUP_WINDOW_MS);
   const [row] = await getDb(c.env)
@@ -75,7 +76,7 @@ async function signupThrottled(c: Context<AppEnv>, ip: { ipHash: string; known: 
   return Number(row?.n ?? 0) >= SIGNUP_MAX_PER_IP;
 }
 
-async function tooMany(c: Context<AppEnv>, mode: "signup" | "login"): Promise<Response> {
+export async function tooMany(c: Context<AppEnv>, mode: "signup" | "login"): Promise<Response> {
   const { t } = view(c);
   // page() only takes the statuses kit.tsx lists, so re-wrap its response as a 429.
   const res = await page(
@@ -106,6 +107,7 @@ function AuthForm(props: {
   next?: string;
 }) {
   const { t, mode } = props;
+  const reveal = { show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") };
   return (
     <Card>
       <form method="post" action={mode === "signup" ? "/signup" : "/login"}>
@@ -125,10 +127,11 @@ function AuthForm(props: {
           type="password"
           required
           autocomplete={mode === "signup" ? "new-password" : "current-password"}
+          reveal={reveal}
           hint={mode === "signup" ? t("อย่างน้อย 8 ตัวอักษร", "At least 8 characters") : undefined}
         />
         {mode === "signup" ? (
-          <Field label={t("ยืนยันรหัสผ่าน", "Confirm password")} name="confirm" type="password" required autocomplete="new-password" />
+          <Field label={t("ยืนยันรหัสผ่าน", "Confirm password")} name="confirm" type="password" required autocomplete="new-password" reveal={reveal} />
         ) : null}
         <Button>{mode === "signup" ? t("สร้างบัญชี", "Create account") : t("เข้าสู่ระบบ", "Sign in")}</Button>
       </form>
@@ -145,6 +148,7 @@ authRoutes.get("/signup", (c) => {
     <>
       <h1>{t("มาเริ่มกันเลย 👋", "Let's get you started 👋")}</h1>
       <p class="muted">{t("ใช้เวลาไม่ถึง 3 นาที", "Takes under 3 minutes.")}</p>
+      <SocialSignIn t={t} providers={enabledProviders(c.env)} />
       <AuthForm mode="signup" t={t} />
       <p>
         {t("มีบัญชีแล้ว?", "Already have an account?")} <a href="/login">{t("เข้าสู่ระบบ", "Sign in")}</a>
@@ -205,6 +209,7 @@ authRoutes.get("/login", (c) => {
     { title: t("เข้าสู่ระบบ", "Sign in") },
     <>
       <h1>{t("ยินดีต้อนรับกลับมา", "Welcome back")}</h1>
+      <SocialSignIn t={t} providers={enabledProviders(c.env)} next={next} />
       <AuthForm mode="login" t={t} next={next} />
       <p>
         {t("ยังไม่มีบัญชี?", "New here?")} <a href="/signup">{t("สมัครสมาชิก", "Create an account")}</a>

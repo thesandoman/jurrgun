@@ -84,6 +84,24 @@ export const sessions = pgTable(
   (t) => [index("identity_sessions_account_idx").on(t.accountId)],
 );
 
+/**
+ * Sign in with Google or LINE: one row per provider identity, pointing at a
+ * normal account. Only the provider's stable user id (`sub`) is kept; no
+ * email, name or picture is stored.
+ */
+export const oauthLinks = pgTable(
+  "identity_oauth_links",
+  {
+    id: text("id").primaryKey(),
+    /** google | line */
+    provider: text("provider").notNull(),
+    subject: text("subject").notNull(),
+    accountId: text("account_id").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("identity_oauth_links_provider_subject_idx").on(t.provider, t.subject), index("identity_oauth_links_account_idx").on(t.accountId)],
+);
+
 export const partnerOrgs = pgTable("identity_partner_orgs", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

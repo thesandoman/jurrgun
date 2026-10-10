@@ -77,5 +77,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "ALTER TABLE \"social_profiles\" ADD COLUMN \"bio\" jsonb DEFAULT '{}'::jsonb NOT NULL;"
     ]
+  },
+  {
+    "id": "0003_stiff_doomsday",
+    "statements": [
+      "CREATE TABLE \"identity_oauth_links\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"provider\" text NOT NULL,\n\t\"subject\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE UNIQUE INDEX \"identity_oauth_links_provider_subject_idx\" ON \"identity_oauth_links\" (\"provider\",\"subject\");",
+      "CREATE INDEX \"identity_oauth_links_account_idx\" ON \"identity_oauth_links\" (\"account_id\");"
+    ]
   }
 ];

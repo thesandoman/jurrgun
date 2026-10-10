@@ -95,7 +95,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Anuphan:wght@500;600;700&display=swap"
           rel="stylesheet"
         />
         <style dangerouslySetInnerHTML={{ __html: STYLES }} />
@@ -247,11 +247,11 @@ export function Field(props: {
   autocomplete?: string;
   maxlength?: number;
   pattern?: string;
+  /** Password fields: labels for a Show / Hide toggle (needs JS; without it the field stays hidden-text). */
+  reveal?: { show: string; hide: string };
 }) {
   const id = `f-${props.name}`;
-  return (
-    <div class="field">
-      <label for={id}>{props.label}</label>
+  const input = (
       <input
         id={id}
         name={props.name}
@@ -265,6 +265,28 @@ export function Field(props: {
         maxlength={props.maxlength}
         pattern={props.pattern}
       />
+  );
+  return (
+    <div class="field">
+      <label for={id}>{props.label}</label>
+      {props.reveal && props.type === "password" ? (
+        <div class="pw">
+          {input}
+          <button
+            type="button"
+            class="pw-toggle"
+            aria-controls={id}
+            aria-pressed="false"
+            data-show={props.reveal.show}
+            data-hide={props.reveal.hide}
+            onclick="var i=document.getElementById(this.getAttribute('aria-controls')),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',String(s));this.textContent=s?this.dataset.hide:this.dataset.show"
+          >
+            {props.reveal.show}
+          </button>
+        </div>
+      ) : (
+        input
+      )}
       {props.hint ? <small>{props.hint}</small> : null}
     </div>
   );

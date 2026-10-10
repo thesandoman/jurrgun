@@ -197,8 +197,8 @@ settingsRoutes.get("/settings", async (c) => {
       interests={p.interests}
       stats={[
         { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events", tint: "green" },
-        { emoji: "🤝", n: Number(circle?.n ?? 0), label: t("คนรู้จัก", "In my circle"), href: "/connections", tint: "peach" },
-        { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events", tint: "sun" },
+        { emoji: "🤝", n: Number(circle?.n ?? 0), label: t("คนรู้จัก", "In my circle"), href: "/connections", tint: "teal" },
+        { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events", tint: "lime" },
       ]}
       steps={steps}
       type={typeCard}
@@ -206,8 +206,8 @@ settingsRoutes.get("/settings", async (c) => {
       links={[
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions for BMA"), tint: "sky" },
-        { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "pink" },
-        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "lilac" },
+        { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
+        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint" },
         { href: "/settings/password", emoji: "🔑", title: t("เปลี่ยนรหัสผ่าน", "Change password"), hint: t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password"), tint: "sun" },
       ]}
     />,
@@ -971,9 +971,9 @@ function PasswordForm(props: { v: View; error?: string }) {
       <h1>{t("เปลี่ยนรหัสผ่าน", "Change password")}</h1>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
       <form method="post">
-        <Field label={t("รหัสผ่านปัจจุบัน", "Current password")} name="current" type="password" required autocomplete="current-password" />
-        <Field label={t("รหัสผ่านใหม่", "New password")} name="password" type="password" required autocomplete="new-password" hint={t("อย่างน้อย 8 ตัวอักษร", "At least 8 characters")} />
-        <Field label={t("ยืนยันรหัสผ่านใหม่", "Confirm new password")} name="confirm" type="password" required autocomplete="new-password" />
+        <Field label={t("รหัสผ่านปัจจุบัน", "Current password")} name="current" type="password" required autocomplete="current-password"  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") }} />
+        <Field label={t("รหัสผ่านใหม่", "New password")} name="password" type="password" required autocomplete="new-password" hint={t("อย่างน้อย 8 ตัวอักษร", "At least 8 characters")}  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") }} />
+        <Field label={t("ยืนยันรหัสผ่านใหม่", "Confirm new password")} name="confirm" type="password" required autocomplete="new-password"  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") }} />
         <Button>{t("เปลี่ยนรหัสผ่าน", "Change password")}</Button>
       </form>
     </>

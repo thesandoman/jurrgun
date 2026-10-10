@@ -79,6 +79,17 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 form{margin:0}
 .field{display:flex;flex-direction:column;gap:6px;margin:18px 0}
 .field label,fieldset legend{font-weight:600;font-size:.94rem}
+.social{display:flex;flex-direction:column;gap:10px;margin:16px 0 4px}
+.social-btn{justify-content:center;gap:10px;font-weight:700}
+.social-line{background:#06c755;color:#fff;border-color:#06c755}
+.social-google{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.social-mark{font-weight:900;font-size:.78rem;letter-spacing:.02em}
+.social-google .social-mark{font-size:1.05rem;color:#4285f4}
+.social-or{display:flex;align-items:center;gap:12px;color:var(--ink-3);font-size:.85rem;margin:8px 0 0}
+.social-or::before,.social-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.pw{position:relative;display:flex}
+.pw input{flex:1;padding-right:76px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);min-height:36px;padding:0 12px;border:none;border-radius:999px;background:var(--surface-2);color:var(--brand);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
 input[type=text],input[type=password],input[type=date],input[type=datetime-local],input[type=number],input[type=search],input[type=url],select,textarea{
   width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
 input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:1px}
@@ -299,5 +310,85 @@ body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 .type-grid a small{line-height:1.35}
 .type-grid a.me{border-color:var(--brand);background:var(--brand-soft)}
 .inline-toggle{display:flex;align-items:center;gap:10px;justify-content:space-between}
+/* ==== Bangkok livery ====================================================
+ * The signature layer. Bangkok's city colour is green, so the app is dressed
+ * like the city's transit: a deep BMA-green body, a bright green + lime
+ * stripe running along it, and a bold grotesque for headings. Everything
+ * here overrides the plain base above, so pages need no new classes.
+ * ===================================================================== */
+:root{
+  --deep:#06492a;--deep-2:#0a5e37;--on-deep:#ffffff;--on-deep-2:#c9f7d9;--lime:#b4f03a;
+  --display:'Bricolage Grotesque','Anuphan',var(--font);
+  --stripe:linear-gradient(180deg,var(--fresh) 0 58%,var(--lime) 58% 100%);
+  --hatch:repeating-linear-gradient(-55deg,transparent 0 12px,rgba(255,255,255,.055) 12px 24px);
+  --radius:22px;
+}
+@media (prefers-color-scheme:dark){:root{--deep:#06301c;--deep-2:#0b4329;--on-deep-2:#a7e9bf;--lime:#c6f45a}}
+
+body{background:radial-gradient(900px 420px at 85% -60px,color-mix(in srgb,var(--lime) 22%,transparent),transparent 70%),radial-gradient(1000px 520px at 0% -80px,var(--brand-soft),transparent 70%),var(--bg);background-attachment:fixed;padding-bottom:104px}
+h1,h2,.flow-title,.me-hi{font-family:var(--display);letter-spacing:-.035em}
+h1{font-size:1.85rem;font-weight:800;line-height:1.12}
+h2{font-weight:700}
+
+/* Top bar: the livery band */
+.topbar{background:var(--deep) var(--hatch);color:var(--on-deep);border-bottom:none;backdrop-filter:none;padding:12px 16px 14px}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:6px;background:var(--stripe);pointer-events:none}
+.topbar .brand{color:var(--on-deep);font-family:var(--display);font-weight:800;font-size:1.22rem;letter-spacing:-.03em}
+.topbar .brand small{color:var(--lime);font-family:var(--font);font-weight:600;letter-spacing:0}
+.topbar .brand-mark{filter:drop-shadow(0 0 0 2px var(--lime))}
+.topbar .brand-mark svg rect:first-child{fill:var(--fresh)}
+.topbar .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:var(--on-deep)}
+.topbar .icon-link{color:var(--on-deep)}
+.proto-banner{background:var(--lime);color:var(--deep);font-weight:600}
+main.wrap{padding-top:26px}
+
+/* Buttons: deep green with the lime stripe along the bottom edge */
+.btn{border-radius:16px;font-weight:700;letter-spacing:-.005em}
+.btn.primary{background:var(--deep);color:var(--on-deep);box-shadow:inset 0 -4px 0 var(--lime),0 6px 18px color-mix(in srgb,var(--deep) 30%,transparent)}
+.btn.primary:hover{background:var(--deep-2)}
+.btn.ghost{background:var(--surface);color:var(--deep);border:2px solid color-mix(in srgb,var(--deep) 35%,var(--line))}
+@media (prefers-color-scheme:dark){.btn.ghost{color:var(--on-deep-2)}.btn.primary{background:var(--brand);color:var(--brand-ink)}.btn.primary:hover{background:var(--fresh)}}
+
+/* Cards: softer, greener, with a livery edge on tappable ones */
+.card{border-radius:var(--radius);border-color:color-mix(in srgb,var(--brand) 14%,var(--line))}
+.card.link{position:relative;overflow:hidden}
+.card.link::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--stripe);background:linear-gradient(90deg,var(--fresh) 0 60%,var(--lime) 60% 100%)}
+.card.link:hover{transform:translateY(-2px);box-shadow:0 14px 34px color-mix(in srgb,var(--brand) 18%,transparent)}
+.card.hero{background:var(--deep) var(--hatch);box-shadow:inset 0 -6px 0 var(--lime),var(--shadow)}
+
+/* Tickets: teasers become boarding-pass strips */
+.teaser{position:relative;background:var(--deep) var(--hatch);color:var(--on-deep);border:none;border-radius:20px;box-shadow:inset 0 -5px 0 var(--lime);overflow:hidden}
+.teaser small,.teaser .muted{color:var(--on-deep-2)}
+.teaser::after{color:var(--lime);font-size:1.2rem}
+.teaser::before{content:"";position:absolute;right:46px;top:-8px;bottom:-8px;border-right:2px dashed rgba(255,255,255,.22)}
+
+/* Inputs */
+input[type=text],input[type=password],input[type=date],input[type=datetime-local],input[type=number],input[type=search],input[type=url],select,textarea{border-radius:14px;border-width:1.5px;min-height:48px}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--lime) 55%,transparent)}
+
+/* Pills and answers: picked = livery */
+.pill span{border-width:1.5px}
+.pill input:checked+span,.answer input:checked+span{background:var(--deep);border-color:var(--deep);color:var(--on-deep);box-shadow:inset 0 -3px 0 var(--lime)}
+.tag.accent{background:color-mix(in srgb,var(--lime) 35%,var(--surface));color:var(--deep)}
+@media (prefers-color-scheme:dark){.tag.accent{color:var(--on-deep-2);background:var(--brand-soft)}}
+
+/* Progress: a moving striped route line */
+.flow-progress,.bar,.me-bar{height:10px;border-radius:999px}
+.flow-progress i,.bar>i,.me-bar i{background:linear-gradient(90deg,var(--fresh),var(--lime)),var(--hatch);background-blend-mode:normal;position:relative}
+
+/* Tab bar: a floating deep-green carriage */
+.tabbar{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));padding:6px;border:none;border-radius:26px;background:var(--deep) var(--hatch);box-shadow:inset 0 -4px 0 var(--lime),0 14px 34px rgba(4,40,22,.35)}
+.tabbar a{color:color-mix(in srgb,var(--on-deep) 72%,transparent);border-radius:18px}
+.tabbar a.on{color:var(--lime);background:rgba(255,255,255,.08);font-weight:700}
+.tabbar a.center{background:var(--lime);color:var(--deep);border-radius:22px;margin:-26px 4px 0;box-shadow:0 0 0 5px var(--bg),0 10px 22px rgba(4,40,22,.3)}
+.tabbar a.center.on{background:var(--lime);color:var(--deep);outline:none;box-shadow:0 0 0 5px var(--bg),0 0 0 8px var(--fresh)}
+body:has(.tabbar) .flow-bar{bottom:calc(84px + env(safe-area-inset-bottom))}
+
+/* Flow cards */
+.flow-emoji{display:grid;place-items:center;width:64px;height:64px;font-size:2.1rem;margin-bottom:10px;border-radius:22px;background:color-mix(in srgb,var(--lime) 30%,var(--surface));box-shadow:inset 0 -4px 0 color-mix(in srgb,var(--fresh) 60%,transparent);transform:rotate(-4deg)}
+.flow-title{font-size:1.6rem;font-weight:800;line-height:1.15}
+
+/* Footer */
+.foot{border-top:6px solid transparent;border-image:linear-gradient(90deg,var(--fresh) 0 60%,var(--lime) 60% 100%) 1;margin-top:36px;padding-top:18px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 `;
