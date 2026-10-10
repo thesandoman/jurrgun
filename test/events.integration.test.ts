@@ -97,7 +97,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(html).toContain('class="fd-ticker"');
     expect(html).toContain("events this week");
     expect(html).toContain('class="fd-status ok"');
-    for (const id of ['id="fd-q"', 'id="fd-text"', 'id="fd-style"', 'id="fd-quests"', 'id="fd-me"', 'id="discover-sheet"', 'id="fd-filters"']) expect(html).toContain(id);
+    for (const id of ['id="fd-q"', 'id="a11y"', 'id="fd-style"', 'id="fd-quests"', 'id="fd-me"', 'id="discover-sheet"', 'id="fd-filters"']) expect(html).toContain(id);
     expect(html).toContain('class="center');
     expect(html).toContain(`EV-${ev.slice(0, 8)}`);
     expect(html).not.toContain('class="topbar"'); // the page draws its own floating header

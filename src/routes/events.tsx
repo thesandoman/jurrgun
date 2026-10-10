@@ -36,12 +36,13 @@ import {
   normalizeUsername,
   withinRange,
   peopleWindow,
+  PEOPLE_WINDOW_HOURS,
   type StrikeStanding,
 } from "../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUTES, label, values } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
-import { fmtDate, type Lang, type T } from "../lib/i18n";
+import { fmtDate, fmtParts, type Lang, type T } from "../lib/i18n";
 import { eventPlace } from "../lib/places";
 import { qrSvg, shortCode } from "../lib/qr";
 import { audit, notify } from "../lib/records";
@@ -182,11 +183,48 @@ export async function coverSrc(env: Ctx["env"], e: Pick<Event, "id" | "coverKey"
   return env.BUCKET ? `/events/${e.id}/cover` : null;
 }
 
-function Cover(props: { e: Event; src?: string | null }) {
+/** The colours of an event's scene cover, from its category. */
+function sceneOf(e: Event): string {
+  const tags = e.tags;
+  if (tags.includes("food")) return "food";
+  if (tags.includes("run") || tags.includes("walk") || tags.includes("pets") || tags.includes("volunteer")) return "park";
+  if (tags.includes("city_quest")) return "river";
+  if (tags.includes("art")) return "art";
+  if (tags.includes("board_game") || tags.includes("language_exchange")) return "play";
+  return "city";
+}
+
+function DateBlock(props: { d: Date; lang: Lang }) {
+  const p = fmtParts(props.d, props.lang);
   return (
-    <div class="event-cover" aria-hidden="true">
-      {props.src ? <img src={props.src} alt="" loading="lazy" /> : coverEmoji(props.e)}
+    <span class="ev-date">
+      <b>{p.day}</b>
+      <small>{p.weekday}</small>
+    </span>
+  );
+}
+
+function Cover(props: { e: Event; src?: string | null; lang?: Lang; class?: string }) {
+  return (
+    <div class={`event-cover scene-${sceneOf(props.e)} ${props.class ?? ""}`.trim()} aria-hidden="true">
+      {props.src ? <img src={props.src} alt="" loading="lazy" /> : <span class="scene-badge">{coverEmoji(props.e)}</span>}
+      {props.lang ? <DateBlock d={props.e.startsAt} lang={props.lang} /> : null}
     </div>
+  );
+}
+
+/** "Free" / "฿250", and the first category, for the line above a title. */
+function eyebrow(e: Event, t: T, lang: Lang): string {
+  const first = e.tags[0];
+  return [first ? label(EVENT_TAGS, first, lang) : null, costText(e, t)].filter(Boolean).join(" · ");
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
   );
 }
 
@@ -199,35 +237,31 @@ function SpotsTag(props: { e: Event; taken: number; t: T }) {
   );
 }
 
-function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null }) {
+function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null; feat?: boolean }) {
   const { e, v } = props;
   const { t, lang } = v;
   const quest = questLabel(e, lang);
   return (
-    <Card href={`/events/${e.id}`}>
-      <Cover e={e} src={props.cover} />
-      <div class="spread">
-        <h3>{title(e, lang)}</h3>
-        {props.mine ? <Tag tone="accent">{statusLabel(props.mine, t)}</Tag> : null}
-      </div>
-      <div class="meta">
-        <span>🗓️ {fmtDate(e.startsAt, lang)}</span>
-        <span>📍 {e.venueName} · {label(DISTRICTS, e.district, lang)}</span>
-      </div>
-      <div class="meta">
-        <span>👥 {ageText(e, t)}</span>
-        <span>🗣️ {langsText(e, lang)}</span>
-        <span>💸 {costText(e, t)}</span>
-        <span>⚡ {label(INTENSITY, e.intensity, lang)}</span>
-      </div>
-      <div class="tags">
-        <SpotsTag e={e} taken={props.taken} t={t} />
-        {quest ? <Tag tone="accent">🧭 City Quest</Tag> : null}
-        {e.plusOneAllowed ? <Tag>{t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</Tag> : null}
-        {e.residentPriority || e.residentQuota > 0 ? <Tag tone="muted">{t("🏙️ สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "🏙️ Resident priority")}</Tag> : null}
-        {e.tags.map((tag) => (
-          <Tag tone="muted">{label(EVENT_TAGS, tag, lang)}</Tag>
-        ))}
+    <Card href={`/events/${e.id}`} class={props.feat ? "ev-card feat" : "ev-card"}>
+      <Cover e={e} src={props.cover} lang={lang} />
+      <div class="ev-body">
+        <p class="eyebrow">{eyebrow(e, t, lang)}</p>
+        <div class="spread">
+          <h3>{title(e, lang)}</h3>
+          {props.mine ? <Tag tone="accent">{statusLabel(props.mine, t)}</Tag> : null}
+        </div>
+        <p class="ev-line">
+          {fmtDate(e.startsAt, lang)} · {e.venueName} · {label(DISTRICTS, e.district, lang)}
+        </p>
+        <p class="ev-line">
+          {ageText(e, t)} · {langsText(e, lang)} · {label(INTENSITY, e.intensity, lang)}
+        </p>
+        <div class="tags">
+          <SpotsTag e={e} taken={props.taken} t={t} />
+          {quest ? <Tag tone="accent">🧭 City Quest</Tag> : null}
+          {e.plusOneAllowed ? <Tag>{t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</Tag> : null}
+          {e.residentPriority || e.residentQuota > 0 ? <Tag tone="muted">{t("🏙️ สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "🏙️ Resident priority")}</Tag> : null}
+        </div>
       </div>
     </Card>
   );
@@ -411,9 +445,9 @@ eventRoutes.get("/events", requireMember, async (c) => {
     list.length === 0 ? (
       <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ กลับมาดูใหม่เร็ว ๆ นี้", "No events match these filters yet. Check back soon.")}</Empty>
     ) : (
-      list.map((e) => (
+      list.map((e, i) => (
         <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
-          <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} />
+          <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} feat={!mapView && i === 0} />
         </div>
       ))
     );
@@ -463,8 +497,28 @@ eventRoutes.get("/events", requireMember, async (c) => {
     c,
     { title: t("ค้นหากิจกรรม", "Discover"), tab: "events" },
     <>
+      <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา", "Small groups, real places, no swiping")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
-      <p class="muted">{t("กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา", "Small groups, real places, no swiping.")}</p>
+      <div class="seg-row">
+        <nav class="seg" aria-label={t("เมื่อไหร่", "When")}>
+          {WHEN_OPTS.map((o) => {
+            const p = new URLSearchParams(params);
+            if (o.value === "all") p.delete("when");
+            else p.set("when", o.value);
+            return (
+              <a href={`/events?${p}`} class={q.when === o.value ? "on" : undefined} aria-current={q.when === o.value ? "page" : undefined}>
+                {lang === "en" ? o.en : o.th}
+              </a>
+            );
+          })}
+        </nav>
+        <nav class="seg views" aria-label={t("มุมมอง", "View")}>
+          <a href={mapHref}>{t("แผนที่", "Map")}</a>
+          <a href={listHref} class="on" aria-current="page">
+            {t("รายการ", "List")}
+          </a>
+        </nav>
+      </div>
       {user.profile.newcomer ? (
         <Card class="hint">
           <strong>{t("เพิ่งย้ายมากรุงเทพฯ ใช่ไหม? 👋", "New to Bangkok? 👋")}</strong>
@@ -493,10 +547,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
         <summary>{t("ตัวกรอง", "Filters")}</summary>
         {filtersForm}
       </details>
-      <nav class="view-toggle" aria-label={t("มุมมอง", "View")}>
-        <a href={mapHref}>🗺️ {t("แผนที่", "Map")}</a>
-        <a href={listHref} class="on" aria-current="page">☰ {t("รายการ", "List")}</a>
-      </nav>
       <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
         {cards}
       </section>
@@ -754,28 +804,47 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <Notice kind="warn">{t("กิจกรรมนี้ถูกยกเลิกแล้ว ขออภัยในความไม่สะดวก", "This event has been cancelled. Sorry for the change of plans.")}</Notice>
       ) : null}
       {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง — ผู้ใช้ทั่วไปยังไม่เห็น", "Draft — members can't see this yet")}</Notice> : null}
-      <Card>
-        <Cover e={event} src={cover} />
+      <Cover e={event} src={cover} class="ev-scene" />
+      <Card class="ev-sheet">
+        <p class="eyebrow">{eyebrow(event, t, lang)}</p>
         <h1>{title(event, lang)}</h1>
         {quest ? (
           <p>
             <Tag tone="accent">🧭 City Quest</Tag> {quest}
           </p>
         ) : null}
-        <div class="meta">
-          <span>🗓️ {fmtDate(event.startsAt, lang)} – {fmtDate(event.endsAt, lang)}</span>
+        <div class="kv">
+          <div>
+            {t("เมื่อไหร่", "When")}
+            <b>{fmtDate(event.startsAt, lang)}</b>
+            {t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`)}
+          </div>
+          <div>
+            {t("ที่ไหน", "Where")}
+            <b>{event.venueName}</b>
+            {label(DISTRICTS, event.district, lang)}
+          </div>
+          <div>
+            {t("กลุ่ม", "Group")}
+            <b>{t(`โต๊ะละ ${event.groupMin}–${event.groupMax} คน`, `Tables of ${event.groupMin}–${event.groupMax}`)}</b>
+            {label(INTENSITY, event.intensity, lang)}
+          </div>
+          <div>
+            {t("ที่นั่ง", "Spots")}
+            <b>{left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็มแล้ว", "Full")}</b>
+            {t(`จาก ${event.capacity} ที่`, `of ${event.capacity}`)}
+          </div>
         </div>
-        <div class="meta">
-          <span>
-            📍 {event.venueName}
-            {event.venueAddress ? `, ${event.venueAddress}` : ""} · {label(DISTRICTS, event.district, lang)}
-          </span>
-          {event.mapUrl ? (
-            <a href={event.mapUrl} target="_blank" rel="noopener noreferrer">
-              {t("เปิดแผนที่", "Open map")}
-            </a>
-          ) : null}
-        </div>
+        {event.venueAddress || event.mapUrl ? (
+          <p class="ev-line">
+            {event.venueAddress ? `📍 ${event.venueAddress} ` : null}
+            {event.mapUrl ? (
+              <a href={event.mapUrl} target="_blank" rel="noopener noreferrer">
+                {t("เปิดแผนที่", "Open map")}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
         <div class="tags">
           <SpotsTag e={event} taken={state.taken} t={t} />
           {event.tags.map((tag) => (
@@ -839,6 +908,15 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       {event.status === "cancelled" ? null : (
         <Card>
           <h2>{t("การลงทะเบียนของฉัน", "My registration")}</h2>
+          <p class="safe-line">
+            <ShieldIcon />
+            <span>
+              {t(
+                "สถานที่สาธารณะ มีโฮสต์ดูแล และไม่มีใครเห็นโปรไฟล์ของคุณ จนกว่าจะเลือกกันทั้งสองฝ่าย",
+                "A public place with a host, and nobody sees your profile unless you both say yes.",
+              )}
+            </span>
+          </p>
           <RegistrationBox event={event} reg={reg} v={v} waitPos={waitPos} started={started} ended={ended} standing={standing} />
           {canInvite(event, reg, now) ? <InviteBox event={event} url={inviteUrl} v={v} /> : null}
         </Card>
@@ -1419,23 +1497,27 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       ) : (
         upcoming.map(({ event, reg }) => (
           <Card>
-            <div class="spread">
-              <h3>
-                <a href={`/events/${event.id}`}>{title(event, lang)}</a>
-              </h3>
-              <Tag tone={reg.status === "confirmed" ? "ok" : reg.status === "offered" ? "accent" : "warn"}>{statusLabel(reg.status, t)}</Tag>
-            </div>
-            <div class="meta">
-              <span>🗓️ {fmtDate(event.startsAt, lang)}</span>
-              <span>📍 {event.venueName}</span>
-            </div>
-            {event.status === "cancelled" ? <Notice kind="warn">{t("กิจกรรมนี้ถูกยกเลิก", "This event was cancelled")}</Notice> : null}
-            <div class="row">
-              {reg.status === "confirmed" && event.status === "published" ? (
-                <LinkButton href={`/me/events/${event.id}/pass`}>{t("🎟️ บัตรเข้างาน", "🎟️ Pass")}</LinkButton>
-              ) : null}
-              {reg.checkedInAt ? <LinkButton href={`/events/${event.id}/live`} kind="ghost">{t("หน้าในงาน", "Live page")}</LinkButton> : null}
-              {reg.status === "offered" ? <LinkButton href={`/events/${event.id}`}>{t("ยืนยันที่นั่ง", "Confirm your spot")}</LinkButton> : null}
+            <div class="dated">
+              <DateBlock d={event.startsAt} lang={lang} />
+              <div>
+                <div class="spread">
+                  <h3>
+                    <a href={`/events/${event.id}`}>{title(event, lang)}</a>
+                  </h3>
+                  <Tag tone={reg.status === "confirmed" ? "ok" : reg.status === "offered" ? "accent" : "warn"}>{statusLabel(reg.status, t)}</Tag>
+                </div>
+                <p class="ev-line">
+                  {fmtParts(event.startsAt, lang).time} · {event.venueName}
+                </p>
+                {event.status === "cancelled" ? <Notice kind="warn">{t("กิจกรรมนี้ถูกยกเลิก", "This event was cancelled")}</Notice> : null}
+                <div class="row">
+                  {reg.status === "confirmed" && event.status === "published" ? (
+                    <LinkButton href={`/me/events/${event.id}/pass`}>{t("🎟️ บัตรเข้างาน", "🎟️ Pass")}</LinkButton>
+                  ) : null}
+                  {reg.checkedInAt ? <LinkButton href={`/events/${event.id}/live`} kind="ghost">{t("หน้าในงาน", "Live page")}</LinkButton> : null}
+                  {reg.status === "offered" ? <LinkButton href={`/events/${event.id}`}>{t("ยืนยันที่นั่ง", "Confirm your spot")}</LinkButton> : null}
+                </div>
+              </div>
             </div>
           </Card>
         ))
@@ -1495,31 +1577,56 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
     c,
     { title: t("บัตรเข้างาน", "Event pass"), tab: "mine" },
     <>
-      <Card class="pass">
-        <h1>{title(event, lang)}</h1>
-        <p>
-          <strong>{user.profile.nickname}</strong>
-        </p>
-        <div
-          role="img"
-          aria-label={t("คิวอาร์โค้ดบัตรเข้างาน ให้โฮสต์สแกน", "Event pass QR code for the host to scan")}
-          dangerouslySetInnerHTML={{ __html: qrSvg(`bkksocial:pass:${reg.passToken}`) }}
-        />
-        <p class="muted">{t("ถ้าสแกนไม่ได้ ให้โฮสต์ใส่รหัสนี้", "If the scan fails, the host can type this code")}</p>
-        <p class="code" style="font-size:2rem">{shortCode(reg.passToken)}</p>
-        {reg.checkedInAt ? <Tag tone="ok">{t("เช็กอินแล้ว", "Checked in")}</Tag> : null}
-        <div class="meta">
-          <span>🗓️ {fmtDate(event.startsAt, lang)}</span>
-          <span>📍 {event.venueName}{event.venueAddress ? `, ${event.venueAddress}` : ""}</span>
-        </div>
-        {event.safetyInfo ? (
+      <section class="ticket" aria-label={t("บัตรเข้างาน", "Event pass")}>
+        <div class="ticket-top">
+          <p class="eyebrow">{t("บัตรเข้างาน", "Event pass")} · {user.profile.nickname}</p>
+          <h1>{title(event, lang)}</h1>
           <p>
-            <strong>{t("จุดนัดพบ: ", "Meeting point: ")}</strong>
-            {event.safetyInfo}
+            {fmtDate(event.startsAt, lang)} · {event.venueName}
+            {event.venueAddress ? `, ${event.venueAddress}` : ""}
           </p>
-        ) : null}
-        <p class="muted">{t("เช็กอินเปิด 30 นาทีก่อนเริ่ม · อย่าแชร์บัตรนี้", "Check-in opens 30 min before the start · don't share this pass")}</p>
-      </Card>
+        </div>
+        <div class="ticket-perf" aria-hidden="true" />
+        <div class="ticket-body">
+          <div
+            role="img"
+            aria-label={t("คิวอาร์โค้ดบัตรเข้างาน ให้โฮสต์สแกน", "Event pass QR code for the host to scan")}
+            dangerouslySetInnerHTML={{ __html: qrSvg(`bkksocial:pass:${reg.passToken}`) }}
+          />
+          <p class="code">{shortCode(reg.passToken)}</p>
+          <p class="muted">{t("ถ้าสแกนไม่ได้ ให้โฮสต์ใส่รหัสนี้ · อย่าแชร์บัตรนี้", "If the scan fails, the host can type this code · don't share this pass")}</p>
+          {reg.checkedInAt ? <Tag tone="ok">{t("เช็กอินแล้ว", "Checked in")}</Tag> : null}
+        </div>
+      </section>
+      <ol class="next-steps" aria-label={t("ขั้นตอนต่อไป", "What happens next")}>
+        <li class="done">
+          <span>
+            <b>{t("ได้ที่นั่งแล้ว", "You have a spot")}</b>
+            <small>{t("โต๊ะจะจัดก่อนงานเริ่ม", "Tables are set before the start")}</small>
+          </span>
+        </li>
+        <li class={reg.checkedInAt ? "done" : undefined}>
+          <span>
+            <b>{t("เช็กอินกับโฮสต์", "Check in with your host")}</b>
+            <small>
+              {event.safetyInfo
+                ? t(`เปิด 30 นาทีก่อนเริ่ม · จุดนัดพบ: ${event.safetyInfo}`, `Opens 30 min before the start · Meet: ${event.safetyInfo}`)
+                : t("เปิด 30 นาทีก่อนเริ่ม", "Opens 30 min before the start")}
+            </small>
+          </span>
+        </li>
+        <li>
+          <span>
+            <b>{t("คนที่ได้เจอ", "People I met")}</b>
+            <small>
+              {t(
+                `เปิดหลังจบงาน ${PEOPLE_WINDOW_HOURS} ชม. จะเชื่อมต่อกันก็ต่อเมื่อเลือกกันทั้งสองฝ่าย`,
+                `Opens for ${PEOPLE_WINDOW_HOURS} hours after the event. You only connect if you both choose to.`,
+              )}
+            </small>
+          </span>
+        </li>
+      </ol>
       <LinkButton href={`/events/${event.id}`} kind="ghost">{t("← รายละเอียดกิจกรรม", "← Event details")}</LinkButton>
     </>,
   );

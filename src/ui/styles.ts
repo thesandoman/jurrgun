@@ -385,4 +385,157 @@ body:has(.tabbar) .flow-bar{bottom:calc(84px + env(safe-area-inset-bottom))}
 /* Footer */
 .foot{border-top:1px solid var(--line);margin-top:36px;padding-top:18px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* ==== Open City ==========================================================
+ * Layered on the livery: same deep BMA green and lime, plus river teal and
+ * a little sun from the Chao Phraya and the parks, still set in Inter.
+ * Scene covers, segmented controls, bottom-sheet event pages and a
+ * boarding-pass ticket.
+ * ===================================================================== */
+:root{
+  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#1a8f5a;
+  --gx:20px;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1511;--river:#5cc8e0;--river-soft:#0f2d36;--sun:#f5c04a;--sun-soft:#3a2f12;--leaf:#4ade80}}
+body{font-size:1rem}
+main.wrap{padding-inline:var(--gx)}
+@media (max-width:520px){:root{--gx:18px}}
+.eyebrow{margin:0 0 2px;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--leaf)}
+
+/* Segmented control (This week / Weekend…, Map / List) */
+.seg{display:flex;gap:2px;padding:4px;margin:12px 0;border-radius:14px;background:color-mix(in srgb,var(--river) 10%,var(--surface-2));overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg a{flex:1 1 0;text-align:center;line-height:1.2;padding:8px 10px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:11px;color:var(--ink-2);text-decoration:none;font-size:.9rem;font-weight:500}
+.seg.views a{flex:0 0 auto;white-space:nowrap;padding-inline:16px}
+.seg a.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(14,36,51,.14)}
+.seg-row{display:flex;flex-wrap:wrap;gap:0 10px;align-items:center}
+.seg-row .seg{flex:1 1 260px}
+.seg-row .seg.views{flex:0 0 auto}
+
+/* Scenes: the cover behind every event. A photo when there is one, otherwise a
+   flat landscape in the category's colours with the emoji on a badge. */
+.event-cover{position:relative;overflow:visible;height:132px;margin:0;border-radius:0;font-size:1.8rem;background:var(--scene,linear-gradient(180deg,#9fd3df 0 52%,var(--river) 52% 100%))}
+.event-cover .scene-badge{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:var(--surface);box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.scene-food{--scene:linear-gradient(180deg,#ffd27a 0 55%,#f2b134 55% 100%)}
+.scene-park{--scene:linear-gradient(180deg,#bfe9cf 0 55%,var(--leaf) 55% 100%)}
+.scene-river{--scene:linear-gradient(180deg,#9fd3df 0 52%,#0b6e8a 52% 100%)}
+.scene-art{--scene:linear-gradient(180deg,#ffd6c2 0 55%,#e07a5f 55% 100%)}
+.scene-play{--scene:linear-gradient(180deg,#d9d2ff 0 55%,#6c5ce7 55% 100%)}
+.scene-city{--scene:linear-gradient(180deg,#cfe3da 0 55%,var(--deep-2) 55% 100%)}
+@media (prefers-color-scheme:dark){
+  .event-cover{--scene:linear-gradient(180deg,#1d4652 0 52%,#0b4f63 52% 100%)}
+  .scene-food{--scene:linear-gradient(180deg,#5a4520 0 55%,#8a6418 55% 100%)}
+  .scene-park{--scene:linear-gradient(180deg,#1f4a33 0 55%,#14683f 55% 100%)}
+  .scene-river{--scene:linear-gradient(180deg,#1d4652 0 52%,#0b4f63 52% 100%)}
+  .scene-art{--scene:linear-gradient(180deg,#5a3528 0 55%,#8c4632 55% 100%)}
+  .scene-play{--scene:linear-gradient(180deg,#352f5c 0 55%,#4b3fa0 55% 100%)}
+  .scene-city{--scene:linear-gradient(180deg,#24392f 0 55%,#0b4329 55% 100%)}
+}
+.ev-date{position:absolute;left:12px;bottom:-18px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;padding:6px 8px;border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:0 6px 16px rgba(0,0,0,.14);line-height:1;font-family:var(--display)}
+.ev-date b{font-size:1.3rem;font-weight:700}
+.ev-date small{font-size:.66rem;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.04em}
+
+/* Event cards */
+.card.ev-card{padding:0;overflow:hidden}
+.ev-body{padding:26px 16px 16px}
+.ev-body h3{margin:2px 0 4px;font-size:1.08rem;line-height:1.3}
+.ev-line{margin:2px 0;color:var(--ink-2);font-size:.88rem}
+.ev-card.feat .event-cover{height:178px}
+.ev-card.feat h3{font-size:1.25rem}
+.discover-list{display:grid;gap:4px}
+
+/* Event page: a scene across the top, details in a sheet over it */
+.ev-scene{height:210px;margin:8px calc(-1 * var(--gx)) 0;font-size:2.6rem}
+main.wrap>.ev-scene:first-child{margin-top:-26px}
+.ev-scene .scene-badge{width:76px;height:76px;border-radius:24px}
+.card.ev-sheet{position:relative;margin-top:-34px;border-radius:26px 26px var(--radius) var(--radius)}
+.ev-sheet h1{margin:2px 0 12px}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 12px}
+.kv div{min-width:0;background:var(--surface-2);border-radius:14px;padding:9px 12px;font-size:.8rem;color:var(--ink-2);line-height:1.35}
+.kv b{display:block;color:var(--ink);font-size:.95rem;font-weight:600;overflow-wrap:anywhere}
+.safe-line{display:flex;gap:10px;align-items:flex-start;margin:10px 0;padding:10px 12px;border-radius:14px;background:var(--river-soft);color:var(--ink);font-size:.9rem}
+.safe-line svg{flex:none;width:22px;height:22px;color:var(--river);margin-top:1px}
+@media (min-width:680px){.ev-scene{margin:0;border-radius:var(--radius) var(--radius) 0 0}.card.ev-sheet{margin-top:-28px}}
+
+/* Pass: a boarding-pass ticket and what happens next */
+.ticket{max-width:420px;margin:8px auto 16px;background:var(--surface);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--line)}
+.ticket-top{background:var(--deep);color:var(--on-deep);padding:16px 18px}
+.ticket-top .eyebrow{color:var(--lime)}
+.ticket-top h1{margin:2px 0 4px;font-size:1.4rem;color:var(--on-deep)}
+.ticket-top p{margin:0;color:var(--on-deep-2);font-size:.9rem}
+.ticket-perf{position:relative;height:0;border-top:2px dashed var(--line);margin:0 18px}
+.ticket-perf::before,.ticket-perf::after{content:"";position:absolute;top:-12px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.ticket-perf::before{left:-30px}.ticket-perf::after{right:-30px}
+.ticket-body{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px;text-align:center}
+.ticket-body svg{width:min(240px,70vw);height:auto;background:#fff;padding:12px;border-radius:14px}
+.ticket .code{font-family:var(--display);font-weight:700;letter-spacing:.22em;font-size:1.7rem;margin:0}
+.next-steps{list-style:none;padding:0;margin:4px auto 18px;max-width:420px;display:grid;gap:2px}
+.next-steps li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;padding:8px 4px}
+.next-steps li::before{content:"";width:20px;height:20px;margin:2px 4px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}
+.next-steps li.done::before{background:var(--leaf);border-color:var(--leaf);box-shadow:inset 0 0 0 3px var(--surface)}
+.next-steps b{display:block;font-weight:600}
+.next-steps small{display:block}
+
+/* My events: dated rows */
+.dated{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.dated .ev-date{position:static;box-shadow:none;background:var(--river-soft)}
+
+/* Tab bar: the green carriage, line icons, the current tab as a white pill */
+.tabbar a span{display:grid;place-items:center;height:24px}
+.tabbar a span svg{width:22px;height:22px}
+.tabbar a.on{background:var(--surface);color:var(--deep);font-weight:700}
+@media (prefers-color-scheme:dark){.tabbar a.on{background:var(--on-deep-2);color:var(--deep)}}
+.tabbar a.center span svg{width:26px;height:26px}
+
+/* ---- Accessibility menu ---- */
+.a11y{position:relative;display:inline-block;background:none;border:0;padding:0;margin:0;border-radius:0}
+.a11y>summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;border-radius:999px;cursor:pointer;color:var(--on-deep);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22)}
+.a11y>summary::-webkit-details-marker{display:none}
+.a11y[open]>summary{background:var(--lime);color:var(--deep);border-color:var(--lime)}
+.a11y-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:40;width:min(330px,calc(100vw - 24px));display:grid;gap:4px;padding:14px;border-radius:20px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.28);font-size:.95rem;font-weight:400;text-align:left}
+/* In the top bar the panel hangs from the bar's right edge, so it always fits the screen */
+.topbar .a11y{position:static}
+.topbar .a11y-panel{right:12px;top:calc(100% + 6px)}
+.a11y-h{margin:0 0 4px;font-family:var(--display);font-weight:700;font-size:1.1rem}
+.a11y-size{margin:0 0 6px}
+.a11y-size legend{font-size:.85rem;color:var(--ink-2);margin-bottom:6px}
+.a11y-size div{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.a11y-size label{position:relative}
+.a11y-size input{position:absolute;opacity:0;inset:0}
+.a11y-size span{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-height:64px;padding:6px;border-radius:14px;border:1.5px solid var(--line);font-size:.78rem;color:var(--ink-2);cursor:pointer}
+.a11y-size b{font-family:var(--display);color:var(--ink);line-height:1.1}
+.a11y-size input:checked+span{border-color:var(--deep);background:var(--brand-soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--deep)}
+.a11y-size input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:1px}
+.a11y-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 2px;border-top:1px solid var(--line);cursor:pointer}
+.a11y-row small{display:block;font-size:.8rem;color:var(--ink-3)}
+.a11y-row input{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:46px;height:28px;margin:0;border-radius:999px;background:var(--line);cursor:pointer;transition:background .15s ease}
+.a11y-row input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s ease}
+.a11y-row input:checked{background:var(--deep)}
+@media (prefers-color-scheme:dark){.a11y-row input:checked{background:var(--brand)}}
+.a11y-row input:checked::after{transform:translateX(18px)}
+.a11y-row input:focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:2px}
+.a11y-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:8px;border-top:1px solid var(--line)}
+.a11y-reset{min-height:40px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+/* On the map the button matches the other floating buttons */
+.fd-top .a11y>summary{width:var(--top-h);height:var(--top-h);border-radius:16px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow)}
+.fd-top .a11y[open]>summary{background:var(--brand);color:var(--brand-ink)}
+.fd-top:has(.a11y[open]){z-index:20}
+.fd-top .a11y-panel{position:fixed;right:10px;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2)}
+
+/* ---- Accessibility modes (classes on <html>, set by the menu) ---- */
+html.a11y-large{font-size:112.5%}
+html.a11y-xl{font-size:125%}
+html.a11y-xl .tabbar a{white-space:normal;line-height:1.1;text-align:center}
+html.a11y-contrast{--ink-2:var(--ink);--ink-3:color-mix(in srgb,var(--ink) 82%,var(--bg));--line:color-mix(in srgb,var(--ink) 50%,var(--bg));--shadow:none}
+html.a11y-contrast body{background:var(--bg)}
+html.a11y-contrast .card,html.a11y-contrast .ticket,html.a11y-contrast .stat,html.a11y-contrast details,html.a11y-contrast input,html.a11y-contrast select,html.a11y-contrast textarea{border-width:2px;border-color:var(--line)}
+html.a11y-contrast .tag,html.a11y-contrast .chip{border:1.5px solid currentColor}
+html.a11y-contrast .seg a.on{outline:2px solid var(--ink)}
+html.a11y-contrast .kv div,html.a11y-contrast .safe-line{border:1.5px solid var(--line)}
+html.a11y-contrast :focus-visible{outline:4px solid var(--sun)!important;outline-offset:2px}
+html.a11y-motion *,html.a11y-motion *::before,html.a11y-motion *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html.a11y-motion .fd-ticker{overflow-x:auto}
+html.a11y-readable body{font-family:'Atkinson Hyperlegible','IBM Plex Sans Thai',system-ui,sans-serif;line-height:1.8;letter-spacing:.015em;word-spacing:.1em}
+html.a11y-readable h1,html.a11y-readable h2,html.a11y-readable h3,html.a11y-readable .flow-title{font-family:'Atkinson Hyperlegible','IBM Plex Sans Thai',system-ui,sans-serif;letter-spacing:0;line-height:1.3}
+html.a11y-readable p,html.a11y-readable li{max-width:65ch}
+html.a11y-links main a:not(.btn):not(.card):not(.seg a):not(.tile):not(.teaser),html.a11y-links .foot a,html.a11y-links .fd-sheet a:not(.card){text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 `;

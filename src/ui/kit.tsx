@@ -10,6 +10,7 @@ import type { AppEnv, CurrentUser } from "../lib/env";
 import { tr, type Lang, type T } from "../lib/i18n";
 import { STYLES } from "./styles";
 import { BrandMark } from "./brand";
+import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 
 export type View = { lang: Lang; t: T; user: CurrentUser | null; path: string };
 
@@ -89,19 +90,19 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>{`${opts.title} · Jurrgun`}</title>
         <meta name="description" content="Jurrgun (เจอกัน) — เพื่อนใหม่ในกรุงเทพฯ กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา · Meet new friends in Bangkok: small groups, real places, no swiping." />
-        <meta name="theme-color" content="#0c8a45" />
+        <meta name="theme-color" content="#06492a" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap"
           rel="stylesheet"
         />
         <style dangerouslySetInnerHTML={{ __html: STYLES }} />
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem("bkk-text")==="big")document.documentElement.classList.add("big-text")}catch(e){}`,
+            __html: A11Y_HEAD_JS,
           }}
         />
       </head>
@@ -124,6 +125,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
                 🔔
               </a>
             ) : null}
+            <A11yMenu t={t} />
             <a href={`/lang/${other}?back=${encodeURIComponent(v.path)}`} class="chip" lang={other}>
               {other === "en" ? "EN" : "ไทย"}
             </a>
@@ -143,6 +145,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           </>
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
+        <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS }} />
         <script
           dangerouslySetInnerHTML={{
             __html: `if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,
@@ -153,17 +156,33 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
   );
 }
 
+/** Line icons for the tab bar (emoji render differently on every phone). */
+function Icon(props: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d={props.d} />
+    </svg>
+  );
+}
+const TAB_ICONS = {
+  events: <Icon d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm3.5-12.5-2 5-5 2 2-5 5-2Z" />,
+  learn: <Icon d="M3 5.5C5 4.5 7.5 4.3 12 6c4.5-1.7 7-1.5 9-.5v13c-2-1-4.5-1.2-9 .5-4.5-1.7-7-1.5-9-.5v-13ZM12 6v13.5" />,
+  mine: <Icon d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5V7Zm10-2v14" />,
+  connections: <Icon d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9c.5-3.5 3-5.5 6-5.5s5.5 2 6 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5m2.5 3.5c1.5.8 2.4 2.6 2.5 5.5" />,
+  me: <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7.5 8.5c.8-4 3.8-6 7.5-6s6.7 2 7.5 6" />,
+};
+
 function TabBar(props: { v: View; tab: Tab }) {
   const { t } = props.v;
   // Same five places on every page; "My events" is the big centre button
   // (your pass lives there), like the Sanroo map's centre action.
-  const items: [Tab, string, string, string][] = [
-    ["events", "/events", "🗺️", t("ค้นหา", "Discover")],
-    ["learn", "/learn", "📚", t("เรียนรู้", "Learn")],
-    ["mine", "/me/events", "🎟️", t("ของฉัน", "My events")],
-    ["connections", "/connections", "🤝", t("คนรู้จัก", "Circle")],
+  const items: [Tab, string, Child, string][] = [
+    ["events", "/events", TAB_ICONS.events, t("ค้นหา", "Discover")],
+    ["learn", "/learn", TAB_ICONS.learn, t("เรียนรู้", "Learn")],
+    ["mine", "/me/events", TAB_ICONS.mine, t("ของฉัน", "My events")],
+    ["connections", "/connections", TAB_ICONS.connections, t("คนรู้จัก", "Circle")],
     // City Pulse lives under Me (and in the Discover ticker).
-    ["me", "/settings", "👤", t("ฉัน", "Me")],
+    ["me", "/settings", TAB_ICONS.me, t("ฉัน", "Me")],
   ];
   return (
     <nav class="tabbar" aria-label={t("เมนูหลัก", "Main")}>

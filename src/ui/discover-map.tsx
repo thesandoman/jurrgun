@@ -7,7 +7,7 @@
  *   scrolling ticker (rain, heat, PM2.5, news) → rain, heat, PM2.5 from
  *     Open-Meteo plus this week's events, the next one, what's filling up,
  *     a Learn tip and the prototype notice
- *   floating header (logo, search, Aa, EN)    → same; search filters events
+ *   floating header (logo, search, ♿, EN)     → same; search filters events
  *   status card ("no warnings · LIVE")        → "N events this week", counted
  *     from the database when the page was built
  *   layer chips                               → Filters + category chips + Free
@@ -23,6 +23,7 @@
  */
 import type { Child } from "hono/jsx";
 import { BrandMark } from "./brand";
+import { A11yMenu } from "./a11y";
 import type { Lang, T } from "../lib/i18n";
 import type { Precision } from "../lib/places";
 import { BKK_CENTER, BKK_PAN_LIMIT } from "../lib/places";
@@ -190,9 +191,7 @@ export function FullDiscover(props: {
             autocomplete="off"
           />
         </form>
-        <button type="button" class="fd-round" id="fd-text" aria-pressed="false" title={t("ขนาดตัวอักษร", "Text size")} aria-label={t("ขนาดตัวอักษร", "Text size")}>
-          Aa
-        </button>
+        <A11yMenu t={t} class="fd-a11y" />
         <a class="fd-round" href={props.langHref} lang={lang === "th" ? "en" : "th"}>
           {lang === "th" ? "EN" : "ไทย"}
         </a>
@@ -269,8 +268,8 @@ export function FullDiscover(props: {
 
 /**
  * The browser side: start sv-map full screen, wire the search box, the
- * right-hand buttons, map style, text size and the ticker pause.
- * Choices (map style, text size) are kept in localStorage on this device only.
+ * right-hand buttons, map style and the ticker pause.
+ * The map style is kept in localStorage on this device only.
  */
 const FULLMAP_JS = `import { createMap } from "/vendor/sv-map.js?v=__V__";
 const cfg = JSON.parse(document.getElementById("dmap-data").textContent);
@@ -339,16 +338,6 @@ quests?.addEventListener("click", () => {
   const on = quests.getAttribute("aria-pressed") !== "true";
   quests.setAttribute("aria-pressed", String(on));
   api?.setFilter(on ? "city_quest" : "");
-});
-
-// Text size (Aa), kept on this device.
-const textBtn = document.getElementById("fd-text");
-const big = () => document.documentElement.classList.contains("big-text");
-textBtn.setAttribute("aria-pressed", String(big()));
-textBtn.addEventListener("click", () => {
-  document.documentElement.classList.toggle("big-text");
-  store.set("bkk-text", big() ? "big" : "normal");
-  textBtn.setAttribute("aria-pressed", String(big()));
 });
 
 // Ticker pause.
@@ -426,7 +415,6 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-sheet-links{margin:0 0 4px;text-align:right;font-size:.85rem}
 /* tab bar floats over the map */
 body.fullmap-body .tabbar{z-index:11}
-html.big-text{font-size:18px}
 @media (min-width:900px){
   .fd-top{right:auto;width:520px}
   .fd-status{right:auto;width:520px}

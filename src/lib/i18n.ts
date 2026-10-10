@@ -32,6 +32,18 @@ export function fmtDate(iso: Date | string, lang: Lang): string {
   }).format(d);
 }
 
+/** Bangkok-time pieces for a date block: day of month, short weekday, HH:MM. */
+export function fmtParts(iso: Date | string, lang: Lang): { day: string; weekday: string; time: string } {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  const locale = lang === "en" ? "en-GB" : "th-TH";
+  const tz = "Asia/Bangkok";
+  return {
+    day: new Intl.DateTimeFormat(locale, { day: "numeric", timeZone: tz }).format(d),
+    weekday: new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: tz }).format(d),
+    time: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(d),
+  };
+}
+
 export function fmtDay(iso: Date | string, lang: Lang): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
   return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", {
