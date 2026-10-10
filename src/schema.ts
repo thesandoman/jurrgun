@@ -28,7 +28,8 @@ import {
 /** Shape of social_profiles.bio. Kept here so the schema has no app imports. */
 export type ProfileBio = {
   comm?: string[];
-  headline?: string;
+  occupation?: string;
+  occupationOther?: string;
   learning?: string;
   learningLangs?: string[];
   energy?: string;

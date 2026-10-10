@@ -18,7 +18,7 @@
  */
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { and, desc, eq, gt, inArray, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { passwordProblem } from "../domain/rules";
 import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
@@ -27,9 +27,7 @@ import {
   COMM_STYLES,
   currentDeck,
   ENERGY,
-  HEADLINE_MAX,
   INTEREST_VALUES,
-  interestLabel,
   LEARNING_MAX,
   MAX_COMM,
   MAX_INTERESTS,
@@ -42,6 +40,7 @@ import {
   type Bio,
   parseOccupation,
 } from "../content/profile";
+import { MeHub, type MeStep } from "../ui/me-hub";
 import { CommPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
@@ -118,116 +117,100 @@ settingsRoutes.get("/settings", async (c) => {
   const { t, lang } = v;
   const user = me(c);
   const p = user.profile!;
-  const [src, vibe] = await Promise.all([photoSrc(c, p.photoKey), loadVibe(c.env, user.account.id)]);
+  const db = getDb(c.env);
+  const now = new Date();
+  const [src, vibe, [been], [upcoming], [circle]] = await Promise.all([
+    photoSrc(c, p.photoKey),
+    loadVibe(c.env, user.account.id),
+    db.select({ n: count() }).from(registrations).where(and(eq(registrations.accountId, user.account.id), isNotNull(registrations.checkedInAt))),
+    db
+      .select({ n: count() })
+      .from(registrations)
+      .innerJoin(events, eq(events.id, registrations.eventId))
+      .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now))),
+    db
+      .select({ n: count() })
+      .from(connections)
+      .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
+  ]);
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
-  const links: [string, string, string, string][] = [
-    ["/pulse", "💬", t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions that go straight to BMA")],
-    ["/settings/profile", "✏️", t("แก้ไขโปรไฟล์", "Edit profile"), t("รูป ความสนใจ สไตล์การสื่อสาร คำถามของคุณ", "Photo, interests, how you keep in touch, your prompts")],
-    ["/settings/connections", "🤝", t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)")],
-    ["/settings/privacy", "🔒", t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate")],
-    ["/settings/password", "🔑", t("เปลี่ยนรหัสผ่าน", "Change password"), t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password")],
+  const bio = cleanBio(p.bio);
+  const steps: MeStep[] = [
+    { done: !!p.photoKey, label: t("ใส่รูป", "Add a photo"), href: "/settings/profile#photo" },
+    { done: !!vibeKey, label: t("ค้นหาไทป์ของคุณ", "Find your type"), href: "/quiz" },
+    { done: p.interests.length >= 3, label: t("ความสนใจอีกนิด", "A few more interests"), href: "/settings/profile#interests" },
+    { done: !!bio.occupation, label: t("บอกว่าทำงานอะไร", "What you do"), href: "/settings/profile#facts" },
+    { done: !!bio.comm?.length, label: t("สไตล์การคุย", "How you keep in touch"), href: "/settings/profile#comm" },
+    { done: !!(bio.energy || bio.weekend), label: t("ข้อมูลสั้น ๆ", "Quick facts"), href: "/settings/profile#facts" },
+    { done: Object.keys(bio.answers ?? {}).length >= 2, label: t("ตอบคำถามของคุณ", "Answer your prompts"), href: "/settings/profile#prompts" },
   ];
+  const created = user.account.createdAt;
+  const memberSince = created ? created.toLocaleDateString(lang === "en" ? "en-GB" : "th-TH", { month: "short", year: "numeric" }) : null;
+  const typeCard =
+    vibe && vibeKey ? (
+      <>
+        <div class="me-h">
+          <h2>{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</h2>
+          <a href="/types">{t("ทุกไทป์", "All types")}</a>
+        </div>
+        <a href="/quiz/result" class="teaser">
+          <b class="big" aria-hidden="true">{ARCHETYPES[vibeKey].emoji}</b>
+          <span>
+            <strong>{L(lang, displayName(vibeKey, vibe.modifier))}</strong>
+            <small class="muted">{L(lang, ARCHETYPES[vibeKey].tagline)}</small>
+          </span>
+        </a>
+        <VisibilityToggle v={v} visible={vibe.visible} next="/settings" />
+        <a href="/quiz">{t("ทำแบบทดสอบใหม่", "Retake the quiz")}</a>
+      </>
+    ) : (
+      <a href="/quiz" class="teaser">
+        <b class="big" aria-hidden="true">🧭</b>
+        <span>
+          <strong>{t("ค้นหาไทป์กรุงเทพฯ ของคุณ", "Find your Bangkok Type")}</strong>
+          <small class="muted">{t("แตะเลือก 18 ข้อ ราว 3 นาที", "18 quick taps, about 3 minutes")}</small>
+        </span>
+      </a>
+    );
+  const badge =
+    user.account.bkkRegistered === "verified" ? (
+      <form method="post" action="/settings/badge" class="card inline-toggle">
+        <label class="toggle" style="margin:0">
+          <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
+          <span>🏅 {t("แสดงตราผู้อยู่อาศัยที่ลงทะเบียนในกรุงเทพฯ", "Show my Bangkok Registered Resident badge")}</span>
+        </label>
+        <noscript>
+          <button type="submit" class="btn ghost">{t("บันทึก", "Save")}</button>
+        </noscript>
+      </form>
+    ) : undefined;
   return page(
     c,
     { title: t("ฉัน", "Me"), tab: "me" },
-    <>
-      <h1>{t("ฉัน", "Me")}</h1>
-      <Card>
-        <div class="row">
-          {src ? (
-            <img src={src} alt={t("รูปโปรไฟล์ของฉัน", "My profile photo")} class="avatar" style="object-fit:cover;width:64px;height:64px" />
-          ) : (
-            <div class="avatar" aria-hidden="true">{p.nickname.slice(0, 1).toUpperCase()}</div>
-          )}
-          <div>
-            <h2 style="margin:0">{p.nickname}</h2>
-            <div class="muted">
-              {label(DISTRICTS, p.district, lang)}
-              {p.showPronouns && p.pronouns ? ` · ${p.pronouns}` : ""}
-            </div>
-          </div>
-        </div>
-        <div class="tags">
-          {p.newcomer ? <Tag tone="accent">{t("มาใหม่ในกรุงเทพฯ", "New to Bangkok")}</Tag> : null}
-          {p.interests.map((i) => (
-            <Tag>{interestLabel(i, lang)}</Tag>
-          ))}
-          {p.languages.map((l) => (
-            <Tag tone="muted">{label(LANGUAGES, l, lang)}</Tag>
-          ))}
-        </div>
-        <div class="row" style="margin-top:14px">
-          <LinkButton href="/me/profile" kind="ghost">
-            👀 {t("ดูโปรไฟล์ของฉัน", "See my profile")}
-          </LinkButton>
-        </div>
-      </Card>
-      <Card>
-        <div class="spread">
-          <h2 style="margin:0">{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</h2>
-          <a href="/types" class="muted">{t("ทุกไทป์", "All types")}</a>
-        </div>
-        {vibe && vibeKey ? (
-          <>
-            <a href="/quiz/result" class="teaser" style="margin:10px 0">
-              <b class="big" aria-hidden="true">{ARCHETYPES[vibeKey].emoji}</b>
-              <span>
-                <strong>{L(lang, displayName(vibeKey, vibe.modifier))}</strong>
-                <small class="muted">{L(lang, ARCHETYPES[vibeKey].tagline)}</small>
-              </span>
-            </a>
-            <VisibilityToggle v={v} visible={vibe.visible} next="/settings" />
-            <a href="/quiz">{t("ทำแบบทดสอบใหม่", "Retake the quiz")}</a>
-          </>
-        ) : (
-          <a href="/quiz" class="teaser" style="margin:10px 0 0">
-            <b class="big" aria-hidden="true">🧭</b>
-            <span>
-              <strong>{t("ค้นหาไทป์ของคุณ", "Find your type")}</strong>
-              <small class="muted">{t("แตะเลือก 18 ข้อ ราว 3 นาที", "18 quick taps, about 3 minutes")}</small>
-            </span>
-          </a>
-        )}
-      </Card>
-      {user.account.bkkRegistered === "verified" ? (
-        <form method="post" action="/settings/badge" class="card inline-toggle">
-          <label class="toggle" style="margin:0">
-            <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
-            <span>🏅 {t("แสดงตราผู้อยู่อาศัยที่ลงทะเบียนในกรุงเทพฯ", "Show my Bangkok Registered Resident badge")}</span>
-          </label>
-          <noscript>
-            <button type="submit" class="btn ghost">{t("บันทึก", "Save")}</button>
-          </noscript>
-        </form>
-      ) : null}
-      {links.map(([href, icon, title, hint]) => (
-        <Card href={href}>
-          <strong>
-            <span aria-hidden="true">{icon}</span> {title}
-          </strong>
-          <div class="muted">{hint}</div>
-        </Card>
-      ))}
-      <Card>
-        <h2>{t("ภาษา", "Language")}</h2>
-        <div class="row">
-          <a href="/lang/th?back=/settings" class={`btn ${lang === "th" ? "primary" : "ghost"}`} lang="th" aria-current={lang === "th" ? "true" : undefined}>
-            ไทย
-          </a>
-          <a href="/lang/en?back=/settings" class={`btn ${lang === "en" ? "primary" : "ghost"}`} lang="en" aria-current={lang === "en" ? "true" : undefined}>
-            English
-          </a>
-        </div>
-      </Card>
-      <p class="row">
-        <a href="/privacy">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a>
-        <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
-        <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
-      </p>
-      <form method="post" action="/logout">
-        <Button kind="ghost">{t("ออกจากระบบ", "Sign out")}</Button>
-      </form>
-    </>,
+    <MeHub
+      v={v}
+      nickname={p.nickname}
+      photo={src}
+      place={[label(DISTRICTS, p.district, lang), p.showPronouns && p.pronouns ? p.pronouns : ""].filter(Boolean).join(" · ")}
+      memberSince={memberSince}
+      newcomer={p.newcomer}
+      interests={p.interests}
+      stats={[
+        { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events", tint: "green" },
+        { emoji: "🤝", n: Number(circle?.n ?? 0), label: t("คนรู้จัก", "In my circle"), href: "/connections", tint: "peach" },
+        { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events", tint: "sun" },
+      ]}
+      steps={steps}
+      type={typeCard}
+      badge={badge}
+      links={[
+        { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
+        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions for BMA"), tint: "sky" },
+        { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "pink" },
+        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "lilac" },
+        { href: "/settings/password", emoji: "🔑", title: t("เปลี่ยนรหัสผ่าน", "Change password"), hint: t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password"), tint: "sun" },
+      ]}
+    />,
   );
 });
 
@@ -287,7 +270,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
       <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
       <form method="post" action="/settings/profile" enctype="multipart/form-data">
-        <Section emoji="📸" title={t("รูปโปรไฟล์", "Profile photo")} hint={t("ไม่บังคับ รูปที่เห็นหน้าชัด ๆ ช่วยให้จำกันได้ในงาน", "Optional. A clear, friendly photo helps people find you at events.")}>
+        <Section id="photo" emoji="📸" title={t("รูปโปรไฟล์", "Profile photo")} hint={t("ไม่บังคับ รูปที่เห็นหน้าชัด ๆ ช่วยให้จำกันได้ในงาน", "Optional. A clear, friendly photo helps people find you at events.")}>
           <div class="pf-photo-main">
             {props.photo ? (
               <img src={props.photo} alt={t("รูปโปรไฟล์ปัจจุบัน", "Current profile photo")} />
@@ -328,23 +311,15 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
           <Choices legend={t("เวลาที่สะดวก", "When suits you best?")} name="eventStyle" options={EVENT_STYLES} values={vals.eventStyle ? [vals.eventStyle] : []} lang={lang} type="radio" />
         </Section>
 
-        <Section emoji="🍜" title={t("ความสนใจ", "Interests")} hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ใช้จัดโต๊ะให้เจอคนที่ชอบคล้ายกัน`, `Pick 1 to ${MAX_INTERESTS}. We use them to seat you with people who share them.`)}>
+        <Section id="interests" emoji="🍜" title={t("ความสนใจ", "Interests")} hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ใช้จัดโต๊ะให้เจอคนที่ชอบคล้ายกัน`, `Pick 1 to ${MAX_INTERESTS}. We use them to seat you with people who share them.`)}>
           <InterestPicker v={props.v} values={vals.interests} />
         </Section>
 
-        <Section emoji="💬" title={t("สไตล์การสื่อสาร", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
+        <Section id="comm" emoji="💬" title={t("สไตล์การสื่อสาร", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
           <CommPicker v={props.v} values={bio.comm} />
         </Section>
 
-        <Section emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
-          <Field
-            label={t("ตอนนี้ทำอะไรอยู่", "What I do")}
-            name="headline"
-            value={bio.headline ?? ""}
-            maxlength={HEADLINE_MAX}
-            placeholder={t("เช่น ครูสอนศิลปะ นักศึกษาปีสาม", "e.g. Art teacher, third-year student")}
-            hint={t(`ไม่เกิน ${HEADLINE_MAX} ตัวอักษร`, `Up to ${HEADLINE_MAX} characters`)}
-          />
+        <Section id="facts" emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
           <OccupationPicker v={props.v} value={bio.occupation} other={bio.occupationOther} />
           <Field
             label={t("กำลังเรียนรู้", "Currently learning")}
@@ -446,7 +421,6 @@ function parseProfileForm(c: C, body: Body): Parsed {
     ...stored,
     deck,
     comm,
-    headline: str(body.headline),
     ...parseOccupation(str(body.occupation), str(body.occupationOther)),
     learning: str(body.learning),
     learningLangs: pickAll("learningLangs", values(LANGUAGES)),
@@ -473,9 +447,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
   if (vals.languages.length === 0 || vals.interests.length === 0) return fail("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.");
   if (vals.interests.length > MAX_INTERESTS) return fail(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`);
   if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การสื่อสารได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`);
-  if ((bio.headline ?? "").length > HEADLINE_MAX) return fail(`"ตอนนี้ทำอะไรอยู่" ยาวได้ไม่เกิน ${HEADLINE_MAX} ตัวอักษร`, `"What I do" can be at most ${HEADLINE_MAX} characters.`);
   if ((bio.learning ?? "").length > LEARNING_MAX) return fail(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`);
-  if (!bio.headline) delete bio.headline;
   if (!bio.learning) delete bio.learning;
 
   const mainFile = fileOf(body.photo);

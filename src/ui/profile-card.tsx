@@ -118,13 +118,8 @@ export function ProfileCard(props: {
         </div>
       </header>
 
-      {bio.headline || bio.learning ? (
+      {bio.learning ? (
         <section class="pc-lines">
-          {bio.headline ? (
-            <p>
-              <span aria-hidden="true">💼</span> {bio.headline}
-            </p>
-          ) : null}
           {bio.learning ? (
             <p>
               <span aria-hidden="true">📚</span> {t("กำลังเรียนรู้", "Currently learning")}: {bio.learning}

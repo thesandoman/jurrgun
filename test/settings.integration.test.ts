@@ -51,6 +51,20 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(html).toContain("/settings/privacy");
   });
 
+  it("shows my numbers and nudges what my profile is missing", async () => {
+    const m = await createMember({ nickname: "Nudge" });
+    let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain("Hey Nudge");
+    expect(html).toContain("Events been");
+    expect(html).toContain("In my circle");
+    const pct = (h: string) => Number(/Your profile is (\d+)% there/.exec(h)?.[1]);
+    const before = pct(html);
+    expect(before).toBeLessThan(100);
+    await db().update(profiles).set({ bio: { occupation: "student" } }).where(eq(profiles.accountId, m.id));
+    html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(pct(html)).toBeGreaterThan(before);
+  });
+
   it("edits the profile and validates input", async () => {
     const m = await createMember({ romanceOn: true, relationship: "single", genderIdentity: "woman", romanceOpenTo: "everyone" });
     expect((await req("/settings/profile", { cookie: m.cookie })).status).toBe(200);
@@ -61,12 +75,10 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(r.status).toBe(400);
     r = await req("/settings/profile", { cookie: m.cookie, form: { ...baseProfile, interests: [] } });
     expect(r.status).toBe(400);
-    r = await req("/settings/profile", { cookie: m.cookie, form: { ...baseProfile, headline: "x".repeat(61) } });
-    expect(r.status).toBe(400);
 
     r = await req("/settings/profile", {
       cookie: m.cookie,
-      form: { ...baseProfile, nickname: "Mint2", district: "chatuchak", interests: ["art", "bogus"], intents: ["explore"], newcomer: "1", locale: "en", headline: "Chatuchak market fan", occupation: "other", occupationOther: "Drone pilot" },
+      form: { ...baseProfile, nickname: "Mint2", district: "chatuchak", interests: ["art", "bogus"], intents: ["explore"], newcomer: "1", locale: "en", occupation: "other", occupationOther: "Drone pilot" },
     });
     expect(r.status).toBe(302);
     expect(r.headers.get("location")).toBe("/settings?notice=saved");
@@ -76,7 +88,6 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(p.interests).toEqual(["art"]);
     expect(p.newcomer).toBe(true);
     expect(p.locale).toBe("en");
-    expect((p.bio as { headline?: string }).headline).toBe("Chatuchak market fan");
     expect(p.bio).toMatchObject({ occupation: "other", occupationOther: "Drone pilot" });
     // Romance intent preserved while romance mode is on.
     expect(p.intents).toEqual(["explore", "romance"]);

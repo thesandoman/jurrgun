@@ -56,8 +56,6 @@ describe.skipIf(!HAS_DB)("profile: edit", () => {
     expect(r.status).toBe(400);
     r = await req("/settings/profile", { cookie: m.cookie, form: { ...base, comm: ["texter", "caller", "meme_sender", "sticker_fan"] } });
     expect(r.status).toBe(400);
-    r = await req("/settings/profile", { cookie: m.cookie, form: { ...base, headline: "x".repeat(61) } });
-    expect(r.status).toBe(400);
     r = await req("/settings/profile", { cookie: m.cookie, form: { ...base, learning: "x".repeat(61) } });
     expect(r.status).toBe(400);
 
@@ -67,7 +65,7 @@ describe.skipIf(!HAS_DB)("profile: edit", () => {
         ...base,
         interests: ["street_food", "khlong_kayak", "muay_thai", "food", "bogus"],
         comm: ["voice_noter", "sticker_fan", "nonsense"],
-        headline: "Barista in Ari",
+        occupation: "food",
         learning: "Sourdough",
         learningLangs: ["ja", "xx"],
         energy: "curious",
@@ -79,7 +77,7 @@ describe.skipIf(!HAS_DB)("profile: edit", () => {
     expect(p.interests).toEqual(["street_food", "khlong_kayak", "muay_thai", "food"]);
     const bio = cleanBio(p.bio);
     expect(bio.comm).toEqual(["voice_noter", "sticker_fan"]);
-    expect(bio.headline).toBe("Barista in Ari");
+    expect(bio.occupation).toBe("food");
     expect(bio.learning).toBe("Sourdough");
     expect(bio.learningLangs).toEqual(["ja"]);
     expect(bio.energy).toBe("curious");
@@ -205,7 +203,8 @@ describe.skipIf(!HAS_DB)("profile: cards", () => {
         bio: {
           deck: [text.id, slider.id],
           comm: ["voice_noter"],
-          headline: "Librarian by day",
+          occupation: "other",
+          occupationOther: "Librarian",
           answers: { [text.id]: { kind: "text", value: "Tokyo in autumn" }, [slider.id]: { kind: "slider", value: 7 } },
         },
       })
@@ -220,7 +219,7 @@ describe.skipIf(!HAS_DB)("profile: cards", () => {
     const html = await r.text();
     expect(html).toContain("MeCard");
     expect(html).toContain("Tokyo in autumn");
-    expect(html).toContain("Librarian by day");
+    expect(html).toContain("Librarian");
     expect(html).toContain("Voice-noter");
     expect(html).toContain('href="/settings/profile"');
     expect((await req("/me/profile")).status).toBe(302);

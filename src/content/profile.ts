@@ -576,8 +576,6 @@ export const WEEKEND_RHYTHM: Opt[] = [
   o("spontaneous", "🎲", "แล้วแต่วันนั้น", "Decided on the day"),
 ];
 
-export const HEADLINE_MAX = 60;
-
 /** Occupation: one pick from this list, or "other" plus the member's own words. */
 export const OCCUPATIONS: Opt[] = [
   o("student", "🎓", "นักเรียน นักศึกษา", "Student"),
@@ -941,7 +939,6 @@ export function swapPrompt(deck: string[], promptId: string, rnd: () => number =
 export type Answer = { kind: string; value: string | number | string[]; photoKey?: string };
 export type Bio = {
   comm?: string[];
-  headline?: string;
   /** A value from OCCUPATIONS; "other" goes with occupationOther. */
   occupation?: string;
   occupationOther?: string;
@@ -1034,7 +1031,6 @@ export function cleanBio(raw: unknown): Bio {
   const s = (v: unknown) => (typeof v === "string" ? v : undefined);
   const out: Bio = {};
   if (strs(b.comm)) out.comm = strs(b.comm);
-  if (s(b.headline)) out.headline = s(b.headline);
   if (s(b.occupation)) out.occupation = s(b.occupation);
   if (s(b.occupationOther)) out.occupationOther = s(b.occupationOther);
   if (s(b.learning)) out.learning = s(b.learning);
