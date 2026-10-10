@@ -3,8 +3,15 @@
  * Palette: Jurrgun green. Fresh mint ground, a deep-enough green for text and
  * buttons (white on --brand passes 4.5:1), bright greens and lime for
  * gradients, sunny yellow for "mine". Dark mode keeps the same family.
+ *
+ * Dark rules are written once, as `@media (prefers-color-scheme:dark)`
+ * blocks; `themed()` turns each into rules that follow the device unless
+ * the Appearance menu has set <html data-theme="light|dark">.
  */
-export const STYLES = `
+export const STYLES = themed(`
+:root{color-scheme:light dark}
+html[data-theme="light"]{color-scheme:light}
+html[data-theme="dark"]{color-scheme:dark}
 :root{
   --bg:#f3fbf5;--surface:#ffffff;--surface-2:#e7f6ec;--ink:#10281b;--ink-2:#3d5a49;--ink-3:#668473;
   --line:#d3eadb;--brand:#0c8a45;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
@@ -491,7 +498,7 @@ main.wrap>.ev-scene:first-child{margin-top:-26px}
 .a11y>summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;border-radius:999px;cursor:pointer;color:var(--on-deep);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22)}
 .a11y>summary::-webkit-details-marker{display:none}
 .a11y[open]>summary{background:var(--lime);color:var(--deep);border-color:var(--lime)}
-.a11y-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:40;width:min(330px,calc(100vw - 24px));display:grid;gap:4px;padding:14px;border-radius:20px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.28);font-size:.95rem;font-weight:400;text-align:left}
+.a11y-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:40;width:min(330px,calc(100vw - 24px));display:grid;gap:4px;padding:14px;border-radius:20px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.28);font-size:.95rem;font-weight:400;text-align:left;max-height:calc(100dvh - 110px);overflow-y:auto;overscroll-behavior:contain}
 /* In the top bar the panel hangs from the bar's right edge, so it always fits the screen */
 .topbar .a11y{position:static}
 .topbar .a11y-panel{right:12px;top:calc(100% + 6px)}
@@ -503,7 +510,7 @@ main.wrap>.ev-scene:first-child{margin-top:-26px}
 .a11y-size input{position:absolute;opacity:0;inset:0}
 .a11y-size span{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-height:64px;padding:6px;border-radius:14px;border:1.5px solid var(--line);font-size:.78rem;color:var(--ink-2);cursor:pointer}
 .a11y-size b{font-family:var(--display);color:var(--ink);line-height:1.1}
-.a11y-size input:checked+span{border-color:var(--deep);background:var(--brand-soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--deep)}
+.a11y-size input:checked+span{border-color:var(--brand);background:var(--brand-soft);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--brand)}
 .a11y-size input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:1px}
 .a11y-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 2px;border-top:1px solid var(--line);cursor:pointer}
 .a11y-row small{display:block;font-size:.8rem;color:var(--ink-3)}
@@ -538,4 +545,40 @@ html.a11y-readable body{font-family:'Atkinson Hyperlegible','IBM Plex Sans Thai'
 html.a11y-readable h1,html.a11y-readable h2,html.a11y-readable h3,html.a11y-readable .flow-title{font-family:'Atkinson Hyperlegible','IBM Plex Sans Thai',system-ui,sans-serif;letter-spacing:0;line-height:1.3}
 html.a11y-readable p,html.a11y-readable li{max-width:65ch}
 html.a11y-links main a:not(.btn):not(.card):not(.seg a):not(.tile):not(.teaser),html.a11y-links .foot a,html.a11y-links .fd-sheet a:not(.card){text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
-`;
+`);
+
+/** Scope every selector in a block of flat rules under `scope`. */
+function scopeRules(body: string, scope: string): string {
+  return body.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel: string, decls: string) => {
+    const scoped = sel
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((x) => (x === ":root" ? scope : x.startsWith("html") ? scope + x.slice(4) : `${scope} ${x}`))
+      .join(",");
+    return `${scoped}{${decls}}`;
+  });
+}
+
+/** Rewrite each dark media block into "device is dark and no light override" plus "dark chosen". */
+export function themed(css: string): string {
+  // Constants live here: STYLES calls this while the module is still loading.
+  const DARK_MEDIA = "@media (prefers-color-scheme:dark){";
+  const AUTO = 'html:not([data-theme="light"])';
+  const FORCED = 'html[data-theme="dark"]';
+  let out = "";
+  let i = 0;
+  for (;;) {
+    const start = css.indexOf(DARK_MEDIA, i);
+    if (start < 0) return out + css.slice(i);
+    let depth = 1;
+    let j = start + DARK_MEDIA.length;
+    for (; j < css.length && depth > 0; j++) {
+      if (css[j] === "{") depth++;
+      else if (css[j] === "}") depth--;
+    }
+    const body = css.slice(start + DARK_MEDIA.length, j - 1);
+    out += css.slice(i, start) + DARK_MEDIA + scopeRules(body, AUTO) + "}" + scopeRules(body, FORCED);
+    i = j;
+  }
+}

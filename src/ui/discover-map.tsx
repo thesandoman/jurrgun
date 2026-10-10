@@ -285,7 +285,7 @@ async function start() {
   api?.destroy();
   api = await createMap(box, {
     lang: cfg.lang, points: visible(), chips: cfg.chips, legend: cfg.legend, messages: cfg.messages,
-    center: cfg.center, panLimit: cfg.panLimit, basemap: style, skipHref: "#discover-sheet",
+    center: cfg.center, panLimit: cfg.panLimit, basemap: style === "auto" ? document.documentElement.dataset.theme || "auto" : style, skipHref: "#discover-sheet",
     extraChips: [{ ...cfg.free, test: (p) => p.free }],
     // sv-map fits the pins to the whole box; refit around the floating controls.
     onFilter: (shown) => setTimeout(() => refit(shown), 0),
