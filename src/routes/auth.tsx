@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "../db";
-import { normalizeUsername, passwordProblem, USERNAME_RE } from "../domain/rules";
+import { isPasswordless, normalizeUsername, passwordProblem, USERNAME_RE } from "../domain/rules";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
@@ -174,6 +174,7 @@ authRoutes.post("/signup", async (c) => {
       </>,
     );
   if (!USERNAME_RE.test(username)) return fail(t("ชื่อผู้ใช้ไม่ถูกต้อง", "That username isn't valid."));
+  if (isPasswordless(username)) return fail(t("ชื่อผู้ใช้ห้ามขึ้นต้นด้วย google_ หรือ line_", "Usernames can't start with google_ or line_."));
   const pwIssue = passwordProblem(password);
   if (pwIssue) return fail(t("รหัสผ่านต้องยาว 8–200 ตัวอักษร", "Password must be 8–200 characters."));
   if (password !== confirm) return fail(t("รหัสผ่านไม่ตรงกัน", "Passwords don't match."));

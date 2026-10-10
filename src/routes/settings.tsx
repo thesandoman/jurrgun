@@ -20,7 +20,7 @@ import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
-import { passwordProblem } from "../domain/rules";
+import { isPasswordless, passwordProblem } from "../domain/rules";
 import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
 import {
   cleanBio,
@@ -217,7 +217,10 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions for BMA"), tint: "sky" },
         { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
         { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint" },
-        { href: "/settings/password", emoji: "🔑", title: t("เปลี่ยนรหัสผ่าน", "Change password"), hint: t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password"), tint: "sun" },
+        // Google / LINE accounts have no password to change.
+        ...(isPasswordless(user.account.username)
+          ? []
+          : [{ href: "/settings/password", emoji: "🔑", title: t("เปลี่ยนรหัสผ่าน", "Change password"), hint: t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password"), tint: "sun" as const }]),
       ]}
     />,
   );
@@ -988,6 +991,11 @@ function PasswordForm(props: { v: View; error?: string }) {
     </>
   );
 }
+
+settingsRoutes.use("/settings/password", async (c, next) => {
+  if (isPasswordless(me(c).account.username)) return c.redirect("/settings");
+  await next();
+});
 
 settingsRoutes.get("/settings/password", (c) => page(c, { title: view(c).t("เปลี่ยนรหัสผ่าน", "Change password"), tab: "me" }, <PasswordForm v={view(c)} />));
 

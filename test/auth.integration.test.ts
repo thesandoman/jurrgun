@@ -73,6 +73,13 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
     expect(again.status).toBe(400);
   });
 
+  it("reserves the google_ and line_ username prefixes for social sign-in", async () => {
+    for (const username of ["google_me", "line_me"]) {
+      const r = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
+      expect(r.status).toBe(400);
+    }
+  });
+
   it("refuses cross-site form posts", async () => {
     const { default: app } = await import("../src/index");
     const res = await app.request("/login", { method: "POST", headers: { origin: "https://evil.example" } });

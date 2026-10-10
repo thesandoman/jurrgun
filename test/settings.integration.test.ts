@@ -51,6 +51,17 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(html).toContain("/settings/privacy");
   });
 
+  it("hides Change password for Google / LINE accounts, which have no password", async () => {
+    const m = await createMember();
+    expect(await (await req("/settings", { cookie: m.cookie })).text()).toContain('href="/settings/password"');
+    await db().update(accounts).set({ username: `google_${m.username}`.slice(0, 30) }).where(eq(accounts.id, m.id));
+    expect(await (await req("/settings", { cookie: m.cookie })).text()).not.toContain('href="/settings/password"');
+    const r = await req("/settings/password", { cookie: m.cookie });
+    expect(r.status).toBe(302);
+    expect(r.headers.get("location")).toBe("/settings");
+    expect((await req("/settings/password", { cookie: m.cookie, form: { current: "x", password: "newpassword1", confirm: "newpassword1" } })).status).toBe(302);
+  });
+
   it("counts my circle and the crews (events) it came from", async () => {
     const [me, a, b, c] = await Promise.all([createMember(), createMember(), createMember(), createMember()]);
     const pair = (x: string, y: string) => (x < y ? { aAccount: x, bAccount: y } : { aAccount: y, bAccount: x });

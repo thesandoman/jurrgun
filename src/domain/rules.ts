@@ -224,6 +224,14 @@ export function safeCount(n: number, k: number = K_THRESHOLD): number | null {
 
 export const USERNAME_RE = /^[a-z0-9_.]{3,30}$/;
 
+/**
+ * Accounts made by "Sign in with Google / LINE" get a username like
+ * "google_x7k2…" and no password the member knows. The prefixes are reserved
+ * (sign-up refuses them), so the prefix alone marks a passwordless account.
+ */
+export const PROVIDER_USERNAME_RE = /^(google|line)_/;
+export const isPasswordless = (username: string) => PROVIDER_USERNAME_RE.test(username);
+
 export function normalizeUsername(raw: string): string {
   return raw.trim().toLowerCase();
 }
