@@ -32,7 +32,7 @@ import { consents, profiles, wellbeing } from "../schema";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, LinkButton, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
-import { cleanBio, COMM_STYLES, INTEREST_VALUES, MAX_COMM, MAX_INTERESTS, parseBangkok, parseEducation, parseOccupation } from "../content/profile";
+import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation } from "../content/profile";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
@@ -188,11 +188,15 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
       </FlowStep>
       <FlowStep
         emoji="🏙️"
-        title={t("คุณอยู่กรุงเทพฯ ไหม?", "Do you live in Bangkok?")}
-        info={t("ช่วงทดลองนี้สำหรับคนที่อาศัยอยู่ในกรุงเทพฯ ตอนนี้ ทะเบียนบ้านอยู่ที่ไหนก็ได้", "This pilot is for people living in Bangkok now. Your household registration can be anywhere.")}
+        title={t("ตอนนี้คุณกับกรุงเทพฯ", "You and Bangkok right now")}
+        hint={t("ทุกคนที่อยู่ในหรือรอบ ๆ กรุงเทพฯ ร่วมได้ ทะเบียนบ้านอยู่ที่ไหนก็ได้", "Anyone in or around Bangkok can join. Your household registration can be anywhere.")}
       >
-        <MustToggle name="livesInBangkok" label={t("ฉันอาศัยอยู่ในกรุงเทพฯ ตอนนี้", "I currently live in Bangkok")} checked={val.livesInBangkok === "1" || !!p} />
-        <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมา", "I'm new in town")} checked={val.newcomer === "1" || !!p?.newcomer} />
+        <div class="answers">
+          {RESIDENCY.map((o) => (
+            <AnswerCard name="residency" value={o.value} label={lang === "en" ? o.en : o.th} emoji={o.emoji} required checked={(val.residency ?? cleanBio(p?.bio).residency ?? (p ? "lives" : "")) === o.value} />
+          ))}
+        </div>
+        <Toggle name="newcomer" label={t("ฉันเพิ่งมาถึงกรุงเทพฯ", "I'm new in town")} checked={val.newcomer === "1" || !!p?.newcomer} />
       </FlowStep>
     </Flow>
   );
@@ -209,7 +213,8 @@ onboarding.post("/basics", async (c) => {
     nickname: str(body.nickname).slice(0, 30),
     birthDate: str(body.birthDate),
     district: str(body.district),
-    livesInBangkok: str(body.livesInBangkok),
+    // "livesInBangkok=1" is the old single checkbox (a page left open mid-sign-up).
+    residency: str(body.residency) || (str(body.livesInBangkok) === "1" ? "lives" : ""),
     newcomer: str(body.newcomer),
   };
   const fail = (error: string, start: number) => page(c, { title: TITLE, status: 400, bare: true }, <BasicsForm v={v} values={vals} error={error} start={start} />);
@@ -218,10 +223,11 @@ onboarding.post("/basics", async (c) => {
   const age = ageOn(vals.birthDate);
   if (!(age >= MIN_AGE && age < 120)) return fail(t("Jurrgun สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "Jurrgun is for adults aged 18 and over."), 1);
   if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."), 2);
-  if (vals.livesInBangkok !== "1") return fail(t("ช่วงทดลองนี้สำหรับคนที่อาศัยอยู่ในกรุงเทพฯ", "This pilot is for people who currently live in Bangkok."), 3);
+  if (!isResidency(vals.residency)) return fail(t("เลือกว่าตอนนี้คุณอยู่กับกรุงเทพฯ แบบไหน", "Please pick how you're in Bangkok right now."), 3);
 
   const db = getDb(c.env);
-  const data = { nickname: vals.nickname, birthDate: vals.birthDate, district: vals.district, newcomer: vals.newcomer === "1", locale: v.lang, updatedAt: new Date() };
+  const bio = { ...cleanBio(user.profile?.bio), residency: vals.residency };
+  const data = { nickname: vals.nickname, birthDate: vals.birthDate, district: vals.district, newcomer: vals.newcomer === "1", bio, locale: v.lang, updatedAt: new Date() };
   if (user.profile) await db.update(profiles).set(data).where(eq(profiles.accountId, user.account.id));
   else await db.insert(profiles).values({ accountId: user.account.id, ...data });
   return c.redirect("/onboarding/privacy");

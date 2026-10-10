@@ -35,6 +35,7 @@ export type ProfileBio = {
   university?: string;
   universityName?: string;
   gradYear?: number;
+  residency?: string;
   story?: string;
   bkkTime?: string;
   hometown?: string;

@@ -30,7 +30,9 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
     const under18 = await req("/onboarding/basics", { cookie, form: { nickname: "Kid", birthDate: "2015-01-01", district: "bang_rak", livesInBangkok: "1" } });
     expect(under18.status).toBe(400);
 
-    let r = await req("/onboarding/basics", { cookie, form: { nickname: "Ploy", birthDate: "1997-03-04", district: "bang_rak", livesInBangkok: "1" } });
+    // No answer to "you and Bangkok right now": refused.
+    expect((await req("/onboarding/basics", { cookie, form: { nickname: "Ploy", birthDate: "1997-03-04", district: "bang_rak" } })).status).toBe(400);
+    let r = await req("/onboarding/basics", { cookie, form: { nickname: "Ploy", birthDate: "1997-03-04", district: "bang_rak", residency: "visiting" } });
     expect(r.headers.get("location")).toBe("/onboarding/privacy");
 
     r = await req("/onboarding/privacy", { cookie, form: { consent_service: "1", consent_safety: "1" } });

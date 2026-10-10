@@ -21,6 +21,7 @@ import {
   type Prompt,
   BKK_STORY,
   BKK_TIME,
+  RESIDENCY,
   educationLabel,
   universityKey,
   occupationLabel,
@@ -99,6 +100,9 @@ export function ProfileCard(props: {
     const parts = [story ? L(lang, story) : "", time && time.value !== "always" ? t(`อยู่มา ${L(lang, time)}`, `here ${L(lang, time).toLowerCase()}`) : time ? L(lang, time) : ""].filter(Boolean);
     facts.push([story?.emoji ?? time!.emoji, t("กรุงเทพฯ ของฉัน", "My Bangkok"), parts.join(" · ")]);
   }
+  // "Lives in Bangkok" is the default; the others are worth knowing at a table.
+  const res = RESIDENCY.find((x) => x.value === bio.residency && x.value !== "lives");
+  if (res) facts.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
   if (bio.hometown) facts.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
   if (bio.guide) facts.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
   const occupation = occupationLabel(bio, lang);

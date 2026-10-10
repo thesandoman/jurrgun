@@ -214,7 +214,7 @@ publicRoutes.get("/terms", (c) => {
     { title: t("ข้อกำหนด", "Terms") },
     <>
       <h1>{t("ข้อกำหนดการใช้งาน (ฉบับร่างต้นแบบ)", "Terms of use (prototype draft)")}</h1>
-      <p>{t("บริการนี้เป็นต้นแบบเพื่อทดสอบ สำหรับผู้มีอายุ 18 ปีขึ้นไปที่อาศัยอยู่ในกรุงเทพฯ ห้ามใช้ข้อมูลส่วนตัวจริงในระยะทดสอบ", "This is a test prototype for adults (18+) living in Bangkok. Please don't use real personal data during testing.")}</p>
+      <p>{t("บริการนี้เป็นต้นแบบเพื่อทดสอบ สำหรับผู้มีอายุ 18 ปีขึ้นไปที่อยู่ในหรือรอบ ๆ กรุงเทพฯ รวมถึงคนที่มาอยู่ช่วงหนึ่ง ห้ามใช้ข้อมูลส่วนตัวจริงในระยะทดสอบ", "This is a test prototype for adults (18+) in and around Bangkok, including people staying for a while. Please don't use real personal data during testing.")}</p>
       <p>{t("กิจกรรมแบบมีค่าใช้จ่ายชำระนอกแอป ณ สถานที่จัดงาน", "Paid events are paid off-platform, at the venue.")}</p>
     </>,
   );

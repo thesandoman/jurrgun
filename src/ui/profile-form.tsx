@@ -15,6 +15,7 @@ import {
   MAX_INTERESTS,
   BKK_STORY,
   BKK_TIME,
+  RESIDENCY,
   DEGREE_GROUPS,
   EDUCATION_DETAIL_MAX,
   gradYears,
@@ -228,10 +229,20 @@ export function EducationPicker(props: { v: View; bio: Bio }) {
 }
 
 /** "My Bangkok": how they came to the city, how long, where from, and whether they'll help newcomers. */
-export function BangkokStory(props: { v: View; story?: string; time?: string; hometown?: string; guide?: boolean; compact?: boolean }) {
+export function BangkokStory(props: { v: View; story?: string; time?: string; hometown?: string; guide?: boolean; residency?: string; compact?: boolean }) {
   const { t, lang } = props.v;
   return (
     <div class="bkk-story">
+      {props.compact ? null : (
+        <fieldset class="choices">
+          <legend>{t("ตอนนี้ฉัน…", "Right now I…")}</legend>
+          <div class="pills">
+            {RESIDENCY.map((o) => (
+              <EmojiPill name="residency" o={o} lang={lang} type="radio" checked={props.residency === o.value} />
+            ))}
+          </div>
+        </fieldset>
+      )}
       <fieldset class="choices">
         <legend>{t("เรื่องของฉันกับกรุงเทพฯ", "My Bangkok story")}</legend>
         <OptRadios v={props.v} name="story" options={BKK_STORY} value={props.story} />

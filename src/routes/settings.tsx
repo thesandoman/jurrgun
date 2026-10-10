@@ -38,6 +38,7 @@ import {
   WEEKEND_RHYTHM,
   type Answer,
   type Bio,
+  isResidency,
   parseBangkok,
   parseEducation,
   parseOccupation,
@@ -348,7 +349,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
         </Section>
 
         <Section id="bangkok" emoji="🛺" title={t("กรุงเทพฯ ของฉัน", "My Bangkok")} hint={t("ไม่บังคับทั้งหมด ช่วยให้คนในโต๊ะรู้จักคุณมากขึ้น", "All optional. Helps your table get to know you.")}>
-          <BangkokStory v={props.v} story={bio.story} time={bio.bkkTime} hometown={bio.hometown} guide={bio.guide} />
+          <BangkokStory v={props.v} story={bio.story} time={bio.bkkTime} hometown={bio.hometown} guide={bio.guide} residency={bio.residency} />
         </Section>
 
         <Section id="facts" emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
@@ -457,6 +458,8 @@ function parseProfileForm(c: C, body: Body): Parsed {
     ...parseOccupation(str(body.occupation), str(body.occupationOther)),
     ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }),
     ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)),
+    // Sign-up's answer stays unless they pick another one.
+    residency: isResidency(str(body.residency)) ? str(body.residency) : stored.residency,
     learning: str(body.learning),
     learningLangs: pickAll("learningLangs", values(LANGUAGES)),
     energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,

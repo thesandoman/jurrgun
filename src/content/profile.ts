@@ -750,6 +750,15 @@ export const BKK_TIME: Opt[] = [
 ];
 export const HOMETOWN_MAX = 40;
 
+/** Where someone is with Bangkok right now. Asked at sign-up; anyone in or around the city can join. */
+export const RESIDENCY: Opt[] = [
+  o("lives", "🏠", "อาศัยอยู่ในกรุงเทพฯ", "I live in Bangkok"),
+  o("nearby", "🏘️", "อยู่ใกล้ ๆ (นนทบุรี สมุทรปราการ ปทุมธานี…)", "I live nearby (Nonthaburi, Samut Prakan, Pathum Thani…)"),
+  o("moving", "📦", "กำลังจะย้ายมากรุงเทพฯ", "I'm moving to Bangkok soon"),
+  o("visiting", "🧳", "มาอยู่กรุงเทพฯ ช่วงหนึ่ง (หลายสัปดาห์หรือหลายเดือน)", "I'm in Bangkok for a while (weeks or months)"),
+];
+export const isResidency = (v: string) => RESIDENCY.some((x) => x.value === v);
+
 /** Read the Bangkok story fields off a form. Unknown picks are dropped. */
 export function parseBangkok(story: string, time: string, hometown: string, guide: string): Pick<Bio, "story" | "bkkTime" | "hometown" | "guide"> {
   const from = hometown.trim().slice(0, HOMETOWN_MAX);
@@ -1104,6 +1113,8 @@ export type Bio = {
   university?: string;
   universityName?: string;
   gradYear?: number;
+  /** RESIDENCY value, from sign-up (editable in My Bangkok). */
+  residency?: string;
   /** Bangkok story (BKK_STORY), time in the city (BKK_TIME), where they're from, and "happy to help newcomers". */
   story?: string;
   bkkTime?: string;
@@ -1205,6 +1216,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.university)) out.university = s(b.university);
   if (s(b.universityName)) out.universityName = s(b.universityName);
   if (typeof b.gradYear === "number" && Number.isInteger(b.gradYear)) out.gradYear = b.gradYear;
+  if (s(b.residency)) out.residency = s(b.residency);
   if (s(b.story)) out.story = s(b.story);
   if (s(b.bkkTime)) out.bkkTime = s(b.bkkTime);
   if (s(b.hometown)) out.hometown = s(b.hometown);
