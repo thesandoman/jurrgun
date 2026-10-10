@@ -3,8 +3,9 @@
  * facts and the prompt bank every member draws a personal deck from.
  *
  * Everything is bilingual {th, en}. Tone (PRD §5.3): short, positive,
- * intentional prompt answers, not a long dating bio. Nothing political,
- * religious-identity or sexual.
+ * intentional prompt answers, not a long dating bio. Nothing political or
+ * sexual. Spiritual practice and belief are welcome as interests (the
+ * "Spiritual" group), framed as things to do, never as an identity to declare.
  *
  * Pure module: no database, no Hono. Validation for every prompt kind lives
  * here so the routes and the tests share one set of rules.
@@ -179,6 +180,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("webtoons", "📱", "เว็บตูน", "Webtoons"),
       o("improv", "🎭", "อิมโพรฟ", "Improv"),
       o("cdramas", "🏮", "ซีรีส์จีน", "C-dramas"),
+      o("y_series", "💞", "ซีรีส์วาย", "BL (Y) series"),
     ],
   },
   {
@@ -491,6 +493,32 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("fantasy_football", "📋", "แฟนตาซีฟุตบอล", "Fantasy football"),
     ],
   },
+  {
+    key: "spiritual",
+    emoji: "🪷",
+    th: "จิตวิญญาณและความเชื่อ",
+    en: "Spiritual",
+    items: [
+      o("amulets", "🧿", "พระเครื่องและเครื่องราง", "Amulets & charms"),
+      o("temple_visits", "🛕", "ไหว้พระทำบุญ", "Temple visits & merit-making"),
+      o("shrine_hopping", "🙏", "ไหว้สิ่งศักดิ์สิทธิ์", "Shrine hopping"),
+      o("dharma_talks", "📿", "ฟังธรรม", "Dharma talks"),
+      o("meditation_retreats", "🏞️", "ปฏิบัติธรรม", "Meditation retreats"),
+      o("chanting", "🕯️", "สวดมนต์", "Chanting"),
+      o("astrology", "♈", "โหราศาสตร์", "Astrology"),
+      o("tarot", "🔮", "ไพ่ทาโรต์", "Tarot"),
+      o("fortune_telling", "🪬", "ดูดวง", "Fortune telling"),
+      o("numerology", "🔢", "เลขศาสตร์", "Numerology"),
+      o("lucky_colours", "🌈", "สีมงคล", "Lucky colours"),
+      o("feng_shui", "🧭", "ฮวงจุ้ย", "Feng shui"),
+      o("crystals", "💎", "คริสตัลและหินมงคล", "Crystals"),
+      o("manifesting", "✨", "ดึงดูดสิ่งดี ๆ", "Manifesting"),
+      o("vegetarian_festival", "🥬", "เทศกาลกินเจ", "Vegetarian festival"),
+      o("supernatural", "👻", "เรื่องลี้ลับ", "The supernatural"),
+      o("faith_community", "🤲", "กิจกรรมทางศาสนา", "Faith community"),
+      o("spiritual_books", "📘", "หนังสือธรรมะและจิตวิญญาณ", "Spiritual reading"),
+    ],
+  },
 ];
 
 export const ALL_INTERESTS: Opt[] = INTEREST_GROUPS.flatMap((g) => g.items);
@@ -549,6 +577,54 @@ export const WEEKEND_RHYTHM: Opt[] = [
 ];
 
 export const HEADLINE_MAX = 60;
+
+/** Occupation: one pick from this list, or "other" plus the member's own words. */
+export const OCCUPATIONS: Opt[] = [
+  o("student", "🎓", "นักเรียน นักศึกษา", "Student"),
+  o("office", "💼", "พนักงานออฟฟิศ", "Office worker"),
+  o("tech", "💻", "ไอทีและเทค", "Tech & IT"),
+  o("creative", "🎨", "งานสร้างสรรค์และดีไซน์", "Creative & design"),
+  o("media", "📰", "สื่อ คอนเทนต์ และการตลาด", "Media, content & marketing"),
+  o("education", "🍎", "ครูและการศึกษา", "Teaching & education"),
+  o("health", "🩺", "การแพทย์และสุขภาพ", "Healthcare"),
+  o("finance", "📊", "การเงินและบัญชี", "Finance & accounting"),
+  o("law", "⚖️", "กฎหมาย", "Law"),
+  o("engineering", "🏗️", "วิศวกรรมและก่อสร้าง", "Engineering & construction"),
+  o("science", "🔬", "วิทยาศาสตร์และวิจัย", "Science & research"),
+  o("government", "🏛️", "ราชการและรัฐวิสาหกิจ", "Government & public sector"),
+  o("hospitality", "🏨", "โรงแรมและท่องเที่ยว", "Hospitality & tourism"),
+  o("food", "👩‍🍳", "อาหารและเครื่องดื่ม", "Food & drink"),
+  o("retail", "🛍️", "ค้าขายและค้าปลีก", "Retail & sales"),
+  o("own_business", "🏪", "เจ้าของกิจการ", "Own business"),
+  o("freelance", "🧑‍💻", "ฟรีแลนซ์", "Freelance"),
+  o("arts", "🎭", "ศิลปินและนักแสดง", "Arts & performing"),
+  o("beauty", "💇", "ความงามและแฟชั่น", "Beauty & fashion"),
+  o("fitness", "🏋️", "กีฬาและฟิตเนส", "Sport & fitness"),
+  o("transport", "🚚", "ขนส่งและโลจิสติกส์", "Transport & logistics"),
+  o("trades", "🔧", "ช่างและงานฝีมือ", "Skilled trades"),
+  o("ngo", "🤝", "องค์กรไม่แสวงกำไร", "Non-profit"),
+  o("caregiver", "🏡", "ดูแลบ้านและครอบครัว", "Home & family"),
+  o("between_jobs", "🧭", "กำลังหางานใหม่", "Between jobs"),
+  o("retired", "🌴", "เกษียณ", "Retired"),
+  o("other", "✏️", "อื่น ๆ (พิมพ์เอง)", "Other (type your own)"),
+];
+export const OCCUPATION_OTHER_MAX = 40;
+
+/** The occupation to show, or null: "other" shows the member's own words. */
+export function occupationLabel(bio: Bio, lang: "th" | "en"): { emoji: string; text: string } | null {
+  const occ = OCCUPATIONS.find((x) => x.value === bio.occupation);
+  if (!occ) return null;
+  if (occ.value === "other") return bio.occupationOther ? { emoji: occ.emoji, text: bio.occupationOther } : null;
+  return { emoji: occ.emoji, text: lang === "en" ? occ.en : occ.th };
+}
+
+/** Read the occupation pair off a form. Unknown picks and an empty "other" become unset. */
+export function parseOccupation(occupation: string, other: string): Pick<Bio, "occupation" | "occupationOther"> {
+  if (!OCCUPATIONS.some((x) => x.value === occupation)) return { occupation: undefined, occupationOther: undefined };
+  if (occupation !== "other") return { occupation, occupationOther: undefined };
+  const text = other.trim().slice(0, OCCUPATION_OTHER_MAX);
+  return text ? { occupation, occupationOther: text } : { occupation: undefined, occupationOther: undefined };
+}
 export const LEARNING_MAX = 60;
 
 // ---------------------------------------------------------- prompt bank --
@@ -866,6 +942,9 @@ export type Answer = { kind: string; value: string | number | string[]; photoKey
 export type Bio = {
   comm?: string[];
   headline?: string;
+  /** A value from OCCUPATIONS; "other" goes with occupationOther. */
+  occupation?: string;
+  occupationOther?: string;
   learning?: string;
   learningLangs?: string[];
   energy?: string;
@@ -956,6 +1035,8 @@ export function cleanBio(raw: unknown): Bio {
   const out: Bio = {};
   if (strs(b.comm)) out.comm = strs(b.comm);
   if (s(b.headline)) out.headline = s(b.headline);
+  if (s(b.occupation)) out.occupation = s(b.occupation);
+  if (s(b.occupationOther)) out.occupationOther = s(b.occupationOther);
   if (s(b.learning)) out.learning = s(b.learning);
   if (strs(b.learningLangs)) out.learningLangs = strs(b.learningLangs);
   if (s(b.energy)) out.energy = s(b.energy);

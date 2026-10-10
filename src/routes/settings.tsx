@@ -40,8 +40,9 @@ import {
   WEEKEND_RHYTHM,
   type Answer,
   type Bio,
+  parseOccupation,
 } from "../content/profile";
-import { CommPicker, InterestPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
+import { CommPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -344,6 +345,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
             placeholder={t("เช่น ครูสอนศิลปะ นักศึกษาปีสาม", "e.g. Art teacher, third-year student")}
             hint={t(`ไม่เกิน ${HEADLINE_MAX} ตัวอักษร`, `Up to ${HEADLINE_MAX} characters`)}
           />
+          <OccupationPicker v={props.v} value={bio.occupation} other={bio.occupationOther} />
           <Field
             label={t("กำลังเรียนรู้", "Currently learning")}
             name="learning"
@@ -445,6 +447,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
     deck,
     comm,
     headline: str(body.headline),
+    ...parseOccupation(str(body.occupation), str(body.occupationOther)),
     learning: str(body.learning),
     learningLangs: pickAll("learningLangs", values(LANGUAGES)),
     energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,

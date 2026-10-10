@@ -13,6 +13,8 @@ import {
   INTEREST_GROUPS,
   MAX_COMM,
   MAX_INTERESTS,
+  OCCUPATION_OTHER_MAX,
+  OCCUPATIONS,
   TEXT_MAX,
   type Answer,
   type Opt,
@@ -111,6 +113,40 @@ export function OptRadios(props: { v: View; name: string; options: Opt[]; value?
       {props.options.map((o) => (
         <EmojiPill name={props.name} o={o} lang={lang} type="radio" checked={props.value === o.value} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Occupation: a dropdown, and a text box for "Other". The box hides itself
+ * unless "Other" is picked (CSS :has; browsers without it just always show it).
+ */
+export function OccupationPicker(props: { v: View; value?: string; other?: string }) {
+  const { t, lang } = props.v;
+  return (
+    <div class="occ">
+      <div class="field">
+        <label for="f-occupation">{t("อาชีพ", "Occupation")}</label>
+        <select id="f-occupation" name="occupation">
+          <option value="">{t("ไม่ระบุ", "Prefer not to say")}</option>
+          {OCCUPATIONS.map((o) => (
+            <option value={o.value} selected={o.value === props.value}>
+              {`${o.emoji} ${L(lang, o)}`}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div class="field occ-other">
+        <label for="f-occupationOther">{t("อาชีพของคุณ", "Your occupation")}</label>
+        <input
+          id="f-occupationOther"
+          name="occupationOther"
+          type="text"
+          value={props.other ?? ""}
+          maxlength={OCCUPATION_OTHER_MAX}
+          placeholder={t("เช่น นักบินโดรน", "e.g. Drone pilot")}
+        />
+      </div>
     </div>
   );
 }
@@ -293,6 +329,7 @@ export function ProfileFormScript() {
 }
 
 export const PROFILE_FORM_CSS = `
+.occ:not(:has(option[value=other]:checked)) .occ-other{display:none}
 .pf-section{margin:36px 0}
 .pf-section>h2{display:flex;align-items:center;gap:10px;margin:0 0 6px;font-size:1.15rem}
 .pf-section>h2 span[aria-hidden]{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--brand-soft)}

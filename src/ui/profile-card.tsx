@@ -19,6 +19,7 @@ import {
   type Answer,
   type Bio,
   type Prompt,
+  occupationLabel,
 } from "../content/profile";
 import { DISTRICTS, INTENTS, LANGUAGES, label } from "../lib/constants";
 import type { View } from "./kit";
@@ -86,6 +87,8 @@ export function ProfileCard(props: {
   const energy = ENERGY.find((x) => x.value === bio.energy);
   const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
   const facts: [string, string, string][] = [];
+  const occupation = occupationLabel(bio, lang);
+  if (occupation) facts.push([occupation.emoji, t("อาชีพ", "Work"), occupation.text]);
   if (energy) facts.push([energy.emoji, t("ตอนเจอกันครั้งแรก", "First-meet energy"), L(lang, energy)]);
   if (weekend) facts.push([weekend.emoji, t("จังหวะวันหยุด", "Weekend rhythm"), L(lang, weekend)]);
   if (p.languages.length) facts.push(["🗣️", t("คุยได้", "Speaks"), p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")]);

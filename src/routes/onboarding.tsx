@@ -32,8 +32,8 @@ import { consents, profiles, wellbeing } from "../schema";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, LinkButton, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
-import { cleanBio, COMM_STYLES, INTEREST_VALUES, MAX_COMM, MAX_INTERESTS } from "../content/profile";
-import { CommPicker, InterestPicker, ProfileFormScript } from "../ui/profile-form";
+import { cleanBio, COMM_STYLES, INTEREST_VALUES, MAX_COMM, MAX_INTERESTS, parseOccupation } from "../content/profile";
+import { CommPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
 export const onboarding = new Hono<AppEnv>();
@@ -321,6 +321,9 @@ function YouForm(props: { v: View; error?: string }) {
       >
         <InterestPicker v={props.v} values={p?.interests} />
       </FlowStep>
+      <FlowStep emoji="💼" title={t("ทำงานอะไร?", "What do you do?")} hint={t("ไม่บังคับ ข้ามได้", "Optional. You can skip this.")}>
+        <OccupationPicker v={props.v} value={cleanBio(p?.bio).occupation} other={cleanBio(p?.bio).occupationOther} />
+      </FlowStep>
       <FlowStep emoji="💬" title={t("ปกติติดต่อกับเพื่อนแบบไหน?", "How do you like to keep in touch?")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ ข้ามได้`, `Pick up to ${MAX_COMM}, or skip`)}>
         <CommPicker v={props.v} values={cleanBio(p?.bio).comm} />
       </FlowStep>
@@ -380,7 +383,7 @@ onboarding.post("/you", async (c) => {
       socialStyles,
       eventStyle,
       intents: [...(intents.length ? intents : ["friends"]), ...keepRomance],
-      bio: { ...cleanBio(user.profile.bio), comm },
+      bio: { ...cleanBio(user.profile.bio), comm, ...parseOccupation(str(body.occupation), str(body.occupationOther)) },
       updatedAt: new Date(),
     })
     .where(eq(profiles.accountId, user.account.id));

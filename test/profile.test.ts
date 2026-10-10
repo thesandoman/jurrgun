@@ -9,6 +9,9 @@ import {
   deckFor,
   ENERGY,
   INTEREST_GROUPS,
+  OCCUPATIONS,
+  occupationLabel,
+  parseOccupation,
   PROMPT_BANK,
   PROMPT_KINDS,
   promptById,
@@ -45,6 +48,28 @@ describe("interests", () => {
   it("uses no en or em dashes in copy", () => {
     const all = JSON.stringify([INTEREST_GROUPS, COMM_STYLES, ENERGY, WEEKEND_RHYTHM, PROMPT_BANK]);
     expect(all).not.toMatch(/[–—]/);
+  });
+});
+
+describe("occupation", () => {
+  it("is a bilingual list ending in Other", () => {
+    for (const o of OCCUPATIONS) expect(bilingual(o)).toBe(true);
+    expect(new Set(OCCUPATIONS.map((o) => o.value)).size).toBe(OCCUPATIONS.length);
+    expect(OCCUPATIONS.at(-1)!.value).toBe("other");
+  });
+
+  it("keeps a listed pick, keeps Other only with words, and drops anything else", () => {
+    expect(parseOccupation("student", "ignored")).toEqual({ occupation: "student", occupationOther: undefined });
+    expect(parseOccupation("other", "  Drone pilot ")).toEqual({ occupation: "other", occupationOther: "Drone pilot" });
+    expect(parseOccupation("other", "   ")).toEqual({ occupation: undefined, occupationOther: undefined });
+    expect(parseOccupation("astronaut", "")).toEqual({ occupation: undefined, occupationOther: undefined });
+    expect(parseOccupation("other", "x".repeat(80)).occupationOther).toHaveLength(40);
+  });
+
+  it("labels a pick in either language, and Other with the member's words", () => {
+    expect(occupationLabel({ occupation: "student" }, "en")).toEqual({ emoji: "🎓", text: "Student" });
+    expect(occupationLabel({ occupation: "other", occupationOther: "Drone pilot" }, "th")!.text).toBe("Drone pilot");
+    expect(occupationLabel({}, "en")).toBeNull();
   });
 });
 
