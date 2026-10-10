@@ -38,10 +38,11 @@ import {
   WEEKEND_RHYTHM,
   type Answer,
   type Bio,
+  parseEducation,
   parseOccupation,
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
-import { CommPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
+import { CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -346,6 +347,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
 
         <Section id="facts" emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
           <OccupationPicker v={props.v} value={bio.occupation} other={bio.occupationOther} />
+          <EducationPicker v={props.v} value={bio.education} detail={bio.educationDetail} />
           <Field
             label={t("กำลังเรียนรู้", "Currently learning")}
             name="learning"
@@ -447,6 +449,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
     deck,
     comm,
     ...parseOccupation(str(body.occupation), str(body.occupationOther)),
+    ...parseEducation(str(body.education), str(body.educationDetail)),
     learning: str(body.learning),
     learningLangs: pickAll("learningLangs", values(LANGUAGES)),
     energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,

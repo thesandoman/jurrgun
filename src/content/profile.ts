@@ -608,6 +608,33 @@ export const OCCUPATIONS: Opt[] = [
 ];
 export const OCCUPATION_OTHER_MAX = 40;
 
+/** Education: the highest level (or "studying now"), plus an optional school or field. */
+export const EDUCATION: Opt[] = [
+  o("high_school", "🏫", "มัธยมศึกษา", "High school"),
+  o("vocational", "🛠️", "อาชีวะ (ปวช. / ปวส.)", "Vocational (ปวช. / ปวส.)"),
+  o("bachelors", "🎓", "ปริญญาตรี", "Bachelor's degree"),
+  o("masters", "📘", "ปริญญาโท", "Master's degree"),
+  o("doctorate", "🔬", "ปริญญาเอก", "Doctorate"),
+  o("studying", "📚", "กำลังเรียนอยู่", "Studying now"),
+  o("self_taught", "🧠", "เรียนรู้ด้วยตัวเอง", "Self-taught"),
+];
+export const EDUCATION_DETAIL_MAX = 60;
+
+/** What to show for education, or null: the level, then the school or field if given. */
+export function educationLabel(bio: Bio, lang: "th" | "en"): { emoji: string; text: string } | null {
+  const ed = EDUCATION.find((x) => x.value === bio.education);
+  if (!ed) return null;
+  const level = lang === "en" ? ed.en : ed.th;
+  return { emoji: ed.emoji, text: bio.educationDetail ? `${level} · ${bio.educationDetail}` : level };
+}
+
+/** Read the education pair off a form. An unknown level clears both. */
+export function parseEducation(level: string, detail: string): Pick<Bio, "education" | "educationDetail"> {
+  if (!EDUCATION.some((x) => x.value === level)) return { education: undefined, educationDetail: undefined };
+  const text = detail.trim().slice(0, EDUCATION_DETAIL_MAX);
+  return { education: level, educationDetail: text || undefined };
+}
+
 /** The occupation to show, or null: "other" shows the member's own words. */
 export function occupationLabel(bio: Bio, lang: "th" | "en"): { emoji: string; text: string } | null {
   const occ = OCCUPATIONS.find((x) => x.value === bio.occupation);
@@ -942,6 +969,9 @@ export type Bio = {
   /** A value from OCCUPATIONS; "other" goes with occupationOther. */
   occupation?: string;
   occupationOther?: string;
+  /** A value from EDUCATION, plus an optional school or field. */
+  education?: string;
+  educationDetail?: string;
   learning?: string;
   learningLangs?: string[];
   energy?: string;
@@ -1033,6 +1063,8 @@ export function cleanBio(raw: unknown): Bio {
   if (strs(b.comm)) out.comm = strs(b.comm);
   if (s(b.occupation)) out.occupation = s(b.occupation);
   if (s(b.occupationOther)) out.occupationOther = s(b.occupationOther);
+  if (s(b.education)) out.education = s(b.education);
+  if (s(b.educationDetail)) out.educationDetail = s(b.educationDetail);
   if (s(b.learning)) out.learning = s(b.learning);
   if (strs(b.learningLangs)) out.learningLangs = strs(b.learningLangs);
   if (s(b.energy)) out.energy = s(b.energy);

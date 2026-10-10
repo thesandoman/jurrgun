@@ -25,6 +25,8 @@ export type CurrentUser = {
   account: Account;
   /** Null until onboarding is finished. */
   profile: Profile | null;
+  /** Unread notifications, for the bell's badge. */
+  unread?: number;
 };
 
 export type AppEnv = {

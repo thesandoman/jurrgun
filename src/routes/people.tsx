@@ -53,6 +53,7 @@ import {
 } from "../schema";
 import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
+import { NotifItems } from "../ui/notif-menu";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -864,6 +865,19 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
 });
 
 // --------------------------------------------------------- notifications --
+
+/** The bell's dropdown list (an HTML fragment). Opening it marks these read. */
+peopleRoutes.get("/notifications/panel", requireMember, async (c) => {
+  const { t, lang } = view(c);
+  const me = c.var.user!.account.id;
+  const db = getDb(c.env);
+  const rows = await db.select().from(notifications).where(eq(notifications.accountId, me)).orderBy(desc(notifications.createdAt)).limit(12);
+  if (rows.some((r) => !r.readAt)) {
+    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), isNull(notifications.readAt)));
+  }
+  c.header("cache-control", "no-store");
+  return c.html(<NotifItems t={t} lang={lang} rows={rows} />);
+});
 
 peopleRoutes.get("/notifications", requireMember, async (c) => {
   const v = view(c);

@@ -396,6 +396,23 @@ body:has(.tabbar) .topbar .a11y-panel{max-height:calc(100dvh - 200px - env(safe-
 
 /* Footer */
 .foot{border-top:1px solid var(--line);margin-top:36px;padding-top:18px}
+/* Notifications dropdown (src/ui/notif-menu.tsx) */
+.notif{position:relative;display:inline-block;background:none;border:0;padding:0;margin:0;border-radius:0}
+.topbar .notif{position:static}
+.notif>summary{list-style:none;cursor:pointer;color:inherit;font-weight:400;position:relative;display:inline-grid;place-items:center;min-width:40px;min-height:40px;border-radius:999px;font-size:1.1rem}
+.notif>summary::-webkit-details-marker{display:none}
+.notif-dot{position:absolute;top:2px;right:0;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--lime);color:var(--deep);font-size:.68rem;font-weight:800;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--deep)}
+.notif-panel{position:absolute;right:12px;top:calc(100% + 6px);z-index:40;width:min(360px,calc(100vw - 24px));padding:12px;border-radius:20px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.28);text-align:left;font-size:.95rem;max-height:calc(100dvh - 120px);overflow-y:auto;overscroll-behavior:contain}
+body:has(.tabbar) .notif-panel{max-height:calc(100dvh - 200px - env(safe-area-inset-bottom))}
+.notif-h{margin:2px 6px 8px;font-weight:700}
+.notif-list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.notif-list a,.notif-list div{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;color:var(--ink);text-decoration:none}
+.notif-list a:hover,.notif-list a:focus-visible{background:var(--surface-2)}
+.notif-list li.unread .notif-title{font-weight:700}
+.notif-list li.unread a,.notif-list li.unread div{background:color-mix(in srgb,var(--lime) 16%,var(--surface))}
+.notif-list small{color:var(--ink-3);font-size:.8rem}
+.notif-empty{margin:6px 6px 10px}
+.notif-all{display:block;margin-top:8px;padding:10px 12px;border-radius:14px;text-align:center;font-weight:700;text-decoration:none;background:var(--surface-2)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 /* ==== Open City ==========================================================
  * Layered on the livery: same deep BMA green and lime, plus river teal and

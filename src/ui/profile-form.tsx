@@ -13,6 +13,8 @@ import {
   INTEREST_GROUPS,
   MAX_COMM,
   MAX_INTERESTS,
+  EDUCATION,
+  EDUCATION_DETAIL_MAX,
   OCCUPATION_OTHER_MAX,
   OCCUPATIONS,
   TEXT_MAX,
@@ -145,6 +147,37 @@ export function OccupationPicker(props: { v: View; value?: string; other?: strin
           value={props.other ?? ""}
           maxlength={OCCUPATION_OTHER_MAX}
           placeholder={t("เช่น นักบินโดรน", "e.g. Drone pilot")}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Education: highest level (or studying now), and an optional school or field. */
+export function EducationPicker(props: { v: View; value?: string; detail?: string }) {
+  const { t, lang } = props.v;
+  return (
+    <div class="edu">
+      <div class="field">
+        <label for="f-education">{t("การศึกษา", "Education")}</label>
+        <select id="f-education" name="education">
+          <option value="">{t("ไม่ระบุ", "Prefer not to say")}</option>
+          {EDUCATION.map((o) => (
+            <option value={o.value} selected={o.value === props.value}>
+              {`${o.emoji} ${L(lang, o)}`}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-educationDetail">{t("สถาบันหรือสาขา (ไม่บังคับ)", "School or field (optional)")}</label>
+        <input
+          id="f-educationDetail"
+          name="educationDetail"
+          type="text"
+          value={props.detail ?? ""}
+          maxlength={EDUCATION_DETAIL_MAX}
+          placeholder={t("เช่น จุฬาฯ วิศวกรรม", "e.g. Chulalongkorn, engineering")}
         />
       </div>
     </div>

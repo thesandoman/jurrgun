@@ -9,8 +9,11 @@ import {
   deckFor,
   ENERGY,
   INTEREST_GROUPS,
+  EDUCATION,
+  educationLabel,
   OCCUPATIONS,
   occupationLabel,
+  parseEducation,
   parseOccupation,
   PROMPT_BANK,
   PROMPT_KINDS,
@@ -70,6 +73,22 @@ describe("occupation", () => {
     expect(occupationLabel({ occupation: "student" }, "en")).toEqual({ emoji: "🎓", text: "Student" });
     expect(occupationLabel({ occupation: "other", occupationOther: "Drone pilot" }, "th")!.text).toBe("Drone pilot");
     expect(occupationLabel({}, "en")).toBeNull();
+  });
+});
+
+describe("education", () => {
+  it("keeps a listed level with an optional school or field, and drops unknown levels", () => {
+    for (const o of EDUCATION) expect(bilingual(o)).toBe(true);
+    expect(parseEducation("bachelors", "  Chula, engineering ")).toEqual({ education: "bachelors", educationDetail: "Chula, engineering" });
+    expect(parseEducation("masters", "")).toEqual({ education: "masters", educationDetail: undefined });
+    expect(parseEducation("wizardry", "Hogwarts")).toEqual({ education: undefined, educationDetail: undefined });
+    expect(parseEducation("studying", "x".repeat(90)).educationDetail).toHaveLength(60);
+  });
+
+  it("shows the level, then the school or field", () => {
+    expect(educationLabel({ education: "bachelors", educationDetail: "Chula" }, "en")!.text).toBe("Bachelor's degree · Chula");
+    expect(educationLabel({ education: "vocational" }, "th")!.text).toBe("อาชีวะ (ปวช. / ปวส.)");
+    expect(educationLabel({}, "en")).toBeNull();
   });
 });
 

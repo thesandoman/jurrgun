@@ -11,6 +11,7 @@ import { tr, type Lang, type T } from "../lib/i18n";
 import { STYLES } from "./styles";
 import { BrandMark } from "./brand";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
+import { NOTIF_JS, NotifMenu } from "./notif-menu";
 
 export type View = { lang: Lang; t: T; user: CurrentUser | null; path: string };
 
@@ -121,11 +122,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           </a>
           <nav class="top-actions">
             {staff ? <a href="/admin" class="chip">{t("ทีมงาน", "Staff")}</a> : null}
-            {member ? (
-              <a href="/notifications" class="icon-link" aria-label={t("การแจ้งเตือน", "Notifications")}>
-                🔔
-              </a>
-            ) : null}
+            {member ? <NotifMenu t={t} unread={user?.unread ?? 0} /> : null}
             <A11yMenu t={t} />
             <a href={`/lang/${other}?back=${encodeURIComponent(v.path)}`} class="chip" lang={other}>
               {other === "en" ? "EN" : "ไทย"}
@@ -147,6 +144,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
         <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS }} />
+        {member && !opts.fullscreen ? <script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}
         <script
           dangerouslySetInnerHTML={{
             __html: `if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,

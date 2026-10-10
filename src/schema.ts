@@ -30,6 +30,8 @@ export type ProfileBio = {
   comm?: string[];
   occupation?: string;
   occupationOther?: string;
+  education?: string;
+  educationDetail?: string;
   learning?: string;
   learningLangs?: string[];
   energy?: string;
