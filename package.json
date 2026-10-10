@@ -8,6 +8,7 @@
     "build": "wrangler deploy --dry-run --outdir dist",
     "start": "wrangler dev",
     "test": "vitest run",
+    "check": "node scripts/check.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "assets": "node scripts/assets-manifest.mjs",
