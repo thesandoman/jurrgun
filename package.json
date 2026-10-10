@@ -25,7 +25,7 @@
     "hono": "^4.12.27",
     "postgres": "^3.4.9",
     "qrcode-generator": "^1.4.4",
-    "sv-map": "https://codeload.github.com/thesandoman/sv-map/tar.gz/9fac25925dff817c0d221ba98cdb02b283b83438"
+    "sv-map": "git+https://github.com/thesandoman/sv-map.git#9fac25925dff817c0d221ba98cdb02b283b83438"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",
