@@ -26,7 +26,7 @@ describe.skipIf(!HAS_DB)("onboarding guards", () => {
     await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, m.id));
     const post = (form: Record<string, string>) => req("/onboarding/basics", { cookie: m.cookie, form: { nickname: "Lek", birthDate: "1995-05-05", district: "bang_rak", ...form } });
     expect((await post({ residency: "from_mars" })).status).toBe(400);
-    for (const residency of ["nearby", "moving", "visiting", "lives"]) {
+    for (const residency of ["nearby", "moving", "visiting", "passing", "lives"]) {
       const r = await post({ residency });
       expect(r.headers.get("location")).toBe("/onboarding/privacy");
       const [p] = await db().select({ bio: profiles.bio }).from(profiles).where(eq(profiles.accountId, m.id));

@@ -756,6 +756,7 @@ export const RESIDENCY: Opt[] = [
   o("nearby", "🏘️", "อยู่ใกล้ ๆ (นนทบุรี สมุทรปราการ ปทุมธานี…)", "I live nearby (Nonthaburi, Samut Prakan, Pathum Thani…)"),
   o("moving", "📦", "กำลังจะย้ายมากรุงเทพฯ", "I'm moving to Bangkok soon"),
   o("visiting", "🧳", "มาอยู่กรุงเทพฯ ช่วงหนึ่ง (หลายสัปดาห์หรือหลายเดือน)", "I'm in Bangkok for a while (weeks or months)"),
+  o("passing", "✈️", "แวะผ่านกรุงเทพฯ (ไม่กี่วัน)", "Just passing through (a few days)"),
 ];
 export const isResidency = (v: string) => RESIDENCY.some((x) => x.value === v);
 
