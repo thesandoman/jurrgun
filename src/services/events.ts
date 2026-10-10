@@ -5,7 +5,7 @@
  * All timers are LAZY: these run when someone loads or changes the event,
  * comparing timestamps — no cron, no polling (SVAGENTS hard rule 10).
  */
-import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { buddyRound, type Attendee } from "../domain/matching";
 import { ageOn, OFFER_HOURS, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
@@ -74,26 +74,36 @@ export async function refreshWaitlist(env: DatabaseEnv, eventId: string, now = n
 
   const state = await seatState(db, event);
   const offerUntil = new Date(Math.min(now.getTime() + OFFER_HOURS * 3_600_000, event.startsAt.getTime()));
-  const queries = [];
-  let offers = 0;
+  const updates = [];
   for (const entry of ordered) {
     if (!seatAvailable(state, entry.isResident)) {
       if (state.taken >= state.capacity) break;
       continue; // seat reserved for residents; try the next person
     }
-    const w = waiting.find((x) => x.id === entry.id)!;
-    queries.push(
-      // Only if still waiting: the member may have cancelled since we read the list.
-      db.update(registrations).set({ status: "offered", offeredUntil: offerUntil }).where(and(eq(registrations.id, entry.id), eq(registrations.status, "waitlisted"))),
-      notify(db, w.accountId, "waitlist_offer", "มีที่ว่างแล้ว! ยืนยันภายใน 12 ชม.", "A spot opened up! Confirm within 12 hours.", `/events/${eventId}`),
+    updates.push(
+      // Only if still waiting: the member may have cancelled, or another page
+      // load may have made this same offer a moment ago.
+      db
+        .update(registrations)
+        .set({ status: "offered", offeredUntil: offerUntil })
+        .where(and(eq(registrations.id, entry.id), eq(registrations.status, "waitlisted")))
+        .returning({ accountId: registrations.accountId }),
     );
     state.taken += 1;
     if (!entry.isResident) state.takenByNonResidents += 1;
-    offers += 1;
   }
-  if (queries.length) await batch(env, queries);
   void expired;
-  return offers;
+  if (updates.length === 0) return 0;
+  // Notify only the rows this call actually changed, so overlapping page loads send one message.
+  // batch() returns positional rows: [accountId] for each changed registration.
+  const changed = (await batch(env, updates)).flat().map((row) => String(row[0]));
+  if (changed.length) {
+    await batch(
+      env,
+      changed.map((accountId) => notify(db, accountId, "waitlist_offer", "มีที่ว่างแล้ว! ยืนยันภายใน 12 ชม.", "A spot opened up! Confirm within 12 hours.", `/events/${eventId}`)),
+    );
+  }
+  return changed.length;
 }
 
 /**
@@ -169,7 +179,8 @@ export async function runBuddyRound(
   const claimed = await db
     .update(events)
     .set({ buddyRoundAt: now })
-    .where(and(eq(events.id, event.id), eq(events.buddyEnabled, true)))
+    // isNull: only the first of several simultaneous page loads wins the claim.
+    .where(and(eq(events.id, event.id), eq(events.buddyEnabled, true), isNull(events.buddyRoundAt)))
     .returning({ id: events.id, at: events.buddyRoundAt });
   if (claimed.length === 0) return { ran: false, groups: 0 };
 

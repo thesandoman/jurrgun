@@ -442,11 +442,16 @@ adminModeration.post("/:id/action", async (c) => {
   const needsTarget = action === "warning" || action === "suspend" || action === "ban" || action === "lift";
   if (needsTarget && !targetId) return bad(t("รายงานนี้ไม่มีบัญชีเป้าหมาย", "This report has no target account"));
 
-  let target: { id: string; role: string } | null = null;
+  let target: { id: string; role: string; status: string } | null = null;
   if (targetId) {
-    const [x] = await db.select({ id: accounts.id, role: accounts.role }).from(accounts).where(eq(accounts.id, targetId)).limit(1);
+    const [x] = await db.select({ id: accounts.id, role: accounts.role, status: accounts.status }).from(accounts).where(eq(accounts.id, targetId)).limit(1);
     target = x ?? null;
     if (needsTarget && !target) return bad(t("ไม่พบบัญชีเป้าหมาย", "Target account not found"));
+  }
+  // Lifting only undoes a suspension or ban. A member who deactivated (or was
+  // deleted by retention) must never be switched back on by a moderator.
+  if (target && action === "lift" && target.status !== "suspended" && target.status !== "banned") {
+    return bad(t("ยกเลิกได้เฉพาะบัญชีที่ถูกระงับหรือแบน", "Only a suspended or banned account can be lifted"));
   }
   if (target && action !== "dismiss" && action !== "note") {
     if (target.role === "bma_admin" && me.role !== "bma_admin") return c.text("Forbidden", 403);

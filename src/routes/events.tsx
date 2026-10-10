@@ -1404,6 +1404,10 @@ eventRoutes.post("/events/:id/offer", requireMember, async (c) => {
   if (action !== "accept" && action !== "decline") {
     return renderDetail(c, event, { error: t("เลือกรับหรือไม่รับที่นั่ง", "Choose accept or decline."), status: 400 });
   }
+  // Staff cancelled the event: an outstanding offer can't be taken up.
+  if (action === "accept" && event.status !== "published") {
+    return renderDetail(c, event, { error: t("กิจกรรมนี้ถูกยกเลิกแล้ว", "This event has been cancelled."), status: 409 });
+  }
   const reg = await myRegistration(db, id, user.account.id);
   if (!reg || reg.status !== "offered" || !reg.offeredUntil || reg.offeredUntil.getTime() <= now.getTime() || event.startsAt.getTime() <= now.getTime()) {
     await refreshWaitlist(c.env, id, now);

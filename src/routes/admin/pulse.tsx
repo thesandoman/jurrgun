@@ -713,8 +713,10 @@ adminPulse.get("/:id/results", async (c) => {
   );
 });
 
-function csvField(v: string): string {
-  return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+export function csvField(v: string): string {
+  // Spreadsheets run cells starting with = + - @ as formulas: make them plain text.
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 adminPulse.get("/:id/export.csv", async (c) => {

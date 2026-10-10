@@ -219,7 +219,10 @@ onboarding.post("/basics", async (c) => {
   };
   const fail = (error: string, start: number) => page(c, { title: TITLE, status: 400, bare: true }, <BasicsForm v={v} values={vals} error={error} start={start} />);
   if (!vals.nickname) return fail(t("กรอกชื่อเล่น", "Please add a nickname."), 0);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(vals.birthDate)) return fail(t("กรอกวันเกิด", "Please add your date of birth."), 1);
+  // A real calendar date: "1990-02-31" passes the pattern but isn't one.
+  const parsed = new Date(`${vals.birthDate}T00:00:00Z`);
+  const realDate = /^\d{4}-\d{2}-\d{2}$/.test(vals.birthDate) && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === vals.birthDate;
+  if (!realDate) return fail(t("กรอกวันเกิด", "Please add your date of birth."), 1);
   const age = ageOn(vals.birthDate);
   if (!(age >= MIN_AGE && age < 120)) return fail(t("Jurrgun สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "Jurrgun is for adults aged 18 and over."), 1);
   if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."), 2);
@@ -472,8 +475,9 @@ export async function connectionsPatch(
   current: { relationship: string; lastSingleSwitchAt: Date | null },
 ): Promise<{ patch: Partial<typeof profiles.$inferInsert>; romanceConsent: boolean | null } | { error: [string, string] }> {
   const relationship = values(RELATIONSHIP).includes(str(body.relationship)) ? str(body.relationship) : "prefer_not";
-  const ageMin = Math.max(18, Math.min(99, Number(str(body.ageMin)) || 18));
-  const ageMax = Math.max(ageMin, Math.min(99, Number(str(body.ageMax)) || 99));
+  // Whole years only (the columns are integers; "30.5" used to be a 500).
+  const ageMin = Math.max(18, Math.min(99, Math.trunc(Number(str(body.ageMin))) || 18));
+  const ageMax = Math.max(ageMin, Math.min(99, Math.trunc(Number(str(body.ageMax))) || 99));
   const switchingToSingle = relationship === "single" && current.relationship !== "single";
   if (switchingToSingle && !canSwitchToSingle(current.lastSingleSwitchAt)) {
     return { error: ["เปลี่ยนเป็น 'โสด' ได้ไม่เกิน 1 ครั้งใน 30 วัน", "You can switch to Single at most once every 30 days."] };
@@ -658,7 +662,7 @@ onboarding.post("/wellbeing", async (c) => {
   if (missing) return c.redirect(`/onboarding/${missing}`);
   const body = await c.req.parseBody();
   const answers = [body.q1, body.q2, body.q3].map((x) => Number(str(x)));
-  if (str(body.skip) !== "1" && answers.every((n) => n >= 1 && n <= 3) && user.account.researchId) {
+  if (str(body.skip) !== "1" && answers.every((n) => Number.isInteger(n) && n >= 1 && n <= 3) && user.account.researchId) {
     if (await hasResearchConsent(c.env, user.account.id)) {
       await getDb(c.env)
         .insert(wellbeing)

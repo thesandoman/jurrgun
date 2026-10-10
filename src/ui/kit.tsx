@@ -415,16 +415,21 @@ export function Stat(props: { label: string; value: string | number | null; hint
   );
 }
 
-/** Redirect target from a form's `next`/`back` field, restricted to this site. */
+/**
+ * Redirect target from a form's `next`/`back` field, restricted to this site.
+ * Browsers drop tabs and newlines and treat \ like /, so "/\t/evil.example"
+ * would leave the site: any control character or backslash is refused.
+ */
 export function safeNext(raw: string | undefined | null, fallback: string): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return fallback;
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || /[\x00-\x1f\x7f\\]/.test(raw)) return fallback;
   return raw;
 }
 
 /** Form helpers: hono's parseBody gives string | File | (string|File)[]. */
 export function str(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (Array.isArray(v) && typeof v[0] === "string") return v[0].trim();
+  // NUL can't be stored in Postgres text: drop it rather than fail the request.
+  if (typeof v === "string") return v.replace(/\0/g, "").trim();
+  if (Array.isArray(v) && typeof v[0] === "string") return v[0].replace(/\0/g, "").trim();
   return "";
 }
 
