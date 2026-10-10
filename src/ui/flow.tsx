@@ -159,11 +159,16 @@ export function AnswerCard(props: { name: string; value: string; label: string; 
 /**
  * Runs once per form (the script tag sits inside the form it drives).
  * Kept small and dependency-free; ES5-ish so old Android WebViews cope.
+ *
+ * The form is set to noValidate: the browser's own check runs over every
+ * step, and a required field in a hidden step is "not focusable", so it would
+ * silently block Next on step one. Steps are checked here instead, one at a
+ * time, and all of them again before the real submit.
  */
 const FLOW_JS = `(function(){
 var s=document.currentScript,f=s&&s.closest("form.flow");if(!f||f.dataset.ready)return;f.dataset.ready="1";
 var steps=[].slice.call(f.querySelectorAll(".flow-step"));if(steps.length<1)return;
-f.classList.add("is-js");
+f.classList.add("is-js");f.noValidate=true;
 var back=f.querySelector(".flow-back"),next=f.querySelector(".flow-next"),bar=f.querySelector(".flow-progress i"),pb=f.querySelector(".flow-progress");
 var at=+f.dataset.stageAt||0,of=+f.dataset.stageOf||1,i=0,busy=0;
 var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -190,14 +195,16 @@ function valid(st){
   if(st.dataset.allOrNone==="1"){var sel=st.querySelectorAll("select"),set=0;[].forEach.call(sel,function(x){if(x.value)set++});if(set&&set<sel.length)return fail()}
   if(msg)msg.hidden=true;return true;
 }
-function go(){if(busy)return;if(!valid(steps[i]))return;if(i<steps.length-1)show(i+1,1,true);else submit()}
+function quiet(st){var els=st.querySelectorAll("input,select,textarea");for(var k=0;k<els.length;k++){if(!els[k].checkValidity())return false}return true}
+function all(){for(var j=0;j<steps.length;j++){if(!quiet(steps[j])){if(j!==i)show(j,j<i?-1:1,false);valid(steps[j]);return false}}return true}
+function go(){if(busy)return;if(!valid(steps[i]))return;if(i<steps.length-1)show(i+1,1,true);else if(all())submit()}
 function submit(){busy=1;next.disabled=true;next.classList.add("is-busy");if(f.requestSubmit)f.requestSubmit();else f.submit()}
-f.addEventListener("submit",function(e){if(busy)return;if(e.submitter&&e.submitter!==next)return;if(i<steps.length-1){e.preventDefault();go()}else if(!valid(steps[i])){e.preventDefault()}else{busy=1;next.classList.add("is-busy")}});
+f.addEventListener("submit",function(e){if(busy)return;if(e.submitter&&e.submitter!==next)return;if(i<steps.length-1){e.preventDefault();go()}else if(!valid(steps[i])||!all()){e.preventDefault()}else{busy=1;next.classList.add("is-busy")}});
 back.addEventListener("click",function(){if(history.state&&typeof history.state.flow==="number")history.back();else show(i-1,-1,false)});
 window.addEventListener("popstate",function(e){var n=e.state&&typeof e.state.flow==="number"?e.state.flow:0;if(n!==i)show(n,n>i?1:-1,false)});
 f.addEventListener("change",function(e){
   var st=steps[i];if(!st||st.dataset.auto!=="1"||e.target.type!=="radio"||!st.contains(e.target))return;
-  setTimeout(function(){if(steps[i]!==st)return;if(i<steps.length-1)show(i+1,1,true);else if(f.dataset.autosubmit==="1")submit()},reduce?60:220);
+  setTimeout(function(){if(steps[i]!==st)return;if(i<steps.length-1)show(i+1,1,true);else if(f.dataset.autosubmit==="1"&&all())submit()},reduce?60:220);
 });
 if(history.replaceState)history.replaceState({flow:i},"");
 show(i,0,false);
