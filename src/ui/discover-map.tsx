@@ -309,6 +309,8 @@ function refit(points, instant = false) {
   } catch {}
 }
 start();
+// The Appearance menu flips <html data-theme>: an "auto" map follows it without a reload.
+new MutationObserver(() => { if (style === "auto") start(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
 // Search: filter pins and the list as you type (the form still works without JS).
 const listItems = () => Array.from(document.querySelectorAll("#discover-list .ev-item"));

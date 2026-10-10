@@ -56,6 +56,8 @@ function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: st
               <Stat label={t("ตัวเลือกที่ลบ", "Pending choices deleted")} value={n("choicesDeleted")} />
               <Stat label={t("เซสชันที่ลบ", "Sessions deleted")} value={n("sessionsDeleted")} />
               <Stat label={t("บันทึกเข้าสู่ระบบที่ลบ", "Sign-in attempts deleted")} value={n("loginAttemptsDeleted")} />
+              <Stat label={t("เช็กอินที่สรุปเป็นภาพรวม", "Check-ins aggregated")} value={n("checkInsAggregated")} />
+              <Stat label={t("คำตอบวิจัยที่ลบ", "Research answers deleted")} value={n("researchAnswersDeleted")} />
               <Stat
                 label={t("บัญชีที่ลบถาวร", "Accounts deleted")}
                 value={n("accountsDeleted")}

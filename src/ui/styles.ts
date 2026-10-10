@@ -404,7 +404,7 @@ body:has(.tabbar) .topbar .a11y-panel{max-height:calc(100dvh - 200px - env(safe-
  * boarding-pass ticket.
  * ===================================================================== */
 :root{
-  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#1a8f5a;
+  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#157a4c;
   --gx:20px;
 }
 @media (prefers-color-scheme:dark){:root{--bg:#0b1511;--river:#5cc8e0;--river-soft:#0f2d36;--sun:#f5c04a;--sun-soft:#3a2f12;--leaf:#4ade80}}
@@ -495,7 +495,7 @@ main.wrap>.ev-scene:first-child{margin-top:-26px}
 .tabbar a span{display:grid;place-items:center;height:24px}
 .tabbar a span svg{width:22px;height:22px}
 .tabbar a.on{background:var(--surface);color:var(--deep);font-weight:700}
-@media (prefers-color-scheme:dark){.tabbar a.on{background:var(--on-deep-2);color:var(--deep)}}
+@media (prefers-color-scheme:dark){.tabbar a.on{background:var(--on-deep-2);color:var(--deep)}.tabbar a.center.on{background:var(--lime);color:var(--deep)}}
 .tabbar a.center span svg{width:26px;height:26px}
 
 /* ---- Accessibility menu ---- */

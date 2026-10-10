@@ -15,9 +15,12 @@ import {
   consents,
   contactShares,
   events,
+  feedback,
   loginAttempts,
   notifications,
   profiles,
+  pulseQuestions,
+  pulseResponses,
   registrations,
   reports,
   sessions,
@@ -186,6 +189,45 @@ describe.skipIf(!HAS_DB)("runRetention", () => {
 });
 
 describe.skipIf(!HAS_DB)("retention on the staff dashboard", () => {
+  it("aggregates year-old check-ins, drops 2-year-old research answers, blanks deleted members' comments", async () => {
+    const [m, gone] = await Promise.all([createMember(), createMember()]);
+    const old = await makeEvent(400 * DAY);
+    const recent = await makeEvent(30 * DAY);
+    const oldReg = await attend(old, m);
+    const recentReg = await attend(recent, m);
+    await db().update(registrations).set({ groupNo: 2, checkedInBy: "staff", checkInMethod: "scan" }).where(inArray(registrations.id, [oldReg, recentReg]));
+
+    const qid = newId();
+    await db().insert(pulseQuestions).values({ id: qid, promptTh: "ทดสอบ", promptEn: "Retention test", kind: "text", status: "archived", createdBy: "test" });
+    const oldAnswer = newId();
+    const newAnswer = newId();
+    await db().insert(pulseResponses).values([
+      { id: oldAnswer, questionId: qid, researchId: `r-${newId()}`, answer: "old", createdAt: new Date(Date.now() - 800 * DAY) },
+      { id: newAnswer, questionId: qid, researchId: `r-${newId()}`, answer: "new" },
+    ]);
+
+    await db().insert(feedback).values({ id: newId(), eventId: recent, accountId: gone.id, groupRating: 4, comment: "loved it, call me" });
+    await deactivate(gone, 31);
+
+    const counts = await runRetention(ENV);
+    expect(counts.checkInsAggregated).toBeGreaterThanOrEqual(1);
+    expect(counts.researchAnswersDeleted).toBeGreaterThanOrEqual(1);
+
+    const regs = await db().select().from(registrations).where(inArray(registrations.id, [oldReg, recentReg]));
+    const o = regs.find((r) => r.id === oldReg)!;
+    const n = regs.find((r) => r.id === recentReg)!;
+    expect([o.groupNo, o.checkedInBy, o.checkInMethod]).toEqual([null, null, null]);
+    expect(o.status).toBe("confirmed"); // still counts as attended
+    expect(n.groupNo).toBe(2);
+
+    const answers = await db().select({ id: pulseResponses.id }).from(pulseResponses).where(inArray(pulseResponses.id, [oldAnswer, newAnswer]));
+    expect(answers.map((x) => x.id)).toEqual([newAnswer]);
+
+    const [fb] = await db().select().from(feedback).where(eq(feedback.accountId, gone.id));
+    expect(fb.comment).toBe("");
+    expect(fb.groupRating).toBe(4);
+  });
+
   it("only lets bma_admin run it", async () => {
     for (const role of ["host", "moderator", "insight_viewer", "partner_admin"] as const) {
       const m = await createMember({ role });

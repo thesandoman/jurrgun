@@ -11,12 +11,18 @@
  *                             and are untouched
  *   expired sessions          once past expires_at
  *   login attempts            after 24 hours (throttling looks back 1 hour at most)
+ *   check-in and group detail 12 months after the event: group numbers, who
+ *                             checked them in and how, +1 links and buddy
+ *                             pairs are cleared; the registration row and its
+ *                             status stay, so attendance totals still add up
+ *   City Pulse and wellbeing  24 months after the answer (research code rows)
  *   deactivated accounts      30 days after deactivation, unless a moderation
  *                             hold applies (an open or in-review report about
  *                             them): profile, vibe, sessions, notifications,
  *                             contact shares and consents are hard-deleted, the
  *                             account row is anonymised and its research_id link
- *                             cut. Reports, moderation actions and audit rows
+ *                             cut, and their feedback comments are blanked
+ *                             (the ratings stay, unlinked). Reports, moderation actions and audit rows
  *                             are kept (legal hold); registrations carry no
  *                             personal content and stay for aggregate counts.
  *
@@ -29,19 +35,23 @@ import { audit } from "../lib/records";
 import {
   accounts,
   auditLog,
+  buddyPairs,
   connectionChoices,
   connections,
   consents,
   contactShares,
   events,
+  feedback,
   loginAttempts,
   notifications,
   oauthLinks,
   profiles,
+  pulseResponses,
   registrations,
   reports,
   sessions,
   vibes,
+  wellbeing,
 } from "../schema";
 
 const HOUR = 3_600_000;
@@ -50,6 +60,8 @@ const DAY = 24 * HOUR;
 export const SIGNAL_RETENTION_DAYS = 7;
 export const DEACTIVATED_RETENTION_DAYS = 30;
 export const LOGIN_ATTEMPT_RETENTION_HOURS = 24;
+export const CHECKIN_RETENTION_DAYS = 365;
+export const RESEARCH_RETENTION_DAYS = 730;
 /** Accounts anonymised per run; the rest wait for the next run. */
 export const ACCOUNT_BATCH = 200;
 /** How often the lazy run on /admin may fire. */
@@ -61,6 +73,8 @@ export type RetentionCounts = {
   choicesDeleted: number;
   sessionsDeleted: number;
   loginAttemptsDeleted: number;
+  checkInsAggregated: number;
+  researchAnswersDeleted: number;
   accountsDeleted: number;
   /** True when more deactivated accounts were due than one run handles. */
   accountsRemaining: boolean;
@@ -72,11 +86,13 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   const windowCutoff = new Date(now.getTime() - PEOPLE_WINDOW_HOURS * HOUR);
   const attemptCutoff = new Date(now.getTime() - LOGIN_ATTEMPT_RETENTION_HOURS * HOUR);
   const deactivatedCutoff = new Date(now.getTime() - DEACTIVATED_RETENTION_DAYS * DAY);
+  const checkinCutoff = new Date(now.getTime() - CHECKIN_RETENTION_DAYS * DAY);
+  const researchCutoff = new Date(now.getTime() - RESEARCH_RETENTION_DAYS * DAY);
 
   const endedBefore = (cutoff: Date) => db.select({ id: events.id }).from(events).where(lte(events.endsAt, cutoff));
 
   // 1. Time-based cleanups, as one batch. `returning` gives the counts.
-  const [signals, choices, sess, attempts] = await batch(env, [
+  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld] = await batch(env, [
     db
       .update(registrations)
       .set({ socialSignal: null, signalTopics: null })
@@ -93,6 +109,19 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       .returning({ id: connectionChoices.id }),
     db.delete(sessions).where(lt(sessions.expiresAt, now)).returning({ id: sessions.id }),
     db.delete(loginAttempts).where(lt(loginAttempts.createdAt, attemptCutoff)).returning({ id: loginAttempts.id }),
+    db
+      .update(registrations)
+      .set({ groupNo: null, checkedInBy: null, checkInMethod: null, plusOneWith: null, plusOneUsername: null })
+      .where(
+        and(
+          inArray(registrations.eventId, endedBefore(checkinCutoff)),
+          or(isNotNull(registrations.groupNo), isNotNull(registrations.checkedInBy), isNotNull(registrations.plusOneWith), isNotNull(registrations.plusOneUsername)),
+        ),
+      )
+      .returning({ id: registrations.id }),
+    db.delete(buddyPairs).where(inArray(buddyPairs.eventId, endedBefore(checkinCutoff))),
+    db.delete(pulseResponses).where(lt(pulseResponses.createdAt, researchCutoff)).returning({ id: pulseResponses.id }),
+    db.delete(wellbeing).where(lt(wellbeing.createdAt, researchCutoff)).returning({ id: wellbeing.id }),
   ]);
 
   // 2. Deactivated accounts past 30 days, without a moderation hold. Bounded.
@@ -121,6 +150,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     choicesDeleted: choices.length,
     sessionsDeleted: sess.length,
     loginAttemptsDeleted: attempts.length,
+    checkInsAggregated: checkIns.length,
+    researchAnswersDeleted: pulseOld.length + wellOld.length,
     accountsDeleted: ids.length,
     accountsRemaining: due.length > ACCOUNT_BATCH,
   };
@@ -134,6 +165,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(notifications).where(inArray(notifications.accountId, ids)),
       db.delete(contactShares).where(inArray(contactShares.accountId, ids)),
       db.delete(consents).where(inArray(consents.accountId, ids)),
+      db.update(feedback).set({ comment: "" }).where(inArray(feedback.accountId, ids)),
       // Frees their Google / LINE identity, so they can sign up again later.
       db.delete(oauthLinks).where(inArray(oauthLinks.accountId, ids)),
       // Their mutual connections end, so the other person no longer sees them.
