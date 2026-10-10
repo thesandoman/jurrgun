@@ -160,6 +160,9 @@ export function AnswerCard(props: { name: string; value: string; label: string; 
  * Runs once per form (the script tag sits inside the form it drives).
  * Kept small and dependency-free; ES5-ish so old Android WebViews cope.
  *
+ * Back only uses browser history for steps this page pushed; a flow that
+ * opened on a later step (after a server-side error) steps back in place.
+ *
  * The form is set to noValidate: the browser's own check runs over every
  * step, and a required field in a hidden step is "not focusable", so it would
  * silently block Next on step one. Steps are checked here instead, one at a
@@ -170,7 +173,7 @@ var s=document.currentScript,f=s&&s.closest("form.flow");if(!f||f.dataset.ready)
 var steps=[].slice.call(f.querySelectorAll(".flow-step"));if(steps.length<1)return;
 f.classList.add("is-js");f.noValidate=true;
 var back=f.querySelector(".flow-back"),next=f.querySelector(".flow-next"),bar=f.querySelector(".flow-progress i"),pb=f.querySelector(".flow-progress");
-var at=+f.dataset.stageAt||0,of=+f.dataset.stageOf||1,i=0,busy=0;
+var at=+f.dataset.stageAt||0,of=+f.dataset.stageOf||1,i=0,busy=0,pushed=0;
 var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
 i=Math.max(0,Math.min(steps.length-1,+f.dataset.start||0));
 function show(n,dir,push){
@@ -181,7 +184,7 @@ function show(n,dir,push){
   var last=n===steps.length-1,auto=st.dataset.auto==="1",picked=!!st.querySelector("input[type=radio]:checked");
   next.textContent=last?f.dataset.done:(st.dataset.cta||(auto&&!picked&&!st.querySelector("[required]")?f.dataset.skip:f.dataset.next));next.classList.toggle("ghost",auto&&!last);next.classList.toggle("primary",!(auto&&!last));
   var pct=Math.round(((at+(n+1)/steps.length)/of)*100);if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
-  if(push&&history.pushState)history.pushState({flow:n},"");
+  if(push&&history.pushState){history.pushState({flow:n},"");pushed++}else if(dir&&history.replaceState)history.replaceState({flow:n},"");
   var h=st.querySelector(".flow-title");if(h&&dir){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}
   if(dir)window.scrollTo(0,0);
 }
@@ -200,8 +203,8 @@ function all(){for(var j=0;j<steps.length;j++){if(!quiet(steps[j])){if(j!==i)sho
 function go(){if(busy)return;if(!valid(steps[i]))return;if(i<steps.length-1)show(i+1,1,true);else if(all())submit()}
 function submit(){busy=1;next.disabled=true;next.classList.add("is-busy");if(f.requestSubmit)f.requestSubmit();else f.submit()}
 f.addEventListener("submit",function(e){if(busy)return;if(e.submitter&&e.submitter!==next)return;if(i<steps.length-1){e.preventDefault();go()}else if(!valid(steps[i])||!all()){e.preventDefault()}else{busy=1;next.classList.add("is-busy")}});
-back.addEventListener("click",function(){if(history.state&&typeof history.state.flow==="number")history.back();else show(i-1,-1,false)});
-window.addEventListener("popstate",function(e){var n=e.state&&typeof e.state.flow==="number"?e.state.flow:0;if(n!==i)show(n,n>i?1:-1,false)});
+back.addEventListener("click",function(){if(pushed>0&&history.state&&typeof history.state.flow==="number")history.back();else show(i-1,-1,false)});
+window.addEventListener("popstate",function(e){var n=e.state&&typeof e.state.flow==="number"?e.state.flow:0;if(n<i)pushed=Math.max(0,pushed-1);else if(n>i)pushed++;if(n!==i)show(n,n>i?1:-1,false)});
 f.addEventListener("change",function(e){
   var st=steps[i];if(!st||st.dataset.auto!=="1"||e.target.type!=="radio"||!st.contains(e.target))return;
   setTimeout(function(){if(steps[i]!==st)return;if(i<steps.length-1)show(i+1,1,true);else if(f.dataset.autosubmit==="1"&&all())submit()},reduce?60:220);

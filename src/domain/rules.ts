@@ -9,10 +9,12 @@ const DAY = 24 * HOUR;
 
 // ------------------------------------------------------------------ age --
 
+/** Age on today's date in Bangkok (UTC+7, no DST), not UTC's date. */
 export function ageOn(birthDate: string, now: Date = new Date()): number {
   const [y, m, d] = birthDate.split("-").map(Number);
-  let age = now.getUTCFullYear() - y;
-  const beforeBirthday = now.getUTCMonth() + 1 < m || (now.getUTCMonth() + 1 === m && now.getUTCDate() < d);
+  const bkk = new Date(now.getTime() + 7 * 3_600_000);
+  let age = bkk.getUTCFullYear() - y;
+  const beforeBirthday = bkk.getUTCMonth() + 1 < m || (bkk.getUTCMonth() + 1 === m && bkk.getUTCDate() < d);
   if (beforeBirthday) age -= 1;
   return age;
 }

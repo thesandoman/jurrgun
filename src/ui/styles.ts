@@ -86,6 +86,7 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 form{margin:0}
 .field{display:flex;flex-direction:column;gap:6px;margin:18px 0}
 .field label,fieldset legend{font-weight:600;font-size:.94rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .social{display:flex;flex-direction:column;gap:10px;margin:16px 0 4px}
 .social-btn{justify-content:center;gap:10px;font-weight:700}
 .social-line{background:#06c755;color:#fff;border-color:#06c755}
@@ -371,7 +372,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:3px so
 .pill span{border-width:1.5px}
 .pill input:checked+span,.answer input:checked+span{background:var(--deep);border-color:var(--deep);color:var(--on-deep)}
 .tag.accent{background:color-mix(in srgb,var(--lime) 35%,var(--surface));color:var(--deep)}
-@media (prefers-color-scheme:dark){.tag.accent{color:var(--on-deep-2);background:var(--brand-soft)}}
+@media (prefers-color-scheme:dark){.tag.accent{color:var(--on-deep-2);background:var(--brand-soft)}
+  /* Deep green barely differs from a dark card, so picked items go bright. */
+  .pill input:checked+span,.answer input:checked+span{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}}
 
 /* Progress */
 .flow-progress,.bar,.me-bar{height:10px;border-radius:999px}
@@ -383,7 +386,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:3px so
 .tabbar a.on{color:var(--lime);background:rgba(255,255,255,.08);font-weight:700}
 .tabbar a.center{background:var(--lime);color:var(--deep);border-radius:22px;margin:-26px 4px 0;box-shadow:0 0 0 5px var(--bg),0 10px 22px rgba(4,40,22,.3)}
 .tabbar a.center.on{background:var(--lime);color:var(--deep);outline:none;box-shadow:0 0 0 5px var(--bg),0 0 0 8px var(--fresh)}
-body:has(.tabbar) .flow-bar{bottom:calc(84px + env(safe-area-inset-bottom))}
+body:has(.tabbar) .flow-bar{bottom:calc(112px + env(safe-area-inset-bottom))}
+/* The tab bar sits above the page: an open accessibility menu must end above it. */
+body:has(.tabbar) .topbar .a11y-panel{max-height:calc(100dvh - 200px - env(safe-area-inset-bottom))}
 
 /* Flow cards */
 .flow-emoji{display:grid;place-items:center;width:64px;height:64px;font-size:2.1rem;margin-bottom:10px;border-radius:22px;background:color-mix(in srgb,var(--lime) 30%,var(--surface));transform:rotate(-4deg)}

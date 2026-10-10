@@ -226,6 +226,24 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     expect((await kinds(w.id, "event_changed")).length).toBe(1);
     const [wr] = await db().select().from(registrations).where(and(eq(registrations.eventId, id), eq(registrations.accountId, w.id))).limit(1);
     expect(wr.status).toBe("offered");
+
+    // Back to draft would strand the people coming: refused.
+    const [moved] = await db().select().from(events).where(eq(events.id, id)).limit(1);
+    const unpublish = await req(`/admin/events/${id}/edit`, {
+      cookie: admin.cookie,
+      form: validForm({
+        title: moved.title,
+        startsAt: toInput(moved.startsAt),
+        endsAt: toInput(moved.endsAt),
+        venueName: moved.venueName,
+        district: moved.district,
+        capacity: "2",
+        status: "draft",
+      }),
+    });
+    expect(unpublish.status).toBe(400);
+    const [still] = await db().select({ status: events.status }).from(events).where(eq(events.id, id)).limit(1);
+    expect(still.status).toBe("published");
   });
 
   it("pre-fills the form from a VisitBangkok route", async () => {

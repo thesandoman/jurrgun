@@ -36,6 +36,7 @@ import {
   events,
   loginAttempts,
   notifications,
+  oauthLinks,
   profiles,
   registrations,
   reports,
@@ -133,6 +134,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(notifications).where(inArray(notifications.accountId, ids)),
       db.delete(contactShares).where(inArray(contactShares.accountId, ids)),
       db.delete(consents).where(inArray(consents.accountId, ids)),
+      // Frees their Google / LINE identity, so they can sign up again later.
+      db.delete(oauthLinks).where(inArray(oauthLinks.accountId, ids)),
       // Their mutual connections end, so the other person no longer sees them.
       db
         .update(connections)

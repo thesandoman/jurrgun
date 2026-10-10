@@ -724,10 +724,13 @@ async function buddyNicknames(db: Db, event: Event, accountId: string, now = new
   const hidden = await blockedWith(db, accountId, others);
   const visible = others.filter((m) => !hidden.has(m));
   if (visible.length === 0) return [];
+  // Only buddies who are still coming: an active account with an active seat.
   const rows = await db
     .select({ nickname: profiles.nickname })
     .from(profiles)
-    .where(inArray(profiles.accountId, visible))
+    .innerJoin(accounts, eq(accounts.id, profiles.accountId))
+    .innerJoin(registrations, and(eq(registrations.accountId, profiles.accountId), eq(registrations.eventId, event.id)))
+    .where(and(inArray(profiles.accountId, visible), eq(accounts.status, "active"), inArray(registrations.status, [...ACTIVE])))
     .limit(10);
   return rows.map((r) => r.nickname);
 }

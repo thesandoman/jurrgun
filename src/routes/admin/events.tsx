@@ -878,6 +878,23 @@ adminEvents.post(
         </>
       ));
     if (!validated || coverErr) return bad([...errors, ...(coverErr ? [coverErr] : [])]);
+    // Unpublishing would hide the event, its passes and its cancel button from
+    // people already coming (and then strike them as no-shows). Cancel instead.
+    if (e.status === "published" && validated.status === "draft") {
+      const [held] = await db
+        .select({ id: registrations.id })
+        .from(registrations)
+        .where(and(eq(registrations.eventId, e.id), inArray(registrations.status, REACHABLE)))
+        .limit(1);
+      if (held) {
+        return bad([
+          v.t(
+            "มีคนลงทะเบียนแล้ว จึงเปลี่ยนกลับเป็นฉบับร่างไม่ได้ ถ้าจัดไม่ได้ให้ยกเลิกกิจกรรมแทน (ระบบจะแจ้งทุกคน)",
+            "People have already signed up, so this can't go back to draft. If it can't go ahead, cancel the event instead (everyone is notified).",
+          ),
+        ]);
+      }
+    }
     let coverKey = e.coverKey;
     if (file) {
       coverKey = await uploadCover(c, e.id, file);

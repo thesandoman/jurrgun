@@ -54,7 +54,13 @@ import {
   consents,
   contactShares,
   events,
+  blocks,
+  feedback,
+  invites,
   notifications,
+  oauthLinks,
+  strikes,
+  vibes,
   profiles,
   pulseQuestions,
   pulseResponses,
@@ -283,6 +289,12 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
       <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
       <form method="post" action="/settings/profile" enctype="multipart/form-data">
+        {/* Enter / "Go" submits with the FIRST submit button. Without this one that
+            would be a prompt's "↻ Different question", which swaps the prompt and
+            deletes its answer. Off-screen rather than display:none so Safari uses it. */}
+        <button type="submit" class="sr-only" tabindex={-1} aria-hidden="true">
+          {t("บันทึก", "Save")}
+        </button>
         <Section id="photo" emoji="📸" title={t("รูปโปรไฟล์", "Profile photo")} hint={t("ไม่บังคับ รูปที่เห็นหน้าชัด ๆ ช่วยให้จำกันได้ในงาน", "Optional. A clear, friendly photo helps people find you at events.")}>
           <div class="pf-photo-main">
             {props.photo ? (
@@ -906,8 +918,50 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     rid ? db.select({ phase: wellbeing.phase, q1: wellbeing.q1, q2: wellbeing.q2, q3: wellbeing.q3, createdAt: wellbeing.createdAt }).from(wellbeing).where(eq(wellbeing.researchId, rid)).limit(10) : Promise.resolve([]),
   ]);
 
-  // Other people in my connections: nickname only.
-  const otherIds = [...new Set(conns.map((x) => (x.a === id ? x.b : x.a)))];
+  const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked] = await Promise.all([
+    db
+      .select({ type: vibes.archetype, modifier: vibes.modifier, scores: vibes.vector, visibleToGroupmates: vibes.visible, takenAt: vibes.takenAt })
+      .from(vibes)
+      .where(eq(vibes.accountId, id))
+      .limit(1),
+    db
+      .select({ event: events.title, reason: strikes.reason, expiresAt: strikes.expiresAt, waived: strikes.waivedBy, createdAt: strikes.createdAt })
+      .from(strikes)
+      .leftJoin(events, eq(events.id, strikes.eventId))
+      .where(eq(strikes.accountId, id))
+      .limit(500),
+    db.select({ blocked: blocks.blocked, createdAt: blocks.createdAt }).from(blocks).where(eq(blocks.blocker, id)).limit(2000),
+    db
+      .select({
+        event: events.title,
+        metNewPerson: feedback.metNewPerson,
+        wouldMeetAgain: feedback.wouldMeetAgain,
+        feltSafe: feedback.feltSafe,
+        groupRating: feedback.groupRating,
+        comment: feedback.comment,
+        createdAt: feedback.createdAt,
+      })
+      .from(feedback)
+      .leftJoin(events, eq(events.id, feedback.eventId))
+      .where(eq(feedback.accountId, id))
+      .limit(1000),
+    db
+      .select({ event: events.title, used: invites.usedAt, createdAt: invites.createdAt })
+      .from(invites)
+      .leftJoin(events, eq(events.id, invites.eventId))
+      .where(eq(invites.inviter, id))
+      .limit(1000),
+    db
+      .select({ event: events.title, usedAt: invites.usedAt })
+      .from(invites)
+      .leftJoin(events, eq(events.id, invites.eventId))
+      .where(eq(invites.usedBy, id))
+      .limit(1000),
+    db.select({ provider: oauthLinks.provider, linkedAt: oauthLinks.createdAt }).from(oauthLinks).where(eq(oauthLinks.accountId, id)).limit(10),
+  ]);
+
+  // Other people in my connections and blocks: nickname only.
+  const otherIds = [...new Set([...conns.map((x) => (x.a === id ? x.b : x.a)), ...myBlocks.map((b) => b.blocked)])];
   const others = otherIds.length
     ? await db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, otherIds)).limit(otherIds.length)
     : [];
@@ -926,6 +980,13 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
       return { with: conn ? (nick.get(conn.a === id ? conn.b : conn.a) ?? null) : null, method: s.method, value: s.value, createdAt: s.createdAt };
     }),
     reportsIFiled: reps,
+    peopleIBlocked: myBlocks.map((b) => ({ nickname: nick.get(b.blocked) ?? null, createdAt: b.createdAt })),
+    feedbackIGave: myFeedback,
+    strikes: myStrikes.map(({ waived, ...rest }) => ({ ...rest, waived: !!waived })),
+    bangkokType: vibe[0] ?? null,
+    invitesICreated: invitesMade.map((x) => ({ event: x.event, used: !!x.used, createdAt: x.createdAt })),
+    invitesIAccepted: inviteUsed,
+    signInWith: linked,
     notifications: notes,
     cityPulse: { answers: pulse, wellbeing: wb },
   };
@@ -965,6 +1026,8 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.update(accounts).set({ status: "deactivated", deactivatedAt: new Date(), researchId: null }).where(eq(accounts.id, id)),
     db.update(profiles).set({ photoKey: null, bio: {}, updatedAt: new Date() }).where(eq(profiles.accountId, id)),
     db.delete(sessions).where(eq(sessions.accountId, id)),
+    // Unlink Google / LINE now: signing in with them again starts a fresh account.
+    db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
     audit(db, id, "account.deactivated", { type: "account", id }),
   ]);
   await releaseUpcomingSeats(c.env, id);

@@ -526,21 +526,30 @@ type SegRow = { key: string; label: string; cell: Cell };
 /**
  * Segments with at least k respondents get their own row; the rest are
  * merged into one "other" row so no small group is ever singled out.
+ *
+ * The "other" row must itself reach k. Otherwise overall minus the shown rows
+ * gives the small group's exact answers (12 in district A, 15 overall, so the
+ * 3 in "other" are known). Smallest shown rows are folded in until it does.
  */
-function segmentRows(m: Map<string, Cell>, labelOf: (k: string) => string, otherLabel: string): SegRow[] {
-  const rows: SegRow[] = [];
+export function segmentRows(m: Map<string, Cell>, labelOf: (k: string) => string, otherLabel: string): SegRow[] {
+  let rows: SegRow[] = [];
   const other = cell();
   let merged = 0;
+  const fold = (x: Cell) => {
+    merged++;
+    other.n += x.n;
+    other.sum += x.sum;
+    for (const [v, n] of x.counts) other.counts.set(v, (other.counts.get(v) ?? 0) + n);
+  };
   for (const [k, x] of m) {
     if (safeCount(x.n) !== null && k !== "unknown") rows.push({ key: k, label: labelOf(k), cell: x });
-    else {
-      merged++;
-      other.n += x.n;
-      other.sum += x.sum;
-      for (const [v, n] of x.counts) other.counts.set(v, (other.counts.get(v) ?? 0) + n);
-    }
+    else fold(x);
   }
-  rows.sort((a, b) => a.label.localeCompare(b.label));
+  if (merged && other.n > 0) {
+    rows.sort((a, b) => a.cell.n - b.cell.n);
+    while (safeCount(other.n) === null && rows.length) fold(rows.shift()!.cell);
+  }
+  rows = rows.sort((a, b) => a.label.localeCompare(b.label));
   if (merged) rows.push({ key: "other", label: otherLabel, cell: other });
   return rows;
 }

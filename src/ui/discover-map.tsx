@@ -353,7 +353,7 @@ pause.addEventListener("click", () => {
 /** Layout for the full-screen map. Uses the app's tokens; dark mode follows the device. */
 export const FULLMAP_CSS = `
 body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:none}
-.fullmap{position:fixed;inset:0;--tk-h:30px;--top-h:52px;--tab-h:calc(64px + env(safe-area-inset-bottom));--sheet-h:56px;--gap:8px}
+.fullmap{position:fixed;inset:0;--tk-h:30px;--top-h:52px;--tab-h:calc(108px + env(safe-area-inset-bottom));--sheet-h:56px;--gap:8px}
 .fd-skip{position:absolute;left:-9999px}
 .fd-skip:focus{left:8px;top:8px;z-index:20;background:var(--surface);padding:8px 12px;border-radius:10px;border:2px solid var(--brand)}
 /* map behind everything */

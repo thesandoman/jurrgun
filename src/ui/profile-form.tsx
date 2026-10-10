@@ -375,7 +375,7 @@ export const PROFILE_FORM_CSS = `
 .pf-photo-main{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .pf-photo-main img,.pf-photo-main .pf-initial{width:96px;height:96px;border-radius:28px;object-fit:cover}
 .pf-initial{display:grid;place-items:center;background:var(--hero);color:#fff;font-size:2.2rem;font-weight:700}
-.pf-save{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:3;display:flex;justify-content:center;margin:28px 0}
+.pf-save{position:sticky;bottom:calc(112px + env(safe-area-inset-bottom));z-index:3;display:flex;justify-content:center;margin:28px 0}
 .pf-save .btn{min-width:220px;box-shadow:var(--shadow)}
 `;
 

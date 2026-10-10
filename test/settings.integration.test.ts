@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { and, desc, eq } from "drizzle-orm";
 import { ENV, HAS_DB, TEST_PASSWORD, createMember, db, req } from "./helpers";
 import app from "../src/index";
-import { accounts, auditLog, connections, consents, events, profiles, registrations, pulseQuestions, pulseResponses, sessions } from "../src/schema";
+import { accounts, auditLog, connections, consents, events, oauthLinks, profiles, registrations, pulseQuestions, pulseResponses, sessions } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
 
 const baseProfile = {
@@ -245,6 +245,16 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(data.cityPulse.answers.map((a: { answer: unknown }) => a.answer)).toContain("hello pulse");
     expect(text).not.toMatch(/password|salt/i);
     expect(text).not.toContain(m.researchId);
+    for (const key of ["peopleIBlocked", "feedbackIGave", "strikes", "bangkokType", "invitesICreated", "invitesIAccepted", "signInWith"]) {
+      expect(data).toHaveProperty(key);
+    }
+  });
+
+  it("deactivating unlinks Google / LINE so the person can sign up fresh later", async () => {
+    const m = await createMember();
+    await db().insert(oauthLinks).values({ id: newId(), provider: "line", subject: `sub-${newId()}`, accountId: m.id });
+    await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
+    expect(await db().select().from(oauthLinks).where(eq(oauthLinks.accountId, m.id))).toHaveLength(0);
   });
 
   it("deactivation needs confirmation, cuts researchId, ends sessions and blocks login", async () => {
