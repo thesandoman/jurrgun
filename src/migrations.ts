@@ -85,5 +85,16 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"identity_oauth_links_provider_subject_idx\" ON \"identity_oauth_links\" (\"provider\",\"subject\");",
       "CREATE INDEX \"identity_oauth_links_account_idx\" ON \"identity_oauth_links\" (\"account_id\");"
     ]
+  },
+  {
+    "id": "0004_cynical_professor_monster",
+    "statements": [
+      "ALTER TABLE \"identity_accounts\" ADD COLUMN \"trusted_host\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"visibility\" text DEFAULT 'public' NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"private_token\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"review_note\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"submitted_at\" timestamp with time zone;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"payment_url\" text;"
+    ]
   }
 ];

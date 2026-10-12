@@ -86,6 +86,7 @@ import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/we
 import { kaipaEvents, type PartnerEvent } from "../services/kaipa";
 import { PartnerSection } from "../ui/partner-events";
 import { deferFor } from "./partners";
+import { canView } from "../domain/hosting";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -369,7 +370,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   };
   const mapView = c.req.query("view") !== "list"; // the map is the default
 
-  const where = [eq(events.status, "published"), gt(events.endsAt, now)];
+  // Private events open only through their link; they are never listed.
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now)];
   const win = whenWindow(q.when, now);
   if (win) where.push(gte(events.startsAt, win[0]), lt(events.startsAt, win[1]));
   if (values(DISTRICTS).includes(q.district)) where.push(eq(events.district, q.district));
@@ -679,21 +681,34 @@ function mapChips(list: Event[], lang: Lang): MapChip[] {
 // -------------------------------------------------------------- detail --
 
 /** The event, or null when it doesn't exist or this viewer may not see it. */
+/** Cookie remembering a private event's link, so RSVP and the pass work after opening it. */
+const privateCookie = (id: string) => `bkk_pev_${id.replace(/[^\w-]/g, "")}`;
+
+/**
+ * The event, if this member may see it (src/domain/hosting.ts canView):
+ * public events for everyone; private ones through their link (?t=…, then
+ * remembered in a cookie scoped to the event), for the host side, staff and
+ * anyone signed up; drafts and proposals for the host side and reviewers.
+ */
 async function visibleEvent(c: Ctx, id: string): Promise<Event | null> {
   const db = getDb(c.env);
   const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
   if (!event) return null;
-  if (event.status === "published" || c.var.user!.account.role !== "user") return event;
-  if (event.status === "cancelled") {
-    // People who had registered can still see that it was cancelled.
-    const [reg] = await db
-      .select({ id: registrations.id })
-      .from(registrations)
-      .where(and(eq(registrations.eventId, id), eq(registrations.accountId, c.var.user!.account.id)))
-      .limit(1);
-    if (reg) return event;
+  const a = c.var.user!.account;
+  const viewer = { id: a.id, role: a.role, partnerOrgId: a.partnerOrgId };
+  if (canView(event, viewer)) return event;
+  const fromLink = c.req.query("t");
+  const token = fromLink ?? getCookie(c, privateCookie(id)) ?? null;
+  const [reg] = await db
+    .select({ id: registrations.id })
+    .from(registrations)
+    .where(and(eq(registrations.eventId, id), eq(registrations.accountId, a.id)))
+    .limit(1);
+  if (!canView(event, viewer, { token, registered: !!reg })) return null;
+  if (fromLink && event.visibility === "private" && event.privateToken && fromLink === event.privateToken) {
+    setCookie(c, privateCookie(id), fromLink, { path: `/events/${id}`, httpOnly: true, sameSite: "Lax", secure: new URL(c.req.url).protocol === "https:", maxAge: 60 * 86_400 });
   }
-  return null;
+  return event;
 }
 
 async function myRegistration(db: Db, eventId: string, accountId: string): Promise<Registration | null> {
@@ -829,6 +844,11 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <Notice kind="warn">{t("กิจกรรมนี้ถูกยกเลิกแล้ว ขออภัยในความไม่สะดวก", "This event has been cancelled. Sorry for the change of plans.")}</Notice>
       ) : null}
       {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง — ผู้ใช้ทั่วไปยังไม่เห็น", "Draft — members can't see this yet")}</Notice> : null}
+      {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ — สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review — members can't see this yet")}</Notice> : null}
+      {event.status === "rejected" ? <Notice kind="warn">{t("ทีมงานส่งกลับให้แก้ไข", "Sent back by the team for changes")}{event.reviewNote ? `: ${event.reviewNote}` : ""}</Notice> : null}
+      {event.visibility === "private" ? (
+        <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เฉพาะคนที่ได้รับลิงก์เท่านั้นที่เห็น อย่าแชร์ต่อในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
+      ) : null}
       <Cover e={event} src={cover} class="ev-scene" />
       <Card class="ev-sheet">
         <p class="eyebrow">{eyebrow(event, t, lang)}</p>
@@ -898,9 +918,17 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             {event.costThb > 0 ? (
               <small>
                 {" "}
-                {t("ชำระนอกแอป ที่สถานที่หรือกับพาร์ตเนอร์", "Paid off-platform, at the venue or to the partner.")}
+                {t("ชำระนอกแอป ที่สถานที่หรือกับผู้จัด", "Paid off-platform, at the venue or to the host.")}
                 {event.paymentNote ? ` ${event.paymentNote}` : ""}
               </small>
+            ) : null}
+            {event.costThb > 0 && event.paymentUrl ? (
+              <>
+                {" "}
+                <a href={event.paymentUrl} target="_blank" rel="noopener noreferrer nofollow">
+                  {t("ชำระเงินกับผู้จัด ↗", "Pay the host ↗")}
+                </a>
+              </>
             ) : null}
           </dd>
           <dt>{t("ความคึกคัก", "Social intensity")}</dt>

@@ -75,6 +75,8 @@ export const accounts = pgTable(
     verification: text("verification").notNull().default("none"),
     /** not_checked | verified | not_verified (PRD §3.2). */
     bkkRegistered: text("bkk_registered").notNull().default("not_checked"),
+    /** Members whose events publish without review (set by bma_admin). */
+    trustedHost: boolean("trusted_host").notNull().default(false),
     /** Pseudonymous id used in research_* tables. Cut on account deletion. */
     researchId: text("research_id"),
     createdAt: created(),
@@ -210,8 +212,20 @@ export const events = pgTable(
     safetyInfo: text("safety_info").notNull().default(""),
     emergencyContact: text("emergency_contact").notNull().default(""),
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
-    /** draft | published | cancelled */
+    /**
+     * draft | pending (a member's proposal, waiting for review) | rejected
+     * (sent back with review_note) | published | cancelled
+     */
     status: text("status").notNull().default("draft"),
+    /** public (listed on Discover) | private (opens only with the private link) */
+    visibility: text("visibility").notNull().default("public"),
+    /** Secret for the private link (?t=…). Never logged or shown publicly; reset by the host. */
+    privateToken: text("private_token"),
+    /** Why a reviewer sent a proposal back, shown to its host. */
+    reviewNote: text("review_note"),
+    submittedAt: ts("submitted_at"),
+    /** Host's own payment page (pay at the venue otherwise). https only; Jurrgun never takes payment. */
+    paymentUrl: text("payment_url"),
     residentPriority: boolean("resident_priority").notNull().default(false),
     residentQuota: integer("resident_quota").notNull().default(0),
     buddyEnabled: boolean("buddy_enabled").notNull().default(false),

@@ -224,6 +224,7 @@ settingsRoutes.get("/settings", async (c) => {
       type={typeCard}
       badge={badge}
       links={[
+        { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("เสนอกิจกรรมของคุณเอง ฟรีหรือจ่ายที่สถานที่", "Propose your own event, free or pay at the venue"), tint: "lime" },
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions for BMA"), tint: "sky" },
         { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },

@@ -22,7 +22,7 @@ import { batch, getDb } from "../../db";
 import { suggestGroups } from "../../domain/matching";
 import { checkInOpen, strikeExpiry } from "../../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label, values } from "../../lib/constants";
-import { newId } from "../../lib/crypto";
+import { newId, randomToken } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
@@ -287,6 +287,8 @@ function StatusTag(props: { v: View; status: string }) {
   const { t } = props.v;
   if (props.status === "published") return <Tag tone="ok">{t("เผยแพร่", "Published")}</Tag>;
   if (props.status === "cancelled") return <Tag tone="warn">{t("ยกเลิก", "Cancelled")}</Tag>;
+  if (props.status === "pending") return <Tag tone="warn">{t("รอตรวจ", "Waiting for review")}</Tag>;
+  if (props.status === "rejected") return <Tag tone="warn">{t("ส่งกลับ", "Sent back")}</Tag>;
   return <Tag tone="muted">{t("ร่าง", "Draft")}</Tag>;
 }
 
@@ -310,6 +312,8 @@ type Draft = {
   languages: string[];
   costThb: string;
   paymentNote: string;
+  paymentUrl: string;
+  visibility: string;
   intensity: string;
   groupMin: string;
   groupMax: string;
@@ -345,6 +349,8 @@ function emptyDraft(): Draft {
     languages: ["th"],
     costThb: "0",
     paymentNote: "",
+    paymentUrl: "",
+    visibility: "public",
     intensity: "social",
     groupMin: "4",
     groupMax: "6",
@@ -381,6 +387,8 @@ function draftFromEvent(e: Event): Draft {
     languages: e.languages,
     costThb: String(e.costThb),
     paymentNote: e.paymentNote ?? "",
+    paymentUrl: e.paymentUrl ?? "",
+    visibility: e.visibility,
     intensity: e.intensity,
     groupMin: String(e.groupMin),
     groupMax: String(e.groupMax),
@@ -419,6 +427,8 @@ function draftFromBody(body: Record<string, unknown>): Draft {
     languages: list(body.languages),
     costThb: s("costThb"),
     paymentNote: s("paymentNote"),
+    paymentUrl: s("paymentUrl"),
+    visibility: s("visibility") || "public",
     intensity: s("intensity"),
     groupMin: s("groupMin"),
     groupMax: s("groupMax"),
@@ -570,6 +580,17 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   const costThb = intIn(d.costThb || "0", 0, 100_000);
   need(costThb !== null, "ค่าใช้จ่าย 0–100,000 บาท", "Cost must be 0–100,000 THB");
   need(d.paymentNote.length <= 500, "วิธีชำระเงินไม่เกิน 500 ตัวอักษร", "Payment note is at most 500 characters");
+  let paymentUrl: string | null = null;
+  if (d.paymentUrl) {
+    try {
+      const u = new URL(d.paymentUrl);
+      if (u.protocol === "https:" && d.paymentUrl.length <= 500) paymentUrl = u.toString();
+    } catch {
+      paymentUrl = null;
+    }
+    need(!!paymentUrl, "ลิงก์ชำระเงินต้องขึ้นต้นด้วย https://", "The payment link must start with https://");
+  }
+  need(d.visibility === "public" || d.visibility === "private", "เลือกการมองเห็น", "Choose who can see the event");
   need(values(INTENSITY).includes(d.intensity), "เลือกระดับความโซเชียล", "Choose a social intensity");
   const groupMin = intIn(d.groupMin, 2, 12);
   const groupMax = intIn(d.groupMax, 2, 12);
@@ -583,6 +604,8 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
 
   let status = d.status;
   if (existing?.status === "cancelled") status = "cancelled";
+  // A member's proposal keeps its review status unless staff pick draft or published.
+  else if (existing && (existing.status === "pending" || existing.status === "rejected") && status === existing.status) status = existing.status;
   else need(status === "draft" || status === "published", "สถานะไม่ถูกต้อง", "Invalid status");
 
   need(!d.hostAccountId || ctx.hosts.some((h) => h.id === d.hostAccountId), "ผู้ดูแลกิจกรรมไม่ถูกต้อง", "Choose a valid host");
@@ -616,6 +639,10 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
       languages: d.languages,
       costThb: costThb!,
       paymentNote: d.paymentNote || null,
+      paymentUrl,
+      visibility: d.visibility as "public" | "private",
+      // A private event needs its link; it survives switching back and forth.
+      privateToken: d.visibility === "private" ? (existing?.privateToken ?? randomToken(32)) : (existing?.privateToken ?? null),
       intensity: d.intensity,
       groupMin: groupMin!,
       groupMax: groupMax!,
@@ -652,6 +679,12 @@ function EventForm(props: {
   const statusOpts = [
     { value: "draft", th: "ร่าง (ยังไม่แสดงต่อสมาชิก)", en: "Draft (hidden from members)" },
     { value: "published", th: "เผยแพร่", en: "Published" },
+    ...(d.status === "pending" ? [{ value: "pending", th: "รอตรวจ (สมาชิกเสนอ)", en: "Waiting for review (member proposal)" }] : []),
+    ...(d.status === "rejected" ? [{ value: "rejected", th: "ส่งกลับให้แก้", en: "Sent back to the host" }] : []),
+  ];
+  const visOpts = [
+    { value: "public", th: "สาธารณะ — แสดงบนหน้าค้นหา", en: "Public — listed on Discover" },
+    { value: "private", th: "ส่วนตัว — เฉพาะคนที่มีลิงก์", en: "Private — only people with the link" },
   ];
   return (
     <form method="post" action={props.action} enctype="multipart/form-data">
@@ -733,6 +766,7 @@ function EventForm(props: {
         <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>
         <Field label={t("ค่าใช้จ่าย (บาท, 0 = ฟรี)", "Cost (THB, 0 = free)")} name="costThb" type="number" min={0} max={100000} value={d.costThb} />
         <Field label={t("วิธีชำระเงิน (นอกแอป)", "How to pay (off-platform)")} name="paymentNote" value={d.paymentNote} maxlength={500} />
+        <Field label={t("ลิงก์ชำระเงินของผู้จัด (ไม่บังคับ)", "Host's payment link (optional)")} name="paymentUrl" type="url" value={d.paymentUrl} placeholder="https://…" maxlength={500} />
         <TextArea label={t("การเข้าถึง", "Accessibility")} name="accessibility" value={d.accessibility} maxlength={1000} />
         <TextArea label={t("ความปลอดภัย / จุดนัดพบ", "Safety / meeting point")} name="safetyInfo" value={d.safetyInfo} maxlength={1000} />
         <Field label={t("ติดต่อฉุกเฉิน", "Emergency contact")} name="emergencyContact" value={d.emergencyContact} maxlength={200} />
@@ -750,6 +784,7 @@ function EventForm(props: {
         ) : (
           <Select label={t("สถานะ", "Status")} name="status" options={statusOpts} value={d.status} lang={lang} />
         )}
+        <Select label={t("ใครเห็นกิจกรรมนี้", "Who can see it")} name="visibility" options={visOpts} value={d.visibility} lang={lang} />
       </Card>
       <div class="row end">
         <LinkButton href={BASE} kind="ghost">
@@ -1114,7 +1149,14 @@ adminEvents.get(
           <span>📍 {e.venueName} · {label(DISTRICTS, e.district, lang)}</span>
           <span>👤 {t("โฮสต์", "Host")}: {hostRow[0]?.nickname ?? t("ยังไม่กำหนด", "not assigned")}</span>
           {e.visitBangkokRoute ? <span>🧭 {label(VISITBANGKOK_ROUTES, e.visitBangkokRoute, lang)}</span> : null}
+          {e.visibility === "private" ? <span>🔒 {t("ส่วนตัว", "Private")}</span> : null}
         </div>
+        {e.visibility === "private" && e.privateToken && (editable || e.hostAccountId === a.id) ? (
+          <div class="field">
+            <label for="private-link">{t("ลิงก์ส่วนตัว (ส่งให้คนที่ชวนเท่านั้น)", "Private link (send it only to people you invite)")}</label>
+            <input id="private-link" type="text" readonly value={`${new URL(c.req.url).origin}/events/${e.id}?t=${encodeURIComponent(e.privateToken)}`} onfocus="this.select()" />
+          </div>
+        ) : null}
         <div class="row" style="margin:10px 0">
           {e.status !== "cancelled" ? <LinkButton href={`${BASE}/${e.id}/checkin`}>{t("📷 จุดเช็กอิน", "📷 Check-in station")}</LinkButton> : null}
           {editable ? (

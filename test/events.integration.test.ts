@@ -172,13 +172,17 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(await has("when=all", later)).toBe(true);
   });
 
-  it("detail: 404 for missing and draft events; staff can preview drafts", async () => {
+  it("detail: 404 for missing and draft events; only the event's host side and reviewers preview drafts", async () => {
     const m = await createMember();
     const host = await createMember({ role: "host" });
-    const draft = await mkEvent({ status: "draft" });
+    const otherHost = await createMember({ role: "host" });
+    const mod = await createMember({ role: "moderator" });
+    const draft = await mkEvent({ status: "draft", hostAccountId: host.id });
     expect((await req(`/events/${newId()}`, { cookie: m.cookie })).status).toBe(404);
     expect((await req(`/events/${draft}`, { cookie: m.cookie })).status).toBe(404);
+    expect((await req(`/events/${draft}`, { cookie: otherHost.cookie })).status).toBe(404);
     expect((await req(`/events/${draft}`, { cookie: host.cookie })).status).toBe(200);
+    expect((await req(`/events/${draft}`, { cookie: mod.cookie })).status).toBe(200);
     const pub = await mkEvent({ costThb: 250, paymentNote: "Pay at the door", plusOneAllowed: true });
     const html = await (await req(`/events/${pub}`, { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Pay at the door");
