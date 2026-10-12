@@ -83,6 +83,9 @@ import {
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
 import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
+import { kaipaEvents, type PartnerEvent } from "../services/kaipa";
+import { PartnerSection } from "../ui/partner-events";
+import { deferFor } from "./partners";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -387,10 +390,24 @@ eventRoutes.get("/events", requireMember, async (c) => {
     where.push(lte(events.ageMin, age), gte(events.ageMax, age));
   }
 
+  // Partner (Kaipa) ticketed events: only the filters that mean something for them.
+  const jurrgunOnly = !!(q.district || q.tag || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident);
+  const partnersP = jurrgunOnly
+    ? Promise.resolve([] as PartnerEvent[])
+    : kaipaEvents(c.env, { defer: deferFor(c) })
+        .then((all) =>
+          all.filter(
+            (e) =>
+              (!win || (e.startsAt >= win[0] && e.startsAt < win[1])) &&
+              (!q.free || e.hasFree) &&
+              (!q.text || `${e.name} ${e.venue} ${e.city}`.toLowerCase().includes(q.text.toLowerCase())),
+          ),
+        )
+        .catch(() => [] as PartnerEvent[]);
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(100);
   const ids = list.map((e) => e.id);
   const hintHidden = getCookie(c, QUIZ_HINT_COOKIE) === "hide";
-  const [taken, mine, myVibe, coverPairs, weather] = await Promise.all([
+  const [taken, mine, myVibe, coverPairs, weather, partners] = await Promise.all([
     takenCounts(db, ids),
     ids.length
       ? db
@@ -402,6 +419,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     hintHidden ? Promise.resolve([{ id: "hidden" }]) : db.select({ id: vibes.accountId }).from(vibes).where(eq(vibes.accountId, user.account.id)).limit(1),
     Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(c.env, e)] as const)),
     mapView ? bangkokWeather(c.env).catch(() => null) : Promise.resolve(null),
+    partnersP,
   ]);
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
@@ -441,16 +459,20 @@ eventRoutes.get("/events", requireMember, async (c) => {
         {t(`${unplaced} กิจกรรมยังไม่มีตำแหน่งบนแผนที่ แต่อยู่ในรายการนี้`, `${unplaced} event${unplaced === 1 ? " isn't" : "s aren't"} on the map yet, but ${unplaced === 1 ? "it's" : "they're"} in this list`)}
       </p>
     ) : null;
-  const cards =
-    list.length === 0 ? (
-      <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ กลับมาดูใหม่เร็ว ๆ นี้", "No events match these filters yet. Check back soon.")}</Empty>
-    ) : (
-      list.map((e, i) => (
-        <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
-          <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} feat={!mapView && i === 0} />
-        </div>
-      ))
-    );
+  const cards = (
+    <>
+      {list.length === 0 ? (
+        <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ กลับมาดูใหม่เร็ว ๆ นี้", "No events match these filters yet. Check back soon.")}</Empty>
+      ) : (
+        list.map((e, i) => (
+          <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
+            <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} feat={!mapView && i === 0} />
+          </div>
+        ))
+      )}
+      <PartnerSection events={partners} t={t} lang={lang} />
+    </>
+  );
 
   if (mapView) {
     const week = list.filter((e) => e.startsAt.getTime() < now.getTime() + 7 * 86_400_000);

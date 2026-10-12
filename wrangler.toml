@@ -15,6 +15,13 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 LOG_LEVEL = "debug"
 
+# Kaipa partner events, LOCAL dev only: their DEV API, every country (dev has
+# test events in the UK and Malaysia, none in Thailand yet). The live app reads
+# these from SV Cloud settings instead; unset there means the feature is off.
+KAIPA_API_URL = "https://dev.kaipa.io"
+KAIPA_FRONTEND_URL = "https://dev-frontend.kaipa.io"
+KAIPA_COUNTRIES = "*"
+
 # Your LOCAL database. Not a secret — it points at Postgres on your own machine,
 # which INSTALL.md sets up. The app running on SV Cloud ignores this: it reaches
 # your real database through the platform, with no connection string and no

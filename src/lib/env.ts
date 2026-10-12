@@ -17,6 +17,10 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   GOOGLE_CLIENT_SECRET?: string;
   LINE_CHANNEL_ID?: string;
   LINE_CHANNEL_SECRET?: string;
+  /** Kaipa partner events (src/services/kaipa.ts): API and frontend base URLs, and which countries to show ("*" = all). */
+  KAIPA_API_URL?: string;
+  KAIPA_FRONTEND_URL?: string;
+  KAIPA_COUNTRIES?: string;
   /** Set in tests: skip calls to outside services (weather). */
   NO_EXTERNAL?: string;
 };
