@@ -3,9 +3,9 @@
  * trusted hosts publish directly, private events open only by their link.
  */
 import { describe, expect, it } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { accounts, events, notifications, registrations } from "../src/schema";
+import { accounts, events, notifications, profiles, registrations } from "../src/schema";
 import { canView, checkProposal } from "../src/domain/hosting";
 
 const bkk = (daysAhead: number, hour: number) => {
@@ -123,6 +123,35 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     expect(r.headers.get("location")).toBe("/host?notice=published");
     const [second] = await db().select().from(events).where(and(eq(events.createdBy, m.id), eq(events.title, "Second meet-up")));
     expect(second.status).toBe("published");
+  });
+
+  it("members, moderators and admins can all host; staff publish directly, even without a member profile", async () => {
+    const [mod, admin, member] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "bma_admin" }), createMember()]);
+    // Staff accounts may never have done member onboarding.
+    await db().update(profiles).set({ onboardedAt: null }).where(inArray(profiles.accountId, [mod.id, admin.id]));
+    for (const staff of [mod, admin]) {
+      expect((await req("/host/new", { cookie: staff.cookie })).status).toBe(200);
+      const r = await req("/host/new", { cookie: staff.cookie, form: proposal({ title: `Staff meet-up ${staff.id.slice(0, 4)}` }) });
+      expect(r.headers.get("location")).toBe("/host?notice=published");
+    }
+    // A member who hasn't finished onboarding is sent to finish it.
+    await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, member.id));
+    expect((await req("/host/new", { cookie: member.cookie })).headers.get("location")).toBe("/onboarding");
+    // Moderators run check-in for the events they host.
+    const [mine] = await db().select({ id: events.id }).from(events).where(eq(events.createdBy, mod.id));
+    expect((await req("/admin/events", { cookie: mod.cookie })).status).toBe(200);
+    expect((await req(`/admin/events/${mine.id}`, { cookie: mod.cookie })).status).toBe(200);
+  });
+
+  it("nobody approves their own proposal", async () => {
+    const m = await createMember();
+    await req("/host/new", { cookie: m.cookie, form: proposal({ title: "My own idea" }) });
+    const e = await latest(m.id);
+    await db().update(accounts).set({ role: "moderator" }).where(eq(accounts.id, m.id));
+    const r = await req(`/admin/review/${e.id}/approve`, { cookie: m.cookie, method: "POST", form: {} });
+    expect(r.headers.get("location")).toBe("/admin/review?notice=own");
+    const [still] = await db().select({ status: events.status }).from(events).where(eq(events.id, e.id));
+    expect(still.status).toBe("pending");
   });
 
   it("private events: never listed, open with the link, RSVP through it, and a reset retires old links", async () => {

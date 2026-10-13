@@ -7,27 +7,34 @@
  *   POST /host/:id/withdraw             take a proposal back (it becomes a draft)
  *   POST /host/:id/private-link/reset   new private link; the old one stops working
  *
- * A proposal waits for review (src/routes/admin/review.tsx) unless its host
- * publishes directly (trusted host, partner admin, Jurrgun team). Rules live
+ * Members, moderators and admins can host. A member's proposal waits for
+ * review (src/routes/admin/review.tsx) unless they're a trusted host; the
+ * Jurrgun team (admins, moderators) and partner admins publish directly. Rules live
  * in src/domain/hosting.ts. Money never passes through Jurrgun: the host says
  * whether it's free or paid at the venue, and may link their own payment page.
  */
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
-import { checkProposal, memberCanEdit, ownsEvent, publishesDirectly, toBangkokInput, type ProposalInput } from "../domain/hosting";
+import { canHost, checkProposal, memberCanEdit, ownsEvent, publishesDirectly, toBangkokInput, type ProposalInput } from "../domain/hosting";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit } from "../lib/records";
-import { requireMember } from "../lib/session";
+import { requireUser } from "../lib/session";
 import { events, type Event } from "../schema";
 import { Button, Card, Choices, Empty, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 
 export const hostRoutes = new Hono<AppEnv>();
-hostRoutes.use("/host", requireMember);
-hostRoutes.use("/host/*", requireMember);
+// Members (once onboarded), moderators and admins can host; staff don't need a member profile.
+const requireHost = async (c: Context<AppEnv>, next: () => Promise<void>) => {
+  const u = c.var.user!;
+  if (!canHost(u.account, !!u.profile?.onboardedAt)) return c.redirect("/onboarding");
+  await next();
+};
+hostRoutes.use("/host", requireUser, requireHost);
+hostRoutes.use("/host/*", requireUser, requireHost);
 
 type C = Context<AppEnv>;
 /** Proposals waiting at once, per member: keeps the review queue fair. */

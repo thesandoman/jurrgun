@@ -29,8 +29,17 @@ export type HostedEvent = {
 /** People who review member proposals. */
 export const isReviewer = (role: string) => role === "bma_admin" || role === "moderator";
 
-/** Accounts whose events publish without review. */
-export const publishesDirectly = (a: { role: string; trustedHost: boolean }) => a.trustedHost || a.role === "bma_admin" || a.role === "partner_admin";
+/** Staff who may host without member onboarding (they may not have a member profile). */
+export const isStaffHost = (role: string) => role === "bma_admin" || role === "moderator" || role === "partner_admin";
+
+/**
+ * Who can host: members (once onboarded), moderators and admins.
+ * Whose events publish without review: the Jurrgun team (admins and
+ * moderators, who would otherwise review their own), partner admins, and
+ * members marked trusted.
+ */
+export const canHost = (a: { role: string }, onboarded: boolean) => onboarded || isStaffHost(a.role);
+export const publishesDirectly = (a: { role: string; trustedHost: boolean }) => a.trustedHost || isStaffHost(a.role);
 
 /** The host, the member who proposed it, or a partner admin of its organisation. */
 export function ownsEvent(e: HostedEvent, v: Viewer): boolean {

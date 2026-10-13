@@ -62,7 +62,8 @@ import {
 } from "../../ui/kit";
 
 export const adminEvents = new Hono<AppEnv>();
-adminEvents.use("*", requireRole("host", "partner_admin"));
+// Moderators host events too: they see and operate only the events they host (scopeWhere / canSee).
+adminEvents.use("*", requireRole("host", "partner_admin", "moderator"));
 
 type Ctx = Context<AppEnv>;
 type Db = ReturnType<typeof getDb>;

@@ -47,6 +47,7 @@ adminReview.get("/", async (c) => {
       <p class="muted">{t("ตรวจความปลอดภัย ความถูกต้อง และหลักปฏิบัติ ก่อนเผยแพร่", "Check safety, accuracy and the code of conduct before anything goes live.")}</p>
       {notice === "approved" ? <Notice kind="ok">{t("เผยแพร่แล้ว และแจ้งผู้จัดแล้ว", "Published, and the host has been told.")}</Notice> : null}
       {notice === "rejected" ? <Notice kind="ok">{t("ส่งกลับให้ผู้จัดแก้ไขแล้ว", "Sent back to the host with your note.")}</Notice> : null}
+      {notice === "own" ? <Notice kind="warn">{t("อนุมัติกิจกรรมของตัวเองไม่ได้ ให้ทีมงานคนอื่นตรวจ", "You can't approve your own event. Ask another reviewer.")}</Notice> : null}
       {notice === "gone" ? <Notice kind="warn">{t("รายการนี้ถูกตรวจหรือถอนไปแล้ว", "That one was already reviewed or withdrawn.")}</Notice> : null}
       {notice === "need_note" ? <Notice kind="error">{t("ใส่เหตุผลให้ผู้จัด (ไม่เกิน 500 ตัวอักษร)", "Add a note for the host (up to 500 characters).")}</Notice> : null}
       {queue.length === 0 ? (
@@ -144,6 +145,8 @@ adminReview.post("/:id/approve", async (c) => {
   const e = await pending(c);
   if (!e) return c.redirect("/admin/review?notice=gone");
   const me = c.var.user!.account;
+  // Nobody approves their own proposal.
+  if (e.createdBy === me.id) return c.redirect("/admin/review?notice=own");
   const trust = str((await c.req.parseBody()).trust) === "1";
   const db = getDb(c.env);
   const ops = [

@@ -201,8 +201,9 @@ function AdminNav(props: { v: View }) {
   const all = role === "bma_admin";
   const links: [string, string, boolean][] = [
     ["/admin", t("ภาพรวม", "Overview"), true],
-    ["/admin/events", t("กิจกรรม", "Events"), all || ["host", "partner_admin"].includes(role)],
+    ["/admin/events", t("กิจกรรม", "Events"), all || ["host", "partner_admin", "moderator"].includes(role)],
     ["/admin/review", t("ตรวจกิจกรรม", "Event review"), all || role === "moderator"],
+    ["/host", t("🎪 จัดกิจกรรม", "🎪 Host an event"), all || role === "moderator" || role === "partner_admin"],
     ["/admin/moderation", t("รายงาน", "Moderation"), all || role === "moderator"],
     ["/admin/users", t("ผู้ใช้", "Users"), all || role === "moderator"],
     ["/admin/pulse", "City Pulse", all],
