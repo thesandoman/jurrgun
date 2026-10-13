@@ -1,7 +1,33 @@
 # Bangkok Buddy: spec for approval
 
-**Status:** proposal. Nothing is built yet. Approve or adjust this, then it gets
-built in one pass.
+**Status:** built (MVP): `/buddy`, `src/routes/buddy.tsx`, `src/domain/buddy.ts`.
+Partner integrations and profile prompts below are still proposals.
+
+## How matching works (as built)
+
+A **weekly clearinghouse**, not first come first served and not a score of
+anyone's "desirability":
+- Once a week, everyone opted in without a buddy is matched together, at the
+  same time. The round is run by the first `/buddy` visit of the week (Bangkok
+  time). A row in `social_buddy_rounds` is the lock, so it runs once.
+- **Preferences come only from what people told us:** Bangkok Type (each
+  type's "clicks with", then natural or complementary match) and districts
+  (same home, or home near the other type's hangouts). A shared language,
+  each other's private age range, no block either way and no past buddy are
+  required. There's no Elo, no popularity and no predicted chance of liking.
+- **Stable roommates (Irving):** no two people would both rather be with each
+  other than with who they got. With strict preferences that is also Pareto
+  optimal.
+- **When no stable matching exists:** greedy pairs, then Pareto improvements
+  (swap partners between two pairs, or pair two people left alone) only
+  when nobody is worse off and someone is better off.
+- **Optimal search (reservation level):** in your first week you're only
+  offered a strong fit. The bar eases each week you wait, so nobody waits
+  forever and nobody is rushed into a poor fit.
+- **Expiry:** a proposal nobody answered expires at the next round.
+
+Defaults chosen for the open questions: matching is **weekly**, stamps come
+from **buddy quests only** for now, and no partner pilot is built yet.
 
 ## What Jurrgun is (one line)
 

@@ -350,7 +350,13 @@ async function pendingCount(c: C, accountId: string): Promise<number> {
 hostRoutes.get("/host/new", (c) => {
   const v = view(c);
   const me = c.var.user!.account;
-  return formPage(c, { v, d: emptyInput(v.lang), action: "/host/new", editing: false, direct: publishesDirectly(me) });
+  // Prefill from a Bangkok Buddy quest ("Make it a table"): a suggestion only, the form validates as usual.
+  const d = emptyInput(v.lang);
+  const title = (c.req.query("title") ?? "").slice(0, 120);
+  const district = c.req.query("district") ?? "";
+  if (title) d[v.lang === "en" ? "titleEn" : "title"] = title;
+  if (DISTRICTS.some((x) => x.value === district)) d.district = district;
+  return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me) });
 });
 
 hostRoutes.post("/host/new", async (c) => {

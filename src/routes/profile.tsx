@@ -14,12 +14,15 @@
  * Mounted at "/", so middleware is attached per route, never with use("*").
  */
 import { Hono, type Context } from "hono";
-import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { cleanBio, currentDeck, universityKey } from "../content/profile";
 import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, connections, profiles, registrations, type Account, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, connections, profiles, registrations, type Account, type Profile } from "../schema";
+import { clickReason } from "../domain/buddy";
+import { ARCHETYPES } from "../vibe/archetypes";
+import { L } from "../lib/i18n";
 import { getObject, getObjectUrl } from "../storage";
 import { LinkButton, page, view } from "../ui/kit";
 import { ProfileCard, type CardPerson } from "../ui/profile-card";
@@ -59,7 +62,7 @@ export function cardPerson(p: Profile): CardPerson {
  * null. Four small indexed queries, run together.
  */
 export async function visibleProfile(db: Db, viewerId: string, targetId: string): Promise<{ account: Account; profile: Profile } | null> {
-  const [rows, blocked, conn, shared] = await Promise.all([
+  const [rows, blocked, conn, shared, buddy] = await Promise.all([
     db.select({ account: accounts, profile: profiles }).from(accounts).innerJoin(profiles, eq(profiles.accountId, accounts.id)).where(eq(accounts.id, targetId)).limit(1),
     viewerId === targetId
       ? Promise.resolve([])
@@ -99,17 +102,53 @@ export async function visibleProfile(db: Db, viewerId: string, targetId: string)
             ),
           )
           .limit(1),
+    // A current Bangkok Buddy (proposed or active) may see the card too.
+    viewerId === targetId
+      ? Promise.resolve([])
+      : db
+          .select({ id: buddyMatches.id })
+          .from(buddyMatches)
+          .where(
+            and(
+              ne(buddyMatches.state, "ended"),
+              or(and(eq(buddyMatches.aAccount, viewerId), eq(buddyMatches.bAccount, targetId)), and(eq(buddyMatches.aAccount, targetId), eq(buddyMatches.bAccount, viewerId))),
+            ),
+          )
+          .limit(1),
   ]);
   const row = rows[0];
   if (!row || !row.profile.onboardedAt) return null;
   if (viewerId === targetId) return row;
   if (!isActive(row.account)) return null;
   if (blocked.length) return null;
-  if (!conn.length && !shared.length) return null;
+  if (!conn.length && !shared.length && !buddy.length) return null;
   return row;
 }
 
 const photoUrl = (accountId: string, slot: string) => `/people/${encodeURIComponent(accountId)}/photo/${encodeURIComponent(slot)}`;
+
+/** "You're a Food Hunter, they're a Story Collector": why you click and a place to try together. */
+function Together(props: { v: ReturnType<typeof view>; mine: keyof typeof ARCHETYPES; theirs: keyof typeof ARCHETYPES }) {
+  const { t, lang } = props.v;
+  const mine = ARCHETYPES[props.mine];
+  const theirs = ARCHETYPES[props.theirs];
+  const why = clickReason(props.mine, props.theirs);
+  const place = theirs.hangouts[0];
+  return (
+    <section class="card together">
+      <span class="eyebrow">{t("ด้วยกัน", "Together")}</span>
+      <p>
+        {t(`คุณเป็น${L(lang, mine.name)} เขาเป็น${L(lang, theirs.name)}`, `You're ${L(lang, mine.name)}, they're ${L(lang, theirs.name)}.`)} {why ? L(lang, why) : null}
+      </p>
+      {place ? (
+        <p class="muted">
+          {place.emoji} {t("ลองไปด้วยกัน: ", "Try together: ")}
+          <strong>{L(lang, place.name)}</strong> · {L(lang, place.why)}
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
 async function renderCard(c: Ctx, target: { account: Account; profile: Profile }, self: boolean) {
   const v = view(c);
@@ -155,6 +194,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
           ) : undefined
         }
       />
+      {!self && theirVibe?.visible && vibes.get(me.account.id) ? <Together v={v} mine={vibes.get(me.account.id)!.archetype} theirs={theirVibe.archetype} /> : null}
       {self ? null : (
         <p class="row muted">
           <a href={`/report?account=${encodeURIComponent(target.account.id)}`}>{t("รายงาน", "Report")}</a>

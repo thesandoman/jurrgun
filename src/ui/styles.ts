@@ -313,6 +313,18 @@ body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 .meter .pm{color:var(--ink-3);font-weight:400}
 .type-range{font-weight:600;color:var(--ink)!important;margin:.2rem 0!important}
 .type-range a{text-decoration:none}
+.buddy-head{display:flex;gap:12px;align-items:flex-start;margin:6px 0 10px}
+.buddy-head .type-emoji{font-size:2.4rem;line-height:1}
+.buddy-head h2{margin:0}
+.buddy-head p{margin:.2rem 0}
+.buddy-safety{margin:10px 0;padding:10px 14px;border-radius:14px;background:var(--surface)}
+.buddy-safety summary{font-weight:600;cursor:pointer}
+.passport-bar{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin:6px 0 10px}
+.passport-bar i{display:block;height:100%;background:var(--brand)}
+.passport{list-style:none;padding:0;margin:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.passport li{font-size:.9rem;color:var(--ink-3)}
+.passport li.on{color:var(--ink);font-weight:600}
+.together p{margin:.3rem 0}
 .answers-six{gap:8px}
 .answers-six .answer-card,.answers-six label{font-size:.95rem;line-height:1.35}
 .blend{list-style:none;padding:0;margin:10px 0;display:grid;gap:10px}

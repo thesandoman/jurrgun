@@ -61,6 +61,7 @@ const NOTICES: Record<string, [string, string]> = {
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
   vibe_saved: ["บันทึกแล้ว", "Saved"],
+  stamped: ["ได้แสตมป์เขตใหม่ลงพาสปอร์ตแล้ว!", "New district stamped in your passport!"],
 };
 
 export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {

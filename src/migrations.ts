@@ -102,5 +102,19 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "ALTER TABLE \"social_vibes\" ADD COLUMN \"blend\" jsonb;"
     ]
+  },
+  {
+    "id": "0006_far_dark_phoenix",
+    "statements": [
+      "CREATE TABLE \"social_buddy_matches\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"a_account\" text NOT NULL,\n\t\"b_account\" text NOT NULL,\n\t\"week\" text NOT NULL,\n\t\"state\" text NOT NULL,\n\t\"a_meet_at\" timestamp with time zone,\n\t\"b_meet_at\" timestamp with time zone,\n\t\"connection_id\" text,\n\t\"ended_by\" text,\n\t\"ended_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_buddy_optins\" (\n\t\"account_id\" text PRIMARY KEY NOT NULL,\n\t\"intent\" text NOT NULL,\n\t\"active\" boolean DEFAULT true NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_buddy_quests\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"match_id\" text NOT NULL,\n\t\"week\" text NOT NULL,\n\t\"scenario\" text NOT NULL,\n\t\"type_code\" text NOT NULL,\n\t\"district\" text NOT NULL,\n\t\"a_done_at\" timestamp with time zone,\n\t\"b_done_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_buddy_rounds\" (\n\t\"week\" text PRIMARY KEY NOT NULL,\n\t\"method\" text NOT NULL,\n\t\"pool\" integer DEFAULT 0 NOT NULL,\n\t\"pairs\" integer DEFAULT 0 NOT NULL,\n\t\"ran_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_passport_stamps\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"district\" text NOT NULL,\n\t\"source\" text NOT NULL,\n\t\"quest_id\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE INDEX \"social_buddy_matches_a_idx\" ON \"social_buddy_matches\" (\"a_account\",\"state\");",
+      "CREATE INDEX \"social_buddy_matches_b_idx\" ON \"social_buddy_matches\" (\"b_account\",\"state\");",
+      "CREATE UNIQUE INDEX \"social_buddy_quests_week_idx\" ON \"social_buddy_quests\" (\"match_id\",\"week\");",
+      "CREATE UNIQUE INDEX \"social_passport_stamps_idx\" ON \"social_passport_stamps\" (\"account_id\",\"district\");"
+    ]
   }
 ];

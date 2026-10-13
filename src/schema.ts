@@ -560,6 +560,84 @@ export const loginAttempts = pgTable(
   (t) => [index("identity_login_attempts_user_idx").on(t.username, t.createdAt), index("identity_login_attempts_ip_idx").on(t.ipHash, t.createdAt)],
 );
 
+// ----------------------------------------------------------- Bangkok Buddy --
+// docs/BANGKOK-BUDDY.md. One buddy at a time, matched on Bangkok Type and
+// districts; weekly quests at real places stamp a shared 50-district passport.
+
+export const buddyOptins = pgTable("social_buddy_optins", {
+  accountId: text("account_id").primaryKey(),
+  /** friends | activity | open ("open to more"). PRIVATE: never shown to the buddy. */
+  intent: text("intent").notNull(),
+  active: boolean("active").notNull().default(true),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+/**
+ * One row per weekly clearinghouse round. Inserting the row is the lock: the
+ * request that inserts it runs the round, everyone else sees it already ran.
+ */
+export const buddyRounds = pgTable("social_buddy_rounds", {
+  week: text("week").primaryKey(),
+  /** stable | pareto | empty */
+  method: text("method").notNull(),
+  pool: integer("pool").notNull().default(0),
+  pairs: integer("pairs").notNull().default(0),
+  ranAt: ts("ran_at").notNull().defaultNow(),
+});
+
+export const buddyMatches = pgTable(
+  "social_buddy_matches",
+  {
+    id: text("id").primaryKey(),
+    /** a < b. */
+    aAccount: text("a_account").notNull(),
+    bAccount: text("b_account").notNull(),
+    /** ISO week the match was made, e.g. "2026-W42". One new match per person per week. */
+    week: text("week").notNull(),
+    /** proposed (waiting for both to say meet) | active | ended */
+    state: text("state").notNull(),
+    aMeetAt: ts("a_meet_at"),
+    bMeetAt: ts("b_meet_at"),
+    /** The circle connection created when both said meet. */
+    connectionId: text("connection_id"),
+    endedBy: text("ended_by"),
+    endedAt: ts("ended_at"),
+    createdAt: created(),
+  },
+  (t) => [index("social_buddy_matches_a_idx").on(t.aAccount, t.state), index("social_buddy_matches_b_idx").on(t.bAccount, t.state)],
+);
+
+export const buddyQuests = pgTable(
+  "social_buddy_quests",
+  {
+    id: text("id").primaryKey(),
+    matchId: text("match_id").notNull(),
+    week: text("week").notNull(),
+    /** The hand-written quiz-bank answer the quest comes from: scenario id + type code. */
+    scenario: text("scenario").notNull(),
+    typeCode: text("type_code").notNull(),
+    district: text("district").notNull(),
+    aDoneAt: ts("a_done_at"),
+    bDoneAt: ts("b_done_at"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_buddy_quests_week_idx").on(t.matchId, t.week)],
+);
+
+export const passportStamps = pgTable(
+  "social_passport_stamps",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    district: text("district").notNull(),
+    /** buddy (a completed quest) */
+    source: text("source").notNull(),
+    questId: text("quest_id"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_passport_stamps_idx").on(t.accountId, t.district)],
+);
+
 // ------------------------------------------------------------------- audit --
 
 export const auditLog = pgTable(
@@ -580,3 +658,5 @@ export type Account = typeof accounts.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;
+export type BuddyMatch = typeof buddyMatches.$inferSelect;
+export type BuddyQuest = typeof buddyQuests.$inferSelect;

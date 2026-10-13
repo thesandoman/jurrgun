@@ -449,6 +449,8 @@ type CircleRow = {
   createdAt: Date;
   other: { id: string; name: string; resident: boolean; vibe?: VibeInfo };
   event: { id: string; title: string; startsAt: Date } | null;
+  /** A Bangkok Buddy connection rather than one from an event. */
+  buddy?: boolean;
   mine: { method: string; value: string } | null;
   theirs: { method: string; value: string } | null;
 };
@@ -506,6 +508,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
       createdAt: r.createdAt,
       other: { id: otherId, name: displayName(p), resident: showsResidentBadge(p, p), vibe: vibeMap.get(otherId) },
       event: e ? { id: e.id, title: eventTitle(e, lang), startsAt: e.startsAt } : null,
+      buddy: r.eventId.startsWith("buddy:"),
       mine: mine ? { method: mine.method, value: mine.value } : null,
       theirs: theirs ? { method: theirs.method, value: theirs.value } : null,
     });
@@ -549,7 +552,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
             </h2>
             <TypeSpark v={props.v} theirs={r.other.vibe} mine={props.myVibe} />
             <p class="muted">
-              {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : ""} · {label(CHOICE_LABELS, r.level, lang)}
+              {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : r.buddy ? t("🤝 บัดดี้กรุงเทพฯ", "🤝 Bangkok Buddy") : ""} · {label(CHOICE_LABELS, r.level, lang)}
             </p>
             <dl>
               <dt>{t("ช่องทางที่คุณแชร์", "What you shared")}</dt>
