@@ -534,7 +534,7 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
   const me = c.var.user!.account.id;
   const lang = view(c).lang;
   const now = new Date();
-  const [matches, shares] = await Promise.all([
+  const [matches, allShares] = await Promise.all([
     db
       .select()
       .from(buddyMatches)
@@ -543,6 +543,9 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
       .limit(1),
     db.select({ eventId: circleShares.eventId, from: circleShares.fromAccount }).from(circleShares).where(eq(circleShares.toAccount, me)).orderBy(desc(circleShares.createdAt)).limit(50),
   ]);
+  // Only hangouts from people still in my circle: a removed or blocked host's private link is not shown.
+  const circleIds = new Set(rows.map((r) => r.other.id));
+  const shares = allShares.filter((x) => circleIds.has(x.from));
   const m = matches[0];
   const buddyId = m ? (m.aAccount === me ? m.bAccount : m.aAccount) : null;
   const eventIds = shares.map((x) => x.eventId);

@@ -380,6 +380,10 @@ describe.skipIf(!HAS_DB)("Circle: group hangouts", () => {
     const stranger = await createMember();
     await req(`/host/${id}/circle`, { cookie: stranger.cookie, form: { go: "1" } });
     expect(await db().select().from(circleShares).where(eq(circleShares.eventId, id))).toHaveLength(1);
+    // Once the host is blocked, their private link no longer shows on my circle page.
+    await req(`/block/${a.id}`, { cookie: b.cookie, form: { back: "/connections" } });
+    const after = await (await req("/connections?lang=en", { cookie: b.cookie })).text();
+    expect(after).not.toContain(`/events/${id}?t=${token}`);
   });
 });
 
