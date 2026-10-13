@@ -116,5 +116,17 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_buddy_quests_week_idx\" ON \"social_buddy_quests\" (\"match_id\",\"week\");",
       "CREATE UNIQUE INDEX \"social_passport_stamps_idx\" ON \"social_passport_stamps\" (\"account_id\",\"district\");"
     ]
+  },
+  {
+    "id": "0007_absent_namor",
+    "statements": [
+      "CREATE TABLE \"social_circle_shares\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"event_id\" text NOT NULL,\n\t\"from_account\" text NOT NULL,\n\t\"to_account\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_buddy_matches\" ADD COLUMN \"end_reason\" text;",
+      "ALTER TABLE \"social_buddy_matches\" ADD COLUMN \"end_requested_by\" text;",
+      "ALTER TABLE \"social_buddy_matches\" ADD COLUMN \"end_requested_at\" timestamp with time zone;",
+      "ALTER TABLE \"social_buddy_matches\" ADD COLUMN \"end_note\" text;",
+      "CREATE UNIQUE INDEX \"social_circle_shares_idx\" ON \"social_circle_shares\" (\"event_id\",\"to_account\");",
+      "CREATE INDEX \"social_circle_shares_to_idx\" ON \"social_circle_shares\" (\"to_account\");"
+    ]
   }
 ];

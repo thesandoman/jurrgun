@@ -602,6 +602,13 @@ export const buddyMatches = pgTable(
     connectionId: text("connection_id"),
     endedBy: text("ended_by"),
     endedAt: ts("ended_at"),
+    /** mutual | moved_off_app | notice | pass | expired | blocked (no ghosting: see /code-of-conduct). */
+    endReason: text("end_reason"),
+    /** A kind wrap-up asked for by one buddy; it closes when the other agrees, or after 7 days. */
+    endRequestedBy: text("end_requested_by"),
+    endRequestedAt: ts("end_requested_at"),
+    /** The wrap-up note key (WRAP_NOTES in domain/buddy.ts), told to the other buddy. */
+    endNote: text("end_note"),
     createdAt: created(),
   },
   (t) => [index("social_buddy_matches_a_idx").on(t.aAccount, t.state), index("social_buddy_matches_b_idx").on(t.bAccount, t.state)],
@@ -636,6 +643,19 @@ export const passportStamps = pgTable(
     createdAt: created(),
   },
   (t) => [uniqueIndex("social_passport_stamps_idx").on(t.accountId, t.district)],
+);
+
+/** A private hangout a host sent to their circle: shows on the recipient's circle page. */
+export const circleShares = pgTable(
+  "social_circle_shares",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").notNull(),
+    fromAccount: text("from_account").notNull(),
+    toAccount: text("to_account").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_circle_shares_idx").on(t.eventId, t.toAccount), index("social_circle_shares_to_idx").on(t.toAccount)],
 );
 
 // ------------------------------------------------------------------- audit --

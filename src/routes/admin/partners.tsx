@@ -25,7 +25,7 @@ export const ROLE_LABELS: Record<Role, [string, string]> = {
   partner_admin: ["แอดมินองค์กรพาร์ตเนอร์", "Partner org admin"],
   moderator: ["ผู้ดูแลความปลอดภัย", "Moderator"],
   insight_viewer: ["ผู้ดูข้อมูลเชิงลึก", "City Insight viewer"],
-  bma_admin: ["แอดมิน กทม.", "BMA admin"],
+  bma_admin: ["แอดมิน", "Admin"],
 };
 
 async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 200) {

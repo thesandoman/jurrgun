@@ -13,8 +13,8 @@ export type Text = { th: string; en: string };
 const t = (th: string, en: string): Text => ({ th, en });
 
 export const REVIEW_NOTE = t(
-  "ข้อมูลนี้เพื่อการเรียนรู้ทั่วไป ไม่ใช่คำแนะนำทางการแพทย์หรือกฎหมาย หากมีข้อสงสัยโปรดปรึกษาแพทย์หรือสายด่วนด้านล่าง (ฉบับร่างต้นแบบ — รอการตรวจทานจากสำนักอนามัยและฝ่ายกฎหมาย กทม.)",
-  "This is general education, not medical or legal advice. If in doubt, talk to a doctor or one of the helplines below. (Prototype draft — pending review by BMA's Health Department and legal team.)",
+  "ข้อมูลนี้เพื่อการเรียนรู้ทั่วไป ไม่ใช่คำแนะนำทางการแพทย์หรือกฎหมาย หากมีข้อสงสัยโปรดปรึกษาแพทย์หรือสายด่วนด้านล่าง (ฉบับร่างต้นแบบ รอการตรวจทานจากผู้เชี่ยวชาญด้านสุขภาพและกฎหมาย)",
+  "This is general education, not medical or legal advice. If in doubt, talk to a doctor or one of the helplines below. (Prototype draft, pending review by health and legal experts.)",
 );
 
 export type Helpline = { number: string; name: Text; when: Text; hours: Text; source: string };
@@ -746,7 +746,7 @@ export const FAQ: { q: Text; a: Text }[] = [
     a: t("ยกเลิกในแอปก่อนเริ่มกิจกรรม 24 ชั่วโมงได้ฟรี ถ้ายกเลิกช้าหรือไม่มาโดยไม่แจ้ง จะได้ 1 strike ซึ่งหมดอายุใน 90 วัน", "Cancel in the app at least 24 hours before — free. Late cancellations or no-shows get a strike that expires after 90 days."),
   },
   {
-    q: t("กทม. เห็นข้อมูลอะไรของฉันบ้าง?", "What does BMA see about me?"),
+    q: t("ทีมงานเห็นข้อมูลอะไรของฉันบ้าง?", "What can the team see about me?"),
     a: t("เจ้าหน้าที่ไม่เห็นสถานะความสัมพันธ์ อัตลักษณ์ทางเพศ หรือการเลือกของคุณ ข้อมูลวิจัยเมืองแสดงเป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น และคุณดาวน์โหลดหรือลบข้อมูลได้เอง", "Staff never see your relationship status, gender identity or choices. City research is only shown as totals of 10+ people, and you can download or delete your data yourself."),
   },
   {

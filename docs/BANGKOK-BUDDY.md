@@ -5,11 +5,12 @@ Partner integrations and profile prompts below are still proposals.
 
 ## How matching works (as built)
 
-A **weekly clearinghouse**, not first come first served and not a score of
+A **daily clearinghouse**, not first come first served and not a score of
 anyone's "desirability":
-- Once a week, everyone opted in without a buddy is matched together, at the
-  same time. The round is run by the first `/buddy` visit of the week (Bangkok
-  time). A row in `social_buddy_rounds` is the lock, so it runs once.
+- Once a day, everyone opted in without a buddy is matched together, at the
+  same time (Bangkok is large enough that a daily pool is big). The round is
+  run by the first `/buddy` visit of the day (Bangkok time). A row in
+  `social_buddy_rounds` is the lock, so it runs once.
 - **Preferences come only from what people told us:** Bangkok Type (each
   type's "clicks with", then natural or complementary match) and districts
   (same home, or home near the other type's hangouts). A shared language,
@@ -24,9 +25,27 @@ anyone's "desirability":
 - **Optimal search (reservation level):** in your first week you're only
   offered a strong fit. The bar eases each week you wait, so nobody waits
   forever and nobody is rushed into a poor fit.
-- **Expiry:** a proposal nobody answered expires at the next round.
+- **Expiry:** a proposal nobody answered closes after 3 days.
 
-Defaults chosen for the open questions: matching is **weekly**, stamps come
+## Quests
+
+- A **weekly quest** (a hand-written quiz-bank answer, alternating whose type picks).
+- A **monthly big quest** themed on the season or a Thai holiday
+  (`src/domain/seasons.ts`: Lunar New Year, kite season, Songkran, mango
+  season, Mother's Day, Vegetarian Festival, Loy Krathong, year-end lights).
+  It earns a season badge in the passport as well as the district stamp.
+
+## No ghosting
+
+An active buddy pairing never just goes quiet. It ends when:
+1. both agree in the app (one asks to wrap up with a kind note, the other agrees), or
+2. both have shared a contact in the circle and moved off the app (LINE, IG and so on), or
+3. one sends a kind wrap-up note and 7 days pass without a reply.
+
+Blocking ends it at once: safety first, and never counted as ghosting. The
+rule is also in the Code of Conduct (`/code-of-conduct#no-ghosting`).
+
+Defaults chosen for the open questions: matching is **daily**, stamps come
 from **buddy quests only** for now, and no partner pilot is built yet.
 
 ## What Jurrgun is (one line)

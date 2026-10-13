@@ -6,8 +6,11 @@
  *   POST /buddy/pause              stop new matches
  *   POST /buddy/:id/meet           say yes to this week's buddy
  *   POST /buddy/:id/pass           not this one (before both said yes)
- *   POST /buddy/:id/end            end an active buddy, no blame
- *   POST /buddy/:id/quest          "we did it": both tapping it stamps the district
+ *   POST /buddy/:id/end            wrap up kindly (no ghosting): agree to a wrap-up,
+ *                                  end at once if both moved off the app, or ask (7-day notice)
+ *   POST /buddy/:id/keep           take back my own wrap-up request
+ *   POST /buddy/:id/quest          "we did it" (weekly quest or the monthly big quest):
+ *                                  both tapping it stamps the district
  *   GET  /buddy/passport           your 50-district passport
  *
  * Hard rules, the same as People I Met:
@@ -18,21 +21,41 @@
  *    Bangkok circle, where contact sharing, reporting and blocking already live.
  *  - Blocked either way, outside each other's age range or with no shared
  *    language: never matched.
- *  - Matching is a weekly clearinghouse round (domain/buddy.ts clearBuddies),
- *    run by the first /buddy visit of the week, so nothing runs on a timer.
+ *  - Matching is a daily clearinghouse round (domain/buddy.ts clearBuddies),
+ *    run by the first /buddy visit of the day, so nothing runs on a timer.
+ *    Quests stay weekly, plus one themed big quest a month (domain/seasons.ts).
+ *  - No ghosting: an active pairing ends only when both agree, when both have
+ *    shared a contact (they moved off the app), or after a kind wrap-up note
+ *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
 import { Hono, type Context } from "hono";
-import { and, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
-import { BUDDY_INTENTS, clearBuddies, clickReason, isBuddyIntent, pickQuest, questText, romanceUnlocked, weekKey, type PoolMember } from "../domain/buddy";
+import {
+  BUDDY_INTENTS,
+  PROPOSAL_DAYS,
+  WRAP_NOTES,
+  WRAP_NOTICE_DAYS,
+  clearBuddies,
+  clickReason,
+  dayKey,
+  isBuddyIntent,
+  isWrapNote,
+  pickQuest,
+  questText,
+  romanceUnlocked,
+  weekKey,
+  type PoolMember,
+} from "../domain/buddy";
+import { monthKey, seasonQuestFor } from "../domain/seasons";
 import { ageOn, romanceCompatible, romanceEligible } from "../domain/rules";
 import { DISTRICTS } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
-import { L, type Lang } from "../lib/i18n";
+import { fmtDay, L, type Lang } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, buddyRounds, buddyOptins, buddyQuests, connections, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
 import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View } from "../ui/kit";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 
@@ -84,27 +107,47 @@ async function currentMatch(db: Db, me: string): Promise<BuddyMatch | null> {
 }
 
 const POOL_LIMIT = 1000;
-const WEEK_MS = 7 * 86_400_000;
+const DAY_MS = 86_400_000;
+const WEEK_MS = 7 * DAY_MS;
 
 /**
- * This week's clearinghouse round (domain/buddy.ts clearBuddies), run by the
- * first /buddy visit of the week. Inserting the week's row is the lock, so it
- * runs once. Everyone opted in by then, without a current buddy, is matched
- * together; whoever joins later is in next week's round.
+ * Today's clearinghouse round (domain/buddy.ts clearBuddies), run by the
+ * first /buddy visit of the day (Bangkok time). Inserting the day's row in
+ * social_buddy_rounds (its `week` column holds the round key) is the lock, so
+ * it runs once. Everyone opted in, without a current buddy, is matched
+ * together in one fair batch; Bangkok is big enough that a daily pool is large.
  */
 export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Promise<void> {
   const db = getDb(env);
+  const round = dayKey(now);
   const week = weekKey(now);
-  const [done] = await db.select({ week: buddyRounds.week }).from(buddyRounds).where(eq(buddyRounds.week, week)).limit(1);
+  const [done] = await db.select({ week: buddyRounds.week }).from(buddyRounds).where(eq(buddyRounds.week, round)).limit(1);
   if (done) return;
-  const claimed = await db.insert(buddyRounds).values({ week, method: "empty", pool: 0, pairs: 0, ranAt: now }).onConflictDoNothing().returning({ week: buddyRounds.week });
+  const claimed = await db.insert(buddyRounds).values({ week: round, method: "empty", pool: 0, pairs: 0, ranAt: now }).onConflictDoNothing().returning({ week: buddyRounds.week });
   if (!claimed.length) return;
 
-  // A proposal nobody answered by the next round expires, so nobody waits forever.
+  // A proposal neither answered closes after PROPOSAL_DAYS, so nobody waits forever.
   await db
     .update(buddyMatches)
-    .set({ state: "ended", endedBy: "expired", endedAt: now })
-    .where(and(eq(buddyMatches.state, "proposed"), ne(buddyMatches.week, week)));
+    .set({ state: "ended", endedBy: "expired", endReason: "expired", endedAt: now })
+    .where(and(eq(buddyMatches.state, "proposed"), lt(buddyMatches.createdAt, new Date(now.getTime() - PROPOSAL_DAYS * DAY_MS))));
+  // A kind wrap-up with no reply closes after WRAP_NOTICE_DAYS: the other buddy was told, so it isn't ghosting.
+  const lapsed = await db
+    .select()
+    .from(buddyMatches)
+    .where(and(eq(buddyMatches.state, "active"), isNotNull(buddyMatches.endRequestedAt), lt(buddyMatches.endRequestedAt, new Date(now.getTime() - WRAP_NOTICE_DAYS * DAY_MS))))
+    .limit(500);
+  if (lapsed.length) {
+    await batch(env, [
+      db
+        .update(buddyMatches)
+        .set({ state: "ended", endReason: "notice", endedAt: now })
+        .where(inArray(buddyMatches.id, lapsed.map((m) => m.id))),
+      ...lapsed.flatMap((m) =>
+        [m.aAccount, m.bAccount].map((x) => notify(db, x, "buddy_ended", "บัดดี้รอบนี้ปิดลงอย่างเป็นมิตรแล้ว รอบใหม่จะจับคู่ให้เร็ว ๆ นี้", "Your buddy pairing has wrapped up kindly. A new match is coming soon.", "/buddy")),
+      ),
+    ]);
+  }
   const optins = await db.select().from(buddyOptins).where(eq(buddyOptins.active, true)).orderBy(desc(buddyOptins.updatedAt)).limit(POOL_LIMIT);
   let ids = optins.map((o) => o.accountId);
   if (ids.length < 2) return;
@@ -140,6 +183,7 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
     const code = types.get(account.id);
     if (!code || busy.has(account.id) || !isActiveAccount(account, now) || !profile.onboardedAt) continue;
     const availableFrom = Math.max(since.get(account.id) ?? now.getTime(), lastEnded.get(account.id) ?? 0);
+    // The reservation bar eases weekly (domain/buddy.ts reservation), even though rounds are daily.
     pool.push({
       accountId: account.id,
       archetype: code,
@@ -153,16 +197,16 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
     });
   }
   ids = pool.map((p) => p.accountId);
-  const result = clearBuddies(pool, week);
-  const writes: Write[] = [db.update(buddyRounds).set({ method: result.method, pool: pool.length, pairs: result.pairs.length }).where(eq(buddyRounds.week, week))];
+  const result = clearBuddies(pool, round);
+  const writes: Write[] = [db.update(buddyRounds).set({ method: result.method, pool: pool.length, pairs: result.pairs.length }).where(eq(buddyRounds.week, round))];
   for (const [a, b] of result.pairs) {
     writes.push(
       db.insert(buddyMatches).values({ id: newId(), aAccount: a, bAccount: b, week, state: "proposed", createdAt: now }),
-      notify(db, a, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่สัปดาห์นี้", "You have a new Bangkok Buddy this week", "/buddy"),
-      notify(db, b, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่สัปดาห์นี้", "You have a new Bangkok Buddy this week", "/buddy"),
+      notify(db, a, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
+      notify(db, b, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
     );
   }
-  writes.push(audit(db, "system", "buddy.round", { type: "buddy_round", id: week }));
+  writes.push(audit(db, "system", "buddy.round", { type: "buddy_round", id: round }));
   await batch(env, writes);
 }
 
@@ -180,10 +224,51 @@ async function weekQuest(db: Db, m: BuddyMatch, types: Map<string, ArchetypeKey>
     .where(inArray(passportStamps.accountId, [m.aAccount, m.bAccount]))
     .limit(200);
   const pick = pickQuest(m.id, week, [ta, tb], new Set(stamps.map((s: { district: string }) => s.district)));
-  const quest: BuddyQuest = { id: newId(), matchId: m.id, week, scenario: pick.scenario, typeCode: pick.typeCode, district: pick.district, aDoneAt: null, bDoneAt: null, createdAt: now };
+  return saveQuest(db, { id: newId(), matchId: m.id, week, scenario: pick.scenario, typeCode: pick.typeCode, district: pick.district, aDoneAt: null, bDoneAt: null, createdAt: now });
+}
+
+/** This month's themed big quest (domain/seasons.ts), created on first view. */
+async function monthQuest(db: Db, m: BuddyMatch, now: Date): Promise<BuddyQuest | null> {
+  const key = monthKey(now);
+  const season = seasonQuestFor(key);
+  if (!season) return null;
+  const [existing] = await db.select().from(buddyQuests).where(and(eq(buddyQuests.matchId, m.id), eq(buddyQuests.week, key))).limit(1);
+  if (existing) return existing;
+  return saveQuest(db, { id: newId(), matchId: m.id, week: key, scenario: "season", typeCode: String(season.month), district: season.district, aDoneAt: null, bDoneAt: null, createdAt: now });
+}
+
+async function saveQuest(db: Db, quest: BuddyQuest): Promise<BuddyQuest | null> {
   await db.insert(buddyQuests).values(quest).onConflictDoNothing({ target: [buddyQuests.matchId, buddyQuests.week] });
-  const [row] = await db.select().from(buddyQuests).where(and(eq(buddyQuests.matchId, m.id), eq(buddyQuests.week, week))).limit(1);
+  const [row] = await db.select().from(buddyQuests).where(and(eq(buddyQuests.matchId, quest.matchId), eq(buddyQuests.week, quest.week))).limit(1);
   return row ?? null;
+}
+
+/** Both buddies have shared a contact in the circle: the friendship can carry on off the app. */
+async function movedOffApp(db: Db, m: BuddyMatch): Promise<boolean> {
+  if (!m.connectionId) return false;
+  const rows = await db.select({ accountId: contactShares.accountId }).from(contactShares).where(eq(contactShares.connectionId, m.connectionId)).limit(4);
+  return [m.aAccount, m.bAccount].every((x) => rows.some((r) => r.accountId === x));
+}
+
+/** Season badges: monthly big quests I finished with any buddy. */
+async function seasonBadges(db: Db, me: string): Promise<{ key: string; icon: string; theme: { en: string; th: string } }[]> {
+  const matches = await db
+    .select({ id: buddyMatches.id })
+    .from(buddyMatches)
+    .where(or(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, me)))
+    .limit(500);
+  if (!matches.length) return [];
+  const done = await db
+    .select({ week: buddyQuests.week })
+    .from(buddyQuests)
+    .where(and(inArray(buddyQuests.matchId, matches.map((m) => m.id)), eq(buddyQuests.scenario, "season"), isNotNull(buddyQuests.aDoneAt), isNotNull(buddyQuests.bDoneAt)))
+    .limit(200);
+  const out = new Map<string, { key: string; icon: string; theme: { en: string; th: string } }>();
+  for (const d of done) {
+    const sq = seasonQuestFor(d.week);
+    if (sq) out.set(d.week, { key: d.week, icon: sq.icon, theme: sq.theme });
+  }
+  return [...out.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
 // ------------------------------------------------------------------ views --
@@ -200,15 +285,15 @@ const SAFETY = (v: View) => (
   </details>
 );
 
-function OptIn(props: { v: View; intent?: string; hasType: boolean }) {
+function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultIntent?: string }) {
   const { t, lang } = props.v;
   return (
     <Card>
       <h2>🤝 {t("หาบัดดี้กรุงเทพฯ", "Get a Bangkok Buddy")}</h2>
       <p>
         {t(
-          "ทุกสัปดาห์เราจับคู่คุณกับหนึ่งคนที่ไทป์เข้ากันและอยู่ย่านใกล้กัน แล้วให้เควสต์ไปเที่ยวที่จริงในกรุงเทพฯ ทำเควสต์ครบ ได้แสตมป์เขตลงพาสปอร์ต 50 เขตของทั้งคู่",
-          "Each week we pair you with one person whose type clicks with yours and who lives nearby, with a quest to a real Bangkok place. Finish it together and you both stamp that district in your 50-district passport.",
+          "เราจับคู่คุณกับหนึ่งคนที่ไทป์เข้ากันและอยู่ย่านใกล้กัน มีเควสต์ไปที่จริงในกรุงเทพฯ ทุกสัปดาห์ และเควสต์ใหญ่ตามเทศกาลทุกเดือน ทำเควสต์ครบ ได้แสตมป์เขตลงพาสปอร์ต 50 เขตของทั้งคู่",
+          "We pair you with one person whose type clicks with yours and who lives nearby. Every week there's a quest to a real Bangkok place, and every month a big quest for the season or festival. Finish one together and you both stamp that district in your 50-district passport.",
         )}
       </p>
       {!props.hasType ? (
@@ -224,13 +309,20 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean }) {
             type="radio"
             required
             options={INTENT_OPTS}
-            values={[props.intent ?? "friends"]}
+            values={[props.intent ?? props.defaultIntent ?? "friends"]}
             lang={lang}
           />
           <p class="muted">
             {t(
               "บัดดี้จะเห็นชื่อเล่นและไทป์กรุงเทพฯ ของคุณ ความโรแมนติกจะขึ้นเฉพาะเมื่อทั้งคู่เลือก 'เปิดใจ' และทำเควสต์ด้วยกันครบสองครั้ง ถ้าไม่ตรงกัน จะไม่มีใครรู้",
               "Your buddy sees your nickname and Bangkok Type. Romance only comes up if you BOTH chose 'open to more' and finished two quests together. If not, nobody ever finds out.",
+            )}
+          </p>
+          <p class="muted">
+            🤝{" "}
+            {t(
+              "ไม่ทิ้งเงียบ: เลิกเป็นบัดดี้ได้เมื่อตกลงกันทั้งคู่ เมื่อย้ายไปคุยกันนอกแอปแล้ว (LINE, IG ฯลฯ) หรือส่งข้อความปิดท้ายอย่างสุภาพ ซึ่งจะปิดเองใน 7 วัน ความปลอดภัยมาก่อนเสมอ บล็อกได้ทันที",
+              "No ghosting: a buddy pairing ends when you both agree, when you've moved off the app together (LINE, IG and so on), or with a kind wrap-up note that closes on its own after 7 days. Safety first: you can always block at once.",
             )}
           </p>
           <Button>{props.intent ? t("บันทึก", "Save") : t("เริ่มเลย", "Start")}</Button>
@@ -258,7 +350,8 @@ function BuddyHeader(props: { v: View; nickname: string; theirs: ArchetypeKey | 
 
 function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; buddyName: string; types: Map<string, ArchetypeKey> }) {
   const { t, lang } = props.v;
-  const text = questText(props.q);
+  const season = props.q.scenario === "season" ? seasonQuestFor(props.q.week) : null;
+  const text = season ? { ...season.quest, icon: season.icon } : questText(props.q);
   const mineDone = side(props.m, props.me) === "a" ? props.q.aDoneAt : props.q.bDoneAt;
   const theirsDone = side(props.m, props.me) === "a" ? props.q.bDoneAt : props.q.aDoneAt;
   const picker = ARCHETYPES[props.q.typeCode as ArchetypeKey];
@@ -270,14 +363,15 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
   const hostHref = `/host/new?district=${encodeURIComponent(props.q.district)}&title=${encodeURIComponent(text ? (lang === "en" ? text.en : text.th) : "")}`;
   return (
     <Card>
-      <span class="eyebrow">{t("เควสต์สัปดาห์นี้", "This week's quest")}</span>
+      <span class="eyebrow">{season ? t(`เควสต์ใหญ่เดือนนี้ · ${season.theme.th}`, `This month's big quest · ${season.theme.en}`) : t("เควสต์สัปดาห์นี้", "This week's quest")}</span>
       {text ? (
         <h3>
           <span aria-hidden="true">{text.icon}</span> {L(lang, text)}
         </h3>
       ) : null}
       <p class="muted">
-        📍 {place} · {picker ? t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`) : null}
+        📍 {place}
+        {season ? <> · 🏅 {t("ได้เหรียญประจำฤดูด้วย", "Earns a season badge")}</> : picker ? <> · {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</> : null}
       </p>
       {mineDone && theirsDone ? (
         <Notice kind="ok">{t(`สำเร็จ! แสตมป์เขต${place}ลงพาสปอร์ตแล้ว`, `Done! ${place} is stamped in both your passports.`)}</Notice>
@@ -285,6 +379,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
         <Notice kind="info">{t("คุณกดเสร็จแล้ว รอบัดดี้กดอีกคน", "You've marked it done. Waiting for your buddy.")}</Notice>
       ) : (
         <form method="post" action={`/buddy/${props.m.id}/quest`}>
+          <input type="hidden" name="quest" value={props.q.week} />
           <Button>✅ {t("ไปมาแล้ว", "We did it")}</Button>
         </form>
       )}
@@ -305,7 +400,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
   );
 }
 
-function Passport(props: { v: View; stamped: Set<string>; compact?: boolean }) {
+function Passport(props: { v: View; stamped: Set<string>; compact?: boolean; badges?: { key: string; icon: string; theme: { en: string; th: string } }[] }) {
   const { t, lang } = props.v;
   return (
     <Card>
@@ -316,8 +411,20 @@ function Passport(props: { v: View; stamped: Set<string>; compact?: boolean }) {
         <i style={`width:${(props.stamped.size / 50) * 100}%`} />
       </div>
       {props.compact ? (
-        <a href="/buddy/passport">{t("ดูทั้ง 50 เขต", "See all 50 districts")} →</a>
+        <a href="/buddy/passport">{t("ดูทั้ง 50 เขตและเหรียญประจำฤดู", "See all 50 districts and season badges")} →</a>
       ) : (
+        <>
+        {props.badges?.length ? (
+          <p class="season-badges">
+            {props.badges.map((b) => (
+              <span class="season-badge" title={L(lang, b.theme)}>
+                {b.icon} {L(lang, b.theme)} <small>{b.key.slice(1)}</small>
+              </span>
+            ))}
+          </p>
+        ) : (
+          <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนกับบัดดี้ เพื่อสะสมเหรียญประจำฤดู", "Finish a monthly big quest with your buddy to collect season badges.")}</p>
+        )}
         <ul class="passport">
           {DISTRICTS.map((d) => (
             <li class={props.stamped.has(d.value) ? "on" : ""}>
@@ -325,8 +432,79 @@ function Passport(props: { v: View; stamped: Set<string>; compact?: boolean }) {
             </li>
           ))}
         </ul>
+        </>
       )}
     </Card>
+  );
+}
+
+/** The no-ghosting wrap-up: ask kindly, agree, or close at once once you've moved off the app. */
+function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) {
+  const { t, lang } = props.v;
+  const { m, me } = props;
+  const notes = Object.entries(WRAP_NOTES);
+  if (m.endRequestedBy === me) {
+    const closes = new Date((m.endRequestedAt?.getTime() ?? Date.now()) + WRAP_NOTICE_DAYS * 86_400_000);
+    return (
+      <Card>
+        <p>
+          🌙{" "}
+          {t(
+            `คุณขอปิดบัดดี้รอบนี้แล้ว บัดดี้ได้รับข้อความของคุณ จะปิดเองวันที่ ${fmtDay(closes, lang)} หากบัดดี้ไม่ได้ตกลงก่อน`,
+            `You asked to wrap up. Your buddy has your note. It closes on ${fmtDay(closes, lang)} unless they agree sooner.`,
+          )}
+        </p>
+        <form method="post" action={`/buddy/${m.id}/keep`}>
+          <Button kind="ghost">{t("ไม่ปิดแล้ว ไปต่อกัน", "Keep going after all")}</Button>
+        </form>
+      </Card>
+    );
+  }
+  if (m.endRequestedBy) {
+    const note = m.endNote && isWrapNote(m.endNote) ? WRAP_NOTES[m.endNote] : null;
+    return (
+      <Card>
+        <span class="eyebrow">{t("บัดดี้ขอปิดรอบนี้", "Your buddy would like to wrap up")}</span>
+        {note ? <p>💬 “{L(lang, note)}”</p> : null}
+        <p class="muted">
+          {t(
+            "ตกลงเพื่อปิดอย่างเป็นมิตร หรืออยากคุยกันต่อ แชร์ช่องทางติดต่อในวงคนรู้จักได้เลย ถ้าไม่ตอบ จะปิดเองใน 7 วัน",
+            "Agree to close it kindly. Want to keep in touch? Share a contact in your circle. If you don't reply, it closes on its own in 7 days.",
+          )}
+        </p>
+        <form method="post" action={`/buddy/${m.id}/end`}>
+          <input type="hidden" name="note" value="lovely" />
+          <Button>🤝 {t("ตกลง ขอบคุณนะ", "Agree, and say thanks")}</Button>
+        </form>
+      </Card>
+    );
+  }
+  return (
+    <details class="buddy-wrap">
+      <summary>{t("ปิดบัดดี้รอบนี้อย่างสุภาพ", "Wrap up kindly")}</summary>
+      <p class="muted">
+        {props.offApp
+          ? t("คุณทั้งคู่แชร์ช่องทางติดต่อกันแล้ว จึงปิดในแอปได้ทันที แล้วคุยกันต่อนอกแอป", "You've both shared a contact, so you can close here right away and carry on off the app.")
+          : t(
+              "ไม่ทิ้งเงียบ: บัดดี้จะได้รับข้อความของคุณ และปิดเมื่อบัดดี้ตกลง หรือเองใน 7 วัน ถ้ารู้สึกไม่ปลอดภัย บล็อกได้ทันทีด้านล่าง",
+              "No ghosting: your buddy gets your note, and it closes when they agree, or on its own after 7 days. If you feel unsafe, block below at once.",
+            )}
+      </p>
+      <form method="post" action={`/buddy/${m.id}/end`}>
+        <fieldset class="choices">
+          <legend>{t("ข้อความปิดท้าย", "Your wrap-up note")}</legend>
+          <div class="pills">
+            {notes.map(([key, text], i) => (
+              <label class="pill">
+                <input type="radio" name="note" value={key} checked={props.offApp ? key === "offapp" : i === 0} required />
+                <span>{L(lang, text)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <Button kind="ghost">{props.offApp ? t("ปิดในแอป", "Close here") : t("ส่งข้อความปิดท้าย", "Send the wrap-up")}</Button>
+      </form>
+    </details>
   );
 }
 
@@ -348,7 +526,8 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
   ]);
   const stamped = new Set(stamps.map((s) => s.district));
   const buddyName = buddyRows[0]?.nickname ?? "";
-  const quest = match?.state === "active" ? await weekQuest(db, match, types, now) : null;
+  const [quest, bigQuest, offApp] = match?.state === "active" ? await Promise.all([weekQuest(db, match, types, now), monthQuest(db, match, now), movedOffApp(db, match)]) : [null, null, false];
+  const defaultIntent = c.var.user!.profile?.romanceOn ? "open" : "friends";
   const iSaidMeet = match ? (side(match, me) === "a" ? match.aMeetAt : match.bMeetAt) : null;
 
   return page(
@@ -356,22 +535,22 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
     { title: t("บัดดี้กรุงเทพฯ", "Bangkok Buddy"), tab: "me" },
     <>
       <h1>🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h1>
-      <p class="muted">{t("หนึ่งคน หนึ่งเมือง 50 เขต ไปสำรวจด้วยกันทีละสัปดาห์", "One person, one city, 50 districts. Explore it together, a week at a time.")}</p>
+      <p class="muted">{t("หนึ่งคน หนึ่งเมือง 50 เขต เควสต์ทุกสัปดาห์ และเควสต์ใหญ่ตามเทศกาลทุกเดือน", "One person, one city, 50 districts. A quest every week, and a big festival quest every month.")}</p>
       {!optin || !optin.active ? (
-        <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} />
+        <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} defaultIntent={defaultIntent} />
       ) : !match ? (
         <Card>
           <h2>⏳ {t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
           <p>
             {t(
-              "เราจับคู่ทุกคนพร้อมกันสัปดาห์ละครั้ง ทุกวันจันทร์ ให้ทุกคนได้คู่ที่เข้ากันที่สุดอย่างยุติธรรม ไม่ใช่ใครมาก่อนได้ก่อน ถ้ายังไม่มีคนที่เข้ากันพอ ยิ่งรอ เกณฑ์จะค่อย ๆ ผ่อนลง เราจะแจ้งเตือนเมื่อมีบัดดี้",
-              "Everyone is matched together once a week, on Monday, so each person gets the best fit fairly, not first come first served. If there's no good fit yet, the bar eases a little each week you wait. We'll notify you when you have a buddy.",
+              "ทุกวันเราจับคู่ทุกคนที่รออยู่พร้อมกันในรอบเดียว ให้ทุกคนได้คู่ที่เข้ากันที่สุดอย่างยุติธรรม ไม่ใช่ใครมาก่อนได้ก่อน ถ้ายังไม่มีคนที่เข้ากันพอ ยิ่งรอนาน เกณฑ์จะค่อย ๆ ผ่อนลงทุกสัปดาห์ เราจะแจ้งเตือนเมื่อมีบัดดี้",
+              "Every day, everyone waiting is matched together in one fair round, so each person gets the best fit, not first come first served. If there's no good fit yet, the bar eases a little each week you wait. We'll notify you when you have a buddy.",
             )}
           </p>
         </Card>
       ) : match.state === "proposed" ? (
         <Card>
-          <span class="eyebrow">{t("บัดดี้ของคุณสัปดาห์นี้", "Your buddy this week")}</span>
+          <span class="eyebrow">{t("บัดดี้คนใหม่ของคุณ", "Your new buddy")}</span>
           <BuddyHeader v={v} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
           <p>{t("ทั้งคู่ต้องกด 'นัดเจอ' ก่อน จึงจะเห็นโปรไฟล์ แชร์ช่องทางติดต่อ และได้เควสต์แรก", "You both need to tap 'Meet' to see each other's card, share a contact and get your first quest.")}</p>
           {iSaidMeet ? (
@@ -398,11 +577,10 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
             </div>
           </Card>
           {quest ? <QuestCard v={v} m={match} q={quest} me={me} buddyName={buddyName} types={types} /> : null}
+          {bigQuest ? <QuestCard v={v} m={match} q={bigQuest} me={me} buddyName={buddyName} types={types} /> : null}
           {SAFETY(v)}
+          <WrapUp v={v} m={match} me={me} offApp={offApp} />
           <div class="row">
-            <form method="post" action={`/buddy/${match.id}/end`}>
-              <Button kind="ghost">{t("ขอบคุณนะ ขอบัดดี้ใหม่", "Thanks, new buddy")}</Button>
-            </form>
             <a href={`/report?account=${otherId}`}>{t("รายงาน", "Report")}</a>
             <form method="post" action={`/block/${otherId}`}>
               <input type="hidden" name="back" value="/buddy" />
@@ -415,7 +593,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       {optin?.active ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
-          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} />
+          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} defaultIntent={defaultIntent} />
           <form method="post" action="/buddy/pause">
             <Button kind="ghost">{t("หยุดรับบัดดี้ใหม่", "Stop new buddies")}</Button>
           </form>
@@ -428,7 +606,11 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
 buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
   const v = view(c);
   const db = getDb(c.env);
-  const stamps = await db.select({ district: passportStamps.district }).from(passportStamps).where(eq(passportStamps.accountId, c.var.user!.account.id)).limit(60);
+  const me = c.var.user!.account.id;
+  const [stamps, badges] = await Promise.all([
+    db.select({ district: passportStamps.district }).from(passportStamps).where(eq(passportStamps.accountId, me)).limit(60),
+    seasonBadges(db, me),
+  ]);
   return page(
     c,
     { title: v.t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport"), tab: "me" },
@@ -436,7 +618,7 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
       <p>
         <a href="/buddy">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
       </p>
-      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} />
+      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} badges={badges} />
     </>,
   );
 });
@@ -502,21 +684,77 @@ buddyRoutes.post("/buddy/:id/meet", requireMember, async (c) => {
   return c.redirect("/buddy?notice=connected");
 });
 
-async function endMatch(c: Ctx, allowed: string) {
+/** Before both said meet: "Not this one" is fine, it hadn't started. */
+buddyRoutes.post("/buddy/:id/pass", requireMember, async (c) => {
   const found = await myMatch(c);
-  if (!found || found.m.state !== allowed) return c.redirect("/buddy");
+  if (!found || found.m.state !== "proposed") return c.redirect("/buddy");
   const { m, me, them } = found;
   const db = getDb(c.env);
   await batch(c.env, [
-    db.update(buddyMatches).set({ state: "ended", endedBy: me, endedAt: new Date() }).where(and(eq(buddyMatches.id, m.id), ne(buddyMatches.state, "ended"))),
-    notify(db, them, "buddy_ended", "บัดดี้รอบนี้จบแล้ว สัปดาห์หน้ามีบัดดี้ใหม่", "This buddy match has ended. A new buddy comes next week.", "/buddy"),
-    audit(db, me, allowed === "proposed" ? "buddy.pass" : "buddy.end", { type: "buddy_match", id: m.id }),
+    db.update(buddyMatches).set({ state: "ended", endedBy: me, endReason: "pass", endedAt: new Date() }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "proposed"))),
+    notify(db, them, "buddy_ended", "บัดดี้คู่นี้ไม่ได้ไปต่อ เราจะหาบัดดี้ใหม่ให้เร็ว ๆ นี้", "This buddy match didn't go ahead. A new buddy is coming soon.", "/buddy"),
+    audit(db, me, "buddy.pass", { type: "buddy_match", id: m.id }),
   ]);
   return c.redirect("/buddy?notice=done");
-}
+});
 
-buddyRoutes.post("/buddy/:id/pass", requireMember, (c) => endMatch(c, "proposed"));
-buddyRoutes.post("/buddy/:id/end", requireMember, (c) => endMatch(c, "active"));
+/**
+ * Wrapping up an active pairing, never by going quiet:
+ *  - the other buddy already asked: agreeing closes it (mutual);
+ *  - both shared a contact (moved off the app): it closes at once;
+ *  - otherwise: a kind wrap-up note is sent and it closes when they agree, or
+ *    after WRAP_NOTICE_DAYS (roundIfDue).
+ */
+buddyRoutes.post("/buddy/:id/end", requireMember, async (c) => {
+  const found = await myMatch(c);
+  if (!found || found.m.state !== "active") return c.redirect("/buddy");
+  const { m, me, them } = found;
+  const body = await c.req.parseBody();
+  const noteRaw = str(body.note);
+  const note = isWrapNote(noteRaw) ? noteRaw : "lovely";
+  const db = getDb(c.env);
+  const now = new Date();
+  const close = (reason: string, th: string, en: string) =>
+    batch(c.env, [
+      db.update(buddyMatches).set({ state: "ended", endedBy: me, endReason: reason, endedAt: now }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "active"))),
+      notify(db, them, "buddy_ended", th, en, "/buddy"),
+      audit(db, me, "buddy.end", { type: "buddy_match", id: m.id }),
+    ]);
+  if (m.endRequestedBy === them) {
+    await close("mutual", "บัดดี้ตกลงปิดรอบนี้แล้ว ขอบคุณที่ออกสำรวจด้วยกันนะ", "Your buddy agreed to wrap up. Thank you both for exploring together!");
+    return c.redirect("/buddy?notice=done");
+  }
+  if (m.endRequestedBy === me) return c.redirect("/buddy");
+  if (await movedOffApp(db, m)) {
+    await close("moved_off_app", `บัดดี้ปิดรอบนี้ในแอปแล้ว: “${WRAP_NOTES[note].th}” คุยกันต่อได้ทางช่องทางที่แชร์ไว้`, `Your buddy closed the pairing on the app: “${WRAP_NOTES[note].en}” You can keep in touch on the contact you shared.`);
+    return c.redirect("/buddy?notice=done");
+  }
+  await batch(c.env, [
+    db.update(buddyMatches).set({ endRequestedBy: me, endRequestedAt: now, endNote: note }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "active"), isNull(buddyMatches.endRequestedBy))),
+    notify(
+      db,
+      them,
+      "buddy_wrap",
+      `บัดดี้ขอปิดรอบนี้: “${WRAP_NOTES[note].th}” ตกลงในแอปได้เลย หรือจะปิดเองใน ${WRAP_NOTICE_DAYS} วัน`,
+      `Your buddy would like to wrap up: “${WRAP_NOTES[note].en}” Agree in the app, or it closes on its own in ${WRAP_NOTICE_DAYS} days.`,
+      "/buddy",
+    ),
+    audit(db, me, "buddy.wrap_request", { type: "buddy_match", id: m.id }),
+  ]);
+  return c.redirect("/buddy?notice=saved");
+});
+
+/** Take back my own wrap-up request. */
+buddyRoutes.post("/buddy/:id/keep", requireMember, async (c) => {
+  const found = await myMatch(c);
+  if (!found || found.m.state !== "active" || found.m.endRequestedBy !== found.me) return c.redirect("/buddy");
+  const db = getDb(c.env);
+  await batch(c.env, [
+    db.update(buddyMatches).set({ endRequestedBy: null, endRequestedAt: null, endNote: null }).where(eq(buddyMatches.id, found.m.id)),
+    notify(db, found.them, "buddy_keep", "บัดดี้อยากไปต่อด้วยกัน", "Your buddy would like to keep going together", "/buddy"),
+  ]);
+  return c.redirect("/buddy?notice=saved");
+});
 
 buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
   const found = await myMatch(c);
@@ -524,7 +762,11 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
   const { m, me, them } = found;
   const db = getDb(c.env);
   const now = new Date();
-  const [q] = await db.select().from(buddyQuests).where(and(eq(buddyQuests.matchId, m.id), eq(buddyQuests.week, weekKey(now)))).limit(1);
+  const body = await c.req.parseBody();
+  const wanted = str(body.quest);
+  // Only this week's quest or this month's big quest can be marked done.
+  const key = wanted === monthKey(now) ? wanted : weekKey(now);
+  const [q] = await db.select().from(buddyQuests).where(and(eq(buddyQuests.matchId, m.id), eq(buddyQuests.week, key))).limit(1);
   if (!q) return c.redirect("/buddy");
   const mySide = side(m, me);
   if ((mySide === "a" ? q.aDoneAt : q.bDoneAt) !== null) return c.redirect("/buddy");
@@ -542,7 +784,7 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
     mark,
     db
       .insert(passportStamps)
-      .values([m.aAccount, m.bAccount].map((accountId) => ({ id: newId(), accountId, district: q.district, source: "buddy", questId: q.id, createdAt: now })))
+      .values([m.aAccount, m.bAccount].map((accountId) => ({ id: newId(), accountId, district: q.district, source: q.scenario === "season" ? "season" : "buddy", questId: q.id, createdAt: now })))
       .onConflictDoNothing({ target: [passportStamps.accountId, passportStamps.district] }),
     notify(db, them, "buddy_stamp", "ได้แสตมป์เขตใหม่ในพาสปอร์ตแล้ว", "New district stamped in your passport", "/buddy/passport"),
   ];
@@ -552,7 +794,7 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
     db.select().from(profiles).where(inArray(profiles.accountId, [m.aAccount, m.bAccount])).limit(2),
     db.select({ a: buddyQuests.aDoneAt, b: buddyQuests.bDoneAt, id: buddyQuests.id }).from(buddyQuests).where(eq(buddyQuests.matchId, m.id)).limit(60),
   ]);
-  const finishedCount = finished.filter((f) => (f.id === q.id ? true : f.a && f.b)).length;
+  const finishedCount = finished.filter((f) => (f.id === q.id ? true : !!f.a && !!f.b)).length;
   const pa = people.find((p) => p.accountId === m.aAccount) as Profile | undefined;
   const pb = people.find((p) => p.accountId === m.bAccount) as Profile | undefined;
   const ia = intents.find((i) => i.accountId === m.aAccount)?.intent ?? "friends";

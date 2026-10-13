@@ -161,7 +161,10 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect((await req("/onboarding", { cookie })).headers.get("location")).toBe("/onboarding/welcome");
     const welcome = await req("/onboarding/welcome", { cookie });
     expect(welcome.status).toBe(200);
-    expect(await welcome.text()).toContain('href="/onboarding/quiz"');
+    const welcomeHtml = await welcome.text();
+    expect(welcomeHtml).toContain('action="/onboarding/welcome"');
+    expect(welcomeHtml).toContain('value="dating"');
+    expect((await req("/onboarding/welcome", { cookie, form: { mode: "dating" } })).headers.get("location")).toBe("/onboarding/quiz");
     const quiz = await req("/onboarding/quiz", { cookie });
     expect(quiz.status).toBe(200);
     const qhtml = await quiz.text();

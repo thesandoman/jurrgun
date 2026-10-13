@@ -14,16 +14,16 @@
  * whether it's free or paid at the venue, and may link their own payment page.
  */
 import { Hono, type Context } from "hono";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { canHost, checkProposal, memberCanEdit, ownsEvent, publishesDirectly, toBangkokInput, type ProposalInput } from "../domain/hosting";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
-import { audit } from "../lib/records";
+import { audit, notify } from "../lib/records";
 import { requireUser } from "../lib/session";
-import { events, type Event } from "../schema";
+import { accounts, blocks, circleShares, connections, events, type Event } from "../schema";
 import { Button, Card, Choices, Empty, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 
 export const hostRoutes = new Hono<AppEnv>();
@@ -166,6 +166,11 @@ hostRoutes.get("/host", async (c) => {
     .orderBy(desc(events.startsAt))
     .limit(50);
   const direct = publishesDirectly(me);
+  const privateIds = mine.filter((e) => e.visibility === "private").map((e) => e.id);
+  const shared = privateIds.length
+    ? await getDb(c.env).select({ eventId: circleShares.eventId }).from(circleShares).where(inArray(circleShares.eventId, privateIds)).limit(5000)
+    : [];
+  const sharedCount = (id: string) => shared.filter((x) => x.eventId === id).length;
   return page(
     c,
     { title: t("จัดกิจกรรม", "Host an event"), tab: "me" },
@@ -183,6 +188,7 @@ hostRoutes.get("/host", async (c) => {
       {c.req.query("notice") === "submitted" ? <Notice kind="ok">{t("ส่งให้ทีมงานตรวจแล้ว เราจะแจ้งเมื่อเผยแพร่", "Sent for review. We'll let you know when it's live.")}</Notice> : null}
       {c.req.query("notice") === "published" ? <Notice kind="ok">{t("เผยแพร่แล้ว!", "It's live!")}</Notice> : null}
       {c.req.query("notice") === "link_reset" ? <Notice kind="ok">{t("สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีก", "New private link made. The old one no longer works.")}</Notice> : null}
+      {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้วงคนรู้จักของคุณแล้ว", "Sent to your circle.")}</Notice> : null}
       <p>
         <LinkButton href="/host/new">＋ {t("เสนอกิจกรรม", "Propose an event")}</LinkButton>
       </p>
@@ -223,6 +229,14 @@ hostRoutes.get("/host", async (c) => {
               {e.status === "pending" || e.status === "rejected" ? (
                 <form method="post" action={`/host/${e.id}/withdraw`}>
                   <Button kind="ghost">{t("ถอนออก", "Withdraw")}</Button>
+                </form>
+              ) : null}
+              {e.visibility === "private" && e.status === "published" ? (
+                <form method="post" action={`/host/${e.id}/circle`}>
+                  <Button kind="ghost">
+                    👥 {t("ส่งให้วงคนรู้จัก", "Send to my circle")}
+                    {sharedCount(e.id) ? ` (${sharedCount(e.id)})` : ""}
+                  </Button>
                 </form>
               ) : null}
               {e.visibility === "private" && e.status === "published" ? (
@@ -356,6 +370,8 @@ hostRoutes.get("/host/new", (c) => {
   const district = c.req.query("district") ?? "";
   if (title) d[v.lang === "en" ? "titleEn" : "title"] = title;
   if (DISTRICTS.some((x) => x.value === district)) d.district = district;
+  // "Host a hangout for your circle": private, link-only by default.
+  if (c.req.query("visibility") === "private") d.visibility = "private";
   return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me) });
 });
 
@@ -441,6 +457,54 @@ hostRoutes.post("/host/:id/withdraw", async (c) => {
     ]);
   }
   return c.redirect("/host");
+});
+
+const CIRCLE_SEND_MAX = 100;
+
+/**
+ * Sends a private hangout to the host's circle (mutual connections, including
+ * a Bangkok Buddy): each gets a notification with the link, and it shows on
+ * their circle page. Safe to repeat: people already sent to are skipped.
+ */
+hostRoutes.post("/host/:id/circle", async (c) => {
+  const db = getDb(c.env);
+  const [e] = await db.select().from(events).where(eq(events.id, c.req.param("id"))).limit(1);
+  if (!e || !ownsEvent(e, viewerOf(c)) || e.visibility !== "private" || e.status !== "published" || !e.privateToken) return c.redirect("/host");
+  const me = c.var.user!.account.id;
+  const [conns, blocked, already] = await Promise.all([
+    db
+      .select({ a: connections.aAccount, b: connections.bAccount })
+      .from(connections)
+      .where(and(isNull(connections.removedAt), or(eq(connections.aAccount, me), eq(connections.bAccount, me))))
+      .limit(1000),
+    db
+      .select({ blocker: blocks.blocker, blocked: blocks.blocked })
+      .from(blocks)
+      .where(or(eq(blocks.blocker, me), eq(blocks.blocked, me)))
+      .limit(1000),
+    db.select({ to: circleShares.toAccount }).from(circleShares).where(eq(circleShares.eventId, e.id)).limit(1000),
+  ]);
+  const skip = new Set([...blocked.flatMap((b) => [b.blocker, b.blocked]), ...already.map((x) => x.to), me]);
+  const ids = [...new Set(conns.map((x) => (x.a === me ? x.b : x.a)))].filter((id) => !skip.has(id));
+  const active = ids.length
+    ? (await db.select({ id: accounts.id, status: accounts.status }).from(accounts).where(inArray(accounts.id, ids)).limit(ids.length)).filter((a) => a.status === "active").map((a) => a.id)
+    : [];
+  const to = active.slice(0, CIRCLE_SEND_MAX);
+  if (to.length) {
+    const nick = c.var.user!.profile?.nickname ?? "";
+    const title = e.titleEn ?? e.title;
+    await batch(c.env, [
+      db
+        .insert(circleShares)
+        .values(to.map((id) => ({ id: newId(), eventId: e.id, fromAccount: me, toAccount: id, createdAt: new Date() })))
+        .onConflictDoNothing({ target: [circleShares.eventId, circleShares.toAccount] }),
+      ...to.map((id) =>
+        notify(db, id, "circle_hangout", `${nick} ชวนคุณไปแฮงเอาต์ส่วนตัว: ${e.title}`, `${nick} invited you to a private hangout: ${title}`, `/events/${e.id}?t=${encodeURIComponent(e.privateToken!)}`),
+      ),
+      audit(db, me, "event.circle_share", { type: "event", id: e.id }),
+    ]);
+  }
+  return c.redirect("/host?notice=circle_sent");
 });
 
 hostRoutes.post("/host/:id/private-link/reset", async (c) => {

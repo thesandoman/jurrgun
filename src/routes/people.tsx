@@ -29,7 +29,7 @@ import {
   type Choice,
   type Level,
 } from "../domain/rules";
-import { CHOICE_LABELS, label, REPORT_REASON_LABELS } from "../lib/constants";
+import { CHOICE_LABELS, DISTRICTS, label, REPORT_REASON_LABELS } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate, fmtDay } from "../lib/i18n";
@@ -38,6 +38,8 @@ import { requireMember } from "../lib/session";
 import {
   accounts,
   blocks,
+  buddyMatches,
+  circleShares,
   connectionChoices,
   connections,
   contactShares,
@@ -516,7 +518,141 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
   return { rows: out, myVibe: vibeMap.get(me) };
 }
 
-function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string } }) {
+type CircleExtras = {
+  buddy: { state: string; nickname: string } | null;
+  hangouts: { id: string; title: string; startsAt: Date; district: string; host: string; href: string }[];
+  ideas: { emoji: string; name: string; why: string; district: string; type: string }[];
+};
+
+/**
+ * The top of the circle page: your Bangkok Buddy, private hangouts your circle
+ * sent you, a button to host one, and group hangout ideas from the types in
+ * your circle (only types people chose to show).
+ */
+async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | undefined): Promise<CircleExtras> {
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const lang = view(c).lang;
+  const now = new Date();
+  const [matches, shares] = await Promise.all([
+    db
+      .select()
+      .from(buddyMatches)
+      .where(and(ne(buddyMatches.state, "ended"), or(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, me))))
+      .orderBy(desc(buddyMatches.createdAt))
+      .limit(1),
+    db.select({ eventId: circleShares.eventId, from: circleShares.fromAccount }).from(circleShares).where(eq(circleShares.toAccount, me)).orderBy(desc(circleShares.createdAt)).limit(50),
+  ]);
+  const m = matches[0];
+  const buddyId = m ? (m.aAccount === me ? m.bAccount : m.aAccount) : null;
+  const eventIds = shares.map((x) => x.eventId);
+  const [evs, names] = await Promise.all([
+    eventIds.length ? db.select().from(events).where(inArray(events.id, eventIds)).limit(eventIds.length) : Promise.resolve([] as Event[]),
+    db
+      .select({ id: profiles.accountId, nickname: profiles.nickname })
+      .from(profiles)
+      .where(inArray(profiles.accountId, [...new Set([...shares.map((x) => x.from), ...(buddyId ? [buddyId] : [])])].concat(["-"])))
+      .limit(100),
+  ]);
+  const nick = (id: string) => names.find((n) => n.id === id)?.nickname ?? "";
+  const hangouts = evs
+    .filter((e) => e.status === "published" && e.endsAt > now && e.privateToken)
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .map((e) => ({
+      id: e.id,
+      title: eventTitle(e, lang),
+      startsAt: e.startsAt,
+      district: e.district,
+      host: nick(shares.find((x) => x.eventId === e.id)!.from),
+      href: `/events/${e.id}?t=${encodeURIComponent(e.privateToken!)}`,
+    }));
+  // Ideas: hangouts of the types most common in my circle (and my own).
+  const counts = new Map<ArchetypeKey, number>();
+  for (const v of [...rows.map((r) => r.other.vibe), myVibe]) if (v?.visible || v === myVibe) if (v) counts.set(v.archetype, (counts.get(v.archetype) ?? 0) + 1);
+  const ideas: CircleExtras["ideas"] = [];
+  for (const [type] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+    for (const h of ARCHETYPES[type].hangouts) {
+      if (ideas.length >= 3) break;
+      if (ideas.some((i) => i.name === h.name.en)) continue;
+      ideas.push({ emoji: h.emoji, name: lang === "en" ? h.name.en : h.name.th, why: lang === "en" ? h.why.en : h.why.th, district: h.district, type: lang === "en" ? ARCHETYPES[type].name.en : ARCHETYPES[type].name.th });
+      break;
+    }
+  }
+  return { buddy: m && buddyId ? { state: m.state, nickname: nick(buddyId) } : null, hangouts, ideas };
+}
+
+function CircleTop(props: { v: View; extras: CircleExtras }) {
+  const { t, lang } = props.v;
+  const { buddy, hangouts, ideas } = props.extras;
+  return (
+    <>
+      <Card class="circle-buddy">
+        <span class="eyebrow">🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</span>
+        {buddy ? (
+          <p>
+            {buddy.state === "active"
+              ? t(`คุณกับ ${buddy.nickname} กำลังสำรวจกรุงเทพฯ ด้วยกัน`, `You and ${buddy.nickname} are exploring Bangkok together.`)
+              : t(`คุณมีบัดดี้คนใหม่: ${buddy.nickname}`, `You have a new buddy: ${buddy.nickname}`)}{" "}
+            <a href="/buddy">{t("ดูเควสต์", "See your quests")} →</a>
+          </p>
+        ) : (
+          <p>
+            {t("จับคู่กับหนึ่งคนที่ไทป์เข้ากัน แล้วสะสมแสตมป์ 50 เขตด้วยกัน", "Pair up with one person whose type clicks with yours and collect all 50 districts together.")}{" "}
+            <a href="/buddy">{t("หาบัดดี้", "Get a buddy")} →</a>
+          </p>
+        )}
+      </Card>
+      <Card>
+        <h2>👥 {t("แฮงเอาต์กลุ่ม", "Group hangouts")}</h2>
+        {hangouts.length ? (
+          <ul class="spots">
+            {hangouts.map((h) => (
+              <li>
+                <b aria-hidden="true">🔒</b>
+                <div>
+                  <a href={h.href}>
+                    <strong>{h.title}</strong>
+                  </a>
+                  <p class="muted">
+                    {fmtDay(h.startsAt, lang)} · {label(DISTRICTS, h.district, lang)} · {t(`ชวนโดย ${h.host}`, `from ${h.host}`)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="muted">{t("ยังไม่มีใครในวงชวนแฮงเอาต์ส่วนตัว เริ่มเองเลยก็ได้", "Nobody in your circle has sent a private hangout yet. Why not start one?")}</p>
+        )}
+        <div class="row">
+          <LinkButton href="/host/new?visibility=private">＋ {t("ชวนวงของคุณไปแฮงเอาต์", "Host a hangout for your circle")}</LinkButton>
+          <LinkButton href="/events" kind="ghost">{t("ดูกิจกรรมกลุ่มทั้งหมด", "Browse group events")}</LinkButton>
+        </div>
+        {ideas.length ? (
+          <>
+            <h3>💡 {t("ไอเดียจากไทป์ในวงของคุณ", "Ideas from the types in your circle")}</h3>
+            <ul class="spots">
+              {ideas.map((i) => (
+                <li>
+                  <b aria-hidden="true">{i.emoji}</b>
+                  <div>
+                    <a href={`/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}`}>
+                      <strong>{i.name}</strong>
+                    </a>{" "}
+                    <small class="muted">· {i.type}</small>
+                    <p class="muted">{i.why}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+      </Card>
+      <h2>🫂 {t("คนในวงของคุณ", "Your people")}</h2>
+    </>
+  );
+}
+
+function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras }) {
   const { t, lang } = props.v;
   const method = (m: string) => label(CONTACT_METHODS, m, lang);
   return (
@@ -524,10 +660,11 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My Bangkok circle")}</h1>
       <p class="muted">
         {t(
-          "คนที่เลือกกันและกันหลังกิจกรรม แชร์ช่องทางติดต่อเมื่อพร้อม — อีกฝ่ายจะเห็นเฉพาะที่คุณแชร์",
-          "People you chose each other with after an event. Share a contact when you're ready — they only see what you share.",
+          "คนที่เลือกกันและกันหลังกิจกรรม และบัดดี้กรุงเทพฯ ของคุณ แชร์ช่องทางติดต่อเมื่อพร้อม อีกฝ่ายจะเห็นเฉพาะที่คุณแชร์ ชวนทั้งวงไปแฮงเอาต์ได้ด้วย",
+          "People you chose each other with after an event, and your Bangkok Buddy. Share a contact when you're ready (they only see what you share), and get the circle together for group hangouts.",
         )}
       </p>
+      {props.extras ? <CircleTop v={props.v} extras={props.extras} /> : null}
       {props.rows.length === 0 ? (
         <Card>
           <Empty>
@@ -593,7 +730,8 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
 peopleRoutes.get("/connections", requireMember, async (c) => {
   const v = view(c);
   const { rows, myVibe } = await loadCircle(c);
-  return page(c, { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} />);
+  const extras = await loadCircleExtras(c, rows, myVibe);
+  return page(c, { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} />);
 });
 
 /** The connection, if I'm one of its two people and it's still active. */
@@ -860,6 +998,16 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
         and(
           isNull(connections.removedAt),
           or(and(eq(connections.aAccount, me), eq(connections.bAccount, other)), and(eq(connections.aAccount, other), eq(connections.bAccount, me))),
+        ),
+      ),
+    // A Bangkok Buddy pairing ends at once: safety first, and never counted as ghosting.
+    db
+      .update(buddyMatches)
+      .set({ state: "ended", endedBy: me, endReason: "blocked", endedAt: new Date() })
+      .where(
+        and(
+          ne(buddyMatches.state, "ended"),
+          or(and(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, other)), and(eq(buddyMatches.aAccount, other), eq(buddyMatches.bAccount, me))),
         ),
       ),
     audit(db, me, "block.create", { type: "account", id: other }),

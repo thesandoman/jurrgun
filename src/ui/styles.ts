@@ -325,6 +325,12 @@ body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 .passport li{font-size:.9rem;color:var(--ink-3)}
 .passport li.on{color:var(--ink);font-weight:600}
 .together p{margin:.3rem 0}
+.season-badges{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.season-badge{display:inline-flex;gap:4px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--gold-soft);color:var(--ink);font-size:.85rem;font-weight:600}
+.season-badge small{color:var(--ink-3);font-weight:400}
+.buddy-wrap{margin:10px 0;padding:10px 14px;border-radius:14px;background:var(--surface)}
+.buddy-wrap summary{font-weight:600;cursor:pointer}
+.circle-buddy p{margin:.3rem 0}
 .answers-six{gap:8px}
 .answers-six .answer-card,.answers-six label{font-size:.95rem;line-height:1.35}
 .blend{list-style:none;padding:0;margin:10px 0;display:grid;gap:10px}

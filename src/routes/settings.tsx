@@ -227,7 +227,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/buddy", emoji: "🤝", title: t("บัดดี้กรุงเทพฯ", "Bangkok Buddy"), hint: t("หนึ่งบัดดี้ เควสต์ทุกสัปดาห์ พาสปอร์ต 50 เขต", "One buddy, a weekly quest, a 50-district passport"), tint: "teal" },
         { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("เสนอกิจกรรมของคุณเอง ฟรีหรือจ่ายที่สถานที่", "Propose your own event, free or pay at the venue"), tint: "lime" },
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
-        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน ส่งตรงถึง กทม.", "Quick anonymous questions for BMA"), tint: "sky" },
+        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },
         { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
         { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint" },
         // Google / LINE accounts have no password to change.
@@ -740,7 +740,7 @@ const CATEGORIES: { key: string; required: boolean; th: string; en: string; hint
   { key: "service", required: true, th: "บัญชีและบริการกิจกรรม", en: "Account and event service", hintTh: "จำเป็นเพื่อให้แอปทำงาน ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Needed for the app to work. Withdrawn only by deactivating your account." },
   { key: "safety", required: true, th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation", hintTh: "ใช้ตรวจสอบรายงานและป้องกันการคุกคาม ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Used to review reports and prevent harassment. Withdrawn only by deactivating your account." },
   { key: "personalization", required: false, th: "จัดกลุ่มและแนะนำกิจกรรมตามความสนใจ", en: "Personalised groups and suggestions", hintTh: "ใช้ความสนใจและภาษาของคุณในการจัดโต๊ะ", hintEn: "Uses your interests and languages to seat you well." },
-  { key: "research", required: false, th: "City Pulse — ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse — anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย กทม. เห็นเฉพาะภาพรวมจากอย่างน้อย 10 คน", hintEn: "Answers are stored under a research code; BMA only sees totals from 10+ people." },
+  { key: "research", required: false, th: "City Pulse — ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse — anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people." },
   { key: "notifications", required: false, th: "การแจ้งเตือนกิจกรรม", en: "Event notifications", hintTh: "เตือนก่อนงานและแจ้งเมื่อมีที่ว่าง", hintEn: "Reminders and waitlist updates." },
   { key: "romance_data", required: false, th: "ข้อมูลโหมดเปิดใจ (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและ 'เปิดใจที่จะพบ' — ถอนแล้วจะปิดโหมดและลบข้อมูลทันที", hintEn: "Gender identity and 'open to meeting' — withdrawing switches romance mode off and deletes them at once." },
 ];
@@ -822,7 +822,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
             </li>
           ))}
         </ul>
-        <p class="muted">{t("ระยะเวลาเหล่านี้เป็นค่าเริ่มต้นในช่วงทดลอง รอ กทม. ยืนยัน", "These are pilot defaults, pending BMA confirmation.")}</p>
+        <p class="muted">{t("ระยะเวลาเหล่านี้เป็นค่าเริ่มต้นในช่วงทดลอง และอาจปรับก่อนเปิดตัวจริง", "These are pilot defaults and may change before launch.")}</p>
       </Card>
       <Card>
         <h2>{t("ข้อมูลของฉัน", "My data")}</h2>

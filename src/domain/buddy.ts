@@ -262,3 +262,30 @@ export function romanceUnlocked(p: {
 }): boolean {
   return p.intents.every((i) => i === "open") && p.eligible.every(Boolean) && p.compatible && p.finishedQuests >= ROMANCE_AFTER_QUESTS;
 }
+
+// ------------------------------------------------------------ no ghosting --
+//
+// A buddy pairing never just goes quiet. It ends when:
+//  - both agree to wrap up (one asks, the other agrees), or
+//  - both have shared a contact in My Bangkok circle (LINE, IG and so on), so
+//    the friendship carries on off the app, or
+//  - one sends a kind wrap-up note and WRAP_NOTICE_DAYS pass without a reply.
+// Safety comes first: blocking ends a pairing at once and is never ghosting.
+
+export const WRAP_NOTICE_DAYS = 7;
+/** A proposal neither answered closes after this many days. */
+export const PROPOSAL_DAYS = 3;
+
+export const WRAP_NOTES = {
+  lovely: { en: "It was lovely exploring with you, thank you!", th: "ดีใจที่ได้ออกสำรวจด้วยกัน ขอบคุณนะ!" },
+  busy: { en: "Life got busy for me. Thank you for the time together.", th: "ช่วงนี้ชีวิตยุ่งมาก ขอบคุณสำหรับเวลาที่ได้ใช้ด้วยกันนะ" },
+  different: { en: "I'd like to try a different buddy. Wishing you a great next match!", th: "อยากลองบัดดี้คนใหม่ ขอให้เจอบัดดี้ที่ใช่นะ!" },
+  offapp: { en: "Let's keep in touch outside the app.", th: "ไว้คุยกันต่อนอกแอปนะ" },
+} satisfies Record<string, Text>;
+export type WrapNote = keyof typeof WRAP_NOTES;
+export const isWrapNote = (x: string): x is WrapNote => Object.prototype.hasOwnProperty.call(WRAP_NOTES, x);
+
+/** Matching runs daily: the round key is the Bangkok date, e.g. "2026-10-13". */
+export function dayKey(now: Date): string {
+  return new Date(now.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+}

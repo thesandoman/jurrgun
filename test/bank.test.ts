@@ -49,3 +49,19 @@ describe("quiz bank", () => {
     for (const a of Object.values(ARCHETYPES)) for (const h of a.hangouts) expect(DISTRICT_KEYS.has(h.district), h.name.en).toBe(true);
   });
 });
+
+describe("monthly big quests", () => {
+  it("one per month, in a real district, bilingual and following the same content rules", async () => {
+    const { SEASON_QUESTS } = await import("../src/domain/seasons");
+    const { ADULT_EN, ADULT_TH, BANNED_EN, BANNED_TH, GENDERED_EN, GENDERED_TH } = await import("../src/vibe/bank-rules");
+    expect(SEASON_QUESTS.map((q) => q.month)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    for (const q of SEASON_QUESTS) {
+      expect(DISTRICT_KEYS.has(q.district), q.district).toBe(true);
+      for (const x of [q.theme, q.quest]) {
+        expect(x.en && x.th).toBeTruthy();
+        for (const re of [BANNED_EN, GENDERED_EN, ADULT_EN, /[–—]/]) expect(x.en, x.en).not.toMatch(re);
+        for (const re of [BANNED_TH, GENDERED_TH, ADULT_TH, /[–—]/]) expect(x.th, x.th).not.toMatch(re);
+      }
+    }
+  });
+});

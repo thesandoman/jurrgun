@@ -177,7 +177,7 @@ publicRoutes.get("/privacy", (c) => {
       <ul>
         <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัส) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
         <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม การเชื่อมต่อ", "Social: nickname, interests, events attended, connections.")}</li>
-        <li>{t("ข้อมูลวิจัยเมือง (City Pulse): ใช้รหัสแฝง แสดงผลเฉพาะภาพรวมที่มีอย่างน้อย 10 คน", "City research (City Pulse): pseudonymous id only, shown to BMA only as totals of 10 or more people.")}</li>
+        <li>{t("ข้อมูลวิจัยเมือง (City Pulse): ใช้รหัสแฝง แสดงผลเฉพาะภาพรวมที่มีอย่างน้อย 10 คน", "City research (City Pulse): pseudonymous id only, and results are only ever shown as totals of 10 or more people.")}</li>
       </ul>
       <p>{t("สถานะความสัมพันธ์ อัตลักษณ์ทางเพศ และ 'เปิดใจให้ใคร' เป็นข้อมูลส่วนตัว ไม่แสดงต่อสาธารณะ และเจ้าหน้าที่ไม่สามารถดูได้", "Relationship status, gender identity and 'open to meeting' are private, never public, and not visible to any staff member.")}</p>
       <p>{t("คุณดู ดาวน์โหลด เปลี่ยนความยินยอม หรือปิดบัญชีได้ที่ ตั้งค่า → ศูนย์ความเป็นส่วนตัว", "You can view, download, change consents or deactivate in Settings → Privacy Center.")}</p>
@@ -195,6 +195,13 @@ publicRoutes.get("/code-of-conduct", (c) => {
     ["ห้ามเปิดเผยตัวตนหรือข้อมูลของผู้อื่น (รวมถึงอัตลักษณ์ทางเพศ) โดยไม่ได้รับอนุญาต", "Never out anyone or share someone's details (including gender identity) without consent."],
     ["ห้ามขายของ หลอกลวง หรือชักชวนเข้าธุรกิจ", "No selling, scams or recruiting."],
     ["ทำตามคำแนะนำของโฮสต์และแจ้งเหตุไม่ปลอดภัยทันที", "Follow your host and report anything unsafe right away."],
+    ["ไม่ทิ้งเงียบ (ghosting) ดูรายละเอียดด้านล่าง", "No ghosting: see the details below."],
+  ];
+  const ghosting: [string, string][] = [
+    ["เมื่อจับคู่กันแล้ว (บัดดี้กรุงเทพฯ หรือเลือกกันและกันหลังกิจกรรม) อย่าหายไปเฉย ๆ", "Once you're matched (a Bangkok Buddy, or a mutual connection after an event), don't just disappear."],
+    ["ปิดบัดดี้ได้เมื่อ (1) ตกลงกันทั้งคู่ในแอป หรือ (2) แชร์ช่องทางติดต่อกันแล้วและย้ายไปคุยนอกแอป เช่น LINE หรือ Instagram หรือ (3) ส่งข้อความปิดท้ายอย่างสุภาพในแอป ซึ่งอีกฝ่ายจะได้รับ และจะปิดเองใน 7 วันหากไม่มีคำตอบ", "A buddy pairing ends when (1) you both agree in the app, or (2) you've both shared a contact and moved off the app, for example to LINE or Instagram, or (3) you send a kind wrap-up note in the app, which your buddy receives and which closes on its own after 7 days if they don't reply."],
+    ["ถ้าไปไม่ได้ ให้บอกล่วงหน้าเสมอ ยกเลิกกิจกรรมในแอปก่อน 24 ชั่วโมง และบอกบัดดี้ก่อนนัด", "If you can't make it, say so in advance: cancel events in the app 24 hours before, and tell your buddy before a meetup."],
+    ["ความปลอดภัยมาก่อนเสมอ ถ้ารู้สึกไม่ปลอดภัย บล็อกหรือรายงานแล้วออกได้ทันที ไม่นับเป็นการทิ้งเงียบ", "Safety always comes first. If you feel unsafe, block or report and leave at once. That is never ghosting."],
   ];
   return page(
     c,
@@ -202,6 +209,8 @@ publicRoutes.get("/code-of-conduct", (c) => {
     <>
       <h1>{t("หลักปฏิบัติของชุมชน", "Community code of conduct")}</h1>
       <ol>{rules.map(([th, en]) => <li>{t(th, en)}</li>)}</ol>
+      <h2 id="no-ghosting">{t("ไม่ทิ้งเงียบ", "No ghosting")}</h2>
+      <ul>{ghosting.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
       <p class="muted">{t("การละเมิดอาจนำไปสู่การเตือน ระงับ หรือแบนถาวร", "Breaking these can lead to a warning, suspension or permanent ban.")}</p>
     </>,
   );

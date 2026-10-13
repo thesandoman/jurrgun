@@ -2,7 +2,7 @@
  * Onboarding (PRD §5, §21): a light personality quiz, not a government form.
  * Every stage is a card flow (src/ui/flow.tsx): one decision per screen.
  *
- *   0 welcome      one splash screen
+ *   0 welcome      one splash screen, and the first question: friends only, or open to dating too
  *   1 quiz         Bangkok Vibe quiz (skippable) → type reveal (/onboarding/type)
  *   2 basics       nickname, birth date (18+ gate), district, lives-in-Bangkok
  *   3 privacy      required consents + code of conduct, then optional extras
@@ -31,7 +31,7 @@ import type { Lang } from "../lib/i18n";
 import { consents, profiles, wellbeing } from "../schema";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
-import { Choices, Field, list, LinkButton, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
+import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
 import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation } from "../content/profile";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
@@ -54,6 +54,8 @@ const stage = (s: Step) => ({ at: STEPS.indexOf(s), of: STEPS.length });
 
 export const CONSENT_VERSION = "2026-10-proto";
 export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
+/** "friends" or "dating", chosen on the welcome screen before a profile exists. */
+export const INTENT_COOKIE = "bkk_intent";
 
 /** The first step this user hasn't completed. */
 async function nextStep(c: Context<AppEnv>, user: CurrentUser): Promise<Step | "done"> {
@@ -115,10 +117,11 @@ function MustToggle(props: { name: string; label: string; checked?: boolean }) {
 
 onboarding.get("/welcome", (c) => {
   const { t } = view(c);
+  const chosen = getCookie(c, INTENT_COOKIE);
   return page(
     c,
     { title: TITLE, bare: true },
-    <>
+    <form method="post" action="/onboarding/welcome">
       <div class="flow-top">
         <div class="flow-progress"><i style="width:4%" /></div>
       </div>
@@ -127,16 +130,34 @@ onboarding.get("/welcome", (c) => {
         <h1>{t("ยินดีต้อนรับสู่ Jurrgun", "Welcome to Jurrgun")}</h1>
         <p class="muted">{t("เจอเพื่อนใหม่ในกลุ่มเล็ก ที่สถานที่จริงในกรุงเทพฯ", "New friends, small groups, real Bangkok places.")}</p>
       </div>
+      <h2>{t("คุณมาที่นี่เพื่ออะไร?", "What brings you here?")}</h2>
+      <div class="answers">
+        <AnswerCard name="mode" value="friends" emoji="👋" label={t("เพื่อนใหม่และกิจกรรมกลุ่มเท่านั้น ไม่เดท", "Friends and group hangouts only, no dating")} checked={chosen !== "dating"} />
+        <AnswerCard name="mode" value="dating" emoji="💘" label={t("เพื่อนใหม่ และเปิดใจเรื่องเดทด้วย", "Friends, and open to dating too")} checked={chosen === "dating"} />
+      </div>
+      <p class="muted">
+        {t(
+          "เปลี่ยนได้ทุกเมื่อในการตั้งค่า เรื่องเดทเป็นความลับเสมอ และจะขึ้นเฉพาะเมื่อทั้งสองฝ่ายเลือกตรงกัน",
+          "You can change this anytime in Settings. Dating stays private and only ever comes up when it's mutual.",
+        )}
+      </p>
       <div class="tiles">
         <span class="tile"><b>🧭</b>{t("ค้นหาไทป์ของคุณ", "Find your type")}</span>
         <span class="tile"><b>👥</b>{t("โต๊ะละ 4 ถึง 6 คน", "Tables of 4 to 6")}</span>
         <span class="tile"><b>🔒</b>{t("เป็นส่วนตัวเสมอ", "Private by default")}</span>
       </div>
       <div class="flow-bar">
-        <LinkButton href="/onboarding/quiz">{t("ไปกันเลย", "Let's go")}</LinkButton>
+        <button type="submit" class="btn primary">{t("ไปกันเลย", "Let's go")}</button>
       </div>
-    </>,
+    </form>,
   );
+});
+
+onboarding.post("/welcome", async (c) => {
+  const body = await c.req.parseBody();
+  const mode = str(body.mode) === "dating" ? "dating" : "friends";
+  setCookie(c, INTENT_COOKIE, mode, { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
+  return c.redirect("/onboarding/quiz");
 });
 
 // ---------------------------------------------------------------- quiz --
@@ -279,8 +300,8 @@ function PrivacyForm(props: { v: View; error?: string }) {
         title={t("ตัวเลือกเพิ่มเติม", "Optional extras")}
         hint={t("เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "Change any of these later in Settings.")}
         info={t(
-          "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: กทม. เห็นเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนงานและเมื่อมีที่ว่าง",
-          "Seating uses your interests and languages. City Pulse: BMA only sees totals from 10 or more people. Reminders: before events and when a spot opens.",
+          "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนงานและเมื่อมีที่ว่าง",
+          "Seating uses your interests and languages. City Pulse: results are only shown as totals from 10 or more people. Reminders: before events and when a spot opens.",
         )}
       >
         {CONSENT_ITEMS.filter((i) => !i.required).map((i) => (
@@ -450,13 +471,13 @@ const ROMANCE_INFO: [string, string] = [
   "Friends-only is the default. If you switch this on, you can choose 'open to something more' after events, and you'll only find out if it's mutual. The details below are private, invisible to staff, and deleted when you switch this off.",
 ];
 
-function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | undefined }) {
+function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | undefined; on?: boolean }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   const openTo = props.openTo;
   return (
     <>
-      <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={!!p?.romanceOn} />
+      <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={props.on ?? !!p?.romanceOn} />
       <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="—" />
       <Choices
         legend={t("เปิดใจที่จะพบ…", "Open to meeting…")}
@@ -514,7 +535,7 @@ export async function connectionsPatch(
   return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null };
 }
 
-function ConnectionsFlow(props: { v: View; error?: string; start?: number }) {
+function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?: string }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   const rel = p?.relationship ?? "prefer_not";
@@ -537,15 +558,17 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number }) {
         <Field label={t("สรรพนาม", "Pronouns")} name="pronouns" value={p?.pronouns} maxlength={30} placeholder={t("เช่น she/her", "e.g. they/them")} />
         <Toggle name="showPronouns" label={t("แสดงในโปรไฟล์", "Show on my profile")} checked={!!p?.showPronouns} />
       </FlowStep>
+      {props.mode === "friends" && !p?.romanceOn ? null : (
       <FlowStep
         emoji="💘"
         title={t("เปิดใจมากกว่าเพื่อน?", "Open to something more?")}
         hint={t("ไม่บังคับ เฉพาะคนโสด ค่าเริ่มต้นคือเพื่อน", "Optional, Single only. Friends-only by default.")}
         info={t(ROMANCE_INFO[0], ROMANCE_INFO[1])}
       >
-        <RomanceFields v={props.v} openTo={p?.romanceOpenTo} />
+        <RomanceFields v={props.v} openTo={p?.romanceOpenTo} on={props.mode === "dating" ? true : undefined} />
         <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
       </FlowStep>
+      )}
     </Flow>
   );
 }
@@ -553,7 +576,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number }) {
 onboarding.get("/connections", (c) => {
   const v = view(c);
   if (!v.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: TITLE, bare: true }, <ConnectionsFlow v={v} />);
+  return page(c, { title: TITLE, bare: true }, <ConnectionsFlow v={v} mode={getCookie(c, INTENT_COOKIE)} />);
 });
 
 onboarding.post("/connections", async (c) => {
@@ -565,7 +588,7 @@ onboarding.post("/connections", async (c) => {
   const result = await connectionsPatch(body, p);
   if ("error" in result) {
     const start = result.error[1].includes("consent") ? 3 : 0;
-    return page(c, { title: TITLE, status: 400, bare: true }, <ConnectionsFlow v={v} error={v.t(...result.error)} start={start} />);
+    return page(c, { title: TITLE, status: 400, bare: true }, <ConnectionsFlow v={v} error={v.t(...result.error)} start={start} mode={getCookie(c, INTENT_COOKIE)} />);
   }
   const db = getDb(c.env);
   const intents = p.intents.filter((i) => i !== "romance");
@@ -642,7 +665,7 @@ onboarding.get("/wellbeing", async (c) => {
           emoji={i === 0 ? "🌱" : undefined}
           title={t(th, en)}
           hint={i === 0 ? t("ไม่บังคับ คำตอบไม่ผูกกับตัวตนของคุณ", "Optional. Not linked to your identity.") : undefined}
-          info={i === 0 ? t("ช่วยให้ กทม. รู้ว่ากิจกรรมช่วยให้คนเหงาน้อยลงหรือไม่", "Helps BMA learn whether events reduce loneliness.") : undefined}
+          info={i === 0 ? t("ช่วยให้เรารู้ว่ากิจกรรมช่วยให้คนเหงาน้อยลงหรือไม่", "Helps us learn whether meetups reduce loneliness.") : undefined}
           auto
         >
           <div class="answers">

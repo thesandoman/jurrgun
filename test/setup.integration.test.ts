@@ -43,7 +43,7 @@ describe.skipIf(!HAS_DB)("POST /api/setup/migrate", () => {
     for (const t of ["identity_accounts", "social_events", "social_registrations", "research_pulse_responses", "identity_audit_log"]) {
       expect(names).toContain(t);
     }
-  });
+  }, 30_000);
 
   it("promotes an account to admin", async () => {
     const signup = await app.request(

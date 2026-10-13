@@ -172,8 +172,8 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
         <Card>
           <p>
             {t(
-              "City Pulse คือคำถามสั้น ๆ เกี่ยวกับการใช้ชีวิตในกรุงเทพฯ เช่น ความปลอดภัย การเดินทาง ที่นั่งสาธารณะ คำตอบเก็บด้วยรหัสวิจัยแทนตัวตน และ กทม. เห็นเฉพาะภาพรวมจากอย่างน้อย 10 คน",
-              "City Pulse asks quick questions about life in Bangkok — safety, getting around, places to sit. Answers are stored under a research code instead of your identity, and BMA only sees totals from 10+ people.",
+              "City Pulse คือคำถามสั้น ๆ เกี่ยวกับการใช้ชีวิตในกรุงเทพฯ เช่น ความปลอดภัย การเดินทาง ที่นั่งสาธารณะ คำตอบเก็บด้วยรหัสวิจัยแทนตัวตน ผลลัพธ์แสดงเป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น และช่วยให้เราจัดกิจกรรมและเลือกสถานที่ได้ดีขึ้น",
+              "City Pulse asks quick questions about life in Bangkok: safety, getting around, places to sit. Answers are stored under a research code instead of your identity, results are only ever shown as totals from 10+ people, and they help us plan better meetups and pick better places.",
             )}
           </p>
           <p>{t("คุณยังไม่ได้เปิดความยินยอมด้านการวิจัย", "You haven't switched on research consent.")}</p>
