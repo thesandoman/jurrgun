@@ -138,7 +138,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           <a href="/privacy">{t("ความเป็นส่วนตัว", "Privacy")}</a>
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
-          <span>{t("โครงการของกรุงเทพมหานคร", "A Bangkok Metropolitan Administration project")}</span>
+          <span>{t("แอปนัดเจอเพื่อนใหม่ในกรุงเทพฯ", "Social meetups for Bangkok")}</span>
         </footer>
           </>
         )}

@@ -9,6 +9,7 @@ import { vibes } from "../src/schema";
 import { randomToken } from "../src/lib/crypto";
 import { parseAnswers, personalOf, quizQuestions, quizSeed, typeSlug } from "../src/routes/quiz";
 import { scoreSession, type Question } from "../src/vibe/generator";
+import { answersAs } from "./quiz-helpers";
 import { ARCHETYPES, displayName, typeOf, type ArchetypeKey } from "../src/vibe/archetypes";
 
 const seedIn = (html: string) => /name="seed" value="([^"]+)"/.exec(html)?.[1] ?? "";
@@ -18,64 +19,32 @@ const answerNames = (html: string) => new Set([...html.matchAll(/name="a(\d+)(?:
 /** createMember()'s default profile, which personalises the /quiz session. */
 const MEMBER = personalOf({ district: "bang_rak", interests: ["food", "art"] });
 
-/**
- * Leans "+" on every question; `count` answers. Ranks go in as the no-JS
- * number selects, coins as number inputs, sliders as 0..100.
- */
+/** Answers as a Food Hunter (BDSH) would; `count` answers. */
 function form(seed: string, questions: Question[], count = questions.length): Record<string, string> {
   const f: Record<string, string> = { seed };
-  questions.slice(0, count).forEach((q, i) => {
-    switch (q.format) {
-      case "scale":
-        f[`a${i}`] = "5";
-        break;
-      case "slider":
-        f[`a${i}`] = q.options[1].pole === 1 ? "90" : "10";
-        break;
-      case "rank": {
-        // positions: + items get 1 and 2, − items 3 and 4
-        let plus = 1;
-        let minus = 3;
-        q.options.forEach((o, j) => (f[`a${i}_${j}`] = String(o.pole === 1 ? plus++ : minus++)));
-        break;
-      }
-      case "budget": {
-        let first = true;
-        q.options.forEach((o, j) => {
-          f[`a${i}_${j}`] = o.pole === 1 ? (first ? "7" : "3") : "0";
-          if (o.pole === 1) first = false;
-        });
-        break;
-      }
-      default:
-        f[`a${i}`] = String(q.options.findIndex((o) => o.pole === 1));
-    }
-  });
+  const picks = answersAs(questions, "BDSH");
+  questions.slice(0, count).forEach((q, i) => (f[`a${i}`] = String(picks[q.id])));
   return f;
 }
 
 const answersOf = (f: Record<string, string>, questions: Question[]) => parseAnswers(f, questions).answers;
 
 describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
-  it("renders 18 questions in every format for a member", async () => {
+  it("renders 20 six-answer questions for a member", async () => {
     const m = await createMember();
     const r = await req("/quiz?lang=en", { cookie: m.cookie });
     expect(r.status).toBe(200);
     const html = await r.text();
-    expect(answerNames(html).size).toBe(18);
+    expect(answerNames(html).size).toBe(20);
     expect(seedIn(html)).toBe(quizSeed(m.id, null));
-    expect(html).toContain("Tap an answer");
-    expect(html).toContain("nothing political");
-    // slider, rank (with no-JS selects), coins (with no-JS number inputs), bothers
-    expect(html).toContain('type="range"');
-    expect(html).toContain("data-rank");
-    expect(html).toMatch(/<select name="a\d+_0"/);
-    expect(html).toContain("data-budget");
-    expect(html).toMatch(/type="number" name="a\d+_0"/);
-    expect(html).toContain("Slide to your spot");
-    // Personalised: the page is the session for this member's district and interests.
+    expect(html).toContain("Tap the answer that");
+    expect(html).toContain("there are no wrong answers");
+    expect(html).not.toContain('type="range"');
+    expect(html).not.toContain("data-budget");
+    // Personalised: the page is the session for this member's home district.
     const qs = quizQuestions(seedIn(html), null, MEMBER);
     for (const q of qs) expect(html).toContain(q.prompt.en.replace(/'/g, "&#39;").replace(/"/g, "&quot;").slice(0, 20));
+    for (const q of qs) expect((html.match(new RegExp(`name="a${qs.indexOf(q)}"`, "g")) ?? []).length).toBe(6);
     expect(qs.map((q) => q.id)).not.toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
   });
 
@@ -91,85 +60,69 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const qs = quizQuestions(seed, null, MEMBER);
     const tampered = await req("/quiz", { cookie: m.cookie, form: form(`${m.id}:999`, qs) });
     expect(tampered.status).toBe(400);
-    const few = await req("/quiz", { cookie: m.cookie, form: form(seed, qs, 11) });
+    const few = await req("/quiz", { cookie: m.cookie, form: form(seed, qs, 13) });
     expect(few.status).toBe(400);
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
   });
 
-  it("rejects malformed rank, coin and choice answers with 400, without saving", async () => {
+  it("rejects answers that aren't one of the options with 400, without saving", async () => {
     const m = await createMember();
     const seed = quizSeed(m.id, null);
     const qs = quizQuestions(seed, null, MEMBER);
-    const ri = qs.findIndex((q) => q.format === "rank");
-    const bi = qs.findIndex((q) => q.format === "budget");
-    const ci = qs.findIndex((q) => q.format === "choice");
-    const si = qs.findIndex((q) => q.format === "slider");
-    expect(ri).toBeGreaterThanOrEqual(0);
-    expect(bi).toBeGreaterThanOrEqual(0);
     const good = form(seed, qs);
-    const bad: Record<string, string>[] = [
-      { ...good, [`a${ri}_0`]: "1", [`a${ri}_1`]: "1" }, // duplicate position
-      { ...good, [`a${ri}_2`]: "" }, // half-done ranking
-      { ...good, [`a${ri}_3`]: "9" }, // out of range
-      { ...good, [`a${bi}_0`]: "9", [`a${bi}_1`]: "0", [`a${bi}_2`]: "0", [`a${bi}_3`]: "0" }, // 9 coins
-      { ...good, [`a${bi}_0`]: "10", [`a${bi}_1`]: "10" }, // 20 coins
-      { ...good, [`a${bi}_0`]: "abc" },
-      { ...good, [`a${ci}`]: "7" },
-      { ...good, [`a${si}`]: "250" },
-    ];
-    for (const f of bad) {
-      const r = await req("/quiz?lang=en", { cookie: m.cookie, form: f });
+    for (const v of ["6", "9", "-1", "abc", "1.5"]) {
+      const r = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, a3: v } });
       expect(r.status).toBe(400);
       expect(await r.text()).toContain("needs another look");
     }
-    // The compact rank form ("2,0,3,1") must also be a real permutation.
-    const compact = { ...good, [`a${ri}`]: "0,0,1,2" };
-    expect((await req("/quiz", { cookie: m.cookie, form: compact })).status).toBe(400);
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
-    // Leaving a rank or coin question untouched just skips it.
-    const skipped = { ...good };
-    for (const k of Object.keys(skipped)) if (k.startsWith(`a${ri}_`)) skipped[k] = "";
-    for (const k of Object.keys(skipped)) if (k.startsWith(`a${bi}_`)) skipped[k] = "0";
-    expect((await req("/quiz", { cookie: m.cookie, form: skipped })).status).toBe(302);
+    // Leaving one question blank just skips it.
+    expect((await req("/quiz", { cookie: m.cookie, form: { ...good, a3: "" } })).status).toBe(302);
   });
 
   it("scores, saves the type, shows it, and retakes with fresh questions", async () => {
     const m = await createMember();
     const seed = quizSeed(m.id, null);
     const qs = quizQuestions(seed, null, MEMBER);
-    expect(new Set(qs.map((q) => q.format))).toEqual(new Set(["choice", "bothers", "scale", "slider", "rank", "budget"]));
     const f = form(seed, qs);
     const r = await req("/quiz", { cookie: m.cookie, form: f });
     expect(r.status).toBe(302);
     expect(r.headers.get("location")).toBe("/quiz/result?new=1");
 
     const scored = scoreSession(qs, answersOf(f, qs));
-    expect(scored.answered).toBe(18);
-    const expected = typeOf(scored.vector);
+    expect(scored.answered).toBe(20);
+    const expected = typeOf(scored.vector, scored.affinity, scored.unsure);
     const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
     expect(row.archetype).toBe(expected.archetype);
     expect(row.modifier).toBe(expected.modifier);
-    expect(row.seen).toHaveLength(18);
+    expect(row.archetype).toBe("BDSH");
+    expect(row.blend?.types).toEqual(expected.blend);
+    expect(row.blend?.unsure).toEqual(scored.unsure);
+    expect(row.blend?.consistency).toBe(1);
+    expect(row.seen).toHaveLength(20);
     expect(row.visible).toBe(false);
 
     const result = await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text();
     expect(result).toContain(displayName(row.archetype as ArchetypeKey, row.modifier).en);
     expect(result).toContain('action="/quiz/visibility"');
+    expect(result).toContain("How sure we are");
+    expect(result).toContain("Clicks with");
+    expect(result).toContain("Hangouts and areas");
 
     // Retake: a new server-side seed, and (mostly) unseen questions.
     const again = await (await req("/quiz", { cookie: m.cookie })).text();
-    expect(seedIn(again)).toBe(`${m.id}:18`);
-    const next = quizQuestions(`${m.id}:18`, row, MEMBER);
-    const repeats = next.filter((q) => row.seen.includes(q.id)).length;
-    expect(repeats).toBeLessThanOrEqual(3);
+    expect(seedIn(again)).toBe(`${m.id}:20`);
+    const next = quizQuestions(`${m.id}:20`, row, MEMBER);
+    const seenScenarios = new Set(row.seen.map((id) => id.split(".")[0]));
+    expect(next.filter((q) => seenScenarios.has(q.scenario)).length).toBeLessThanOrEqual(6);
 
     // Retaking keeps `visible` and grows `seen`.
     await req("/quiz/visibility", { cookie: m.cookie, form: { visible: "1", next: "/quiz/result" } });
-    const r2 = await req("/quiz", { cookie: m.cookie, form: form(`${m.id}:18`, next) });
+    const r2 = await req("/quiz", { cookie: m.cookie, form: form(`${m.id}:20`, next) });
     expect(r2.status).toBe(302);
     const [row2] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
     expect(row2.visible).toBe(true);
-    expect(row2.seen.length).toBeGreaterThan(18);
+    expect(row2.seen.length).toBeGreaterThan(20);
   });
 
   it("toggles visibility", async () => {
@@ -212,7 +165,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const quiz = await req("/onboarding/quiz", { cookie });
     expect(quiz.status).toBe(200);
     const qhtml = await quiz.text();
-    expect(answerNames(qhtml).size).toBe(18);
+    expect(answerNames(qhtml).size).toBe(20);
     expect(qhtml).toContain('formaction="/onboarding/quiz/skip"');
     const skip = await req("/onboarding/quiz/skip", { cookie, method: "POST" });
     expect(skip.headers.get("location")).toBe("/onboarding/basics");

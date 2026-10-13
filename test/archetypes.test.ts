@@ -11,8 +11,10 @@ import {
   displayName,
   flavourBadges,
   matchLabel,
+  resultOf,
   normalizeType,
   suggestedMatches,
+  typeFits,
   typeOf,
 } from "../src/vibe/archetypes";
 
@@ -39,11 +41,11 @@ describe("16 types", () => {
 
 describe("typeOf", () => {
   it("takes letters from energy, explore, motion, culture and a flavour from rhythm and plan", () => {
-    expect(typeOf(vec({ energy: 0.8, explore: -0.5, motion: -0.4, culture: 0.6, rhythm: 0.9 }))).toEqual({ archetype: "BFSN", modifier: "rhythm+" });
-    expect(typeOf(vec({ energy: -1, explore: 1, motion: 1, culture: -1, rhythm: -0.7, plan: -0.6 }))).toEqual({ archetype: "CDMH", modifier: "rhythm-,plan-" });
+    expect(typeOf(vec({ energy: 0.8, explore: -0.5, motion: -0.4, culture: 0.6, rhythm: 0.9 }))).toMatchObject({ archetype: "BFSN", modifier: "rhythm+" });
+    expect(typeOf(vec({ energy: -1, explore: 1, motion: 1, culture: -1, rhythm: -0.7, plan: -0.6 }))).toMatchObject({ archetype: "CDMH", modifier: "rhythm-,plan-" });
   });
   it("breaks exact ties toward the first letter and drops balanced flavours", () => {
-    expect(typeOf(vec({ rhythm: 0.1 }))).toEqual({ archetype: "BDMN", modifier: null });
+    expect(typeOf(vec({ rhythm: 0.1 }))).toMatchObject({ archetype: "BDMN", modifier: null });
   });
   it("recomputes results saved by the old 13-type version", () => {
     expect(normalizeType({ archetype: "plan+", modifier: "energy-", vector: vec({ energy: -0.5, plan: 0.8 }) })).toEqual({ archetype: "CDMN", modifier: "plan+" });
@@ -72,29 +74,78 @@ describe("match labels", () => {
   });
 });
 
-describe("reachability through the v3.1 quiz", () => {
-  it("every one of the 16 codes comes out of a real mixed session (slider, rank, coins and all)", async () => {
-    const { generateSession, scoreSession, COINS } = await import("../src/vibe/generator");
-    const { CODE_AXES } = await import("../src/vibe/archetypes");
-    for (const [seed, personal] of [["reach-a", undefined], ["reach-b", { district: "bang_rak", interests: ["food", "art"] }]] as const) {
-      const qs = generateSession({ seed, formats: "mixed", personal });
+describe("blend, wing and type-linked picks", () => {
+  it("a balanced letter is decided by the types the person picked, a clear letter never is", () => {
+    // Energy is balanced (0.1), the rest clearly D, S, H.
+    const v = vec({ energy: 0.1, explore: 0.8, motion: -0.8, culture: -0.8 });
+    expect(typeOf(v).archetype).toBe("BDSH");
+    expect(typeOf(v, { CDSH: 1, BDSH: 0 }).archetype).toBe("CDSH");
+    // Even a strong pull toward a type cannot flip a clear letter (explore stays D).
+    expect(typeOf(v, { BFSH: 1, BDSH: 0 }).archetype.slice(1)).toBe("DSH");
+  });
+
+  it("the blend is the type, its wing and a third, best first, with fits in 0..100", () => {
+    const v = vec({ energy: 0.7, explore: 0.3, motion: -0.6, culture: -0.9 });
+    const { archetype, blend } = typeOf(v);
+    expect(blend).toHaveLength(3);
+    expect(blend[0].key).toBe(archetype);
+    expect(new Set(blend.map((b) => b.key)).size).toBe(3);
+    expect(blend[0].fit).toBeGreaterThanOrEqual(blend[1].fit);
+    expect(blend[1].fit).toBeGreaterThanOrEqual(blend[2].fit);
+    for (const b of blend) expect(b.fit).toBeGreaterThanOrEqual(0), expect(b.fit).toBeLessThanOrEqual(100);
+    // The wing is the closest letter flip: explore (0.3) is the weakest clear letter.
+    expect(blend[1].key).toBe("BFSH");
+    expect(typeFits(v)).toHaveLength(16);
+  });
+
+  it("rebuilds the result extras for results saved before they existed", () => {
+    const v = vec({ energy: -0.5, explore: 0.5, motion: 0.5, culture: -0.5 });
+    const r = resultOf({ archetype: "CDMH", vector: v, blend: null });
+    expect(r.types[0].key).toBe("CDMH");
+    expect(r.types).toHaveLength(3);
+    expect(r.unsure).toEqual([]);
+    expect(r.range).toEqual(["CDMH"]);
+    // A saved result is used as is, and one unsure letter gives a two-type range.
+    const saved = { types: [{ key: "CDMH" as const, fit: 70 }, { key: "CDSH" as const, fit: 60 }], unsure: ["motion"], consistency: 0.75 };
+    const r2 = resultOf({ archetype: "CDMH", vector: v, blend: saved });
+    expect(r2.types).toEqual(saved.types);
+    expect(r2.consistency).toBe(0.75);
+    expect(r2.range).toEqual(["CDMH", "CDSH"]);
+  });
+
+  it("every type has a drive, a drain, a best time and three real spots, all bilingual", () => {
+    for (const k of ARCHETYPE_KEYS) {
+      const a = ARCHETYPES[k];
+      for (const x of [a.drive, a.drain, a.bestTime]) expect(x.en && x.th, k).toBeTruthy();
+      expect(a.spots, k).toHaveLength(3);
+      for (const s of a.spots) for (const x of [s.name, s.area, s.why]) expect(x.en && x.th, k).toBeTruthy();
+    }
+    // Every type clicks with three other types and has three hangouts.
+    for (const k of ARCHETYPE_KEYS) {
+      const a = ARCHETYPES[k];
+      expect(a.clicks, k).toHaveLength(3);
+      for (const c of a.clicks) expect(c.key !== k && c.why.en && c.why.th, k).toBeTruthy();
+      expect(a.hangouts, k).toHaveLength(3);
+      for (const h of a.hangouts) expect(h.name.en && h.name.th && h.why.en && h.why.th, k).toBeTruthy();
+    }
+    // No two types share a headline spot.
+    const names = ARCHETYPE_KEYS.flatMap((k) => ARCHETYPES[k].spots.map((s) => s.name.en));
+    expect(names.length - new Set(names).size).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("reachability through the real quiz", () => {
+  it("every one of the 16 codes comes out of a real session, with and without a home district", async () => {
+    const { generateSession, scoreSession } = await import("../src/vibe/generator");
+    const { answersAs } = await import("./quiz-helpers");
+    for (const [seed, personal] of [["reach-a", undefined], ["reach-b", { district: "bang_rak" }]] as const) {
+      const qs = generateSession({ seed, personal });
       for (const code of ARCHETYPE_KEYS) {
-        const want: Record<string, 1 | -1> = {};
-        CODE_AXES.forEach((axis, i) => (want[axis.category] = code[i] === axis.plus ? 1 : -1));
-        const answers: Record<string, number | number[]> = {};
-        for (const q of qs) {
-          const pole = want[q.category] ?? 1;
-          if (q.format === "scale") answers[q.id] = q.pole === pole ? 5 : 1;
-          else if (q.format === "slider") answers[q.id] = q.options[1].pole === pole ? 100 : 0;
-          else if (q.format === "rank") answers[q.id] = q.options.map((_, j) => j).sort((a, b) => (q.options[b].pole === pole ? 1 : 0) - (q.options[a].pole === pole ? 1 : 0));
-          else if (q.format === "budget") {
-            const mine = q.options.map((o, j) => (o.pole === pole ? j : -1)).filter((j) => j >= 0);
-            answers[q.id] = q.options.map((_, j) => (j === mine[0] ? COINS : 0));
-          } else answers[q.id] = q.options.findIndex((o) => o.pole === pole);
-        }
-        const r = scoreSession(qs, answers);
+        const r = scoreSession(qs, answersAs(qs, code));
         expect(r.answered).toBe(qs.length);
-        expect(typeOf(r.vector).archetype).toBe(code);
+        const t = typeOf(r.vector, r.affinity, r.unsure);
+        expect(t.archetype).toBe(code);
+        expect(t.blend[0].fit).toBeGreaterThanOrEqual(80);
       }
     }
   });

@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
 import { generateSession } from "../src/vibe/generator";
+import { answersAs } from "./quiz-helpers";
 
 describe("GET /api/vibe/quiz", () => {
   it("returns a balanced public session for a seed", async () => {
@@ -11,8 +12,8 @@ describe("GET /api/vibe/quiz", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { seed: string; questions: { id: string }[] };
     expect(body.seed).toBe("demo");
-    expect(body.questions).toHaveLength(18);
-    expect(JSON.stringify(body)).not.toContain("pole");
+    expect(body.questions).toHaveLength(20);
+    expect(JSON.stringify(body)).not.toMatch(/"type"|"district"|"flavour"|BDMN|CFSH/);
   });
 
   it("flattens to one language when asked", async () => {
@@ -43,15 +44,11 @@ describe("POST /api/vibe/score", () => {
 
   it("scores answers against the session rebuilt from the seed", async () => {
     const qs = generateSession({ seed: "s1" });
-    const answers = Object.fromEntries(
-      qs.map((q) => [q.id, q.format === "scale" ? (q.pole === 1 ? 5 : 1) : q.options.findIndex((o) => o.pole === 1)]),
-    );
-    const res = await post({ seed: "s1", answers });
+    const res = await post({ seed: "s1", answers: answersAs(qs, "BDMN") });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { answered: number; vector: Record<string, number>; name: { en: string } };
-    expect(body.answered).toBe(18);
-    expect(Object.values(body.vector).every((v) => v === 1)).toBe(true);
-    expect(body.name.en).toBe("Curious Connector");
+    const body = (await res.json()) as { answered: number; vector: Record<string, number>; unsure: string[] };
+    expect(body.answered).toBe(20);
+    for (const c of ["energy", "explore", "motion", "culture"]) expect(body.vector[c]).toBeGreaterThan(0);
   });
 
   it("ignores answers to questions that aren't in the session", async () => {

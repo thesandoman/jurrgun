@@ -520,6 +520,12 @@ export const vibes = pgTable("social_vibes", {
   archetype: text("archetype").notNull(),
   /** Second-strongest pole for the name modifier, e.g. "explore+". */
   modifier: text("modifier"),
+  /**
+   * Result extras: the top three types with their fit (0..100), letters
+   * within the margin of error, margins, and twin-question consistency.
+   * Null for results saved before this existed.
+   */
+  blend: jsonb("blend").$type<{ types: { key: string; fit: number }[]; unsure: string[]; consistency: number | null; margin?: Record<string, number> }>(),
   /** Question ids answered so far, so retakes get fresh questions. */
   seen: jsonb("seen").$type<string[]>().notNull().default([]),
   /** Shown on profile / to groupmates only if the user opts in. */

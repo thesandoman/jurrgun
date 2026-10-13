@@ -1,0 +1,1 @@
+ALTER TABLE "social_vibes" ADD COLUMN "blend" jsonb;

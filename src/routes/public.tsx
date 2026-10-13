@@ -173,7 +173,7 @@ publicRoutes.get("/privacy", (c) => {
     { title: t("ความเป็นส่วนตัว", "Privacy") },
     <>
       <h1>{t("นโยบายความเป็นส่วนตัว (ฉบับร่างต้นแบบ)", "Privacy notice (prototype draft)")}</h1>
-      <p>{t("Jurrgun เป็นโครงการต้นแบบของกรุงเทพมหานคร เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a Bangkok Metropolitan Administration prototype. We collect only what's needed and keep it in three separate stores:")}</p>
+      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok. We collect only what's needed and keep it in three separate stores:")}</p>
       <ul>
         <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัส) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
         <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม การเชื่อมต่อ", "Social: nickname, interests, events attended, connections.")}</li>

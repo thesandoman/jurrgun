@@ -1,421 +1,218 @@
 /**
- * Bangkok Vibe quiz generator: determinism, balance, formats, uniqueness and scoring.
+ * Bangkok Type quiz: session building, balance, the 2,500-quiz rule, scoring
+ * and the margin of error.
  */
 import { describe, expect, it } from "vitest";
+import { CATEGORIES } from "../src/vibe/content";
 import {
-  ACTIVITIES,
-  BOTHERS,
-  CATEGORIES,
-  COMPANIONS,
-  PLACES,
-  SITUATIONS,
-  SLIDER_ENDS,
-  STATEMENTS,
-  SUPERPOWERS,
-  WHENS,
-  type Pole,
-  type Text,
-} from "../src/vibe/content";
-import {
-  COINS,
+  CONTEXT_MIN,
+  OPTIONS_PER_QUESTION,
+  QUIZ_LENGTH,
   generateSession,
   itemScore,
-  mixCounts,
-  questionSpace,
   scoreSession,
   toPublic,
-  type Answer,
   type Answers,
   type Question,
 } from "../src/vibe/generator";
+import { LETTERS, SCENARIOS, TYPE_CODES, oppositeCode, type TypeCode } from "../src/vibe/scenarios";
+import { ARCHETYPE_KEYS, typeOf } from "../src/vibe/archetypes";
+import { answerAs, answersAs } from "./quiz-helpers";
 
-const mixed = (seed: string, extra: Partial<Parameters<typeof generateSession>[0]> = {}) => generateSession({ seed, formats: "mixed", ...extra });
-
-/** The answer that pushes `q` fully toward `pole`. */
-export function answerFor(q: Question, pole: Pole): Answer {
-  switch (q.format) {
-    case "scale":
-      return q.pole === pole ? 5 : 1;
-    case "slider":
-      return q.options[1].pole === pole ? 100 : 0;
-    case "rank": {
-      const idx = q.options.map((_, j) => j);
-      return [...idx.filter((j) => q.options[j].pole === pole), ...idx.filter((j) => q.options[j].pole !== pole)];
-    }
-    case "budget": {
-      const mine = q.options.map((o) => o.pole === pole);
-      const n = mine.filter(Boolean).length;
-      let left = COINS;
-      return mine.map((m, j) => {
-        if (!m) return 0;
-        const isLast = mine.slice(j + 1).every((x) => !x);
-        const c = isLast ? left : Math.floor(COINS / n);
-        left -= c;
-        return c;
-      });
-    }
-    default:
-      return q.options.findIndex((o) => o.pole === pole);
-  }
-}
+const session = (seed: string, extra: Partial<Parameters<typeof generateSession>[0]> = {}) => generateSession({ seed, ...extra });
+const ids = (qs: Question[]) => qs.map((q) => q.id).join(",");
+const CODE_CATS = ["energy", "explore", "motion", "culture"] as const;
 
 describe("generateSession", () => {
   it("is deterministic for a seed and different across seeds", () => {
-    for (const formats of ["classic", "mixed"] as const) {
-      const a = generateSession({ seed: "alpha", formats }).map((q) => q.id);
-      expect(generateSession({ seed: "alpha", formats }).map((q) => q.id)).toEqual(a);
-      expect(generateSession({ seed: "beta", formats }).map((q) => q.id)).not.toEqual(a);
-    }
+    expect(ids(session("alpha"))).toBe(ids(session("alpha")));
+    expect(ids(session("beta"))).not.toBe(ids(session("alpha")));
   });
 
-  it("classic sessions balance categories with a scale item per category", () => {
-    for (const seed of ["1", "2", "3", "bkk", "thonburi"]) {
-      const qs = generateSession({ seed, perCategory: 3 });
-      expect(qs).toHaveLength(18);
-      for (const c of CATEGORIES) {
-        const items = qs.filter((q) => q.category === c);
-        expect(items).toHaveLength(3);
-        expect(items.some((q) => q.format === "scale")).toBe(true);
-      }
-      expect(qs.every((q) => q.format === "choice" || q.format === "scale")).toBe(true);
-      expect(new Set(qs.map((q) => q.id)).size).toBe(qs.length);
-    }
-  });
-
-  it("mixed sessions keep perCategory balance and include every format", () => {
-    for (let i = 0; i < 200; i++) {
-      for (const per of [2, 3, 4, 6]) {
-        const qs = mixed(`mix${i}`, { perCategory: per });
-        expect(qs).toHaveLength(per * 6);
-        for (const c of CATEGORIES) expect(qs.filter((q) => q.category === c)).toHaveLength(per);
-        const count = (f: string) => qs.filter((q) => q.format === f).length;
-        const want = mixCounts(per);
-        expect(count("slider")).toBe(want.slider);
-        expect(count("rank")).toBe(want.rank);
-        expect(count("budget")).toBe(want.budget);
-        expect(count("bothers")).toBe(want.bothers);
-        expect(count("scale")).toBe(want.scale);
-        expect(count("slider")).toBeGreaterThanOrEqual(1);
-        expect(count("rank") + count("budget")).toBeGreaterThanOrEqual(2);
-        expect(count("choice")).toBeGreaterThanOrEqual(per === 2 ? 4 : 6);
-      }
-    }
-  });
-
-  it("never puts the same category, or (in mixed sessions) the same format, twice in a row", () => {
+  it("20 questions: 16 core, 2 rhythm, 2 plan, six answers each, every scenario once", () => {
     for (let i = 0; i < 300; i++) {
-      for (const qs of [generateSession({ seed: `order${i}` }), mixed(`order${i}`), mixed(`order${i}`, { perCategory: 6 })]) {
-        for (let k = 1; k < qs.length; k++) expect(qs[k].category).not.toBe(qs[k - 1].category);
-      }
-      const qs = mixed(`order${i}`);
-      for (let k = 1; k < qs.length; k++) expect(qs[k].format, `${i}:${k}`).not.toBe(qs[k - 1].format);
+      const qs = session(`shape${i}`);
+      expect(qs).toHaveLength(QUIZ_LENGTH);
+      expect(qs.filter((q) => q.kind === "core")).toHaveLength(16);
+      expect(qs.filter((q) => q.kind === "rhythm")).toHaveLength(2);
+      expect(qs.filter((q) => q.kind === "plan")).toHaveLength(2);
+      expect(new Set(qs.map((q) => q.scenario)).size).toBe(QUIZ_LENGTH);
+      for (const q of qs) expect(q.options).toHaveLength(OPTIONS_PER_QUESTION);
     }
   });
 
-  it("puts the + option first only about half the time", () => {
-    let plusFirst = 0;
-    let total = 0;
-    for (let i = 0; i < 200; i++) {
-      for (const q of mixed(`pos${i}`)) {
-        if ((q.format !== "choice" && q.format !== "slider") || q.template === "skip") continue;
-        total += 1;
-        if (q.options[0].pole === 1) plusFirst += 1;
-      }
-    }
-    expect(plusFirst / total).toBeGreaterThan(0.4);
-    expect(plusFirst / total).toBeLessThan(0.6);
-  });
-
-  it("rank and budget offer two activities from each pole", () => {
-    for (let i = 0; i < 50; i++) {
-      for (const q of mixed(`four${i}`)) {
-        if (q.format !== "rank" && q.format !== "budget") continue;
-        expect(q.options).toHaveLength(4);
-        expect(q.options.filter((o) => o.pole === 1)).toHaveLength(2);
-        expect(new Set(q.options.map((o) => o.label.en)).size).toBe(4);
-        if (q.format === "budget") expect(q.coins).toBe(10);
+  it("every question shows three opposite pairs, so each letter (and flavour) is split 3/3", () => {
+    for (let i = 0; i < 300; i++) {
+      for (const q of session(`split${i}`)) {
+        const codes = q.options.map((o) => o.type);
+        expect(new Set(codes).size).toBe(6);
+        for (const c of codes) expect(codes).toContain(oppositeCode(c));
+        for (let k = 0; k < 4; k++) expect(codes.filter((c) => LETTERS[c[k]].pole === 1)).toHaveLength(3);
+        if (q.kind !== "core") expect(q.options.filter((o) => o.flavour === 1)).toHaveLength(3);
+        // Every answer is the hand-written one for that type.
+        const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
+        for (const o of q.options) expect(o.label.en).toBe(sc.answers[o.type].en);
       }
     }
   });
 
-  it("avoids questions the user has already seen", () => {
-    for (const formats of ["classic", "mixed"] as const) {
-      const first = generateSession({ seed: "u1-a", formats });
-      const seen = new Set(first.map((q) => q.id));
-      const second = generateSession({ seed: "u1-b", seen, formats });
-      expect(second.filter((q) => seen.has(q.id)).length).toBeLessThanOrEqual(2);
+  it("every type is offered 7 or 8 times per session", () => {
+    for (let i = 0; i < 300; i++) {
+      const offered = new Map<string, number>(TYPE_CODES.map((c) => [c, 0]));
+      for (const q of session(`fair${i}`)) for (const o of q.options) offered.set(o.type, offered.get(o.type)! + 1);
+      for (const n of offered.values()) expect([7, 8]).toContain(n);
     }
   });
 
-  it("public questions leak no category or pole, in any format", () => {
-    const formats = new Set<string>();
-    for (let i = 0; i < 20; i++) {
-      for (const q of mixed(`pub${i}`)) {
-        const pub = toPublic(q);
-        formats.add(pub.format);
-        const json = JSON.stringify(pub);
-        for (const key of ["category", "pole", "template", "districts", "tags"]) expect(json).not.toContain(`"${key}"`);
-        expect(json).not.toContain("pole");
-        if (pub.format !== "scale") expect(pub.options).toHaveLength(q.format === "scale" ? 0 : q.options.length);
+  it("mixes who you're with: the context minimums hold in every session", () => {
+    for (let i = 0; i < 300; i++) {
+      const core = session(`ctx${i}`).filter((q) => q.kind === "core");
+      for (const [ctx, min] of Object.entries(CONTEXT_MIN)) expect(core.filter((q) => q.context === ctx).length, ctx).toBeGreaterThanOrEqual(min);
+    }
+  });
+
+  it("includes two twin pairs, at least 8 questions apart", () => {
+    for (let i = 0; i < 300; i++) {
+      const qs = session(`twin${i}`);
+      const pairs = qs.filter((q) => q.twin && qs.some((x) => x.scenario === q.twin) && q.scenario < q.twin!);
+      expect(pairs).toHaveLength(2);
+      for (const q of pairs) {
+        const j = qs.findIndex((x) => x.scenario === q.twin);
+        expect(Math.abs(qs.indexOf(q) - j)).toBeGreaterThanOrEqual(8);
       }
     }
-    expect([...formats].sort()).toEqual(["bothers", "budget", "choice", "rank", "scale", "slider"]);
-  });
-});
-
-describe("no user receives the same quiz", () => {
-  it("5,000 different seeds give 5,000 different sessions, with no repeated id inside any session", () => {
-    const sessions = new Set<string>();
-    for (let i = 0; i < 5000; i++) {
-      const ids = mixed(`acct-${i}:0`).map((q) => q.id);
-      expect(new Set(ids).size).toBe(ids.length);
-      sessions.add(ids.join(","));
-    }
-    expect(sessions.size).toBe(5000);
-  }, 30_000);
-
-  it("the same seed with different personalisation gives a different session", () => {
-    const base = mixed("same-seed").map((q) => q.id).join(",");
-    const a = mixed("same-seed", { personal: { district: "bang_rak", interests: ["food"] } }).map((q) => q.id).join(",");
-    const b = mixed("same-seed", { personal: { district: "lat_krabang", interests: ["food"] } }).map((q) => q.id).join(",");
-    const c = mixed("same-seed", { personal: { district: "bang_rak", interests: ["running", "pets"] } }).map((q) => q.id).join(",");
-    expect(new Set([base, a, b, c]).size).toBe(4);
-    // Empty personalisation is the same as none.
-    expect(mixed("same-seed", { personal: { district: null, interests: [] } }).map((q) => q.id).join(",")).toBe(base);
   });
 
-  it("personalisation leans scenes toward the person's district and interests", () => {
-    let local = 0;
-    let scenes = 0;
-    let liked = 0;
-    for (let i = 0; i < 400; i++) {
-      for (const q of mixed(`p${i}`, { personal: { district: "lat_krabang", interests: ["running"] } })) {
-        if (q.template !== "scene" && q.template !== "host") continue;
-        scenes += 1;
-        const place = PLACES.find((p) => p.en === q.art.caption?.en)!;
-        if (place.districts.includes("lat_krabang")) local += 1;
-        if (place.tags.includes("running")) liked += 1;
-      }
-    }
-    // Uniform picking would give about 1/39 and 6/39.
-    expect(local / scenes).toBeGreaterThan(0.15);
-    expect(liked / scenes).toBeGreaterThan(0.3);
+  it("avoids scenarios the person has already seen", () => {
+    const first = session("u1-a");
+    const second = session("u1-b", { seen: new Set(first.map((q) => q.id)) });
+    const firstScenarios = new Set(first.map((q) => q.scenario));
+    // 47 scenarios, 20 per quiz: twins and context minimums may force a few back.
+    expect(second.filter((q) => firstScenarios.has(q.scenario)).length).toBeLessThanOrEqual(6);
   });
 
-  it("the question space is well over 100,000 and real sessions reach a wide part of it", () => {
-    expect(questionSpace()).toBeGreaterThanOrEqual(100_000);
-    const ids = new Set<string>();
-    for (let i = 0; i < 1500; i++) for (const q of mixed(`space${i}`)) ids.add(q.id);
-    expect(ids.size).toBeGreaterThanOrEqual(15_000);
-  });
-});
-
-describe("content is non-political, positive and complete", () => {
-  const allTexts = (): Text[] => [
-    ...Object.values(ACTIVITIES).flatMap((p) => [...p.plus, ...p.minus]),
-    ...Object.values(STATEMENTS).flatMap((p) => [...p.plus, ...p.minus]),
-    ...Object.values(SLIDER_ENDS).flatMap((p) => [...p.plus, ...p.minus]),
-    ...Object.values(BOTHERS).flatMap((p) => [...p.plus, ...p.minus]),
-    ...Object.values(SUPERPOWERS).flatMap((p) => [...p.plus, ...p.minus]),
-    ...SITUATIONS,
-    ...PLACES,
-    ...WHENS,
-    ...COMPANIONS,
-  ];
-
-  it("contains none of the civic / political words from the old quiz, in English or Thai", () => {
-    const banned =
-      /policy|policies|government|politic|vote|voting|election|ballot|budget|tax|rules?\b|regulat|law\b|cctv|surveillance|police|security guard|expert|resident|public money|subsid|campaign|party (?:member|leader|line|politics)|ideolog|religio|worship|monk|alms|merit|pray|LGBT|gender|income|salary|protest|candidate|parliament|minister|governor|BMA\b/i;
-    const bannedTh = /การเมือง|เลือกตั้ง|โหวต|ลงคะแนน|ภาษี|งบประมาณ|ตำรวจ|กล้องวงจรปิด|ศาสนา|ไหว้พระ|ตักบาตร|ทำบุญ|พรรค|รัฐบาล|นโยบาย|กฎหมาย|ผู้ว่า|ประท้วง|รายได้|เงินเดือน/;
-    const texts = allTexts();
-    expect(texts.length).toBeGreaterThanOrEqual(450);
-    for (const text of texts) {
-      expect(text.en).not.toMatch(banned);
-      expect(text.th).not.toMatch(bannedTh);
-    }
-    // Generated prompts too (they add template words around the bank).
+  it("a home district puts an answer set near home into the session", () => {
     for (let i = 0; i < 100; i++) {
-      for (const q of mixed(`words${i}`)) {
-        expect(q.prompt.en).not.toMatch(banned);
-        expect(q.prompt.th).not.toMatch(bannedTh);
-      }
+      const qs = session(`home${i}`, { personal: { district: "nong_chok" } });
+      expect(qs.some((q) => q.options.some((o) => o.district === "nong_chok"))).toBe(true);
     }
   });
 
-  it("new copy uses no em or en dashes, and every item is bilingual", () => {
-    for (const text of allTexts()) {
-      expect(text.en, text.en).not.toMatch(/[–—]/);
-      expect(text.th, text.en).not.toMatch(/[–—]/);
-      expect(text.th.trim().length, text.en).toBeGreaterThan(0);
-      expect(text.en.trim().length).toBeGreaterThan(0);
-    }
-    for (let i = 0; i < 50; i++) for (const q of mixed(`dash${i}`)) expect(q.prompt.en).not.toMatch(/[–—]/);
-  });
-
-  it("bank sizes: 14+ activities and 6+ statements and slider ends per pole, 30+ places, 15+ situations", () => {
-    for (const c of CATEGORIES) {
-      for (const bank of [ACTIVITIES[c], STATEMENTS[c], SLIDER_ENDS[c], BOTHERS[c], SUPERPOWERS[c]]) {
-        expect(bank.plus.length).toBeGreaterThanOrEqual(bank === ACTIVITIES[c] ? 14 : bank === BOTHERS[c] ? 5 : bank === SUPERPOWERS[c] ? 3 : 6);
-        expect(bank.minus.length).toBe(bank.plus.length);
+  it("public questions leak no type, district or flavour", () => {
+    for (let i = 0; i < 30; i++) {
+      for (const q of session(`pub${i}`)) {
+        const json = JSON.stringify(toPublic(q));
+        expect(json).not.toMatch(/"type"|"district"|"flavour"|"kind"|"context"|"twin"/);
+        for (const code of TYPE_CODES) expect(json).not.toContain(`"${code}"`);
       }
     }
-    expect(Object.values(ACTIVITIES).flatMap((p) => [...p.plus, ...p.minus]).length).toBeGreaterThanOrEqual(168);
-    expect(PLACES.length).toBeGreaterThanOrEqual(30);
-    expect(SITUATIONS.length).toBeGreaterThanOrEqual(15);
-    expect(COMPANIONS.length).toBeGreaterThanOrEqual(12);
-    // No item appears twice anywhere in a bank (it would blur the two poles).
-    for (const c of CATEGORIES) {
-      for (const bank of [ACTIVITIES, STATEMENTS, SLIDER_ENDS, BOTHERS, SUPERPOWERS]) {
-        const all = [...bank[c].plus, ...bank[c].minus].map((x) => x.en);
-        expect(new Set(all).size).toBe(all.length);
-      }
-    }
-    const acts = Object.values(ACTIVITIES).flatMap((p) => [...p.plus, ...p.minus]).map((a) => a.en);
-    expect(new Set(acts).size).toBe(acts.length);
   });
 });
 
-describe("scoring", () => {
-  it("scores every format, including reversed 'skip' and 'bothers' items", () => {
-    for (let i = 0; i < 30; i++) {
-      for (const q of mixed(`score${i}`)) {
-        switch (q.format) {
-          case "scale":
-            expect(itemScore(q, 5)).toBe(q.pole);
-            expect(itemScore(q, 3)).toBe(0);
-            expect(itemScore(q, 6)).toBeNull();
-            expect(itemScore(q, [5])).toBeNull();
-            break;
-          case "slider":
-            expect(itemScore(q, 100)).toBe(q.options[1].pole);
-            expect(itemScore(q, 0)).toBe(q.options[0].pole);
-            expect(itemScore(q, 50)).toBe(0);
-            expect(itemScore(q, 75)).toBe(0.5 * q.options[1].pole);
-            expect(itemScore(q, 101)).toBeNull();
-            expect(itemScore(q, 12.5)).toBeNull();
-            break;
-          case "rank": {
-            expect(itemScore(q, answerFor(q, 1))).toBe(1);
-            expect(itemScore(q, answerFor(q, -1))).toBe(-1);
-            const alt = [q.options.findIndex((o) => o.pole === 1), q.options.findIndex((o) => o.pole === -1)];
-            const rest = [0, 1, 2, 3].filter((j) => !alt.includes(j)).sort((a, b) => q.options[b].pole - q.options[a].pole);
-            expect(itemScore(q, [...alt, ...rest])).toBe(0.5); // + − + −  →  (3 − 1 − 1 + 3) / 8
-            expect(itemScore(q, [0, 0, 1, 2])).toBeNull();
-            expect(itemScore(q, [0, 1, 2])).toBeNull();
-            expect(itemScore(q, [0, 1, 2, 4])).toBeNull();
-            expect(itemScore(q, 1)).toBeNull();
-            break;
-          }
-          case "budget": {
-            expect(itemScore(q, answerFor(q, 1))).toBe(1);
-            expect(itemScore(q, answerFor(q, -1))).toBe(-1);
-            const even = q.options.map(() => 0);
-            even[q.options.findIndex((o) => o.pole === 1)] = 5;
-            even[q.options.findIndex((o) => o.pole === -1)] = 5;
-            expect(itemScore(q, even)).toBe(0);
-            const lean = q.options.map((o) => (o.pole === 1 ? 4 : 1)); // 8 vs 2
-            expect(itemScore(q, lean)).toBeCloseTo(0.6);
-            expect(itemScore(q, [1, 1, 1, 1])).toBeNull();
-            expect(itemScore(q, [11, 0, 0, -1])).toBeNull();
-            expect(itemScore(q, [10, 0, 0])).toBeNull();
-            expect(itemScore(q, [2.5, 2.5, 5, 0])).toBeNull();
-            break;
-          }
-          default:
-            expect(itemScore(q, 0)).toBe(q.options[0].pole);
-            expect(itemScore(q, 2)).toBeNull();
-            expect(itemScore(q, [0])).toBeNull();
-        }
+describe("no two people get the same quiz", () => {
+  it("5,000 seeds give 5,000 different sessions", () => {
+    const all = new Set<string>();
+    for (let i = 0; i < 5000; i++) all.add(ids(session(`u${i}`)));
+    expect(all.size).toBe(5000);
+  });
+
+  it("at least 2,500 different quizzes lead to each of the 16 types", () => {
+    const quizzes = Array.from({ length: 2500 }, (_, i) => session(`perm${i}`));
+    expect(new Set(quizzes.map(ids)).size).toBe(2500);
+    for (const code of ARCHETYPE_KEYS) {
+      let reached = 0;
+      for (const qs of quizzes) {
+        const r = scoreSession(qs, answersAs(qs, code));
+        if (typeOf(r.vector, r.affinity, r.unsure).archetype === code) reached += 1;
       }
+      expect(reached, code).toBe(2500);
+    }
+  }, 120_000);
+});
+
+describe("scoring and the margin of error", () => {
+  it("only option indices are valid answers", () => {
+    const q = session("valid")[0];
+    expect(itemScore(q, 0)).toBe(1);
+    expect(itemScore(q, 5)).toBe(1);
+    for (const bad of [6, -1, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
+  });
+
+  it("someone answering consistently as a type gets exactly that type, every letter clear", () => {
+    for (const code of ARCHETYPE_KEYS) {
+      const qs = session(`clear-${code}`);
+      const r = scoreSession(qs, answersAs(qs, code));
+      expect(r.answered).toBe(20);
+      for (const c of CODE_CATS) expect(r.unsure, `${code} ${c}`).not.toContain(c);
+      expect(r.consistency).toBe(1);
+      const t = typeOf(r.vector, r.affinity, r.unsure);
+      expect(t.archetype).toBe(code);
+      expect(t.range).toEqual([code]);
+      expect(r.affinity[code]).toBe(1);
     }
   });
 
-  it("'bothers' and 'skip' items score the opposite of the side their text describes", () => {
-    for (let i = 0; i < 30; i++) {
-      for (const q of mixed(`rev${i}`)) {
-        if (q.format === "bothers") {
-          for (const o of q.options) {
-            const filedUnder = BOTHERS[q.category].plus.some((b) => b.en === o.label.en) ? 1 : -1;
-            expect(o.pole).toBe(filedUnder);
-          }
-        }
-        if (q.template === "skip" && q.format === "choice") {
-          for (const o of q.options) {
-            const isPlusActivity = ACTIVITIES[q.category].plus.some((a) => a.en === o.label.en);
-            expect(o.pole).toBe(isPlusActivity ? -1 : 1);
-          }
-        }
-      }
-    }
-  });
-
-  it("an all-+ answer sheet scores +1 everywhere, in classic and mixed sessions", () => {
-    for (const qs of [generateSession({ seed: "allplus" }), mixed("allplus")]) {
-      const answers: Answers = Object.fromEntries(qs.map((q) => [q.id, answerFor(q, 1)]));
-      const r = scoreSession(qs, answers);
-      for (const c of CATEGORIES) {
-        expect(r.vector[c]).toBe(1);
-        expect(r.strength[c]).toBe("strong");
-      }
-      expect(r.answered).toBe(qs.length);
-      expect(r.highlights).toHaveLength(2);
-      expect(r.name.en).toBe("Curious Connector");
-    }
-  });
-
-  it("all-neutral answers give the All-Rounder", () => {
-    const qs = mixed("neutral");
-    const answers: Answers = {};
-    for (const q of qs) {
-      if (q.format === "scale") answers[q.id] = 3;
-      if (q.format === "slider") answers[q.id] = 50;
-    }
+  it("a 50/50 answerer gets unsure letters and a range instead of one type", () => {
+    const qs = session("split-mind");
+    const answers: Answers = Object.fromEntries(qs.map((q, i) => [q.id, answerAs(q, i % 2 ? "BDSH" : "CFMN")]));
     const r = scoreSession(qs, answers);
-    expect(r.name.en).toBe("Bangkok All-Rounder");
+    expect(r.unsure.filter((c) => (CODE_CATS as readonly string[]).includes(c)).length).toBeGreaterThanOrEqual(2);
+    expect(typeOf(r.vector, r.affinity, r.unsure).range.length).toBeGreaterThan(1);
+  });
+
+  it("one unsure letter gives a range of the two types either side of it", () => {
+    const v = { energy: 0.1, explore: 0.8, motion: -0.8, culture: -0.8, rhythm: 0, plan: 0 };
+    const t = typeOf(v, null, ["energy", "rhythm", "plan"]);
+    expect(t.range).toHaveLength(2);
+    expect(t.range.map((k) => k.slice(1))).toEqual(["DSH", "DSH"]);
+    expect(new Set(t.range.map((k) => k[0]))).toEqual(new Set(["B", "C"]));
+  });
+
+  it("a twin pair answered differently lowers consistency and widens the margin", () => {
+    const qs = session("twin-margin");
+    const base = answersAs(qs, "BDSH");
+    const r1 = scoreSession(qs, base);
+    const twin = qs.find((q) => q.twin && qs.some((x) => x.scenario === q.twin))!;
+    const r2 = scoreSession(qs, { ...base, [twin.id]: answerAs(twin, "CFMN") });
+    expect(r2.consistency).toBeLessThan(1);
+    const wider = (["energy", "explore", "motion", "culture"] as const).filter((c) => r2.margin[c] > r1.margin[c]);
+    expect(wider.length).toBeGreaterThan(0);
+  });
+
+  it("flavours come from the rhythm and plan questions and need both answers to agree", () => {
+    const qs = session("flavour");
+    const answers: Answers = {};
+    for (const q of qs) answers[q.id] = q.kind === "core" ? 0 : q.options.findIndex((o) => o.flavour === 1);
+    const r = scoreSession(qs, answers);
+    expect(r.vector.rhythm).toBe(1);
+    expect(r.vector.plan).toBe(1);
+    expect(r.unsure).not.toContain("rhythm");
+    const rq = qs.filter((q) => q.kind === "rhythm");
+    const split = { ...answers, [rq[1].id]: rq[1].options.findIndex((o) => o.flavour === -1) };
+    expect(scoreSession(qs, split).unsure).toContain("rhythm");
+  });
+
+  it("random answerers mostly get a range result: we don't overclaim", () => {
+    let ranged = 0;
+    for (let i = 0; i < 300; i++) {
+      const qs = session(`rand${i}`);
+      const answers: Answers = Object.fromEntries(qs.map((q, k) => [q.id, (i * 7 + k * 5 + ((i * k) % 3)) % 6]));
+      const r = scoreSession(qs, answers);
+      if (typeOf(r.vector, r.affinity, r.unsure).range.length > 1) ranged += 1;
+    }
+    expect(ranged / 300).toBeGreaterThan(0.7);
   });
 
   it("ignores malformed answers instead of throwing", () => {
-    const qs = mixed("junk");
-    const junk: unknown[] = [NaN, Infinity, -1, 1e9, [], [NaN, 1, 2, 3], ["a"], [1, 2, 3, 4, 5, 6]];
-    for (const q of qs) for (const j of junk) expect(() => itemScore(q, j as Answer)).not.toThrow();
-    const answers = Object.fromEntries(qs.map((q, i) => [q.id, junk[i % junk.length] as Answer]));
-    expect(scoreSession(qs, answers).answered).toBe(0);
-  });
-});
-
-describe("procedural visuals", () => {
-  it("every bank item has an icon or a sky tone", async () => {
-    const { ACTIVITY_ICONS, PLACE_ICONS, WHEN_TONES, SITUATION_ART, COMPANION_ICONS, SLIDER_ICONS, BOTHER_ICONS, POWER_ICONS } = await import("../src/vibe/visuals");
-    for (const p of Object.values(ACTIVITIES)) for (const a of [...p.plus, ...p.minus]) expect(ACTIVITY_ICONS[a.en], a.en).toBeTruthy();
-    for (const p of PLACES) expect(PLACE_ICONS[p.en], p.en).toBeTruthy();
-    for (const w of WHENS) expect(WHEN_TONES[w.en], w.en).toBeTruthy();
-    for (const s of SITUATIONS) expect(SITUATION_ART[s.en]?.icon, s.en).toBeTruthy();
-    for (const c of COMPANIONS) expect(COMPANION_ICONS[c.en], c.en).toBeTruthy();
-    for (const p of Object.values(SLIDER_ENDS)) for (const a of [...p.plus, ...p.minus]) expect(SLIDER_ICONS[a.en], a.en).toBeTruthy();
-    for (const p of Object.values(BOTHERS)) for (const a of [...p.plus, ...p.minus]) expect(BOTHER_ICONS[a.en], a.en).toBeTruthy();
-    for (const p of Object.values(SUPERPOWERS)) for (const a of [...p.plus, ...p.minus]) expect(POWER_ICONS[a.en], a.en).toBeTruthy();
+    const qs = session("junk");
+    const junk: unknown[] = [NaN, Infinity, -1, 1e9, [], "a", null, 7];
+    const answers = Object.fromEntries(qs.map((q, i) => [q.id, junk[i % junk.length]])) as unknown as Answers;
+    const r = scoreSession(qs, answers);
+    expect(r.answered).toBe(0);
+    for (const c of CATEGORIES) expect(r.vector[c]).toBe(0);
   });
 
-  it("every question carries a picture and every option an icon", () => {
-    for (let i = 0; i < 50; i++) {
-      for (const q of mixed(`art${i}`)) {
-        expect(q.art.icons.length).toBeGreaterThan(0);
-        expect(q.art.tone).toBeTruthy();
-        if (q.format !== "scale") for (const o of q.options) expect(o.icon).toBeTruthy();
-        expect(toPublic(q).art).toEqual(q.art);
-      }
-    }
-  });
-
-  it("every one of the 16 Bangkok Types is reachable through real answers, in every format mix", async () => {
-    const { ARCHETYPE_KEYS, CODE_AXES, typeOf } = await import("../src/vibe/archetypes");
-    for (const qs of [generateSession({ seed: "reach" }), mixed("reach"), mixed("reach2", { perCategory: 2 })]) {
-      for (const code of ARCHETYPE_KEYS) {
-        const want: Record<string, Pole> = {};
-        CODE_AXES.forEach((axis, i) => (want[axis.category] = code[i] === axis.plus ? 1 : -1));
-        const answers: Answers = Object.fromEntries(qs.map((q) => [q.id, answerFor(q, want[q.category] ?? 1)]));
-        expect(typeOf(scoreSession(qs, answers).vector).archetype).toBe(code);
-      }
-    }
+  it("every scenario has an answer in each type's own voice", () => {
+    for (const sc of SCENARIOS) for (const code of TYPE_CODES) expect(sc.answers[code as TypeCode]?.en, `${sc.id} ${code}`).toBeTruthy();
   });
 });

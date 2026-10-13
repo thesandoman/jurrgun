@@ -3,7 +3,7 @@
  * information should be reachable by anyone).
  */
 import { Hono } from "hono";
-import { FAQ, HELPLINES, LAST_CHECKED, LEARN_CARDS, REVIEW_NOTE, TOPICS, TYPES_CARD, type Block, type Source, type Topic } from "../content/learn";
+import { ABOUT, FAQ, HELPLINES, LAST_CHECKED, LEARN_CARDS, LEARN_GROUPS, REVIEW_NOTE, TOPICS, TYPES_CARD, groupCards, type Block, type LearnCard, type Source, type Topic } from "../content/learn";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { Card, Notice, page, view } from "../ui/kit";
@@ -27,10 +27,10 @@ export function FaqList(props: { lang: Lang; limit?: number }) {
   );
 }
 
-export function LearnCards(props: { lang: Lang }) {
+export function LearnCards(props: { lang: Lang; cards?: LearnCard[] }) {
   return (
     <div class="grid2">
-      {LEARN_CARDS.map((topic) => (
+      {(props.cards ?? LEARN_CARDS).map((topic) => (
         <Card href={`/learn/${topic.slug}`}>
           <h3>
             <span aria-hidden="true">{topic.icon}</span> {L(props.lang, topic.title)}
@@ -93,6 +93,15 @@ function BlockView(props: { block: Block; lang: Lang }) {
   const { block, lang } = props;
   if (block.kind === "p") return <p>{L(lang, block.text)}</p>;
   if (block.kind === "tip") return <Notice kind="info">💡 {L(lang, block.text)}</Notice>;
+  if (block.kind === "link")
+    return (
+      <p>
+        🗺️{" "}
+        <a href={block.url} target="_blank" rel="noopener noreferrer">
+          {L(lang, block.text)}
+        </a>
+      </p>
+    );
   return <ul>{block.items.map((i) => <li>{L(lang, i)}</li>)}</ul>;
 }
 
@@ -113,18 +122,35 @@ learnRoutes.get("/faq", (c) => {
 
 learnRoutes.get("/learn", (c) => {
   const { t, lang } = view(c);
+  const grouped = new Set(LEARN_GROUPS.flatMap((g) => g.slugs));
+  const ungrouped = LEARN_CARDS.filter((x) => !grouped.has(x.slug));
   return page(
     c,
     { title: t("เรียนรู้", "Learn"), tab: "learn" },
     <>
       <h1>{t("เรียนรู้", "Learn")}</h1>
+      <Card>
+        <p class="eyebrow">{t("Jurrgun คืออะไร", "What is Jurrgun")}</p>
+        <p style="margin:0">{L(lang, ABOUT)}</p>
+      </Card>
       <p class="muted">
         {t(
           "เรื่องที่ควรรู้ก่อนออกไปเจอคนใหม่ — เขียนให้ทุกเพศ ทุกความหลากหลาย อ่านได้โดยไม่ต้องเข้าสู่ระบบ",
           "Things worth knowing before you meet new people — written for every gender and orientation, no login needed.",
         )}
       </p>
-      <LearnCards lang={lang} />
+      {LEARN_GROUPS.map((g) => (
+        <section id={g.key}>
+          <h2>{L(lang, g.title)}</h2>
+          <LearnCards lang={lang} cards={groupCards(g.slugs)} />
+        </section>
+      ))}
+      {ungrouped.length > 0 && (
+        <section>
+          <h2>{t("หัวข้ออื่น", "More topics")}</h2>
+          <LearnCards lang={lang} cards={ungrouped} />
+        </section>
+      )}
       <Helplines lang={lang} />
       <p class="muted">{L(lang, REVIEW_NOTE)}</p>
     </>,

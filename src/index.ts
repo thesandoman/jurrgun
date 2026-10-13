@@ -84,7 +84,7 @@ app.get("/api/vibe/quiz", (c) => {
   if (lang !== undefined && lang !== "th" && lang !== "en") {
     return c.json({ error: "lang must be th or en" }, 400);
   }
-  const questions = generateSession({ seed, perCategory: per }).map(toPublic);
+  const questions = generateSession({ seed }).map(toPublic);
   if (!lang) return c.json({ seed, per, questions });
   // Single-language view: flatten every { th, en } to one string.
   const flat = JSON.parse(JSON.stringify(questions), (_k, v) =>
@@ -107,7 +107,7 @@ app.post("/api/vibe/score", async (c) => {
   for (const [id, v] of Object.entries(body.answers as Record<string, unknown>)) {
     if (typeof v === "number") answers[id] = v;
   }
-  const result = scoreSession(generateSession({ seed: body.seed, perCategory: per }), answers);
+  const result = scoreSession(generateSession({ seed: body.seed }), answers);
   return c.json(result);
 });
 

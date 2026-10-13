@@ -96,5 +96,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"social_events\" ADD COLUMN \"submitted_at\" timestamp with time zone;",
       "ALTER TABLE \"social_events\" ADD COLUMN \"payment_url\" text;"
     ]
+  },
+  {
+    "id": "0005_last_speed",
+    "statements": [
+      "ALTER TABLE \"social_vibes\" ADD COLUMN \"blend\" jsonb;"
+    ]
   }
 ];
