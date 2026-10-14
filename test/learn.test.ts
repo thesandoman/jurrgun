@@ -15,16 +15,16 @@ function texts(topic: Topic): Text[] {
 }
 
 describe("FAQ", () => {
-  it("keeps the home page light: the hero, four feature tiles (Buddy first) and a link to the FAQ", async () => {
+  it("keeps the home page visual: a bento hero, Buddy first, big-number tiles and a link to the FAQ", async () => {
     const html = await (await app.request("/?lang=en", { headers: { cookie: "jg_intro=seen" } })).text();
-    const hero = html.indexOf("Small groups. Real places. No swiping.");
+    const hero = html.indexOf("Make friends in the city you love");
     expect(hero).toBeGreaterThan(-1);
-    expect(html.indexOf('href="/buddy" class="feature"')).toBeGreaterThan(hero);
-    expect(html).toContain('href="/safety" class="feature"');
+    expect(html.indexOf('href="/buddy" class="tile2')).toBeGreaterThan(hero);
+    expect(html).toContain('href="/safety" class="tile2');
     expect(html).toContain('href="/faq"');
     expect(html).not.toContain(FAQ[0].q.en); // the questions live on /faq now
     expect(html).not.toContain("Hosted by the city");
-    expect(html).toContain("16 types");
+    expect(html).toContain("Bangkok types");
   });
 
   it("/faq lists every question, in Thai by default", async () => {

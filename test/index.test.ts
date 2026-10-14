@@ -33,7 +33,7 @@ describe("GET /", () => {
 
   it("switches to English with ?lang=en", async () => {
     const body = await (await app.request("/?lang=en", seen)).text();
-    expect(body).toContain("Small groups. Real places. No swiping.");
+    expect(body).toContain("Make friends in the city you love");
   });
 });
 

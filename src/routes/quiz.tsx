@@ -42,6 +42,7 @@ import {
   resultOf,
 } from "../vibe/archetypes";
 import { DISTRICTS } from "../lib/constants";
+import { AvatarStack, Big, Pill, Tile, artFor } from "../ui/visual";
 
 const districtName = (lang: Lang, key: string) => {
   const d = DISTRICTS.find((x) => x.value === key);
@@ -274,19 +275,24 @@ function Clicks(props: { v: View; a: Archetype }) {
   return (
     <Card>
       <h2>🤝 {t("เข้ากันได้ดีกับ", "Clicks with")}</h2>
-      <ul class="spots">
+      <div class="type-row">
         {props.a.clicks.map((x) => (
-          <li>
-            <b aria-hidden="true">{ARCHETYPES[x.key].emoji}</b>
-            <div>
-              <a href={`/types/${typeSlug(x.key)}`}>
-                <strong>{L(lang, ARCHETYPES[x.key].name)}</strong>
-              </a>
-              <p>{L(lang, x.why)}</p>
-            </div>
-          </li>
+          <a href={`/types/${typeSlug(x.key)}`} class="type-pick" title={L(lang, x.why)}>
+            <AvatarStack items={[{ label: L(lang, ARCHETYPES[x.key].name), emoji: ARCHETYPES[x.key].emoji, seed: x.key }]} size={56} />
+            <small>{L(lang, ARCHETYPES[x.key].name).replace(/^The /, "")}</small>
+          </a>
         ))}
-      </ul>
+      </div>
+      <details class="how">
+        <summary>{t("ทำไมถึงเข้ากัน", "Why you click")}</summary>
+        <ul>
+          {props.a.clicks.map((x) => (
+            <li>
+              {ARCHETYPES[x.key].emoji} {L(lang, x.why)}
+            </li>
+          ))}
+        </ul>
+      </details>
     </Card>
   );
 }
@@ -340,94 +346,82 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
   );
 }
 
-/** The type, its wing and a third, as fit bars. */
+/** The type, its wing and a third, as three tiles with big percentages. */
 function Blend(props: { v: View; blend: TypeResult["types"] }) {
   const { t, lang } = props.v;
-  const roles = [t("ไทป์หลัก", "Your type"), t("ปีก", "Wing"), t("อีกด้านของคุณ", "Also in you")];
-  const wing = props.blend[1] ? ARCHETYPES[props.blend[1].key] : null;
+  const roles = [t("ไทป์หลัก", "Your type"), t("ปีก", "Wing"), t("อีกด้าน", "Also in you")];
   return (
-    <Card>
+    <>
       <h2>🧬 {t("ส่วนผสมของคุณ", "Your blend")}</h2>
-      <ul class="blend">
+      <div class="bento blend3">
         {props.blend.map((b, i) => (
-          <li>
-            <a href={`/types/${typeSlug(b.key)}`}>
-              <b aria-hidden="true">{ARCHETYPES[b.key].emoji}</b> {L(lang, ARCHETYPES[b.key].name)}
-            </a>
-            <small>{roles[i]}</small>
-            <span class="blend-track" role="img" aria-label={`${L(lang, ARCHETYPES[b.key].name)}: ${b.fit}%`}>
-              <i style={`width:${Math.max(3, b.fit)}%`} />
-            </span>
-            <strong>{b.fit}%</strong>
-          </li>
+          <Tile href={`/types/${typeSlug(b.key)}`} tone={i === 0 ? "brand" : "plain"}>
+            <AvatarStack items={[{ label: L(lang, ARCHETYPES[b.key].name), emoji: ARCHETYPES[b.key].emoji, seed: b.key }]} size={44} />
+            <Big n={`${b.fit}%`} label={roles[i]} />
+            <small>{L(lang, ARCHETYPES[b.key].name).replace(/^The /, "")}</small>
+          </Tile>
         ))}
-      </ul>
-      {wing ? (
-        <p>
-          🪽 {t(`ปีก${L(lang, wing.name)}: `, `Your ${wing.name.en.replace(/^The /, "")} wing: `)}
-          {L(lang, wing.drive)}
-        </p>
-      ) : null}
-    </Card>
+      </div>
+    </>
   );
 }
 
-/** What drives and drains a type, and when it shines. */
+/** What drives and drains a type, and when it shines: three tiles. */
 function TypeFacts(props: { v: View; a: Archetype }) {
   const { t, lang } = props.v;
   const a = props.a;
+  const facts: [string, string, { en: string; th: string }][] = [
+    ["🎯", t("แรงขับเคลื่อน", "What drives you"), a.drive],
+    ["🪫", t("สิ่งที่ทำให้หมดพลัง", "What drains you"), a.drain],
+    ["🕰️", t("ช่วงเวลาที่ใช่", "Best time"), a.bestTime],
+  ];
   return (
-    <dl class="type-facts">
-      <div>
-        <dt>🎯 {t("แรงขับเคลื่อน", "What drives you")}</dt>
-        <dd>{L(lang, a.drive)}</dd>
-      </div>
-      <div>
-        <dt>🪫 {t("สิ่งที่ทำให้หมดพลัง", "What drains you")}</dt>
-        <dd>{L(lang, a.drain)}</dd>
-      </div>
-      <div>
-        <dt>🕰️ {t("ช่วงเวลาที่ใช่", "Best time")}</dt>
-        <dd>{L(lang, a.bestTime)}</dd>
-      </div>
-    </dl>
+    <div class="facts3">
+      {facts.map(([icon, label, text]) => (
+        <div class="fact">
+          <b aria-hidden="true">{icon}</b>
+          <small>{label}</small>
+          <span>{L(lang, text)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
-/** Three real places this type is most likely to be, and why. */
+/** The type's places as swipeable postcards: classic spots, then hangouts. */
 function TypeSpots(props: { v: View; a: Archetype; mine?: boolean }) {
   const { t, lang } = props.v;
   const a = props.a;
   return (
-    <Card>
-      <h2>📍 {props.mine ? t("กรุงเทพฯ ของคุณ: ที่ที่คุณน่าจะไปบ่อยที่สุด", "Your Bangkok: where you're most likely to be") : t(`จะเจอ${L(lang, a.name)}ได้ที่ไหน`, `Where to find ${L(lang, a.name)}`)}</h2>
-      <ul class="spots">
-        {a.spots.map((s) => (
-          <li>
-            <b aria-hidden="true">{s.emoji}</b>
+    <>
+      <h2>📍 {props.mine ? t("กรุงเทพฯ ของคุณ", "Your Bangkok") : t(`จะเจอ${L(lang, a.name)}ได้ที่ไหน`, `Where to find ${L(lang, a.name)}`)}</h2>
+      <div class="rail2">
+        {a.spots.map((sp) => (
+          <div class="place-card">
+            <QuestionArt art={artFor(sp.name.en, sp.emoji, sp.area)} lang={lang} />
             <div>
-              <strong>{L(lang, s.name)}</strong> <small class="muted">· {L(lang, s.area)}</small>
-              <p>{L(lang, s.why)}</p>
+              <strong>{L(lang, sp.name)}</strong>
+              <small>{L(lang, sp.why)}</small>
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
-      <details class="how">
-      <summary>🏙️ {t("ที่เที่ยวและย่านเฉพาะ", "Hangouts and areas")}</summary>
-      <ul class="spots">
-        {a.hangouts.map((s) => (
-          <li>
-            <b aria-hidden="true">{s.emoji}</b>
+      </div>
+      <h3>🏙️ {t("ที่เที่ยวและย่านเฉพาะ", "Hangouts and areas")}</h3>
+      <div class="rail2">
+        {a.hangouts.map((h) => (
+          <div class="place-card">
+            <QuestionArt art={artFor(h.name.en, h.emoji, { en: districtName("en", h.district), th: districtName("th", h.district) })} lang={lang} />
             <div>
-              <strong>{L(lang, s.name)}</strong> <small class="muted">· {districtName(lang, s.district)}</small>
-              <p>{L(lang, s.why)}</p>
+              <strong>{L(lang, h.name)}</strong>
+              <small>{L(lang, h.why)}</small>
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
-      </details>
-      <p>💬 <strong>{t("เปิดบทสนทนา", "Conversation starter")}:</strong> {L(lang, a.starter)}</p>
-    </Card>
+      </div>
+      <p class="chips2">
+        <span>💬 {L(lang, a.starter)}</span>
+      </p>
+    </>
   );
 }
 
@@ -439,30 +433,33 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
   const others = res.range.filter((k) => k !== key);
   return (
     <>
-      <div class={`type-hero ${props.reveal ? "reveal" : ""}`}>
-        <span class="muted">{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</span>
-        <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
-        <h1>{L(lang, displayName(key, props.row.modifier))}</h1>
-        {others.length > 0 ? (
-          <p class="type-range">
-            {t("ใกล้เคียงกับ", "Close to")}{" "}
-            {others.map((k, i) => (
-              <>
-                {i > 0 ? t(" และ ", " and ") : null}
-                <a href={`/types/${typeSlug(k)}`}>
-                  {ARCHETYPES[k].emoji} {L(lang, ARCHETYPES[k].name)}
-                </a>
-              </>
-            ))}
-          </p>
-        ) : null}
-        <p>{L(lang, a.tagline)}</p>
-        <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
+      <div class={`stack-card type-hero2 ${props.reveal ? "reveal" : ""}`}>
+        <Tile tone="brand" art={{ tone: "evening", icons: [], seed: 3 }} lang={lang}>
+          <Pill dot>{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</Pill>
+          <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
+          <h1>{L(lang, displayName(key, props.row.modifier))}</h1>
+          <small>{L(lang, a.tagline)}</small>
+          {others.length > 0 ? (
+            <span class="type-range">
+              {t("ใกล้เคียง", "Close to")}{" "}
+              {others.map((k, i) => (
+                <>
+                  {i > 0 ? " · " : null}
+                  <a href={`/types/${typeSlug(k)}`}>
+                    {ARCHETYPES[k].emoji} {L(lang, ARCHETYPES[k].name)}
+                  </a>
+                </>
+              ))}
+            </span>
+          ) : null}
+        </Tile>
       </div>
-      <Card>
-        <p>{L(lang, a.description)}</p>
-        <TypeFacts v={props.v} a={a} />
-      </Card>
+      <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
+      <TypeFacts v={props.v} a={a} />
+      <details class="how">
+        <summary>{t("เกี่ยวกับไทป์นี้", "About this type")}</summary>
+        <p style="margin:8px 0 0">{L(lang, a.description)}</p>
+      </details>
       <Blend v={props.v} blend={res.types} />
       <TypeSpots v={props.v} a={a} mine />
       <Clicks v={props.v} a={a} />

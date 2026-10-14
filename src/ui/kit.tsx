@@ -9,6 +9,12 @@ import type { Child } from "hono/jsx";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import { tr, type Lang, type T } from "../lib/i18n";
 import { STYLES } from "./styles";
+import { VISUAL_CSS } from "./visual";
+import { QUESTION_ART_CSS } from "./question-art";
+import { themed } from "./styles";
+
+/** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
+const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS);
 import { BrandMark } from "./brand";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
@@ -102,7 +108,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap"
           rel="stylesheet"
         />
-        <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+        <style dangerouslySetInnerHTML={{ __html: ALL_CSS }} />
         <script
           dangerouslySetInnerHTML={{
             __html: A11Y_HEAD_JS,

@@ -56,6 +56,8 @@ import {
 import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
 import { NotifItems } from "../ui/notif-menu";
+import { AvatarStack, Bento, Pill, Tile, artFor } from "../ui/visual";
+import { QuestionArt } from "../ui/question-art";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -581,73 +583,70 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
   return { buddy: m && buddyId ? { state: m.state, nickname: nick(buddyId) } : null, hangouts, ideas };
 }
 
-function CircleTop(props: { v: View; extras: CircleExtras }) {
+function CircleTop(props: { v: View; extras: CircleExtras; people: { name: string; emoji?: string; seed: string }[] }) {
   const { t, lang } = props.v;
   const { buddy, hangouts, ideas } = props.extras;
   return (
     <>
-      <Card class="circle-buddy">
-        <span class="eyebrow">🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</span>
-        {buddy ? (
-          <p>
-            {buddy.state === "active"
-              ? t(`คุณกับ ${buddy.nickname} กำลังสำรวจกรุงเทพฯ ด้วยกัน`, `You and ${buddy.nickname} are exploring Bangkok together.`)
-              : t(`คุณมีบัดดี้คนใหม่: ${buddy.nickname}`, `You have a new buddy: ${buddy.nickname}`)}{" "}
-            <a href="/buddy">{t("ดูเควสต์", "See your quests")} →</a>
-          </p>
-        ) : (
-          <p>
-            {t("จับคู่กับหนึ่งคนที่ไทป์เข้ากัน แล้วสะสมแสตมป์ 50 เขตด้วยกัน", "Pair up with one person whose type clicks with yours and collect all 50 districts together.")}{" "}
-            <a href="/buddy">{t("หาบัดดี้", "Get a buddy")} →</a>
-          </p>
-        )}
-      </Card>
-      <Card>
-        <h2>👥 {t("แฮงเอาต์กลุ่ม", "Group hangouts")}</h2>
-        {hangouts.length ? (
-          <ul class="spots">
-            {hangouts.map((h) => (
-              <li>
-                <b aria-hidden="true">🔒</b>
-                <div>
-                  <a href={h.href}>
-                    <strong>{h.title}</strong>
-                  </a>
-                  <p class="muted">
-                    {fmtDay(h.startsAt, lang)} · {label(DISTRICTS, h.district, lang)} · {t(`ชวนโดย ${h.host}`, `from ${h.host}`)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p class="muted">{t("ยังไม่มีใครในวงชวนแฮงเอาต์ส่วนตัว เริ่มเองเลยก็ได้", "Nobody in your circle has sent a private hangout yet. Why not start one?")}</p>
-        )}
-        <div class="row">
-          <LinkButton href="/host/new?visibility=private">＋ {t("ชวนวงของคุณไปแฮงเอาต์", "Host a hangout for your circle")}</LinkButton>
-          <LinkButton href="/events" kind="ghost">{t("ดูกิจกรรมกลุ่มทั้งหมด", "Browse group events")}</LinkButton>
+      <Bento>
+        <Tile href="/buddy" tone="deep" size="wide" class="circle-buddy">
+          <span class="go" aria-hidden="true">↗</span>
+          <Pill dot>🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</Pill>
+          <h3>
+            {buddy
+              ? buddy.state === "active"
+                ? t(`สำรวจกรุงเทพฯ กับ ${buddy.nickname}`, `Exploring with ${buddy.nickname}`)
+                : t(`บัดดี้คนใหม่: ${buddy.nickname}`, `New buddy: ${buddy.nickname}`)
+              : t("หาบัดดี้", "Get a buddy")}
+          </h3>
+        </Tile>
+        <Tile href="/host/new?visibility=private" tone="brand">
+          <span class="ico" aria-hidden="true">＋</span>
+          <h3>{t("ชวนวงไปแฮงเอาต์", "Host a hangout for your circle")}</h3>
+        </Tile>
+        <Tile href="/events">
+          <span class="ico" aria-hidden="true">🗓️</span>
+          <h3>{t("กิจกรรมกลุ่ม", "Browse group events")}</h3>
+        </Tile>
+      </Bento>
+      <h2>👥 {t("แฮงเอาต์กลุ่ม", "Group hangouts")}</h2>
+      {hangouts.length ? (
+        <div class="rail2">
+          {hangouts.map((h) => (
+            <a href={h.href} class="place-card">
+              <QuestionArt art={artFor(h.title, "🔒", { en: label(DISTRICTS, h.district, "en"), th: label(DISTRICTS, h.district, "th") })} lang={lang} />
+              <div>
+                <strong>{h.title}</strong>
+                <small>
+                  {fmtDay(h.startsAt, lang)} · {t(`ชวนโดย ${h.host}`, `from ${h.host}`)}
+                </small>
+              </div>
+            </a>
+          ))}
         </div>
-        {ideas.length ? (
-          <>
-            <h3>💡 {t("ไอเดียจากไทป์ในวงของคุณ", "Ideas from the types in your circle")}</h3>
-            <ul class="spots">
-              {ideas.map((i) => (
-                <li>
-                  <b aria-hidden="true">{i.emoji}</b>
-                  <div>
-                    <a href={`/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}`}>
-                      <strong>{i.name}</strong>
-                    </a>{" "}
-                    <small class="muted">· {i.type}</small>
-                    <p class="muted">{i.why}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-      </Card>
-      <h2>🫂 {t("คนในวงของคุณ", "Your people")}</h2>
+      ) : (
+        <p class="muted">{t("ยังไม่มีแฮงเอาต์จากวงของคุณ", "No hangouts from your circle yet.")}</p>
+      )}
+      {ideas.length ? (
+        <>
+          <h3>💡 {t("ไอเดียจากไทป์ในวงของคุณ", "Ideas from the types in your circle")}</h3>
+          <div class="rail2">
+            {ideas.map((i) => (
+              <a href={`/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}`} class="place-card">
+                <QuestionArt art={artFor(i.name, i.emoji, { en: label(DISTRICTS, i.district, "en"), th: label(DISTRICTS, i.district, "th") })} lang={lang} />
+                <div>
+                  <strong>{i.name}</strong>
+                  <small>{i.type}</small>
+                </div>
+              </a>
+            ))}
+          </div>
+        </>
+      ) : null}
+      <h2 class="people-h">
+        🫂 {t("คนในวงของคุณ", "Your people")}{" "}
+        {props.people.length ? <AvatarStack items={props.people.slice(0, 6).map((p) => ({ label: p.name, emoji: p.emoji, seed: p.seed }))} more={Math.max(0, props.people.length - 6)} size={34} /> : null}
+      </h2>
     </>
   );
 }
@@ -661,7 +660,13 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
       <p class="muted">
         {t("คนที่เลือกกันและกัน บัดดี้ และแฮงเอาต์กลุ่ม", "People you chose each other with, your buddy, and group hangouts.")}
       </p>
-      {props.extras ? <CircleTop v={props.v} extras={props.extras} /> : null}
+      {props.extras ? (
+        <CircleTop
+          v={props.v}
+          extras={props.extras}
+          people={props.rows.map((r) => ({ name: r.other.name, emoji: r.other.vibe?.visible ? ARCHETYPES[r.other.vibe.archetype].emoji : undefined, seed: r.other.id }))}
+        />
+      ) : null}
       {props.rows.length === 0 ? (
         <Card>
           <Empty>

@@ -323,7 +323,7 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy: monthly big quest", () => {
     const key = monthKey(new Date());
     const season = seasonQuestFor(key)!;
     const page = await (await req("/buddy?lang=en", { cookie: a.cookie })).text();
-    expect(page).toContain("This month&#39;s big quest");
+    expect(page).toContain("This month ·");
     expect(page).toContain(`name="quest" value="${key}"`);
     for (const x of [a, b]) await req(`/buddy/${m.id}/quest`, { cookie: x.cookie, form: { quest: key } });
     const [q] = await db().select().from(buddyQuests).where(and(eq(buddyQuests.matchId, m.id), eq(buddyQuests.week, key)));

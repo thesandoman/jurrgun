@@ -58,6 +58,8 @@ import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
 import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View } from "../ui/kit";
+import { AvatarStack, Bento, Big, Pill, PostcardFan, Ring, Stamps, Tile, artFor } from "../ui/visual";
+import type { Child } from "hono/jsx";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 
 export const buddyRoutes = new Hono<AppEnv>();
@@ -301,60 +303,83 @@ const SAFETY = (v: View) => (
   </details>
 );
 
-function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultIntent?: string; canDate?: boolean }) {
+function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultIntent?: string; canDate?: boolean; compact?: boolean }) {
   const { t, lang } = props.v;
   return (
-    <Card>
-      <h2>🤝 {t("หาบัดดี้กรุงเทพฯ", "Get a Bangkok Buddy")}</h2>
-      <div class="tiles">
-        <span class="tile"><b>🤝</b>{t("หนึ่งคนที่เข้ากัน", "One person who clicks")}</span>
-        <span class="tile"><b>🗺️</b>{t("เควสต์ทุกสัปดาห์", "A quest every week")}</span>
-        <span class="tile"><b>🏅</b>{t("เควสต์เทศกาลทุกเดือน", "A festival quest monthly")}</span>
-      </div>
-      {!props.hasType ? (
-        <>
-          <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน เพื่อจับคู่บัดดี้ที่เข้ากับคุณ", "Take the Bangkok Type quiz first, so we can find a buddy who clicks with you.")}</Notice>
-          <LinkButton href="/quiz">{t("ทำแบบทดสอบ", "Take the quiz")}</LinkButton>
-        </>
-      ) : (
-        <form method="post" action="/buddy/optin">
-          <Choices
-            legend={t("คุณเปิดรับอะไร (เป็นความลับ บัดดี้ไม่เห็น)", "What you're open to (private: your buddy never sees this)")}
-            name="intent"
-            type="radio"
-            required
-            options={props.canDate ? INTENT_OPTS : INTENT_OPTS.filter((o) => o.value !== "dating")}
-            values={[props.intent ?? props.defaultIntent ?? "friends"]}
-            lang={lang}
-          />
-          <details class="how">
-            <summary>{t("ทำงานอย่างไร", "How it works")}</summary>
-            <ul>
-              <li>👀 {t("บัดดี้เห็นชื่อเล่นและไทป์ของคุณ", "Your buddy sees your nickname and type.")}</li>
-              <li>💘 {t("เรื่องหัวใจขึ้นเฉพาะเมื่อทั้งคู่เลือก และทำเควสต์ครบสองครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
-              <li>🤝 {t("ไม่ทิ้งเงียบ: ปิดเมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
-              <li>🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัย", "Safety net")}</a></li>
-            </ul>
-          </details>
-          <Button>{props.intent ? t("บันทึก", "Save") : t("เริ่มเลย", "Start")}</Button>
-        </form>
+    <>
+      {props.compact ? null : (
+        <Bento>
+          <Tile size="wide" tone="deep">
+            <AvatarStack items={[{ label: "You", emoji: "🙂", seed: "you" }, { label: "?", emoji: "❔", seed: "q" }]} size={54} />
+            <h2>{t("หาบัดดี้กรุงเทพฯ", "Get a Bangkok Buddy")}</h2>
+          </Tile>
+          <Tile>
+            <span class="ico" aria-hidden="true">🗺️</span>
+            <Big n="52" label={t("เควสต์ต่อปี", "quests a year")} />
+          </Tile>
+          <Tile tone="gold">
+            <span class="ico" aria-hidden="true">🏅</span>
+            <Big n="12" label={t("เทศกาลต่อปี", "festival quests")} />
+          </Tile>
+        </Bento>
       )}
-    </Card>
+      {!props.hasType ? (
+        <Card>
+          <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน", "Take the Bangkok Type quiz first.")}</Notice>
+          <LinkButton href="/quiz">🧭 {t("ทำแบบทดสอบ", "Take the quiz")}</LinkButton>
+        </Card>
+      ) : (
+        <Card>
+          <form method="post" action="/buddy/optin">
+            <Choices
+              legend={t("คุณเปิดรับอะไร 🔒", "What you're open to 🔒")}
+              hint={t("ความลับ บัดดี้ไม่เห็น", "Private: your buddy never sees this")}
+              name="intent"
+              type="radio"
+              required
+              options={props.canDate ? INTENT_OPTS : INTENT_OPTS.filter((o) => o.value !== "dating")}
+              values={[props.intent ?? props.defaultIntent ?? "friends"]}
+              lang={lang}
+            />
+            <details class="how">
+              <summary>{t("ทำงานอย่างไร", "How it works")}</summary>
+              <ul>
+                <li>👀 {t("บัดดี้เห็นชื่อเล่นและไทป์ของคุณ", "Your buddy sees your nickname and type.")}</li>
+                <li>💘 {t("เรื่องหัวใจขึ้นเฉพาะเมื่อทั้งคู่เลือก และทำเควสต์ครบสองครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
+                <li>🤝 {t("ไม่ทิ้งเงียบ: ปิดเมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
+                <li>🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัย", "Safety net")}</a></li>
+              </ul>
+            </details>
+            <Button>{props.intent ? t("บันทึก", "Save") : t("เริ่มเลย", "Start")}</Button>
+          </form>
+        </Card>
+      )}
+    </>
   );
 }
 
-function BuddyHeader(props: { v: View; nickname: string; theirs: ArchetypeKey | undefined; mine: ArchetypeKey | undefined }) {
+/** Your buddy as a layered card: both types' avatars overlapping, name, and why you click. */
+function BuddyCard(props: { v: View; nickname: string; theirs: ArchetypeKey | undefined; mine: ArchetypeKey | undefined; eyebrow: string; children?: Child }) {
   const { t, lang } = props.v;
   const a = props.theirs ? ARCHETYPES[props.theirs] : null;
+  const mine = props.mine ? ARCHETYPES[props.mine] : null;
   const why = props.theirs && props.mine ? clickReason(props.mine, props.theirs) : null;
   return (
-    <div class="buddy-head">
-      <span class="type-emoji" aria-hidden="true">{a?.emoji ?? "🙂"}</span>
-      <div>
+    <div class="stack-card">
+      <Tile tone="deep">
+        <Pill dot>{props.eyebrow}</Pill>
+        <AvatarStack
+          items={[
+            { label: mine ? L(lang, mine.name) : "You", emoji: mine?.emoji ?? "🙂", seed: props.mine ?? "me" },
+            { label: a ? L(lang, a.name) : props.nickname, emoji: a?.emoji ?? "🙂", seed: props.theirs ?? "them" },
+          ]}
+          size={58}
+        />
         <h2>{props.nickname}</h2>
-        {a ? <p class="muted">{L(lang, a.name)} · {L(lang, a.tagline)}</p> : null}
-        {why ? <p>🤝 {L(lang, why)}</p> : props.mine && props.theirs ? <p>✨ {t("ไทป์ต่างกัน เรื่องคุยไม่มีวันหมด", "Different types: you'll never run out of things to say.")}</p> : null}
-      </div>
+        {a ? <small>{L(lang, a.name)}</small> : null}
+        {why ? <small>🤝 {L(lang, why)}</small> : mine && a ? <small>✨ {t("ไทป์ต่างกัน คุยไม่มีวันหมด", "Different types, endless conversation")}</small> : null}
+        {props.children}
+      </Tile>
     </div>
   );
 }
@@ -367,82 +392,99 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
   const theirsDone = side(props.m, props.me) === "a" ? props.q.bDoneAt : props.q.aDoneAt;
   const picker = ARCHETYPES[props.q.typeCode as ArchetypeKey];
   const place = districtName(lang, props.q.district);
+  const caption = { en: districtName("en", props.q.district), th: districtName("th", props.q.district) };
+  const ta = ARCHETYPES[props.types.get(props.m.aAccount) as ArchetypeKey];
+  const tb = ARCHETYPES[props.types.get(props.m.bAccount) as ArchetypeKey];
+  const cards = [
+    artFor(props.q.district + "a", ta?.emoji ?? "🙂"),
+    { ...artFor(props.q.district, text?.icon ?? "📍", caption), tone: season ? ("evening" as const) : artFor(props.q.district, "").tone },
+    artFor(props.q.district + "b", tb?.emoji ?? "🙂"),
+  ];
   const shareText = t(
     `ฉันนัดเจอบัดดี้จาก Jurrgun (${props.buddyName}) ที่${place} จะทักหาเมื่อถึงบ้าน`,
     `I'm meeting my Jurrgun buddy (${props.buddyName}) in ${place}. I'll message you when I'm home.`,
   );
   const hostHref = `/host/new?district=${encodeURIComponent(props.q.district)}&title=${encodeURIComponent(text ? (lang === "en" ? text.en : text.th) : "")}`;
   return (
-    <Card>
-      <span class="eyebrow">{season ? t(`เควสต์ใหญ่เดือนนี้ · ${season.theme.th}`, `This month's big quest · ${season.theme.en}`) : t("เควสต์สัปดาห์นี้", "This week's quest")}</span>
-      {text ? (
-        <h3>
-          <span aria-hidden="true">{text.icon}</span> {L(lang, text)}
-        </h3>
-      ) : null}
-      <p class="muted">
-        📍 {place}
-        {season ? <> · 🏅 {t("ได้เหรียญประจำฤดูด้วย", "Earns a season badge")}</> : picker ? <> · {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</> : null}
+    <Card class={season ? "quest season" : "quest"}>
+      <span class="eyebrow">{season ? t(`🏅 เควสต์ใหญ่เดือนนี้ · ${season.theme.th}`, `🏅 This month · ${season.theme.en}`) : t("🗺️ เควสต์สัปดาห์นี้", "🗺️ This week's quest")}</span>
+      <PostcardFan cards={cards} lang={lang} />
+      {text ? <h3 class="quest-title">{L(lang, text)}</h3> : null}
+      <p class="chips2">
+        <span>📍 {place}</span>
+        {season ? <span>🏅 {t("เหรียญประจำฤดู", "Season badge")}</span> : picker ? <span>{picker.emoji} {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</span> : null}
+        <span>{mineDone ? "✅" : "⬜"} {t("คุณ", "You")}</span>
+        <span>{theirsDone ? "✅" : "⬜"} {props.buddyName}</span>
       </p>
       {mineDone && theirsDone ? (
-        <Notice kind="ok">{t(`สำเร็จ! แสตมป์เขต${place}ลงพาสปอร์ตแล้ว`, `Done! ${place} is stamped in both your passports.`)}</Notice>
-      ) : mineDone ? (
-        <Notice kind="info">{t("คุณกดเสร็จแล้ว รอบัดดี้กดอีกคน", "You've marked it done. Waiting for your buddy.")}</Notice>
-      ) : (
+        <Notice kind="ok">{t(`สำเร็จ! แสตมป์${place}แล้ว`, `Done! ${place} stamped.`)}</Notice>
+      ) : mineDone ? null : (
         <form method="post" action={`/buddy/${props.m.id}/quest`}>
           <input type="hidden" name="quest" value={props.q.week} />
           <Button>✅ {t("ไปมาแล้ว", "We did it")}</Button>
         </form>
       )}
-      <div class="row">
+      <div class="acts">
         <button type="button" class="btn ghost" data-share={shareText}>
-          📍 {t("เช็กอินกับเพื่อน", "Check in with a friend")}
+          📍 {t("เช็กอิน", "Check in")}
         </button>
         <LinkButton href={hostHref} kind="ghost">
-          🍽️ {t("ชวนคนอื่นมาเป็นโต๊ะ", "Make it a table")}
+          🍽️ {t("ชวนเป็นโต๊ะ", "Make it a table")}
         </LinkButton>
       </div>
       <script
         dangerouslySetInnerHTML={{
-          __html: `document.querySelectorAll("[data-share]").forEach(function(b){b.addEventListener("click",function(){var s=b.getAttribute("data-share");if(navigator.share){navigator.share({text:s}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(s);b.textContent="✓"}})})`,
+          __html: `document.querySelectorAll("[data-share]").forEach(function(b){if(b.dataset.ready)return;b.dataset.ready=1;b.addEventListener("click",function(){var s=b.getAttribute("data-share");if(navigator.share){navigator.share({text:s}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(s);b.textContent="✓"}})})`,
         }}
       />
     </Card>
   );
 }
 
+/** "Phra Nakhon" → "PN", "Chatuchak" → "CHA". */
+const shortName = (en: string) => {
+  const words = en.split(/\s+/).filter(Boolean);
+  return words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 3) : en.slice(0, 3);
+};
+
 function Passport(props: { v: View; stamped: Set<string>; compact?: boolean; badges?: { key: string; icon: string; theme: { en: string; th: string } }[] }) {
   const { t, lang } = props.v;
+  const items = DISTRICTS.map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value) }));
+  // Stamped first in the compact view, so progress is visible at a glance.
+  const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on)].slice(0, 12);
   return (
-    <Card>
-      <h2>
-        🛂 {t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport")} <small class="muted">{props.stamped.size} / 50</small>
-      </h2>
-      <div class="passport-bar" role="img" aria-label={`${props.stamped.size} / 50`}>
-        <i style={`width:${(props.stamped.size / 50) * 100}%`} />
+    <Card class="passport-card">
+      <div class="passport-head">
+        <Ring value={props.stamped.size} max={50} label={t("เขต", "districts")} />
+        <div>
+          <h2>🛂 {t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport")}</h2>
+          <small class="muted">{t("แสตมป์ทุกเขตด้วยกัน", "Stamp every district together")}</small>
+        </div>
       </div>
       {props.compact ? (
-        <a href="/buddy/passport">{t("ดูทั้ง 50 เขตและเหรียญประจำฤดู", "See all 50 districts and season badges")} →</a>
+        <>
+          <Stamps items={preview} />
+          <a href="/buddy/passport">{t("ดูทั้ง 50 เขต", "All 50 districts")} →</a>
+        </>
       ) : (
         <>
-        {props.badges?.length ? (
-          <p class="season-badges">
-            {props.badges.map((b) => (
-              <span class="season-badge" title={L(lang, b.theme)}>
-                {b.icon} {L(lang, b.theme)} <small>{b.key.slice(1)}</small>
-              </span>
+          {props.badges?.length ? (
+            <p class="season-badges">
+              {props.badges.map((b) => (
+                <span class="season-badge" title={L(lang, b.theme)}>
+                  {b.icon} {L(lang, b.theme)}
+                </span>
+              ))}
+            </p>
+          ) : (
+            <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือน เพื่อสะสมเหรียญ", "Finish monthly big quests to collect season badges.")}</p>
+          )}
+          <Stamps items={items} />
+          <p class="chips2">
+            {items.filter((x) => x.on).map((x) => (
+              <span>✅ {x.name}</span>
             ))}
           </p>
-        ) : (
-          <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนกับบัดดี้ เพื่อสะสมเหรียญประจำฤดู", "Finish a monthly big quest with your buddy to collect season badges.")}</p>
-        )}
-        <ul class="passport">
-          {DISTRICTS.map((d) => (
-            <li class={props.stamped.has(d.value) ? "on" : ""}>
-              <span aria-hidden="true">{props.stamped.has(d.value) ? "✅" : "▫️"}</span> {lang === "en" ? d.en : d.th}
-            </li>
-          ))}
-        </ul>
         </>
       )}
     </Card>
@@ -552,14 +594,17 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       {!optin || !optin.active ? (
         <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} />
       ) : !match ? (
-        <Card>
-          <h2>⏳ {t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
-          <p>{t("จับคู่อย่างยุติธรรมทุกวัน เราจะแจ้งเตือนเมื่อมีบัดดี้", "Fair matching runs daily. We'll notify you.")}</p>
-        </Card>
+        <div class="stack-card">
+          <Tile tone="brand" art={{ tone: "dawn", icons: [], seed: 11 }} lang={v.lang}>
+            <Pill dot>{t("จับคู่ทุกวัน", "Matching daily")}</Pill>
+            <AvatarStack items={[{ label: "You", emoji: "🙂", seed: "you" }, { label: "?", emoji: "⏳", seed: "q" }]} size={54} />
+            <h2>{t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
+            <small>{t("เราจะแจ้งเตือนคุณ", "We'll notify you")}</small>
+          </Tile>
+        </div>
       ) : match.state === "proposed" ? (
         <Card>
-          <span class="eyebrow">{t("บัดดี้คนใหม่ของคุณ", "Your new buddy")}</span>
-          <BuddyHeader v={v} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
+          <BuddyCard v={v} eyebrow={t("บัดดี้คนใหม่", "New buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
           <p class="muted">{t("ทั้งคู่กด 'นัดเจอ' เพื่อเริ่ม", "You both tap 'Meet' to start.")}</p>
           {iSaidMeet ? (
             <Notice kind="info">{t("คุณกดนัดเจอแล้ว รออีกฝ่าย", "You said meet. Waiting for your buddy.")}</Notice>
@@ -576,14 +621,12 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
         </Card>
       ) : (
         <>
-          <Card>
-            <span class="eyebrow">{t("บัดดี้ของคุณ", "Your buddy")}</span>
-            <BuddyHeader v={v} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
-            <div class="row">
-              <LinkButton href={`/people/${otherId}`} kind="ghost">{t("ดูโปรไฟล์", "See their card")}</LinkButton>
-              <LinkButton href="/connections" kind="ghost">💬 {t("แชร์ช่องทางติดต่อ", "Share a contact")}</LinkButton>
-            </div>
-          </Card>
+          <BuddyCard v={v} eyebrow={t("บัดดี้ของคุณ", "Your buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)}>
+            <span class="acts">
+              <a class="glass-btn" href={`/people/${otherId}`}>👤 {t("โปรไฟล์", "Card")}</a>
+              <a class="glass-btn" href="/connections">💬 {t("แชร์ช่องทางติดต่อ", "Share contact")}</a>
+            </span>
+          </BuddyCard>
           {quest ? <QuestCard v={v} m={match} q={quest} me={me} buddyName={buddyName} types={types} /> : null}
           {bigQuest ? <QuestCard v={v} m={match} q={bigQuest} me={me} buddyName={buddyName} types={types} /> : null}
           {SAFETY(v)}
@@ -601,7 +644,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       {optin?.active ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
-          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} />
+          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} compact />
           <form method="post" action="/buddy/pause">
             <Button kind="ghost">{t("หยุดรับบัดดี้ใหม่", "Stop new buddies")}</Button>
           </form>

@@ -6,8 +6,9 @@ import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
 import { LEARN_CARDS } from "../content/learn";
 import { L } from "../lib/i18n";
+import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
-import { BRAND, BrandMark, MARK_SVG } from "../ui/brand";
+import { BRAND, MARK_SVG } from "../ui/brand";
 
 export const publicRoutes = new Hono<AppEnv>();
 
@@ -22,42 +23,42 @@ publicRoutes.get("/", (c) => {
     c,
     { title: t("เพื่อนใหม่ในเมืองเดียวกัน", "Make friends in Bangkok") },
     <>
-      <section class="hero-lite">
-        <span class="hero-mark"><BrandMark /></span>
-        <h1>{t("เจอกัน! เพื่อนใหม่ในกรุงเทพฯ", "Jurrgun! Bangkok's own way to make friends")}</h1>
-        <p>{t("กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา", "Small groups. Real places. No swiping.")}</p>
-        <div class="row">
-          {user ? (
-            <LinkButton href="/onboarding">{t("ทำโปรไฟล์ต่อ", "Continue setting up")}</LinkButton>
-          ) : (
-            <>
-              <LinkButton href="/signup">{t("เริ่มเลย", "Get started")}</LinkButton>
-              <a href="/login">{t("มีบัญชีแล้ว? เข้าสู่ระบบ", "Have an account? Sign in")}</a>
-            </>
-          )}
-        </div>
-      </section>
-      <div class="features">
-        <a href="/buddy" class="feature">
-          <b aria-hidden="true">🤝</b>
-          <strong>{t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</strong>
-          <small>{t("หนึ่งคน เควสต์ทุกสัปดาห์ 50 เขต", "One person, weekly quests, 50 districts")}</small>
-        </a>
-        <a href="/events" class="feature">
-          <b aria-hidden="true">👥</b>
-          <strong>{t("โต๊ะเล็ก", "Small tables")}</strong>
-          <small>{t("4 ถึง 6 คน ที่สถานที่จริง", "4 to 6 people, real places")}</small>
-        </a>
-        <a href="/types" class="feature">
-          <b aria-hidden="true">🧭</b>
-          <strong>{t("ไทป์กรุงเทพฯ", "Bangkok Type")}</strong>
-          <small>{t("16 ไทป์ คุณเป็นแบบไหน?", "16 types. Which are you?")}</small>
-        </a>
-        <a href="/safety" class="feature">
-          <b aria-hidden="true">🛡️</b>
-          <strong>{t("ปลอดภัยไว้ก่อน", "Safety first")}</strong>
-          <small>{t("รู้เมื่อเลือกตรงกันเท่านั้น", "Mutual matches only")}</small>
-        </a>
+      <Bento>
+        <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
+          <Pill dot>{t("กรุงเทพฯ · กลุ่มเล็ก", "Bangkok · small groups")}</Pill>
+          <h2>{t("เจอเพื่อนใหม่ ในเมืองที่คุณรัก", "Make friends in the city you love")}</h2>
+          <small>{t("ไม่ต้องปัด เจอกันจริง", "No swiping. Real places.")}</small>
+        </Tile>
+        <Tile href="/buddy" tone="deep" size="tall">
+          <span class="go" aria-hidden="true">↗</span>
+          <AvatarStack items={[{ label: "You", emoji: "🍜", seed: "a" }, { label: "Buddy", emoji: "📜", seed: "b" }]} size={46} />
+          <h3>{t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h3>
+          <small>{t("1 คน · เควสต์ทุกสัปดาห์", "1 person · weekly quests")}</small>
+        </Tile>
+        <Tile href="/events">
+          <Big n="4–6" label={t("คนต่อโต๊ะ", "per table")} />
+        </Tile>
+        <Tile tone="gold" href="/buddy/passport">
+          <Big n="50" label={t("เขตให้สะสม", "districts to collect")} />
+        </Tile>
+        <Tile href="/types">
+          <Big n="16" label={t("ไทป์กรุงเทพฯ", "Bangkok types")} />
+        </Tile>
+        <Tile href="/safety" tone="gold">
+          <span class="ico" aria-hidden="true">🛡️</span>
+          <h3>{t("ปลอดภัยไว้ก่อน", "Safety first")}</h3>
+          <small>{t("รู้เมื่อเลือกตรงกันเท่านั้น", "You only hear when it's mutual")}</small>
+        </Tile>
+      </Bento>
+      <div class="row">
+        {user ? (
+          <LinkButton href="/onboarding">{t("ทำโปรไฟล์ต่อ", "Continue setting up")}</LinkButton>
+        ) : (
+          <>
+            <LinkButton href="/signup">{t("เริ่มเลย", "Get started")}</LinkButton>
+            <a href="/login">{t("เข้าสู่ระบบ", "Sign in")}</a>
+          </>
+        )}
       </div>
       <div class="rail-wrap">
         <div class="rail" role="list">
