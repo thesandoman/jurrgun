@@ -645,6 +645,21 @@ export const passportStamps = pgTable(
   (t) => [uniqueIndex("social_passport_stamps_idx").on(t.accountId, t.district)],
 );
 
+/**
+ * Why someone is here for dating, from the first onboarding screen. PRIVATE:
+ * never shown to other members; only ever reported as totals.
+ */
+export const datingIntents = pgTable("social_dating_intents", {
+  accountId: text("account_id").primaryKey(),
+  /** friends | dating (friends and open to dating) | dating_only */
+  mode: text("mode").notNull(),
+  /** Why they're here for dating (DATING_REASONS keys). */
+  reasons: jsonb("reasons").$type<string[]>().notNull().default([]),
+  /** What makes dating in Bangkok hard for them (DATING_CHALLENGES keys). */
+  challenges: jsonb("challenges").$type<string[]>().notNull().default([]),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
 /** A private hangout a host sent to their circle: shows on the recipient's circle page. */
 export const circleShares = pgTable(
   "social_circle_shares",

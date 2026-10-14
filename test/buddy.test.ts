@@ -189,3 +189,21 @@ describe("romance gate", () => {
     expect(romanceUnlocked({ ...base, finishedQuests: 1 })).toBe(false);
   });
 });
+
+describe("dating only", () => {
+  it("someone here only for dating is only paired with people they can date", () => {
+    const a = member("a", "BDSH", { datesWith: new Set(["c"]) });
+    const b = member("b", "CDSH");
+    const c = member("c", "BFSH");
+    const prefs = buddyPreferences([a, b, c], "w");
+    expect(prefs.get("a")).toEqual(["c"]);
+    expect(prefs.get("b")).not.toContain("a");
+    const r = clearBuddies([a, b, c], "w");
+    for (const [x, y] of r.pairs) expect([x, y].includes("a") ? [x, y].includes("c") : true).toBe(true);
+  });
+
+  it("'dating' counts as open to more for the romance gate", () => {
+    expect(romanceUnlocked({ intents: ["dating", "open"], eligible: [true, true], compatible: true, finishedQuests: 2 })).toBe(true);
+    expect(romanceUnlocked({ intents: ["dating", "friends"], eligible: [true, true], compatible: true, finishedQuests: 2 })).toBe(false);
+  });
+});

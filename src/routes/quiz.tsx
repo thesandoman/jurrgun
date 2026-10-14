@@ -152,10 +152,7 @@ export function QuizFlow(props: {
       <FlowStep
         emoji="🧭"
         title={t("คุณเป็นคนกรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
-        hint={t(
-          "สถานการณ์จริงในกรุงเทพฯ กับเพื่อน ครอบครัว เดท และคนใหม่ ๆ เลือกคำตอบที่ใช่ที่สุด ไม่มีถูกผิด คำตอบช่วยจัดโต๊ะให้เข้ากับคุณ และเป็นความลับจนกว่าคุณจะเลือกแสดง",
-          "Real Bangkok moments with friends, family, dates and new people. Pick the answer that's most you; there are no wrong answers. Your answers help seat you at the right table, and your type stays private unless you choose to show it.",
-        )}
+        hint={t("สถานการณ์จริงในกรุงเทพฯ ไม่มีถูกผิด เป็นความลับ", "Real Bangkok moments. No wrong answers. Private.")}
         cta={t("เริ่มเลย", "Start")}
       >
         <div class="tiles" aria-hidden="true">
@@ -254,7 +251,6 @@ function Certainty(props: { v: View; res: TypeResult & { range: ArchetypeKey[] }
   const letters = unsure.filter((c) => CODE_AXES.some((a) => a.category === c));
   return (
     <>
-      <h2>🎯 {t("เราแน่ใจแค่ไหน", "How sure we are")}</h2>
       <p class="muted">
         {letters.length === 0
           ? t("ทุกตัวอักษรชัดเจนเกินระยะความคลาดเคลื่อน", "Every letter is clear beyond the margin of error.")
@@ -308,7 +304,6 @@ function Matches(props: { v: View; archetype: ArchetypeKey }) {
   return (
     <>
       <h2>{t("ใครชวนคุยสนุก", "Fun to chat with")}</h2>
-      <p class="muted">{t("แค่ชวนคุยเล่น ไม่ใช่กฎ คุณเจอได้ทุกคน", "Just for fun. You can meet everyone.")}</p>
       <div class="matches">
         {rows.map(([kind, key]) => (
           <a href={`/types/${typeSlug(key)}`}>
@@ -353,7 +348,6 @@ function Blend(props: { v: View; blend: TypeResult["types"] }) {
   return (
     <Card>
       <h2>🧬 {t("ส่วนผสมของคุณ", "Your blend")}</h2>
-      <p class="muted">{t("ไม่มีใครเป็นแค่ไทป์เดียว นี่คือสามไทป์ที่ใกล้กับคุณที่สุด", "Nobody is just one type. These are the three closest to you.")}</p>
       <ul class="blend">
         {props.blend.map((b, i) => (
           <li>
@@ -418,7 +412,8 @@ function TypeSpots(props: { v: View; a: Archetype; mine?: boolean }) {
           </li>
         ))}
       </ul>
-      <h3>🏙️ {t("ที่เที่ยวและย่านเฉพาะ", "Hangouts and areas")}</h3>
+      <details class="how">
+      <summary>🏙️ {t("ที่เที่ยวและย่านเฉพาะ", "Hangouts and areas")}</summary>
       <ul class="spots">
         {a.hangouts.map((s) => (
           <li>
@@ -430,6 +425,7 @@ function TypeSpots(props: { v: View; a: Archetype; mine?: boolean }) {
           </li>
         ))}
       </ul>
+      </details>
       <p>💬 <strong>{t("เปิดบทสนทนา", "Conversation starter")}:</strong> {L(lang, a.starter)}</p>
     </Card>
   );
@@ -470,10 +466,11 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
       <Blend v={props.v} blend={res.types} />
       <TypeSpots v={props.v} a={a} mine />
       <Clicks v={props.v} a={a} />
-      <Card>
+      <details class="how card">
+        <summary>🎯 {t("เราแน่ใจแค่ไหน และตัวอักษรของคุณ", "How sure we are, and your letters")}</summary>
         <Certainty v={props.v} res={res} />
         <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? res.unsure : undefined} />
-      </Card>
+      </details>
       <Matches v={props.v} archetype={key} />
       <VisibilityToggle v={props.v} visible={props.row.visible} next={props.visibilityNext} />
       <div class="flow-bar">

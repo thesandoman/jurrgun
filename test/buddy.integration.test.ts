@@ -10,7 +10,7 @@ import { roundIfDue } from "../src/routes/buddy";
 import { dayKey } from "../src/domain/buddy";
 import { monthKey, seasonQuestFor } from "../src/domain/seasons";
 import { randomToken } from "../src/lib/crypto";
-import { blocks, notifications, buddyMatches, buddyOptins, buddyQuests, buddyRounds, circleShares, connections, events, passportStamps, profiles, vibes } from "../src/schema";
+import { blocks, datingIntents, notifications, buddyMatches, buddyOptins, buddyQuests, buddyRounds, circleShares, connections, events, passportStamps, profiles, vibes } from "../src/schema";
 import type { AppEnv } from "../src/lib/env";
 
 const env = ENV as unknown as AppEnv["Bindings"];
@@ -390,5 +390,77 @@ describe.skipIf(!HAS_DB)("City Pulse copy", () => {
       const html = await (await req(path, { cookie: m.cookie })).text();
       expect(html, path).not.toMatch(/BMA (only2 )?sees|for BMA|shown to BMA|What does BMA see/);
     }
+  });
+});
+
+describe.skipIf(!HAS_DB)("Here for dating", () => {
+  it("dating members answer why and what's hard; answers are saved privately and answered back", async () => {
+    const m = await createMember();
+    const r = await req("/onboarding/welcome", { cookie: m.cookie, form: { mode: "dating_only" } });
+    expect(r.headers.get("location")).toBe("/onboarding/dating");
+    const q = await (await req("/onboarding/dating?lang=en", { cookie: m.cookie })).text();
+    expect(q).toContain("Why are you here for dating?");
+    expect(q).toContain("What makes dating in Bangkok hard?");
+    const done = await (
+      await req("/onboarding/dating?lang=en", {
+        cookie: `${m.cookie}; bkk_intent=dating_only`,
+        form: { reasons: ["long_term", "slow", "real_things", "new_city", "bogus"], challenges: ["safety", "ghosting", "nope"] },
+      })
+    ).text();
+    expect(done).toContain("We hear you");
+    expect(done).toContain("No ghosting");
+    expect(done).toContain('href="/safety"');
+    const [row] = await db().select().from(datingIntents).where(eq(datingIntents.accountId, m.id));
+    expect(row.mode).toBe("dating_only");
+    expect(row.reasons).toEqual(["long_term", "slow", "real_things"]); // up to three, unknown dropped
+    expect(row.challenges).toEqual(["safety", "ghosting"]);
+  });
+
+  it("'dating only' needs romance mode; otherwise it's saved as 'open to more'", async () => {
+    const plain = await createMember();
+    await withType2(plain, "BDSH");
+    await req("/buddy/optin", { cookie: plain.cookie, form: { intent: "dating" } });
+    expect((await db().select().from(buddyOptins).where(eq(buddyOptins.accountId, plain.id)))[0].intent).toBe("open");
+    const romantic = await createMember({ romanceOn: true, relationship: "single", genderIdentity: "woman", romanceOpenTo: "everyone" });
+    await withType2(romantic, "CDSH");
+    const page = await (await req("/buddy?lang=en", { cookie: romantic.cookie })).text();
+    expect(page).toContain('value="dating"');
+    await req("/buddy/optin", { cookie: romantic.cookie, form: { intent: "dating" } });
+    expect((await db().select().from(buddyOptins).where(eq(buddyOptins.accountId, romantic.id)))[0].intent).toBe("dating");
+  });
+
+  it("a dating-only member is never paired with someone who only wants friends", async () => {
+    const romantic = { romanceOn: true, relationship: "single", genderIdentity: "man", romanceOpenTo: "everyone" as const };
+    const a = await createMember(romantic);
+    const friendsOnly = await createMember();
+    await withType2(a, "BFSN");
+    await withType2(friendsOnly, "BDSN"); // a great type fit, same district
+    await req("/buddy/optin", { cookie: a.cookie, form: { intent: "dating" } });
+    await req("/buddy/optin", { cookie: friendsOnly.cookie, form: { intent: "friends" } });
+    await only2(a, friendsOnly);
+    await roundIfDue(env, nextRoundDate2());
+    expect(await matchOf2(a)).toHaveLength(0);
+  });
+});
+
+describe.skipIf(!HAS_DB)("Safety net and the Buddy tab", () => {
+  it("/safety: one-tap helplines, a date plan that is never sent to the server, and the checklist", async () => {
+    const html = await (await req("/safety?lang=en")).text();
+    for (const n of ["191", "1669", "1300", "1441", "1155"]) expect(html).toContain(`href="tel:${n}"`);
+    expect(html).toContain('id="plan"');
+    expect(html).not.toMatch(/<form[^>]*id="plan"[^>]*method="post"/);
+    expect(html).toContain("never saved on our side");
+    expect(html).toContain("Never send money or codes");
+  });
+
+  it("Bangkok Buddy is a main tab; Learn and Safety sit at the top of Me", async () => {
+    const m = await createMember();
+    const html = await (await req("/events?lang=en", { cookie: m.cookie })).text();
+    const tabbar = html.slice(html.indexOf('class="tabbar"'));
+    expect(tabbar).toContain('href="/buddy"');
+    expect(tabbar).not.toContain('href="/learn"');
+    const me = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
+    expect(me).toContain('href="/learn"');
+    expect(me).toContain('href="/safety"');
   });
 });

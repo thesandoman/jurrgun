@@ -331,6 +331,23 @@ body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 .buddy-wrap{margin:10px 0;padding:10px 14px;border-radius:14px;background:var(--surface)}
 .buddy-wrap summary{font-weight:600;cursor:pointer}
 .circle-buddy p{margin:.3rem 0}
+.sos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:10px 0 14px}
+.sos-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px;border-radius:16px;background:var(--surface);text-decoration:none;color:var(--ink);text-align:center}
+.sos-btn strong{font-size:1.3rem;color:var(--brand)}
+.sos-btn small{font-size:.78rem;color:var(--ink-2);line-height:1.2}
+.plan{display:grid;gap:8px}
+.plan label{display:grid;gap:2px;font-size:.85rem;color:var(--ink-2)}
+.plan input{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.checklist{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
+.checklist li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--surface)}
+.checklist b{font-size:1.2rem}
+.features{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}
+.feature{display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:20px;background:var(--surface);text-decoration:none;color:var(--ink)}
+.feature b{font-size:1.6rem;line-height:1.2}
+.feature small{color:var(--ink-2);font-size:.82rem}
+details.how{margin:10px 0;padding:10px 14px;border-radius:14px;background:var(--surface)}
+details.how>summary{font-weight:600;cursor:pointer}
+details.how ul{margin:8px 0 0;padding-left:0;list-style:none;display:grid;gap:6px}
 .answers-six{gap:8px}
 .answers-six .answer-card,.answers-six label{font-size:.95rem;line-height:1.35}
 .blend{list-style:none;padding:0;margin:10px 0;display:grid;gap:10px}

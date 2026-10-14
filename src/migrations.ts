@@ -128,5 +128,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_circle_shares_idx\" ON \"social_circle_shares\" (\"event_id\",\"to_account\");",
       "CREATE INDEX \"social_circle_shares_to_idx\" ON \"social_circle_shares\" (\"to_account\");"
     ]
+  },
+  {
+    "id": "0008_purple_talon",
+    "statements": [
+      "CREATE TABLE \"social_dating_intents\" (\n\t\"account_id\" text PRIMARY KEY NOT NULL,\n\t\"mode\" text NOT NULL,\n\t\"reasons\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"challenges\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);"
+    ]
   }
 ];

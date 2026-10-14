@@ -19,7 +19,10 @@ import { SCENARIOS, type Scenario, type TypeCode } from "../vibe/scenarios";
 import { hashString } from "../vibe/rng";
 import { greedyPairs, stableRoommates, type Preferences } from "../match/roommates";
 
-export const BUDDY_INTENTS = ["friends", "activity", "open"] as const;
+/** friends | activity | open (to more, if mutual) | dating (dating only). All PRIVATE. */
+export const BUDDY_INTENTS = ["friends", "activity", "open", "dating"] as const;
+/** Intents that count as open to dating. */
+export const DATING_INTENTS: readonly string[] = ["open", "dating"];
 export type BuddyIntent = (typeof BUDDY_INTENTS)[number];
 
 export const isBuddyIntent = (x: string): x is BuddyIntent => (BUDDY_INTENTS as readonly string[]).includes(x);
@@ -96,6 +99,11 @@ export type PoolMember = BuddyCandidate & {
   excluded: ReadonlySet<string>;
   /** Weeks since they became available (opted in, or their last buddy ended). */
   weeksWaiting: number;
+  /**
+   * Dating only: the people they can date (also open to dating, both
+   * romance-eligible and compatible). Undefined for everyone else.
+   */
+  datesWith?: ReadonlySet<string>;
 };
 
 /** The minimum pairScore someone is offered, by weeks waited. */
@@ -109,6 +117,9 @@ const inRange = (age: number, min: number, max: number) => age >= min && age <= 
 function acceptScore(a: PoolMember, b: PoolMember): number | null {
   if (a.accountId === b.accountId || a.excluded.has(b.accountId) || b.excluded.has(a.accountId)) return null;
   if (!inRange(b.age, a.ageMin, a.ageMax) || !inRange(a.age, b.ageMin, b.ageMax)) return null;
+  // Someone here only for dating is only paired with people they can date.
+  if (a.datesWith && !a.datesWith.has(b.accountId)) return null;
+  if (b.datesWith && !b.datesWith.has(a.accountId)) return null;
   const s = pairScore(a, b);
   if (s === null || s < reservation(a.weeksWaiting)) return null;
   return s;
@@ -260,7 +271,7 @@ export function romanceUnlocked(p: {
   compatible: boolean;
   finishedQuests: number;
 }): boolean {
-  return p.intents.every((i) => i === "open") && p.eligible.every(Boolean) && p.compatible && p.finishedQuests >= ROMANCE_AFTER_QUESTS;
+  return p.intents.every((i) => DATING_INTENTS.includes(i)) && p.eligible.every(Boolean) && p.compatible && p.finishedQuests >= ROMANCE_AFTER_QUESTS;
 }
 
 // ------------------------------------------------------------ no ghosting --

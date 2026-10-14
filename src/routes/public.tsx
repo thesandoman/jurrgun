@@ -7,7 +7,6 @@ import type { AppEnv } from "../lib/env";
 import { LEARN_CARDS } from "../content/learn";
 import { L } from "../lib/i18n";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
-import { FaqList } from "./learn";
 import { BRAND, BrandMark, MARK_SVG } from "../ui/brand";
 
 export const publicRoutes = new Hono<AppEnv>();
@@ -38,38 +37,41 @@ publicRoutes.get("/", (c) => {
           )}
         </div>
       </section>
-      <div class="tiles">
-        <span class="tile"><b aria-hidden="true">🏙️</b>{t("เมืองเป็นเจ้าภาพ", "Hosted by the city")}</span>
-        <span class="tile"><b aria-hidden="true">👥</b>{t("โต๊ะละ 4 ถึง 6 คน", "Tables of 4 to 6")}</span>
-        <span class="tile"><b aria-hidden="true">🔒</b>{t("รู้เมื่อเลือกตรงกัน", "Mutual matches only")}</span>
+      <div class="features">
+        <a href="/buddy" class="feature">
+          <b aria-hidden="true">🤝</b>
+          <strong>{t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</strong>
+          <small>{t("หนึ่งคน เควสต์ทุกสัปดาห์ 50 เขต", "One person, weekly quests, 50 districts")}</small>
+        </a>
+        <a href="/events" class="feature">
+          <b aria-hidden="true">👥</b>
+          <strong>{t("โต๊ะเล็ก", "Small tables")}</strong>
+          <small>{t("4 ถึง 6 คน ที่สถานที่จริง", "4 to 6 people, real places")}</small>
+        </a>
+        <a href="/types" class="feature">
+          <b aria-hidden="true">🧭</b>
+          <strong>{t("ไทป์กรุงเทพฯ", "Bangkok Type")}</strong>
+          <small>{t("16 ไทป์ คุณเป็นแบบไหน?", "16 types. Which are you?")}</small>
+        </a>
+        <a href="/safety" class="feature">
+          <b aria-hidden="true">🛡️</b>
+          <strong>{t("ปลอดภัยไว้ก่อน", "Safety first")}</strong>
+          <small>{t("รู้เมื่อเลือกตรงกันเท่านั้น", "Mutual matches only")}</small>
+        </a>
       </div>
-      <a href="/types" class="teaser">
-        <b class="big" aria-hidden="true">🧭</b>
-        <span>
-          <strong>{t("ค้นหาไทป์กรุงเทพฯ ของคุณ", "Find your Bangkok Type")}</strong>
-          <small class="muted">{t("13 ไทป์ คุณเป็นแบบไหน?", "13 types. Which one are you?")}</small>
-        </span>
-      </a>
-      <h2>{t("คำถามที่พบบ่อย", "FAQ")}</h2>
-      <FaqList lang={lang} limit={5} />
-      <p>
-        <a href="/faq">{t("ดูคำถามทั้งหมด →", "See all questions →")}</a>
-      </p>
-      <h2>
-        {t("เรียนรู้ก่อนออกไปเจอคนใหม่", "Learn before you meet")}
-        <span class="swipe-hint" aria-hidden="true">{t("ปัดดู →", "Swipe →")}</span>
-      </h2>
       <div class="rail-wrap">
         <div class="rail" role="list">
           {LEARN_CARDS.map((topic) => (
             <a href={`/learn/${topic.slug}`} role="listitem">
               <b aria-hidden="true">{topic.icon}</b>
               <strong>{L(lang, topic.title)}</strong>
-              <small class="muted">{L(lang, topic.summary)}</small>
             </a>
           ))}
         </div>
       </div>
+      <p class="muted">
+        <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a> · <a href="/learn">{t("เรียนรู้", "Learn")}</a> · <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
+      </p>
     </>,
   );
 });

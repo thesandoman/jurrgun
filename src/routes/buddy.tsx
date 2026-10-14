@@ -49,13 +49,14 @@ import {
 } from "../domain/buddy";
 import { monthKey, seasonQuestFor } from "../domain/seasons";
 import { ageOn, romanceCompatible, romanceEligible } from "../domain/rules";
+import { DATING_INTENTS } from "../domain/buddy";
 import { DISTRICTS } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
 import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View } from "../ui/kit";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 
@@ -69,6 +70,7 @@ const INTENT_OPTS = [
   { value: "friends", th: "เพื่อนใหม่", en: "New friends" },
   { value: "activity", th: "เพื่อนทำกิจกรรม", en: "An activity buddy" },
   { value: "open", th: "เปิดใจมากกว่าเพื่อน ถ้าทั้งคู่รู้สึกตรงกัน", en: "Open to more, only if it's mutual" },
+  { value: "dating", th: "หาเดทโดยเฉพาะ", en: "Dating only" },
 ] satisfies { value: (typeof BUDDY_INTENTS)[number]; th: string; en: string }[];
 
 const districtName = (lang: Lang, key: string) => {
@@ -178,6 +180,19 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
     excluded.get(b.blocked)?.add(b.blocker);
   }
   const since = new Map(optins.map((o) => [o.accountId, o.updatedAt.getTime()]));
+  const intentOf = new Map(optins.map((o) => [o.accountId, o.intent]));
+  const profileOf = new Map(people.map((x) => [x.account.id, x.profile]));
+  /** Who a dating-only member can date: open to dating too, both eligible, compatible. */
+  const datesWith = (id: string): Set<string> | undefined => {
+    if (intentOf.get(id) !== "dating") return undefined;
+    const me = profileOf.get(id)!;
+    const out = new Set<string>();
+    if (!romanceEligible(me)) return out;
+    for (const [other, p] of profileOf) {
+      if (other !== id && DATING_INTENTS.includes(intentOf.get(other) ?? "") && romanceEligible(p) && romanceCompatible(me, p)) out.add(other);
+    }
+    return out;
+  };
   const pool: PoolMember[] = [];
   for (const { account, profile } of people) {
     const code = types.get(account.id);
@@ -194,6 +209,7 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
       ageMax: profile.ageMax,
       excluded: excluded.get(account.id) ?? new Set(),
       weeksWaiting: Math.floor((now.getTime() - availableFrom) / WEEK_MS),
+      datesWith: datesWith(account.id),
     });
   }
   ids = pool.map((p) => p.accountId);
@@ -285,17 +301,16 @@ const SAFETY = (v: View) => (
   </details>
 );
 
-function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultIntent?: string }) {
+function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultIntent?: string; canDate?: boolean }) {
   const { t, lang } = props.v;
   return (
     <Card>
       <h2>🤝 {t("หาบัดดี้กรุงเทพฯ", "Get a Bangkok Buddy")}</h2>
-      <p>
-        {t(
-          "เราจับคู่คุณกับหนึ่งคนที่ไทป์เข้ากันและอยู่ย่านใกล้กัน มีเควสต์ไปที่จริงในกรุงเทพฯ ทุกสัปดาห์ และเควสต์ใหญ่ตามเทศกาลทุกเดือน ทำเควสต์ครบ ได้แสตมป์เขตลงพาสปอร์ต 50 เขตของทั้งคู่",
-          "We pair you with one person whose type clicks with yours and who lives nearby. Every week there's a quest to a real Bangkok place, and every month a big quest for the season or festival. Finish one together and you both stamp that district in your 50-district passport.",
-        )}
-      </p>
+      <div class="tiles">
+        <span class="tile"><b>🤝</b>{t("หนึ่งคนที่เข้ากัน", "One person who clicks")}</span>
+        <span class="tile"><b>🗺️</b>{t("เควสต์ทุกสัปดาห์", "A quest every week")}</span>
+        <span class="tile"><b>🏅</b>{t("เควสต์เทศกาลทุกเดือน", "A festival quest monthly")}</span>
+      </div>
       {!props.hasType ? (
         <>
           <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน เพื่อจับคู่บัดดี้ที่เข้ากับคุณ", "Take the Bangkok Type quiz first, so we can find a buddy who clicks with you.")}</Notice>
@@ -308,23 +323,19 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
             name="intent"
             type="radio"
             required
-            options={INTENT_OPTS}
+            options={props.canDate ? INTENT_OPTS : INTENT_OPTS.filter((o) => o.value !== "dating")}
             values={[props.intent ?? props.defaultIntent ?? "friends"]}
             lang={lang}
           />
-          <p class="muted">
-            {t(
-              "บัดดี้จะเห็นชื่อเล่นและไทป์กรุงเทพฯ ของคุณ ความโรแมนติกจะขึ้นเฉพาะเมื่อทั้งคู่เลือก 'เปิดใจ' และทำเควสต์ด้วยกันครบสองครั้ง ถ้าไม่ตรงกัน จะไม่มีใครรู้",
-              "Your buddy sees your nickname and Bangkok Type. Romance only comes up if you BOTH chose 'open to more' and finished two quests together. If not, nobody ever finds out.",
-            )}
-          </p>
-          <p class="muted">
-            🤝{" "}
-            {t(
-              "ไม่ทิ้งเงียบ: เลิกเป็นบัดดี้ได้เมื่อตกลงกันทั้งคู่ เมื่อย้ายไปคุยกันนอกแอปแล้ว (LINE, IG ฯลฯ) หรือส่งข้อความปิดท้ายอย่างสุภาพ ซึ่งจะปิดเองใน 7 วัน ความปลอดภัยมาก่อนเสมอ บล็อกได้ทันที",
-              "No ghosting: a buddy pairing ends when you both agree, when you've moved off the app together (LINE, IG and so on), or with a kind wrap-up note that closes on its own after 7 days. Safety first: you can always block at once.",
-            )}
-          </p>
+          <details class="how">
+            <summary>{t("ทำงานอย่างไร", "How it works")}</summary>
+            <ul>
+              <li>👀 {t("บัดดี้เห็นชื่อเล่นและไทป์ของคุณ", "Your buddy sees your nickname and type.")}</li>
+              <li>💘 {t("เรื่องหัวใจขึ้นเฉพาะเมื่อทั้งคู่เลือก และทำเควสต์ครบสองครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
+              <li>🤝 {t("ไม่ทิ้งเงียบ: ปิดเมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
+              <li>🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัย", "Safety net")}</a></li>
+            </ul>
+          </details>
           <Button>{props.intent ? t("บันทึก", "Save") : t("เริ่มเลย", "Start")}</Button>
         </form>
       )}
@@ -527,32 +538,29 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
   const stamped = new Set(stamps.map((s) => s.district));
   const buddyName = buddyRows[0]?.nickname ?? "";
   const [quest, bigQuest, offApp] = match?.state === "active" ? await Promise.all([weekQuest(db, match, types, now), monthQuest(db, match, now), movedOffApp(db, match)]) : [null, null, false];
-  const defaultIntent = c.var.user!.profile?.romanceOn ? "open" : "friends";
+  const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, me)).limit(1);
+  const canDate = !!c.var.user!.profile && romanceEligible(c.var.user!.profile);
+  const defaultIntent = dating?.mode === "dating_only" && canDate ? "dating" : dating?.mode === "dating" || c.var.user!.profile?.romanceOn ? "open" : "friends";
   const iSaidMeet = match ? (side(match, me) === "a" ? match.aMeetAt : match.bMeetAt) : null;
 
   return page(
     c,
-    { title: t("บัดดี้กรุงเทพฯ", "Bangkok Buddy"), tab: "me" },
+    { title: t("บัดดี้กรุงเทพฯ", "Bangkok Buddy"), tab: "buddy" },
     <>
       <h1>🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h1>
-      <p class="muted">{t("หนึ่งคน หนึ่งเมือง 50 เขต เควสต์ทุกสัปดาห์ และเควสต์ใหญ่ตามเทศกาลทุกเดือน", "One person, one city, 50 districts. A quest every week, and a big festival quest every month.")}</p>
+      <p class="muted">{t("หนึ่งคน หนึ่งเมือง 50 เขต", "One person, one city, 50 districts.")}</p>
       {!optin || !optin.active ? (
-        <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} defaultIntent={defaultIntent} />
+        <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} />
       ) : !match ? (
         <Card>
           <h2>⏳ {t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
-          <p>
-            {t(
-              "ทุกวันเราจับคู่ทุกคนที่รออยู่พร้อมกันในรอบเดียว ให้ทุกคนได้คู่ที่เข้ากันที่สุดอย่างยุติธรรม ไม่ใช่ใครมาก่อนได้ก่อน ถ้ายังไม่มีคนที่เข้ากันพอ ยิ่งรอนาน เกณฑ์จะค่อย ๆ ผ่อนลงทุกสัปดาห์ เราจะแจ้งเตือนเมื่อมีบัดดี้",
-              "Every day, everyone waiting is matched together in one fair round, so each person gets the best fit, not first come first served. If there's no good fit yet, the bar eases a little each week you wait. We'll notify you when you have a buddy.",
-            )}
-          </p>
+          <p>{t("จับคู่อย่างยุติธรรมทุกวัน เราจะแจ้งเตือนเมื่อมีบัดดี้", "Fair matching runs daily. We'll notify you.")}</p>
         </Card>
       ) : match.state === "proposed" ? (
         <Card>
           <span class="eyebrow">{t("บัดดี้คนใหม่ของคุณ", "Your new buddy")}</span>
           <BuddyHeader v={v} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
-          <p>{t("ทั้งคู่ต้องกด 'นัดเจอ' ก่อน จึงจะเห็นโปรไฟล์ แชร์ช่องทางติดต่อ และได้เควสต์แรก", "You both need to tap 'Meet' to see each other's card, share a contact and get your first quest.")}</p>
+          <p class="muted">{t("ทั้งคู่กด 'นัดเจอ' เพื่อเริ่ม", "You both tap 'Meet' to start.")}</p>
           {iSaidMeet ? (
             <Notice kind="info">{t("คุณกดนัดเจอแล้ว รออีกฝ่าย", "You said meet. Waiting for your buddy.")}</Notice>
           ) : (
@@ -593,7 +601,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       {optin?.active ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
-          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} defaultIntent={defaultIntent} />
+          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} />
           <form method="post" action="/buddy/pause">
             <Button kind="ghost">{t("หยุดรับบัดดี้ใหม่", "Stop new buddies")}</Button>
           </form>
@@ -613,7 +621,7 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
   ]);
   return page(
     c,
-    { title: v.t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport"), tab: "me" },
+    { title: v.t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport"), tab: "buddy" },
     <>
       <p>
         <a href="/buddy">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
@@ -625,8 +633,11 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
 
 buddyRoutes.post("/buddy/optin", requireMember, async (c) => {
   const body = await c.req.parseBody();
-  const intent = str(body.intent);
+  let intent = str(body.intent);
   if (!isBuddyIntent(intent)) return c.redirect("/buddy");
+  // "Dating only" needs romance mode on (Single, consented); otherwise it's "open to more".
+  const profile = c.var.user!.profile;
+  if (intent === "dating" && !(profile && romanceEligible(profile))) intent = "open";
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
   const now = new Date();

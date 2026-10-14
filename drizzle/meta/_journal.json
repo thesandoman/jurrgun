@@ -57,6 +57,13 @@
       "when": 1791893600574,
       "tag": "0007_absent_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791946345747,
+      "tag": "0008_purple_talon",
+      "breakpoints": true
     }
   ]
 }

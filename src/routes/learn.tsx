@@ -29,14 +29,12 @@ export function FaqList(props: { lang: Lang; limit?: number }) {
 
 export function LearnCards(props: { lang: Lang; cards?: LearnCard[] }) {
   return (
-    <div class="grid2">
+    <div class="features">
       {(props.cards ?? LEARN_CARDS).map((topic) => (
-        <Card href={`/learn/${topic.slug}`}>
-          <h3>
-            <span aria-hidden="true">{topic.icon}</span> {L(props.lang, topic.title)}
-          </h3>
-          <p class="muted">{L(props.lang, topic.summary)}</p>
-        </Card>
+        <a href={`/learn/${topic.slug}`} class="feature" title={L(props.lang, topic.summary)}>
+          <b aria-hidden="true">{topic.icon}</b>
+          <strong>{L(props.lang, topic.title)}</strong>
+        </a>
       ))}
     </div>
   );
@@ -129,16 +127,14 @@ learnRoutes.get("/learn", (c) => {
     { title: t("เรียนรู้", "Learn"), tab: "learn" },
     <>
       <h1>{t("เรียนรู้", "Learn")}</h1>
-      <Card>
-        <p class="eyebrow">{t("Jurrgun คืออะไร", "What is Jurrgun")}</p>
-        <p style="margin:0">{L(lang, ABOUT)}</p>
-      </Card>
-      <p class="muted">
-        {t(
-          "เรื่องที่ควรรู้ก่อนออกไปเจอคนใหม่ — เขียนให้ทุกเพศ ทุกความหลากหลาย อ่านได้โดยไม่ต้องเข้าสู่ระบบ",
-          "Things worth knowing before you meet new people — written for every gender and orientation, no login needed.",
-        )}
-      </p>
+      <details class="how">
+        <summary>{t("Jurrgun คืออะไร", "What is Jurrgun")}</summary>
+        <p style="margin:8px 0 0">{L(lang, ABOUT)}</p>
+      </details>
+      <a href="/safety" class="feature" style="margin:10px 0">
+        <b aria-hidden="true">🛡️</b>
+        <strong>{t("ตัวช่วยความปลอดภัย: สายด่วนและแชร์แผนนัด", "Safety net: helplines and share your plans")}</strong>
+      </a>
       {LEARN_GROUPS.map((g) => (
         <section id={g.key}>
           <h2>{L(lang, g.title)}</h2>
@@ -151,7 +147,10 @@ learnRoutes.get("/learn", (c) => {
           <LearnCards lang={lang} cards={ungrouped} />
         </section>
       )}
-      <Helplines lang={lang} />
+      <details class="how">
+        <summary>☎️ {t("สายด่วนทั้งหมด", "All helplines")}</summary>
+        <Helplines lang={lang} />
+      </details>
       <p class="muted">{L(lang, REVIEW_NOTE)}</p>
     </>,
   );

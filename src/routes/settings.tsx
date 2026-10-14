@@ -224,7 +224,8 @@ settingsRoutes.get("/settings", async (c) => {
       type={typeCard}
       badge={badge}
       links={[
-        { href: "/buddy", emoji: "🤝", title: t("บัดดี้กรุงเทพฯ", "Bangkok Buddy"), hint: t("หนึ่งบัดดี้ เควสต์ทุกสัปดาห์ พาสปอร์ต 50 เขต", "One buddy, a weekly quest, a 50-district passport"), tint: "teal" },
+        { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky" },
+        { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint" },
         { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("เสนอกิจกรรมของคุณเอง ฟรีหรือจ่ายที่สถานที่", "Propose your own event, free or pay at the venue"), tint: "lime" },
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },

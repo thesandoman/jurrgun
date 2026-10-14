@@ -38,7 +38,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(answerNames(html).size).toBe(20);
     expect(seedIn(html)).toBe(quizSeed(m.id, null));
     expect(html).toContain("Tap the answer that");
-    expect(html).toContain("there are no wrong answers");
+    expect(html).toContain("No wrong answers");
     expect(html).not.toContain('type="range"');
     expect(html).not.toContain("data-budget");
     // Personalised: the page is the session for this member's home district.
@@ -164,7 +164,8 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const welcomeHtml = await welcome.text();
     expect(welcomeHtml).toContain('action="/onboarding/welcome"');
     expect(welcomeHtml).toContain('value="dating"');
-    expect((await req("/onboarding/welcome", { cookie, form: { mode: "dating" } })).headers.get("location")).toBe("/onboarding/quiz");
+    expect((await req("/onboarding/welcome", { cookie, form: { mode: "friends" } })).headers.get("location")).toBe("/onboarding/quiz");
+    expect((await req("/onboarding/welcome", { cookie, form: { mode: "dating_only" } })).headers.get("location")).toBe("/onboarding/dating");
     const quiz = await req("/onboarding/quiz", { cookie });
     expect(quiz.status).toBe(200);
     const qhtml = await quiz.text();

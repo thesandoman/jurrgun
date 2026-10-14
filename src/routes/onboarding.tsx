@@ -2,7 +2,8 @@
  * Onboarding (PRD §5, §21): a light personality quiz, not a government form.
  * Every stage is a card flow (src/ui/flow.tsx): one decision per screen.
  *
- *   0 welcome      one splash screen, and the first question: friends only, or open to dating too
+ *   0 welcome      one splash screen, and the first question: friends only, open to dating, or here
+ *                  for dating; dating members then answer why, and what makes dating in Bangkok hard
  *   1 quiz         Bangkok Vibe quiz (skippable) → type reveal (/onboarding/type)
  *   2 basics       nickname, birth date (18+ gate), district, lives-in-Bangkok
  *   3 privacy      required consents + code of conduct, then optional extras
@@ -28,7 +29,8 @@ import {
 import { newId } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import type { Lang } from "../lib/i18n";
-import { consents, profiles, wellbeing } from "../schema";
+import { consents, datingIntents, profiles, wellbeing } from "../schema";
+import { CHALLENGE_ANSWERS, DATING_CHALLENGES, DATING_REASONS, isMode, MAX_REASONS, MODE_OPTS } from "../content/dating";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
@@ -54,7 +56,7 @@ const stage = (s: Step) => ({ at: STEPS.indexOf(s), of: STEPS.length });
 
 export const CONSENT_VERSION = "2026-10-proto";
 export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
-/** "friends" or "dating", chosen on the welcome screen before a profile exists. */
+/** friends | dating | dating_only, chosen on the welcome screen before a profile exists. */
 export const INTENT_COOKIE = "bkk_intent";
 
 /** The first step this user hasn't completed. */
@@ -116,7 +118,7 @@ function MustToggle(props: { name: string; label: string; checked?: boolean }) {
 // ------------------------------------------------------------- welcome --
 
 onboarding.get("/welcome", (c) => {
-  const { t } = view(c);
+  const { t, lang } = view(c);
   const chosen = getCookie(c, INTENT_COOKIE);
   return page(
     c,
@@ -128,24 +130,14 @@ onboarding.get("/welcome", (c) => {
       <div class="splash">
         <div class="splash-mark" aria-hidden="true">◐</div>
         <h1>{t("ยินดีต้อนรับสู่ Jurrgun", "Welcome to Jurrgun")}</h1>
-        <p class="muted">{t("เจอเพื่อนใหม่ในกลุ่มเล็ก ที่สถานที่จริงในกรุงเทพฯ", "New friends, small groups, real Bangkok places.")}</p>
       </div>
       <h2>{t("คุณมาที่นี่เพื่ออะไร?", "What brings you here?")}</h2>
       <div class="answers">
-        <AnswerCard name="mode" value="friends" emoji="👋" label={t("เพื่อนใหม่และกิจกรรมกลุ่มเท่านั้น ไม่เดท", "Friends and group hangouts only, no dating")} checked={chosen !== "dating"} />
-        <AnswerCard name="mode" value="dating" emoji="💘" label={t("เพื่อนใหม่ และเปิดใจเรื่องเดทด้วย", "Friends, and open to dating too")} checked={chosen === "dating"} />
+        {MODE_OPTS.map((o, i) => (
+          <AnswerCard name="mode" value={o.value} emoji={o.emoji} label={lang === "en" ? o.label.en : o.label.th} checked={chosen ? chosen === o.value : i === 0} />
+        ))}
       </div>
-      <p class="muted">
-        {t(
-          "เปลี่ยนได้ทุกเมื่อในการตั้งค่า เรื่องเดทเป็นความลับเสมอ และจะขึ้นเฉพาะเมื่อทั้งสองฝ่ายเลือกตรงกัน",
-          "You can change this anytime in Settings. Dating stays private and only ever comes up when it's mutual.",
-        )}
-      </p>
-      <div class="tiles">
-        <span class="tile"><b>🧭</b>{t("ค้นหาไทป์ของคุณ", "Find your type")}</span>
-        <span class="tile"><b>👥</b>{t("โต๊ะละ 4 ถึง 6 คน", "Tables of 4 to 6")}</span>
-        <span class="tile"><b>🔒</b>{t("เป็นส่วนตัวเสมอ", "Private by default")}</span>
-      </div>
+      <p class="muted">🔒 {t("เปลี่ยนได้ทุกเมื่อ เรื่องเดทเป็นความลับเสมอ", "Change it anytime. Dating stays private.")}</p>
       <div class="flow-bar">
         <button type="submit" class="btn primary">{t("ไปกันเลย", "Let's go")}</button>
       </div>
@@ -155,9 +147,81 @@ onboarding.get("/welcome", (c) => {
 
 onboarding.post("/welcome", async (c) => {
   const body = await c.req.parseBody();
-  const mode = str(body.mode) === "dating" ? "dating" : "friends";
+  const raw = str(body.mode);
+  const mode = isMode(raw) ? raw : "friends";
   setCookie(c, INTENT_COOKIE, mode, { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
-  return c.redirect("/onboarding/quiz");
+  const me = c.var.user!.account.id;
+  await getDb(c.env)
+    .insert(datingIntents)
+    .values({ accountId: me, mode, reasons: [], challenges: [], updatedAt: new Date() })
+    .onConflictDoUpdate({ target: datingIntents.accountId, set: { mode, updatedAt: new Date() } });
+  return c.redirect(mode === "friends" ? "/onboarding/quiz" : "/onboarding/dating");
+});
+
+const pick = (keys: string[], allowed: { value: string }[]) => [...new Set(keys)].filter((k) => allowed.some((o) => o.value === k));
+
+/** Two quick questions for dating members: why, and what makes it hard. */
+onboarding.get("/dating", (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  return page(
+    c,
+    { title: TITLE, bare: true },
+    <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")}>
+      <FlowStep emoji="💘" title={t("ทำไมถึงมาหาเดทที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
+        <Pills name="reasons" options={DATING_REASONS.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var b=[].slice.call(document.querySelectorAll('input[name=reasons]'));function u(){var n=b.filter(function(x){return x.checked}).length;b.forEach(function(x){x.disabled=!x.checked&&n>=${MAX_REASONS}})}b.forEach(function(x){x.addEventListener("change",u)});u()})()`,
+          }}
+        />
+      </FlowStep>
+      <FlowStep emoji="🏙️" title={t("อะไรทำให้การเดทในกรุงเทพฯ ยาก?", "What makes dating in Bangkok hard?")} hint={t("เลือกได้หลายข้อ", "Pick any.")}>
+        <Pills name="challenges" options={DATING_CHALLENGES.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
+      </FlowStep>
+    </Flow>,
+  );
+});
+
+onboarding.post("/dating", async (c) => {
+  const { t, lang } = view(c);
+  const body = await c.req.parseBody({ all: true });
+  const reasons = pick(list(body.reasons), DATING_REASONS).slice(0, MAX_REASONS);
+  const challenges = pick(list(body.challenges), DATING_CHALLENGES);
+  const me = c.var.user!.account.id;
+  const mode = getCookie(c, INTENT_COOKIE);
+  await getDb(c.env)
+    .insert(datingIntents)
+    .values({ accountId: me, mode: isMode(mode ?? "") ? mode! : "dating", reasons, challenges, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: datingIntents.accountId, set: { reasons, challenges, updatedAt: new Date() } });
+  // Answer what they told us, briefly.
+  const answers = challenges.map((ch) => ({ emoji: DATING_CHALLENGES.find((o) => o.value === ch)!.emoji, text: CHALLENGE_ANSWERS[ch] })).filter((a) => a.text);
+  return page(
+    c,
+    { title: TITLE, bare: true },
+    <>
+      <div class="splash">
+        <div class="splash-mark" aria-hidden="true">💚</div>
+        <h1>{t("เราได้ยินคุณแล้ว", "We hear you")}</h1>
+      </div>
+      {answers.length ? (
+        <ul class="spots">
+          {answers.map((a) => (
+            <li>
+              <b aria-hidden="true">{a.emoji}</b>
+              <div>{lang === "en" ? a.text.en : a.text.th}</div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p>
+        🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัยเวลาเดท", "Your dating safety net")}</a>
+      </p>
+      <div class="flow-bar">
+        <a class="btn primary" href="/onboarding/quiz">{t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ", "Next: your Bangkok Type")}</a>
+      </div>
+    </>,
+  );
 });
 
 // ---------------------------------------------------------------- quiz --
@@ -565,7 +629,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
         hint={t("ไม่บังคับ เฉพาะคนโสด ค่าเริ่มต้นคือเพื่อน", "Optional, Single only. Friends-only by default.")}
         info={t(ROMANCE_INFO[0], ROMANCE_INFO[1])}
       >
-        <RomanceFields v={props.v} openTo={p?.romanceOpenTo} on={props.mode === "dating" ? true : undefined} />
+        <RomanceFields v={props.v} openTo={p?.romanceOpenTo} on={props.mode === "dating" || props.mode === "dating_only" ? true : undefined} />
         <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
       </FlowStep>
       )}

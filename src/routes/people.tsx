@@ -659,10 +659,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
     <>
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My Bangkok circle")}</h1>
       <p class="muted">
-        {t(
-          "คนที่เลือกกันและกันหลังกิจกรรม และบัดดี้กรุงเทพฯ ของคุณ แชร์ช่องทางติดต่อเมื่อพร้อม อีกฝ่ายจะเห็นเฉพาะที่คุณแชร์ ชวนทั้งวงไปแฮงเอาต์ได้ด้วย",
-          "People you chose each other with after an event, and your Bangkok Buddy. Share a contact when you're ready (they only see what you share), and get the circle together for group hangouts.",
-        )}
+        {t("คนที่เลือกกันและกัน บัดดี้ และแฮงเอาต์กลุ่ม", "People you chose each other with, your buddy, and group hangouts.")}
       </p>
       {props.extras ? <CircleTop v={props.v} extras={props.extras} /> : null}
       {props.rows.length === 0 ? (

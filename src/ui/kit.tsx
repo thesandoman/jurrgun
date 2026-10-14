@@ -20,7 +20,7 @@ export function view(c: Context<AppEnv>): View {
   return { lang, t: tr(lang), user: c.var.user ?? null, path: new URL(c.req.url).pathname };
 }
 
-type Tab = "events" | "learn" | "mine" | "connections" | "pulse" | "me" | "admin" | "none";
+type Tab = "events" | "learn" | "buddy" | "mine" | "connections" | "pulse" | "me" | "admin" | "none";
 
 export type PageOpts = {
   title: string;
@@ -170,15 +170,17 @@ const TAB_ICONS = {
   mine: <Icon d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5V7Zm10-2v14" />,
   connections: <Icon d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9c.5-3.5 3-5.5 6-5.5s5.5 2 6 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5m2.5 3.5c1.5.8 2.4 2.6 2.5 5.5" />,
   me: <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7.5 8.5c.8-4 3.8-6 7.5-6s6.7 2 7.5 6" />,
+  buddy: <Icon d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2.5 20c.4-3.3 2.6-5.5 5.5-5.5 1.6 0 3 .7 4 1.8 1-1.1 2.4-1.8 4-1.8 2.9 0 5.1 2.2 5.5 5.5" />,
 };
 
 function TabBar(props: { v: View; tab: Tab }) {
   const { t } = props.v;
   // Same five places on every page; "My events" is the big centre button
-  // (your pass lives there), like the Sanroo map's centre action.
+  // (your pass lives there), like the Sanroo map's centre action. Bangkok
+  // Buddy is a core tab; Learn lives at the top of Me (and the footer).
   const items: [Tab, string, Child, string][] = [
     ["events", "/events", TAB_ICONS.events, t("ค้นหา", "Discover")],
-    ["learn", "/learn", TAB_ICONS.learn, t("เรียนรู้", "Learn")],
+    ["buddy", "/buddy", TAB_ICONS.buddy, t("บัดดี้", "Buddy")],
     ["mine", "/me/events", TAB_ICONS.mine, t("ของฉัน", "My events")],
     ["connections", "/connections", TAB_ICONS.connections, t("คนรู้จัก", "Circle")],
     // City Pulse lives under Me (and in the Discover ticker).
@@ -187,7 +189,7 @@ function TabBar(props: { v: View; tab: Tab }) {
   return (
     <nav class="tabbar" aria-label={t("เมนูหลัก", "Main")}>
       {items.map(([key, href, icon, text]) => (
-        <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && props.tab === "pulse") ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
+        <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && (props.tab === "pulse" || props.tab === "learn")) ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
           <span aria-hidden="true">{icon}</span>
           {text}
         </a>
