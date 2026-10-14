@@ -241,6 +241,20 @@ function SpotsTag(props: { e: Event; taken: number; t: T }) {
   );
 }
 
+/** A row of seats: filled ones taken, open ones left (up to 16 drawn, then "+n"). */
+function Seats(props: { capacity: number; taken: number }) {
+  const shown = Math.min(props.capacity, 16);
+  const filled = Math.min(shown, Math.round((Math.min(props.taken, props.capacity) / Math.max(1, props.capacity)) * shown));
+  return (
+    <span class="seats" role="img" aria-label={`${props.taken} / ${props.capacity}`}>
+      {Array.from({ length: shown }, (_, i) => (
+        <i class={i < filled ? "on" : ""} />
+      ))}
+      {props.capacity > shown ? <small>+{props.capacity - shown}</small> : null}
+    </span>
+  );
+}
+
 function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null; feat?: boolean }) {
   const { e, v } = props;
   const { t, lang } = v;
@@ -254,12 +268,12 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
           <h3>{title(e, lang)}</h3>
           {props.mine ? <Tag tone="accent">{statusLabel(props.mine, t)}</Tag> : null}
         </div>
-        <p class="ev-line">
-          {fmtDate(e.startsAt, lang)} · {e.venueName} · {label(DISTRICTS, e.district, lang)}
+        <p class="chips2">
+          <span>🕒 {fmtParts(e.startsAt, lang).time}</span>
+          <span>📍 {label(DISTRICTS, e.district, lang)}</span>
+          <span>🗣️ {langsText(e, lang)}</span>
         </p>
-        <p class="ev-line">
-          {ageText(e, t)} · {langsText(e, lang)} · {label(INTENSITY, e.intensity, lang)}
-        </p>
+        <Seats capacity={e.capacity} taken={props.taken} />
         <div class="tags">
           <SpotsTag e={e} taken={props.taken} t={t} />
           {quest ? <Tag tone="accent">🧭 City Quest</Tag> : null}
@@ -858,26 +872,30 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             <Tag tone="accent">🧭 City Quest</Tag> {quest}
           </p>
         ) : null}
-        <div class="kv">
-          <div>
-            {t("เมื่อไหร่", "When")}
-            <b>{fmtDate(event.startsAt, lang)}</b>
-            {t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`)}
+        <div class="facts4">
+          <div class="fact">
+            <b aria-hidden="true">📅</b>
+            <small>{t("เมื่อไหร่", "When")}</small>
+            <span>{fmtDate(event.startsAt, lang)}</span>
+            <small>{t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`)}</small>
           </div>
-          <div>
-            {t("ที่ไหน", "Where")}
-            <b>{event.venueName}</b>
-            {label(DISTRICTS, event.district, lang)}
+          <div class="fact">
+            <b aria-hidden="true">📍</b>
+            <small>{t("ที่ไหน", "Where")}</small>
+            <span>{event.venueName}</span>
+            <small>{label(DISTRICTS, event.district, lang)}</small>
           </div>
-          <div>
-            {t("กลุ่ม", "Group")}
-            <b>{t(`โต๊ะละ ${event.groupMin}–${event.groupMax} คน`, `Tables of ${event.groupMin}–${event.groupMax}`)}</b>
-            {label(INTENSITY, event.intensity, lang)}
+          <div class="fact">
+            <b aria-hidden="true">👥</b>
+            <small>{t("กลุ่ม", "Group")}</small>
+            <span>{t(`โต๊ะละ ${event.groupMin}–${event.groupMax} คน`, `Tables of ${event.groupMin}–${event.groupMax}`)}</span>
+            <small>{label(INTENSITY, event.intensity, lang)}</small>
           </div>
-          <div>
-            {t("ที่นั่ง", "Spots")}
-            <b>{left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็มแล้ว", "Full")}</b>
-            {t(`จาก ${event.capacity} ที่`, `of ${event.capacity}`)}
+          <div class="fact">
+            <b aria-hidden="true">🪑</b>
+            <small>{t("ที่นั่ง", "Spots")}</small>
+            <span>{left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็มแล้ว", "Full")}</span>
+            <Seats capacity={event.capacity} taken={state.taken} />
           </div>
         </div>
         {event.venueAddress || event.mapUrl ? (
@@ -896,11 +914,28 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             <Tag tone="muted">{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
         </div>
-        <p style="white-space:pre-line">{description(event, lang)}</p>
+        {description(event, lang).length > 220 ? (
+          <details class="how ev-desc">
+            <summary>{description(event, lang).slice(0, 160).trim()}…</summary>
+            <p style="white-space:pre-line;margin:8px 0 0">{description(event, lang)}</p>
+          </details>
+        ) : (
+          <p style="white-space:pre-line">{description(event, lang)}</p>
+        )}
       </Card>
 
       <Card>
         <h2>{t("รายละเอียด", "Details")}</h2>
+        <p class="chips2">
+          <span>🧑‍🤝‍🧑 {host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</span>
+          <span>🎂 {ageText(event, t)}</span>
+          <span>🗣️ {langsText(event, lang)}</span>
+          <span>💸 {costText(event, t)}</span>
+          {event.plusOneAllowed ? <span>➕ {t("ชวนเพื่อนได้", "+1 welcome")}</span> : null}
+          {event.accessibility ? <span>♿ {t("มีข้อมูลการเข้าถึง", "Access info")}</span> : null}
+        </p>
+        <details class="how">
+        <summary>{t("รายละเอียดทั้งหมด", "All details")}</summary>
         <dl class="facts">
           <dt>{t("ผู้จัด / โฮสต์", "Host")}</dt>
           <dd>{host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</dd>
@@ -954,6 +989,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             </>
           ) : null}
         </dl>
+        </details>
       </Card>
 
       <BuddyBox names={buddies} event={event} t={t} />

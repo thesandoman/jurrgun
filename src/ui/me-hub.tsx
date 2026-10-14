@@ -118,7 +118,7 @@ export function MeHub(props: {
 
       <nav class="me-menu" aria-label={t("ตั้งค่า", "Settings")}>
         {props.links.map((l) => (
-          <a href={l.href} class="me-row">
+          <a href={l.href} class={`me-row tint-${l.tint}`} title={l.hint}>
             <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
               {l.emoji}
             </span>
@@ -207,14 +207,15 @@ const ME_CSS = `
 .me-chip:nth-child(6n+5){--tint:var(--t-mint);transform:rotate(-1.5deg)}
 .me-chip:nth-child(6n){--tint:var(--t-sun);transform:rotate(1deg)}
 
-.me-menu{background:var(--surface);border-radius:28px;padding:6px;margin:20px 0;box-shadow:var(--shadow)}
-.me-row{display:flex;align-items:center;gap:14px;padding:12px 10px;border-radius:22px;text-decoration:none;color:var(--ink)}
-.me-row+.me-row{margin-top:2px}
-.me-row:hover,.me-row:focus-visible{background:var(--surface-2)}
+.me-menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:20px 0}
+.me-row{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:118px;padding:14px;border-radius:24px;text-decoration:none;color:var(--ink);background:color-mix(in srgb,var(--tint) 12%,var(--surface));border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .18s ease}
+.me-row:hover,.me-row:focus-visible{transform:translateY(-2px)}
+.me-row:active{transform:scale(.98)}
 .me-bubble{flex:none;display:grid;place-items:center;width:46px;height:46px;font-size:1.35rem;background:color-mix(in srgb,var(--tint) 22%,var(--surface));border-radius:55% 45% 50% 50%/50% 55% 45% 50%}
 .me-row:nth-child(even) .me-bubble{border-radius:45% 55% 52% 48%/56% 46% 54% 44%}
-.me-row-text{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
-.me-row-text small{color:var(--ink-3);font-size:.84rem}
+.me-row-text{display:flex;flex-direction:column;line-height:1.25;margin-top:auto}
+.me-row-text small{display:none}
+.me-row .me-chev{position:absolute;top:12px;right:14px}
 .me-chev{font-size:1.5rem;color:var(--ink-3);line-height:1}
 
 .me-lang{display:flex;gap:6px;padding:5px;margin:10px auto;border-radius:999px;background:var(--surface-2);width:max-content;max-width:100%}

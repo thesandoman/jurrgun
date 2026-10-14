@@ -230,6 +230,14 @@ a.tile2:active{transform:scale(.98)}
 .type-pick small{font-size:.8rem;line-height:1.2}
 .people-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tile2 .ico{font-weight:800}
+.seats{display:flex;flex-wrap:wrap;gap:3px;align-items:center;margin:6px 0}
+.seats i{width:10px;height:10px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line)}
+.seats i.on{background:var(--brand);border-color:var(--brand)}
+.seats small{color:var(--ink-3);font-size:.72rem;margin-left:2px}
+.facts4{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+@media (min-width:720px){.facts4{grid-template-columns:repeat(4,1fr)}}
+.facts4 .fact span{font-weight:700}
+details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chips2 span{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:999px;background:var(--surface-2);font-size:.82rem;font-weight:600}
 @media (prefers-reduced-motion:reduce){.pill2-dot{animation:none}.fan-card,.tile2{transition:none}}
 `;
