@@ -290,12 +290,7 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
   return (
     <Card>
       <h2>🤝 {t("หาบัดดี้กรุงเทพฯ", "Get a Bangkok Buddy")}</h2>
-      <p>
-        {t(
-          "เราจับคู่คุณกับหนึ่งคนที่ไทป์เข้ากันและอยู่ย่านใกล้กัน มีเควสต์ไปที่จริงในกรุงเทพฯ ทุกสัปดาห์ และเควสต์ใหญ่ตามเทศกาลทุกเดือน ทำเควสต์ครบ ได้แสตมป์เขตลงพาสปอร์ต 50 เขตของทั้งคู่",
-          "We pair you with one person whose type clicks with yours and who lives nearby. Every week there's a quest to a real Bangkok place, and every month a big quest for the season or festival. Finish one together and you both stamp that district in your 50-district passport.",
-        )}
-      </p>
+      <p>{t("จับคู่กับหนึ่งคนที่ไทป์เข้ากันและอยู่ใกล้กัน แล้วไปเควสต์ที่จริงด้วยกัน", "One person who clicks with you, nearby. Real quests, together.")}</p>
       {!props.hasType ? (
         <>
           <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน เพื่อจับคู่บัดดี้ที่เข้ากับคุณ", "Take the Bangkok Type quiz first, so we can find a buddy who clicks with you.")}</Notice>
@@ -312,19 +307,22 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
             values={[props.intent ?? props.defaultIntent ?? "friends"]}
             lang={lang}
           />
-          <p class="muted">
+          <details class="buddy-more">
+            <summary>ⓘ {t("รายละเอียด", "Learn more")}</summary>
+            <p class="muted">
             {t(
               "บัดดี้จะเห็นชื่อเล่นและไทป์กรุงเทพฯ ของคุณ ความโรแมนติกจะขึ้นเฉพาะเมื่อทั้งคู่เลือก 'เปิดใจ' และทำเควสต์ด้วยกันครบสองครั้ง ถ้าไม่ตรงกัน จะไม่มีใครรู้",
               "Your buddy sees your nickname and Bangkok Type. Romance only comes up if you BOTH chose 'open to more' and finished two quests together. If not, nobody ever finds out.",
             )}
           </p>
-          <p class="muted">
+            <p class="muted">
             🤝{" "}
             {t(
               "ไม่ทิ้งเงียบ: เลิกเป็นบัดดี้ได้เมื่อตกลงกันทั้งคู่ เมื่อย้ายไปคุยกันนอกแอปแล้ว (LINE, IG ฯลฯ) หรือส่งข้อความปิดท้ายอย่างสุภาพ ซึ่งจะปิดเองใน 7 วัน ความปลอดภัยมาก่อนเสมอ บล็อกได้ทันที",
               "No ghosting: a buddy pairing ends when you both agree, when you've moved off the app together (LINE, IG and so on), or with a kind wrap-up note that closes on its own after 7 days. Safety first: you can always block at once.",
             )}
           </p>
+          </details>
           <Button>{props.intent ? t("บันทึก", "Save") : t("เริ่มเลย", "Start")}</Button>
         </form>
       )}
@@ -535,24 +533,19 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
     { title: t("บัดดี้กรุงเทพฯ", "Bangkok Buddy"), tab: "me" },
     <>
       <h1>🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h1>
-      <p class="muted">{t("หนึ่งคน หนึ่งเมือง 50 เขต เควสต์ทุกสัปดาห์ และเควสต์ใหญ่ตามเทศกาลทุกเดือน", "One person, one city, 50 districts. A quest every week, and a big festival quest every month.")}</p>
+      <p class="muted">{t("หนึ่งบัดดี้ 50 เขต", "One buddy. 50 districts.")}</p>
       {!optin || !optin.active ? (
         <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} defaultIntent={defaultIntent} />
       ) : !match ? (
         <Card>
           <h2>⏳ {t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
-          <p>
-            {t(
-              "ทุกวันเราจับคู่ทุกคนที่รออยู่พร้อมกันในรอบเดียว ให้ทุกคนได้คู่ที่เข้ากันที่สุดอย่างยุติธรรม ไม่ใช่ใครมาก่อนได้ก่อน ถ้ายังไม่มีคนที่เข้ากันพอ ยิ่งรอนาน เกณฑ์จะค่อย ๆ ผ่อนลงทุกสัปดาห์ เราจะแจ้งเตือนเมื่อมีบัดดี้",
-              "Every day, everyone waiting is matched together in one fair round, so each person gets the best fit, not first come first served. If there's no good fit yet, the bar eases a little each week you wait. We'll notify you when you have a buddy.",
-            )}
-          </p>
+          <p>{t("เราจับคู่ทุกวัน และจะแจ้งเตือนเมื่อมีบัดดี้", "We match daily and will notify you.")}</p>
         </Card>
       ) : match.state === "proposed" ? (
         <Card>
           <span class="eyebrow">{t("บัดดี้คนใหม่ของคุณ", "Your new buddy")}</span>
           <BuddyHeader v={v} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
-          <p>{t("ทั้งคู่ต้องกด 'นัดเจอ' ก่อน จึงจะเห็นโปรไฟล์ แชร์ช่องทางติดต่อ และได้เควสต์แรก", "You both need to tap 'Meet' to see each other's card, share a contact and get your first quest.")}</p>
+          <p>{t("ทั้งคู่กด 'นัดเจอ' จึงจะเริ่ม", "Start once you both tap 'Meet'.")}</p>
           {iSaidMeet ? (
             <Notice kind="info">{t("คุณกดนัดเจอแล้ว รออีกฝ่าย", "You said meet. Waiting for your buddy.")}</Notice>
           ) : (
