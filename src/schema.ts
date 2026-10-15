@@ -995,8 +995,30 @@ export const regularTableMembers = pgTable(
     accountId: text("account_id").notNull(),
     joinedAt: ts("joined_at").notNull().defaultNow(),
     leftAt: ts("left_at"),
+    /** Set when the host asked them to step back: they can't join this table again before this. */
+    rejoinAfter: ts("rejoin_after"),
   },
   (t) => [uniqueIndex("social_regular_table_members_idx").on(t.tableId, t.accountId), index("social_regular_table_members_account_idx").on(t.accountId)],
+);
+
+/**
+ * Two members of the same regular table who blocked each other. The pair is
+ * stored in id order (a < b), so it never records who blocked whom, and no
+ * reason is kept. The host decides what happens (/tables/:id/conflicts).
+ */
+export const regularTableConflicts = pgTable(
+  "social_regular_table_conflicts",
+  {
+    id: text("id").primaryKey(),
+    tableId: text("table_id").notNull(),
+    aAccount: text("a_account").notNull(),
+    bAccount: text("b_account").notNull(),
+    /** open | kept (both stay, hidden from each other) | stepped_back | reported */
+    status: text("status").notNull().default("open"),
+    resolvedAt: ts("resolved_at"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_regular_table_conflicts_pair_idx").on(t.tableId, t.aAccount, t.bAccount), index("social_regular_table_conflicts_status_idx").on(t.tableId, t.status)],
 );
 
 // ------------------------------------------------------------------- audit --

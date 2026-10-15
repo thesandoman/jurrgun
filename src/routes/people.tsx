@@ -16,7 +16,7 @@
  */
 import { MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
-import { myTables } from "../services/regular-tables";
+import { myTables, raiseConflicts } from "../services/regular-tables";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
@@ -1169,6 +1169,8 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
       ),
     audit(db, me, "block.create", { type: "account", id: other }),
   ]);
+  // Two people at the same regular table: nobody is removed; the host decides (/tables/:id/conflicts).
+  await raiseConflicts(c.env, me, other);
   return c.redirect(withNotice(safeNext(str(body.back), "/connections"), "blocked"));
 });
 

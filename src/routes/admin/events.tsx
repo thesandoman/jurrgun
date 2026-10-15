@@ -73,6 +73,8 @@ const BASE = "/admin/events";
 /** Registrations that hear about changes to an event. */
 const REACHABLE = ["confirmed", "offered", "waitlisted"];
 const MAX_REGS = 2000;
+/** Staff and partner organisers set any size up to this; large events have no fixed cap (owner, D19). */
+export const ORGANISER_MAX_CAPACITY = 100_000;
 
 // ------------------------------------------------------------- access --
 
@@ -577,8 +579,9 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   }
   need(values(DISTRICTS).includes(d.district), "เลือกเขต", "Choose a district");
 
-  const capacity = intIn(d.capacity, 1, 500);
-  need(capacity !== null, "จำนวนที่นั่งต้องอยู่ระหว่าง 1 ถึง 500", "Capacity must be 1 to 500");
+  // Large events have no fixed cap: the organiser decides (member hosts keep MEMBER_MAX_CAPACITY in domain/hosting.ts).
+  const capacity = intIn(d.capacity, 1, ORGANISER_MAX_CAPACITY);
+  need(capacity !== null, "จำนวนที่นั่งต้องอยู่ระหว่าง 1 ถึง 100,000", "Capacity must be 1 to 100,000");
   const ageMin = intIn(d.ageMin, 18, 99);
   const ageMax = intIn(d.ageMax, 18, 99);
   need(ageMin !== null && ageMax !== null && ageMin <= ageMax, "ช่วงอายุต้องอยู่ระหว่าง 18 ถึง 99 และอายุต่ำสุดต้องไม่เกินอายุสูงสุด", "Age range must be 18 to 99 with min ≤ max");
@@ -604,7 +607,7 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   need(d.accessibility.length <= 1000 && d.safetyInfo.length <= 1000, "ข้อมูลการเข้าถึง/ความปลอดภัยไม่เกิน 1,000 ตัวอักษร", "Accessibility and safety info are at most 1,000 characters");
   need(d.emergencyContact.length <= 200, "ช่องทางฉุกเฉินไม่เกิน 200 ตัวอักษร", "Emergency contact is at most 200 characters");
   need(d.tags.every((x) => values(EVENT_TAGS).includes(x)), "แท็กไม่ถูกต้อง", "Unknown tag");
-  const residentQuota = intIn(d.residentQuota || "0", 0, 500);
+  const residentQuota = intIn(d.residentQuota || "0", 0, ORGANISER_MAX_CAPACITY);
   need(residentQuota !== null && (capacity === null || residentQuota <= capacity), "โควตาผู้อยู่อาศัยต้องไม่เกินจำนวนที่นั่ง", "Resident quota can't exceed capacity");
   need(!d.visitBangkokRoute || values(VISITBANGKOK_ROUTES).includes(d.visitBangkokRoute), "เส้นทาง VisitBangkok ไม่ถูกต้อง", "Unknown VisitBangkok route");
 
@@ -755,7 +758,7 @@ function EventForm(props: {
       <Card>
         <h2>{t("ผู้เข้าร่วม", "Who it's for")}</h2>
         <div class="grid2">
-          <Field label={t("จำนวนที่นั่ง", "Capacity")} name="capacity" type="number" min={1} max={500} value={d.capacity} required />
+          <Field label={t("จำนวนที่นั่ง", "Capacity")} name="capacity" type="number" min={1} max={ORGANISER_MAX_CAPACITY} value={d.capacity} required />
           <Field label={t("อายุต่ำสุด", "Minimum age")} name="ageMin" type="number" min={18} max={99} value={d.ageMin} required />
           <Field label={t("อายุสูงสุด", "Maximum age")} name="ageMax" type="number" min={18} max={99} value={d.ageMax} required />
           <Select label={t("ระดับความโซเชียล", "Social intensity")} name="intensity" options={INTENSITY} value={d.intensity} lang={lang} />
@@ -766,7 +769,7 @@ function EventForm(props: {
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Bring-a-friend (+1) allowed")} checked={d.plusOneAllowed} />
         <Toggle name="buddyEnabled" label={t("เปิด Event Buddy", "Enable Event Buddy")} hint={t("จับคู่คนที่ไม่อยากมาคนเดียว 48 ชม. ก่อนงาน", "Pairs people who don't want to arrive alone, 48h before")} checked={d.buddyEnabled} />
         <Toggle name="residentPriority" label={t("ให้สิทธิ์ผู้อยู่อาศัยในกรุงเทพฯ ก่อน", "Bangkok resident priority")} checked={d.residentPriority} />
-        <Field label={t("โควตาผู้อยู่อาศัย (ที่นั่ง)", "Resident quota (seats)")} name="residentQuota" type="number" min={0} max={500} value={d.residentQuota} hint={t("ไม่เกินจำนวนที่นั่ง", "At most the capacity")} />
+        <Field label={t("โควตาผู้อยู่อาศัย (ที่นั่ง)", "Resident quota (seats)")} name="residentQuota" type="number" min={0} max={ORGANISER_MAX_CAPACITY} value={d.residentQuota} hint={t("ไม่เกินจำนวนที่นั่ง", "At most the capacity")} />
       </Card>
       <Card>
         <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>

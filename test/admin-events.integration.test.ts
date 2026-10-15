@@ -180,7 +180,7 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     const bad: Record<string, string>[] = [
       { endsAt: "2030-01-15T18:00" },
       { capacity: "0" },
-      { capacity: "501" },
+      { capacity: "100001" },
       { startsAt: "not-a-date" },
       { groupMin: "7", groupMax: "6" },
       { mapUrl: "javascript:alert(1)" },
@@ -201,6 +201,11 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     expect(r.headers.get("location")).toBe(`/admin/events/${e.id}?notice=saved`);
     const edit = await (await req(`/admin/events/${e.id}/edit`, { cookie: admin.cookie })).text();
     expect(edit).toContain('value="2030-01-15T19:30"');
+    // Large events have no fixed cap for staff and partner organisers (owner, D19): up to 100,000.
+    const big = validForm({ capacity: "50000" });
+    expect((await req("/admin/events/new", { cookie: admin.cookie, form: big })).status).toBe(302);
+    const [large] = await db().select().from(events).where(eq(events.title, big.title as string)).limit(1);
+    expect(large.capacity).toBe(50000);
   });
 
   it("notifies registrants when a published event moves, and offers new seats on capacity increase", async () => {

@@ -26,6 +26,7 @@ import { L } from "../lib/i18n";
 import { getObject, getObjectUrl } from "../storage";
 import { LinkButton, page, view } from "../ui/kit";
 import { datingPromptsShown, datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
+import { regularAt } from "../services/regular-tables";
 import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 
 export const profileRoutes = new Hono<AppEnv>();
@@ -161,7 +162,12 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   const me = c.var.user!;
   const db = getDb(c.env);
   const person = cardPerson(target.profile, me.profile);
-  const vibes = await vibesFor(db, self ? [me.account.id] : [target.account.id, me.account.id]);
+  // The card itself is only reachable by connected viewers and the member (visibleProfile), and
+  // regularAt drops tables this viewer couldn't join (women-only) or whose host they're blocked with.
+  const [vibes, tables] = await Promise.all([
+    vibesFor(db, self ? [me.account.id] : [target.account.id, me.account.id]),
+    regularAt(db, target.account.id, { id: me.account.id, gender: me.profile?.gender }),
+  ]);
   const theirVibe = vibes.get(target.account.id);
   const resident = showsResidentBadge(target.account, target.profile);
   const badges =
@@ -190,6 +196,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         badges={badges}
         viewerInterests={self ? null : (me.profile?.interests ?? [])}
         viewerUniversity={self ? null : universityKey(cleanBio(me.profile?.bio))}
+        regularAt={tables}
         actions={
           self ? (
             <>

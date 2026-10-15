@@ -220,16 +220,20 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     ]
   },
   {
-    "id": "0017_good_titanium_man",
+    "id": "0017_condemned_blink",
     "statements": [
-      "CREATE TABLE \"social_regular_table_members\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"table_id\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"joined_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"left_at\" timestamp with time zone\n);",
+      "CREATE TABLE \"social_regular_table_conflicts\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"table_id\" text NOT NULL,\n\t\"a_account\" text NOT NULL,\n\t\"b_account\" text NOT NULL,\n\t\"status\" text DEFAULT 'open' NOT NULL,\n\t\"resolved_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_regular_table_members\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"table_id\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"joined_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"left_at\" timestamp with time zone,\n\t\"rejoin_after\" timestamp with time zone\n);",
       "CREATE TABLE \"social_regular_tables\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"host_account_id\" text NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"district\" text NOT NULL,\n\t\"description\" text DEFAULT '' NOT NULL,\n\t\"women_only\" boolean DEFAULT false NOT NULL,\n\t\"join_token\" text NOT NULL,\n\t\"request_id\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"archived_at\" timestamp with time zone\n);",
       "ALTER TABLE \"social_events\" ADD COLUMN \"regular_table_id\" text;",
+      "CREATE UNIQUE INDEX \"social_regular_table_conflicts_pair_idx\" ON \"social_regular_table_conflicts\" (\"table_id\",\"a_account\",\"b_account\");",
+      "CREATE INDEX \"social_regular_table_conflicts_status_idx\" ON \"social_regular_table_conflicts\" (\"table_id\",\"status\");",
       "CREATE UNIQUE INDEX \"social_regular_table_members_idx\" ON \"social_regular_table_members\" (\"table_id\",\"account_id\");",
       "CREATE INDEX \"social_regular_table_members_account_idx\" ON \"social_regular_table_members\" (\"account_id\");",
       "CREATE INDEX \"social_regular_tables_host_idx\" ON \"social_regular_tables\" (\"host_account_id\");",
       "CREATE UNIQUE INDEX \"social_regular_tables_token_idx\" ON \"social_regular_tables\" (\"join_token\");",
-      "CREATE INDEX \"social_events_regular_table_idx\" ON \"social_events\" (\"regular_table_id\");"
+      "CREATE INDEX \"social_events_regular_table_idx\" ON \"social_events\" (\"regular_table_id\");",
+      "-- One-time backfill (owner, D19): every Table Host (circle_head) without an open regular table gets one, named from their latest approved request, in their profile's district. Safe to run again: it skips hosts who already have one.\nINSERT INTO \"social_regular_tables\" (\"id\", \"host_account_id\", \"name\", \"district\", \"description\", \"women_only\", \"join_token\", \"request_id\", \"created_at\")\nSELECT replace(gen_random_uuid()::text, '-', ''), r.\"account_id\", left(r.\"circle_name\", 60), p.\"district\", '', false, replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), r.\"id\", now()\nFROM (\n\tSELECT DISTINCT ON (\"account_id\") \"id\", \"account_id\", \"circle_name\"\n\tFROM \"social_circle_head_requests\"\n\tWHERE \"status\" = 'approved'\n\tORDER BY \"account_id\", \"created_at\" DESC\n) r\nJOIN \"identity_accounts\" a ON a.\"id\" = r.\"account_id\" AND a.\"role\" = 'circle_head'\nJOIN \"social_profiles\" p ON p.\"account_id\" = r.\"account_id\"\nWHERE NOT EXISTS (SELECT 1 FROM \"social_regular_tables\" t WHERE t.\"host_account_id\" = r.\"account_id\" AND t.\"archived_at\" IS NULL);"
     ]
   }
 ];

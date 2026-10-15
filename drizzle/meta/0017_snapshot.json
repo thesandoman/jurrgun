@@ -1,5 +1,5 @@
 {
-  "id": "214a26bc-ca8c-46aa-89e3-173ba42af20c",
+  "id": "b23e77a3-f3ad-4162-b49d-308ed628aa0a",
   "prevId": "eba5741c-d83d-4fe0-8aa3-4a0ea3d22db6",
   "version": "7",
   "dialect": "postgresql",
@@ -3567,6 +3567,112 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.social_regular_table_conflicts": {
+      "name": "social_regular_table_conflicts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "table_id": {
+          "name": "table_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "a_account": {
+          "name": "a_account",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "b_account": {
+          "name": "b_account",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "social_regular_table_conflicts_pair_idx": {
+          "name": "social_regular_table_conflicts_pair_idx",
+          "columns": [
+            {
+              "expression": "table_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "a_account",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "b_account",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "social_regular_table_conflicts_status_idx": {
+          "name": "social_regular_table_conflicts_status_idx",
+          "columns": [
+            {
+              "expression": "table_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.social_regular_table_members": {
       "name": "social_regular_table_members",
       "schema": "",
@@ -3598,6 +3704,12 @@
         },
         "left_at": {
           "name": "left_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejoin_after": {
+          "name": "rejoin_after",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

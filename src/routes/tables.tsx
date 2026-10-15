@@ -17,15 +17,15 @@
 import { Hono, type Context } from "hono";
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { batch, getDb } from "../db";
-import { canJoin, canSetWomenOnly, DESCRIPTION_MAX, JOIN_TEXT, MAX_MEMBERS, NAME_MAX, tableVisible } from "../domain/regular-tables";
+import { canJoin, canSetWomenOnly, CONFLICT_ACTIONS, DESCRIPTION_MAX, JOIN_TEXT, MAX_MEMBERS, NAME_MAX, STEP_BACK_DAYS, tableVisible, type ConflictAction } from "../domain/regular-tables";
 import { DISTRICTS, districtsAZ, label } from "../lib/constants";
 import { randomToken, safeEqual } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { circleHeadRequests, events, profiles, regularTableMembers, regularTables, type RegularTable } from "../schema";
-import { blockedAmong, getTable, hostTable, memberIds, myTables, newTable, standing, wentWithHost } from "../services/regular-tables";
+import { accounts, circleHeadRequests, events, notifications, profiles, regularTableConflicts, regularTableMembers, regularTables, reports, type RegularTable } from "../schema";
+import { blockedAmong, getTable, hostTable, memberIds, myTables, newTable, rejoinAfterFor, standing, wentWithHost } from "../services/regular-tables";
 import { newId } from "../lib/crypto";
 import { Button, Card, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view } from "../ui/kit";
 
@@ -134,7 +134,7 @@ async function load(c: C) {
 /** Join check for someone not at the table yet. */
 async function joinCheck(c: C, db: Db, table: RegularTable, me: string, token: string) {
   const members = await memberIds(db, table.id);
-  const [blocked, went] = await Promise.all([blockedAmong(db, me, [table.hostAccountId, ...members]), wentWithHost(db, table.hostAccountId, me)]);
+  const [blocked, went, rejoinAfter] = await Promise.all([blockedAmong(db, me, [table.hostAccountId, ...members]), wentWithHost(db, table.hostAccountId, me), rejoinAfterFor(db, table.id, me)]);
   const invited = (!!token && safeEqual(token, table.joinToken)) || went;
   return canJoin({
     archived: !!table.archivedAt,
@@ -144,6 +144,7 @@ async function joinCheck(c: C, db: Db, table: RegularTable, me: string, token: s
     womenOnly: table.womenOnly,
     viewer: c.var.user!.profile ?? {},
     memberCount: members.length,
+    rejoinAfter,
   });
 }
 
@@ -220,6 +221,9 @@ tableRoutes.get("/tables/:id", async (c) => {
   const seen = ids.filter((id) => !hidden.has(id) && id !== me);
   const nameOf = new Map(names.map((n) => [n.id, n.nickname]));
   const hostProfile = st.isHost ? c.var.user!.profile : null;
+  const waiting = st.isHost
+    ? (await db.select({ id: regularTableConflicts.id }).from(regularTableConflicts).where(and(eq(regularTableConflicts.tableId, table.id), eq(regularTableConflicts.status, "open"))).limit(50)).length
+    : 0;
   const notice = c.req.query("notice");
   return page(
     c,
@@ -228,6 +232,11 @@ tableRoutes.get("/tables/:id", async (c) => {
       {notice === "joined" ? <Notice kind="ok">{t(`ยินดีต้อนรับสู่โต๊ะ "${table.name}" แล้วเจอกันนะ`, `Welcome to "${table.name}". See you there.`)}</Notice> : null}
       {notice === "link_reset" ? <Notice kind="ok">{t("สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีก", "New invite link made. The old one no longer works.")}</Notice> : null}
       {head}
+      {waiting ? (
+        <Notice kind="warn">
+          <a href={`/tables/${table.id}/conflicts`}>{t(`มี ${waiting} เรื่องในโต๊ะที่รอคุณตัดสินใจ`, `${waiting} thing${waiting === 1 ? "" : "s"} at your table waiting for you`)}</a>
+        </Notice>
+      ) : null}
       {table.description ? <p>{table.description}</p> : null}
       <p class="row">
         <LinkButton href={`/chat/table:${table.id}`}>💬 {t("แชตของโต๊ะ", "Table chat")}</LinkButton>
@@ -362,4 +371,153 @@ tableRoutes.post("/tables/:id/link/reset", async (c) => {
     audit(db, me, "regular_table.link_reset", { type: "regular_table", id: table.id }),
   ]);
   return c.redirect(`/tables/${table.id}?notice=link_reset`);
+});
+
+// ---------------------------------------------------------- conflicts --
+// Two members who blocked each other. Nobody was removed: they just stopped
+// seeing each other. The host decides; this page never says who blocked whom.
+
+async function openConflict(db: Db, tableId: string, id: string) {
+  const [row] = await db
+    .select()
+    .from(regularTableConflicts)
+    .where(and(eq(regularTableConflicts.id, id), eq(regularTableConflicts.tableId, tableId), eq(regularTableConflicts.status, "open")))
+    .limit(1);
+  return row ?? null;
+}
+
+tableRoutes.get("/tables/:id/conflicts", async (c) => {
+  const v = view(c);
+  const { t } = v;
+  const got = await load(c);
+  if (!got || !got.st.isHost) return notFound(c);
+  const { db, table } = got;
+  const rows = await db
+    .select()
+    .from(regularTableConflicts)
+    .where(and(eq(regularTableConflicts.tableId, table.id), eq(regularTableConflicts.status, "open")))
+    .orderBy(asc(regularTableConflicts.createdAt))
+    .limit(50);
+  const names = await nicknames(db, [...new Set(rows.flatMap((r) => [r.aAccount, r.bAccount]))]);
+  const n = (id: string) => names.find((x) => x.id === id)?.nickname ?? "?";
+  const notice = c.req.query("notice");
+  return page(
+    c,
+    { title: t("เรื่องที่รอคุณตัดสินใจ", "Waiting for you"), tab: "connections" },
+    <>
+      <p>
+        <a href={`/tables/${table.id}`}>← {table.name}</a>
+      </p>
+      <h1>{t("สองคนในโต๊ะไม่สบายใจกัน", "Two people aren't comfortable with each other")}</h1>
+      <p class="muted">
+        {t(
+          "ไม่มีใครถูกเอาออกจากโต๊ะ ตอนนี้สองคนนี้แค่มองไม่เห็นกัน เราไม่บอกว่าใครบล็อกใคร และไม่มีเหตุผลให้ดู คุณเลือกได้ว่าจะทำยังไงต่อ",
+          "Nobody has been removed. For now the two of them just don't see each other. We never say who blocked whom, and there's no reason to read. You decide what happens next.",
+        )}
+      </p>
+      {notice === "kept" ? <Notice kind="ok">{t("ให้อยู่ทั้งสองคนแล้ว เขาจะยังมองไม่เห็นกัน", "Both stay. They still won't see each other.")}</Notice> : null}
+      {notice === "stepped_back" ? <Notice kind="ok">{t("ส่งข้อความถึงเขาอย่างสุภาพแล้ว", "Done. We sent them a kind note.")}</Notice> : null}
+      {notice === "reported" ? <Notice kind="ok">{t("ส่งให้ทีมงานดูแล้ว", "Sent to our moderators.")}</Notice> : null}
+      {rows.length === 0 ? (
+        <Empty>{t("ไม่มีเรื่องที่รอคุณตัดสินใจ", "Nothing waiting for you.")}</Empty>
+      ) : (
+        rows.map((r) => (
+          <Card>
+            <h2 style="margin-top:0">
+              {n(r.aAccount)} · {n(r.bAccount)}
+            </h2>
+            <form method="post" action={`/tables/${table.id}/conflicts/${r.id}`}>
+              <Button kind="ghost" name="action" value="keep">
+                {t("ให้อยู่ทั้งสองคน แค่ไม่ต้องเห็นกัน", "Keep both, hidden from each other")}
+              </Button>
+            </form>
+            <form method="post" action={`/tables/${table.id}/conflicts/${r.id}`}>
+              <input type="hidden" name="action" value="step_back" />
+              <p class="muted">
+                {t(`ขอให้คนหนึ่งพักจากโต๊ะก่อน เขาจะได้ข้อความสุภาพ และกลับมาได้หลัง ${STEP_BACK_DAYS} วัน`, `Ask one to step back. They get a kind note and can come back after ${STEP_BACK_DAYS} days.`)}
+              </p>
+              <div class="row">
+                <Button kind="ghost" name="member" value={r.aAccount}>
+                  {t(`ขอให้ ${n(r.aAccount)} พักก่อน`, `Ask ${n(r.aAccount)} to step back`)}
+                </Button>
+                <Button kind="ghost" name="member" value={r.bAccount}>
+                  {t(`ขอให้ ${n(r.bAccount)} พักก่อน`, `Ask ${n(r.bAccount)} to step back`)}
+                </Button>
+              </div>
+            </form>
+            <form method="post" action={`/tables/${table.id}/conflicts/${r.id}`}>
+              <Button kind="ghost" name="action" value="report">
+                {t("ส่งให้ทีมงานช่วยดู", "Send it to moderators")}
+              </Button>
+            </form>
+          </Card>
+        ))
+      )}
+    </>,
+  );
+});
+
+tableRoutes.post("/tables/:id/conflicts/:cid", async (c) => {
+  const got = await load(c);
+  if (!got || !got.st.isHost) return notFound(c);
+  const { db, me, table } = got;
+  const r = await openConflict(db, table.id, c.req.param("cid"));
+  const back = `/tables/${table.id}/conflicts`;
+  if (!r) return c.redirect(back);
+  const body = await c.req.parseBody();
+  const action = str(body.action) as ConflictAction;
+  if (!CONFLICT_ACTIONS.includes(action)) return c.redirect(back);
+  const now = new Date();
+  const target = { type: "regular_table_conflict", id: r.id };
+  const close = (status: string) =>
+    db.update(regularTableConflicts).set({ status, resolvedAt: now }).where(and(eq(regularTableConflicts.id, r.id), eq(regularTableConflicts.status, "open")));
+  // The audit records what the host chose: never a reason, never who blocked whom.
+  if (action === "keep") {
+    await batch(c.env, [close("kept"), audit(db, me, "regular_table.conflict_keep", target)]);
+    return c.redirect(`${back}?notice=kept`);
+  }
+  if (action === "step_back") {
+    const member = str(body.member);
+    if (member !== r.aAccount && member !== r.bAccount) return c.redirect(back);
+    await batch(c.env, [
+      db
+        .update(regularTableMembers)
+        .set({ leftAt: now, rejoinAfter: new Date(now.getTime() + STEP_BACK_DAYS * 86_400_000) })
+        .where(and(eq(regularTableMembers.tableId, table.id), eq(regularTableMembers.accountId, member))),
+      close("stepped_back"),
+      notify(
+        db,
+        member,
+        "table_step_back",
+        `เจ้าภาพขอให้คุณพักจากโต๊ะประจำ "${table.name}" สักพัก กลับมาได้อีกครั้งใน ${STEP_BACK_DAYS} วัน ขอบคุณที่เข้าใจนะ`,
+        `The host has asked you to take a break from "${table.name}". You're welcome back in ${STEP_BACK_DAYS} days. Thanks for understanding.`,
+        "/tables",
+      ),
+      audit(db, me, "regular_table.conflict_step_back", target),
+    ]);
+    return c.redirect(`${back}?notice=stepped_back`);
+  }
+  // Send to moderators: a report in the usual queue, naming both members, with no reason or direction.
+  const [pair, staff] = await Promise.all([
+    db.select({ id: accounts.id, username: accounts.username }).from(accounts).where(inArray(accounts.id, [r.aAccount, r.bAccount])).limit(2),
+    db.select({ id: accounts.id }).from(accounts).where(and(inArray(accounts.role, ["moderator", "bma_admin"]), eq(accounts.status, "active"))).limit(500),
+  ]);
+  const u = (id: string) => pair.find((x) => x.id === id)?.username ?? id;
+  const reportId = newId();
+  await batch(c.env, [
+    db.insert(reports).values({
+      id: reportId,
+      reporter: me,
+      targetAccount: r.aAccount,
+      reason: "other",
+      details: `Regular table "${table.name}": the Table Host asks moderators to look at two members who aren't comfortable with each other (@${u(r.aAccount)} and @${u(r.bAccount)}). No reason or direction is recorded.`,
+      severity: "standard",
+    }),
+    close("reported"),
+    audit(db, me, "regular_table.conflict_report", target, { report: reportId }),
+    ...(staff.length
+      ? [db.insert(notifications).values(staff.map((s) => ({ id: newId(), accountId: s.id, kind: "report", titleTh: "มีรายงานจากโต๊ะประจำรอตรวจสอบ", titleEn: "Regular table report to review", link: "/admin/moderation" })))]
+      : []),
+  ]);
+  return c.redirect(`${back}?notice=reported`);
 });

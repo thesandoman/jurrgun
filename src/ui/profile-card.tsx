@@ -132,6 +132,8 @@ export function ProfileCard(props: {
   viewerUniversity?: string | null;
   /** Extra actions under the header (Edit button on my own card). */
   actions?: Child;
+  /** Names of the regular tables they sit at, already filtered for this viewer (src/services/regular-tables.ts regularAt). */
+  regularAt?: string[];
 }) {
   const { t, lang } = props.v;
   const p = props.person;
@@ -176,6 +178,7 @@ export function ProfileCard(props: {
   // "Lives in Bangkok" is the default; the others are worth knowing at a table.
   const res = RESIDENCY.find((x) => x.value === bio.residency && x.value !== "lives");
   if (res) facts.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
+  if (props.regularAt?.length) facts.push(["🪑", t("ขาประจำที่", "Regular at"), props.regularAt.join(", ")]);
   if (bio.hometown) facts.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
   facts.push(...reflectionFacts(bio.reflections, lang, t));
   if (bio.guide) facts.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);

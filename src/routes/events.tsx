@@ -95,7 +95,7 @@ import { PartnerSection } from "../ui/partner-events";
 import { deferFor } from "./partners";
 import { canView } from "../domain/hosting";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
-import { blockedAmong, getTable, hostTable, memberIds, seatedFor, standing } from "../services/regular-tables";
+import { blockedAmong, getTable, hostTable, memberIds, rejoinAfterFor, seatedFor, standing } from "../services/regular-tables";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -959,8 +959,8 @@ async function tablePrompt(db: Db, event: Event, user: CurrentUser, now: Date): 
     .limit(1);
   if (!reg) return null;
   const members = await memberIds(db, table.id);
-  const blocked = await blockedAmong(db, me, [hostId, ...members]);
-  const check = canJoinTable({ archived: false, isHost: false, invited: true, blocked: blocked.size > 0, womenOnly: table.womenOnly, viewer: user.profile ?? {}, memberCount: members.length });
+  const [blocked, rejoinAfter] = await Promise.all([blockedAmong(db, me, [hostId, ...members]), rejoinAfterFor(db, table.id, me)]);
+  const check = canJoinTable({ archived: false, isHost: false, invited: true, blocked: blocked.size > 0, womenOnly: table.womenOnly, viewer: user.profile ?? {}, memberCount: members.length, rejoinAfter });
   return check.ok ? { id: table.id, name: table.name, seated: false, canJoin: true } : null;
 }
 

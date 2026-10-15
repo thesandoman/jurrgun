@@ -8,8 +8,9 @@ import { and, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { newId, randomToken } from "../lib/crypto";
 import { audit, notify } from "../lib/records";
-import { accounts, blocks, circleShares, events, regularTableMembers, regularTables, registrations, type Event, type RegularTable } from "../schema";
-import { DESCRIPTION_MAX, NAME_MAX } from "../domain/regular-tables";
+import { accounts, blocks, circleShares, events, profiles, regularTableConflicts, regularTableMembers, regularTables, registrations, type Event, type RegularTable } from "../schema";
+import { isWoman } from "../domain/rules";
+import { conflictPair, DESCRIPTION_MAX, NAME_MAX } from "../domain/regular-tables";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -156,4 +157,68 @@ export async function sendToTable(env: DatabaseEnv, e: Event, t: RegularTable, h
     audit(db, host, "event.table_share", { type: "event", id: e.id }, { table: t.id }),
   ]);
   return to.length;
+}
+
+/** When the host asked `me` to step back from this table, the date they may join again (null otherwise). */
+export async function rejoinAfterFor(db: Db, tableId: string, me: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ at: regularTableMembers.rejoinAfter })
+    .from(regularTableMembers)
+    .where(and(eq(regularTableMembers.tableId, tableId), eq(regularTableMembers.accountId, me)))
+    .limit(1);
+  return row?.at ?? null;
+}
+
+/**
+ * After `x` and `y` block each other: for every regular table they both sit
+ * at, open a conflict for the host to decide on (nobody is removed), and tell
+ * the host privately. The pair is stored and named in id order, so neither the
+ * record nor the notification says who blocked whom, and no reason is kept.
+ * A pair already raised at a table isn't raised again.
+ */
+export async function raiseConflicts(env: DatabaseEnv, x: string, y: string): Promise<number> {
+  const db = getDb(env);
+  const rows = await db
+    .select({ tableId: regularTableMembers.tableId, accountId: regularTableMembers.accountId })
+    .from(regularTableMembers)
+    .where(and(inArray(regularTableMembers.accountId, [x, y]), isNull(regularTableMembers.leftAt)))
+    .limit(200);
+  const shared = [...new Set(rows.map((r) => r.tableId))].filter((t) => rows.some((r) => r.tableId === t && r.accountId === x) && rows.some((r) => r.tableId === t && r.accountId === y));
+  if (!shared.length) return 0;
+  const tables = await db.select().from(regularTables).where(and(inArray(regularTables.id, shared), isNull(regularTables.archivedAt))).limit(shared.length);
+  const [a, b] = conflictPair(x, y);
+  const names = await db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, [a, b])).limit(2);
+  const n = (id: string) => names.find((r) => r.id === id)?.nickname ?? "";
+  let raised = 0;
+  for (const t of tables) {
+    const made = await db
+      .insert(regularTableConflicts)
+      .values({ id: newId(), tableId: t.id, aAccount: a, bAccount: b })
+      .onConflictDoNothing({ target: [regularTableConflicts.tableId, regularTableConflicts.aAccount, regularTableConflicts.bAccount] })
+      .returning({ id: regularTableConflicts.id });
+    if (!made.length) continue;
+    raised++;
+    await notify(
+      db,
+      t.hostAccountId,
+      "table_conflict",
+      `สองคนในโต๊ะประจำของคุณมีเรื่องไม่สบายใจกัน: ${n(a)} กับ ${n(b)}`,
+      `Two people at your regular table aren't comfortable with each other: ${n(a)} and ${n(b)}`,
+      `/tables/${t.id}/conflicts`,
+    );
+  }
+  return raised;
+}
+
+/**
+ * "Regular at" on a profile card: the open tables the member hosts or sits
+ * at, minus any the viewer couldn't join (women-only for someone who isn't a
+ * woman or non-binary) and any whose host has a block either way with the viewer.
+ */
+export async function regularAt(db: Db, owner: string, viewer: { id: string; gender?: string | null }): Promise<string[]> {
+  const tables = await myTables(db, owner);
+  const open = tables.filter((t) => !t.womenOnly || isWoman(viewer));
+  if (viewer.id === owner) return open.map((t) => t.name);
+  const hidden = await blockedAmong(db, viewer.id, [...new Set(open.map((t) => t.hostAccountId))]);
+  return open.filter((t) => !hidden.has(t.hostAccountId)).map((t) => t.name);
 }
