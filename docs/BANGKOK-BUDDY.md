@@ -116,13 +116,13 @@ plug into.
 
 | Partner | What they do best | How we integrate | What stays ours |
 |---|---|---|---|
-| **Timeleft** (dinners with strangers) | Curated tables for 6 | Their dinners appear as Discover events (like the existing Kaipa partner events), with type-balanced seating suggestions | Type-aware seating plus the 50-district quests |
+| **Timeleft** (dinners with strangers) | Curated tables for 6 | Their dinners appear as Discover events (run through our own partner organisations and events), with type-balanced seating suggestions | Type-aware seating plus the 50-district quests |
 | **Meetup** (groups) | Recurring interest groups | Their groups appear under "Groups near your districts"; the "Make it a table" output can post to a partner group | Buddy quests feeding into groups |
 | **Coffee Meets Bagel** (daily curated pick) | Low-volume, high-intent matching | Their idea inspires our low-volume buddy match (daily rounds, at most one new buddy a week); we don't copy the daily pick | Platonic first, romance only when both opt in |
 | **Hinge / Raya** (rich profiles, curation) | Prompts and a curated feel | Their idea inspires profile prompts tied to your type ("My Bangkok in one dish…") | Type, passport and district map as the profile |
 
 **Partner integration (MVP):**
-- Partner events through the existing Kaipa-style partner event pipeline.
+- Partner events through our own partner organisations and event tools (/admin/partners, /admin/events).
 - A shared link format: partner events open in their app, and attendance is
   confirmed back through a webhook, which stamps the district in the passport.
 

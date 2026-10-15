@@ -90,9 +90,6 @@ import {
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
 import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
-import { kaipaEvents, type PartnerEvent } from "../services/kaipa";
-import { PartnerSection } from "../ui/partner-events";
-import { deferFor } from "./partners";
 import { canView } from "../domain/hosting";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
 import { blockedAmong, getTable, hostTable, memberIds, rejoinAfterFor, seatedFor, standing } from "../services/regular-tables";
@@ -484,24 +481,10 @@ eventRoutes.get("/events", requireMember, async (c) => {
     where.push(lte(events.ageMin, age), gte(events.ageMax, age));
   }
 
-  // Partner (Kaipa) ticketed events: only the filters that mean something for them.
-  const jurrgunOnly = !!(q.district || q.tag || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident);
-  const partnersP = jurrgunOnly
-    ? Promise.resolve([] as PartnerEvent[])
-    : kaipaEvents(c.env, { defer: deferFor(c) })
-        .then((all) =>
-          all.filter(
-            (e) =>
-              (!win || (e.startsAt >= win[0] && e.startsAt < win[1])) &&
-              (!q.free || e.hasFree) &&
-              (!q.text || `${e.name} ${e.venue} ${e.city}`.toLowerCase().includes(q.text.toLowerCase())),
-          ),
-        )
-        .catch(() => [] as PartnerEvent[]);
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(100);
   const ids = list.map((e) => e.id);
   const hintHidden = getCookie(c, QUIZ_HINT_COOKIE) === "hide";
-  const [taken, mine, myVibe, coverPairs, weather, partners] = await Promise.all([
+  const [taken, mine, myVibe, coverPairs, weather] = await Promise.all([
     takenCounts(db, ids),
     ids.length
       ? db
@@ -513,7 +496,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
     hintHidden ? Promise.resolve([{ id: "hidden" }]) : db.select({ id: vibes.accountId }).from(vibes).where(eq(vibes.accountId, user.account.id)).limit(1),
     Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(c.env, e)] as const)),
     mapView ? bangkokWeather(c.env).catch(() => null) : Promise.resolve(null),
-    partnersP,
   ]);
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
@@ -567,7 +549,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
           </div>
         ))
       )}
-      <PartnerSection events={partners} t={t} lang={lang} />
     </>
   );
 

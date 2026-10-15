@@ -2,11 +2,12 @@
  * Community hosting (Phase 1): who may see, edit and publish an event, and the
  * checks on a member's event proposal. Pure: no database, no Hono.
  *
- * Shaped after studying Kaipa's partner API, with a few deliberate changes:
- *  - Kaipa publishes every new event at once. Here a member's event is a
+ * Shaped after studying how event-ticketing partners publish, with a few
+ * deliberate changes:
+ *  - Partners often publish every new event at once. Here a member's event is a
  *    proposal (status "pending") until the team approves it; trusted hosts,
  *    partner admins and the Jurrgun team publish straight away.
- *  - Private events work like Kaipa's private links (an unguessable token in
+ *  - Private events work like a private link (an unguessable token in
  *    ?t=…, resettable by the host), but the host, staff and anyone already
  *    signed up keep access after a reset.
  *  - Times are typed in Bangkok time and stored as instants (no "UTC that is

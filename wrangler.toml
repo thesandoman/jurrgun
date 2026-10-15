@@ -15,12 +15,6 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 LOG_LEVEL = "debug"
 
-# Kaipa partner events are switched off for now (owner, 2026-10-15): their dev
-# API kept timing out and held up Discover. The code stays in src/services/kaipa.ts;
-# to switch it back on locally, set KAIPA_API_URL ("https://dev.kaipa.io"),
-# KAIPA_FRONTEND_URL ("https://dev-frontend.kaipa.io") and KAIPA_COUNTRIES ("*")
-# here. The live app reads them from SV Cloud settings; unset there means off.
-
 # Your LOCAL database. Not a secret — it points at Postgres on your own machine,
 # which INSTALL.md sets up. The app running on SV Cloud ignores this: it reaches
 # your real database through the platform, with no connection string and no
