@@ -205,7 +205,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
           </>
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
-        <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS + A11Y_FORM_JS }} />
+        <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS + ";" + A11Y_FORM_JS }} />
         {opts.admin ? <script dangerouslySetInnerHTML={{ __html: TABLE_FILTER_JS }} /> : null}
         <script dangerouslySetInnerHTML={{ __html: ALIVE_JS }} />
         {member && !opts.fullscreen ? <script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}

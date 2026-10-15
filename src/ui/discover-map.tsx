@@ -24,7 +24,6 @@
 import type { Child } from "hono/jsx";
 import { BrandMark } from "./brand";
 import { A11yMenu } from "./a11y";
-import { ViewSwitch } from "./kit";
 import type { Lang, T } from "../lib/i18n";
 import type { Precision } from "../lib/places";
 import { BKK_CENTER, BKK_PAN_LIMIT } from "../lib/places";
@@ -218,13 +217,14 @@ export function FullDiscover(props: {
 
       {/* Right-hand buttons */}
       <nav class="fd-rail" aria-label={t("เครื่องมือแผนที่", "Map tools")}>
-        <a href="/faq" class="fd-rail-btn">
-          <b aria-hidden="true">💬</b>
-          {t("ถาม", "Ask")}
+        {/* The map / cards switch lives here, so nothing floats over the map. */}
+        <a href={props.listHref} class="fd-rail-btn">
+          <b aria-hidden="true">🃏</b>
+          {t("การ์ด", "Cards")}
         </a>
-        <button type="button" class="fd-rail-btn" id="fd-style">
+        <button type="button" class="fd-rail-btn" id="fd-style" aria-label={t("เปลี่ยนแบบแผนที่", "Change map style")}>
           <b aria-hidden="true">🗺️</b>
-          {t("แผนที่", "Map")}
+          {t("แบบแผนที่", "Layers")}
         </button>
         {props.hasQuests ? (
           <button type="button" class="fd-rail-btn" id="fd-quests" aria-pressed="false">
@@ -260,7 +260,6 @@ export function FullDiscover(props: {
           {props.list}
         </section>
       </details>
-      <ViewSwitch t={t} on="map" mapHref="#" cardsHref={props.listHref} />
 
       <script type="application/json" id="dmap-data" dangerouslySetInnerHTML={{ __html: scriptJson(cfg) }} />
       <script type="module" dangerouslySetInnerHTML={{ __html: FULLMAP_JS.replace("__V__", SV_MAP_VERSION) }} />
@@ -484,7 +483,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-skip{position:absolute;left:-9999px}
 .fd-skip:focus{left:8px;top:8px;z-index:20;background:var(--surface);padding:8px 12px;border-radius:10px;border:2px solid var(--brand)}
 /* map behind everything */
-.fullmap .dmap{position:fixed;inset:0;z-index:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--gold);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--gold);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
+.fullmap .dmap{position:fixed;inset:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--gold);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--gold);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
 .fullmap .svm-map{position:absolute;inset:0;height:100%;min-height:0;border:0;border-radius:0}
 .fullmap .dmap-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--ink-3);background:var(--surface-2)}
 .fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right{display:none}
@@ -497,6 +496,8 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fullmap .svm-key.dragging{opacity:.9;box-shadow:0 12px 30px rgba(0,0,0,.3)}
 .fullmap .svm-key.dragging summary{cursor:grabbing}
 .fullmap .svm-sheet{z-index:12;bottom:calc(var(--tab-h) + 8px)!important}
+/* A tapped pin gets the screen to itself: the rail and the key step aside. */
+.fullmap:has(.svm-sheet:not([hidden])) :is(.fd-rail,.svm-key){visibility:hidden}
 .fullmap .maplibregl-ctrl-bottom-right{bottom:calc(var(--tab-h) + var(--sheet-h) + 6px)}
 /* ticker */
 .fd-ticker{position:fixed;z-index:8;top:0;left:0;right:0;height:var(--tk-h);display:flex;align-items:center;background:color-mix(in srgb,var(--surface) 92%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(8px);overflow:hidden;font-size:.82rem}
@@ -537,6 +538,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-rail{position:fixed;z-index:6;right:10px;bottom:calc(var(--tab-h) + var(--sheet-h) + 14px);display:flex;flex-direction:column;gap:8px}
 .fd-rail-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:58px;min-height:58px;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.7rem;font-weight:600;text-decoration:none;cursor:pointer;box-shadow:var(--shadow)}
 .fd-rail-btn b{font-size:1.2rem;line-height:1.1}
+@media (max-width:520px){.fd-rail{gap:6px}.fd-rail-btn{width:54px;min-height:52px}}
 .fd-rail-btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 /* events sheet */
 .fd-sheet{margin:0;padding:0;position:fixed;z-index:10;left:0;right:0;bottom:var(--tab-h);background:color-mix(in srgb,var(--surface) 84%,transparent);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);border-top:1px solid color-mix(in srgb,#fff 18%,var(--line));border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);will-change:transform}
@@ -557,6 +559,8 @@ body.fullmap-body .tabbar{z-index:11}
   .fd-filters-body{right:auto;width:420px}
   .fd-sheet{left:12px;right:auto;width:400px;bottom:calc(var(--tab-h) + 12px);border-radius:18px;border:1px solid var(--line)}
   .fd-sheet-body{max-height:calc(100dvh - 300px - var(--tab-h))}
-  .fullmap .svm-key{left:424px}
+  /* Laptops: the key and a tapped pin's card sit in the left column, above the events list. */
+  .fullmap .svm-key{left:12px;bottom:calc(var(--tab-h) + var(--sheet-h) + 26px)}
+  .fullmap .svm-sheet{left:12px!important;right:auto!important;top:auto!important;width:400px;max-height:calc(100dvh - var(--tk-h) - var(--top-h) - 220px)}
 }
 `;

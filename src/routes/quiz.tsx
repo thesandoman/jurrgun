@@ -238,7 +238,6 @@ export function QuizFlow(props: {
   const ask = props.ask ?? props.questions.map((_, i) => i);
   const followUp = props.ask !== undefined && ask[0] > 0;
   const n = props.questions.length;
-  const types = typeQuestions(props.questions).length;
   // About 9 seconds a question.
   const minutes = Math.max(2, Math.round((n * 9) / 60));
   // A follow-up page carries on the progress bar from where the 16 left off.
@@ -269,8 +268,8 @@ export function QuizFlow(props: {
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
         hint={t(
-          `${types} สถานการณ์สั้น ๆ ในกรุงเทพฯ ตอบตามความรู้สึกแรก ใช้เวลาราว ${minutes} นาที และมีแค่คุณที่เห็นคำตอบ`,
-          `${types} quick Bangkok moments. Go with your gut. About ${minutes} minutes, and only you see your answers.`,
+          `${n} สถานการณ์สั้น ๆ ในกรุงเทพฯ ตอบตามความรู้สึกแรก ใช้เวลาราว ${minutes} นาที และมีแค่คุณที่เห็นคำตอบ`,
+          `${n} quick Bangkok moments. Go with your gut. About ${minutes} minutes, and only you see your answers.`,
         )}
         cta={t("เริ่มเลย", "Start")}
       >

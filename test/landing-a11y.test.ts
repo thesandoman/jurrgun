@@ -28,3 +28,12 @@ describe("intro", () => {
     expect(html).not.toContain('href="#" class="btn primary intro-next"');
   });
 });
+
+describe("inline scripts", () => {
+  it("never glue two IIFEs together (the second would be called on the first's result)", async () => {
+    for (const path of ["/", "/intro", "/login"]) {
+      const html = await (await app.request(path, seen)).text();
+      expect(html, path).not.toMatch(/\}\)\(\)\(function/);
+    }
+  });
+});

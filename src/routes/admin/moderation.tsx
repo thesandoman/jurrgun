@@ -27,7 +27,7 @@ import { fmtDate, fmtDay } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { accounts, events, moderationActions, profiles, registrations, reports, sessions } from "../../schema";
-import { Button, Card, Empty, Field, int, Notice, page, pageOf, Pager, str, Tag, TextArea, view } from "../../ui/kit";
+import { Card, Empty, Field, int, Notice, page, pageOf, Pager, str, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
@@ -194,7 +194,15 @@ adminModeration.get("/", async (c) => {
                   <td>{r.reporterNick ?? "—"}</td>
                   <td>{r.targetNick ?? "—"}</td>
                   <td>{r.eventTitle ? (lang === "en" && r.eventTitleEn ? r.eventTitleEn : r.eventTitle) : "—"}</td>
-                  <td>{age(r.createdAt, lang)}</td>
+                  <td>
+                    {age(r.createdAt, lang)}
+                    {Date.now() - r.createdAt.getTime() > (r.severity === "critical" ? 1 : 24) * 3_600_000 ? (
+                      <>
+                        {" "}
+                        <Tag tone="warn">{t("เกินเวลา", "Overdue")}</Tag>
+                      </>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -491,7 +499,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
             </select>
           </div>
           {target ? (
-            <div class="field">
+            <div class="field" data-for="warning suspend ban">
               <label for="f-rule">{t("ข้อที่ละเมิด (ข้อกำหนด / หลักปฏิบัติ)", "Rule broken (Terms / code of conduct)")}</label>
               <select id="f-rule" name="rule">
                 <option value="">{t("ไม่ระบุ", "None named")}</option>
@@ -504,14 +512,36 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
               </small>
             </div>
           ) : null}
-          {target ? <Field label={t("จำนวนวันที่ระงับ (1 ถึง 90)", "Suspension days (1-90)")} name="days" type="number" min={1} max={90} value={7} /> : null}
+          {target ? (
+            <div data-for="suspend">
+              <Field label={t("จำนวนวันที่ระงับ (1 ถึง 90)", "Suspension days (1-90)")} name="days" type="number" min={1} max={90} value={7} />
+            </div>
+          ) : null}
           <TextArea
             label={t("บันทึกของผู้ดูแล", "Moderator note")}
             name="note"
             maxlength={2000}
             hint={t("จำเป็นสำหรับการตักเตือน ระงับ และแบน ผู้ถูกรายงานจะไม่เห็นบันทึกนี้", "Required for warning, suspension and ban. The member never sees it.")}
           />
-          <Button kind="danger">{t("ยืนยันการดำเนินการ", "Confirm action")}</Button>
+          <button
+            type="submit"
+            class="btn primary"
+            id="mod-go"
+            data-note={t("บันทึกโน้ต", "Save note")}
+            data-warning={t("ส่งคำเตือน", "Send warning")}
+            data-suspend={t("ระงับบัญชี", "Suspend account")}
+            data-ban={t("แบนบัญชีถาวร", "Ban account")}
+            data-lift={t("ยกเลิกการระงับ / แบน", "Lift suspension / ban")}
+            data-dismiss={t("ยกเลิกรายงาน", "Dismiss report")}
+          >
+            {t("บันทึกโน้ต", "Save note")}
+          </button>
+          {/* The form shows only what the chosen action needs, and the button says what it will do. */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){var sel=document.getElementById("f-action"),go=document.getElementById("mod-go");if(!sel||!go)return;function upd(){var a=sel.value;document.querySelectorAll("[data-for]").forEach(function(el){el.hidden=el.dataset.for.split(" ").indexOf(a)<0});go.textContent=go.dataset[a]||go.textContent;go.classList.toggle("danger",a==="suspend"||a==="ban");go.classList.toggle("primary",!(a==="suspend"||a==="ban"))}sel.addEventListener("change",upd);upd()})()`,
+            }}
+          />
         </form>
       </Card>
     </>,
