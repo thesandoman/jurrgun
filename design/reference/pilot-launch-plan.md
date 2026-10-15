@@ -1,5 +1,7 @@
 # Jurrgun pilot launch plan
 
+> **Stock document, not a schedule (owner, 2026-10-15).** This is a reference playbook for when the pilot is greenlit. No launch is planned for these dates. Dates like "7 November" and "Loy Krathong week" are worked examples that show the sequence. Shift them to the real start date when the owner sets one, and treat the owner decisions at the end as open until then.
+
 *2026-10-15. Task 12, built with the brand-launch skill. It rests on `.agents/brand-context.md`, `brand-positioning.md`, `customer-profile.md`, `film-review.md` and the owner's decisions in `project-state.md`. Dates marked **[verify]** follow the Thai lunar calendar or depend on organisers, so check them before booking. Owner decisions needed are at the end.*
 
 ## 01 Strategy

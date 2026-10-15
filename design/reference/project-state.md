@@ -60,6 +60,10 @@ None right now. New questions go to the Branding chat.
 | Quiz: interactive formats | UI formats (worktree amazing-ardinghelli) | running | any time if outside the bank and generator, else after Q5 (D14) |
 | worktree `jurgun-map` (`discover-map`) | merged into main 6 days ago | stale | safe to remove |
 
+## Reference documents (not schedules)
+
+- `design/reference/pilot-launch-plan.md`: a stock pilot launch playbook. Its dates are examples, and no launch is scheduled (owner, 10-15).
+
 ## Proposed next tasks (waiting for approval)
 
 See the Branding chat for the list with recommendations.
