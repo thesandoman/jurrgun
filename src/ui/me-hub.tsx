@@ -14,7 +14,7 @@ import type { View } from "./kit";
 /** `sub`: an optional breakdown under the label (e.g. "across 3 crews"). */
 export type MeStat = { emoji: string; n: number; label: string; sub?: string; href: string; tint: Tint };
 export type MeStep = { done: boolean; label: string; href: string };
-export type MeLink = { href: string; emoji: string; title: string; hint: string; tint: Tint };
+export type MeLink = { href: string; emoji: string; title: string; hint: string; tint: Tint; group?: string };
 export type Tint = "green" | "lime" | "teal" | "mint" | "sky" | "sun";
 
 export function MeHub(props: {
@@ -30,6 +30,8 @@ export function MeHub(props: {
   type: Child;
   badge?: Child;
   links: MeLink[];
+  /** One-tap switches shown above the menu. */
+  quick?: Child;
 }) {
   const { t, lang } = props.v;
   const done = props.steps.filter((s) => s.done).length;
@@ -116,8 +118,13 @@ export function MeHub(props: {
 
       {props.badge}
 
-      <nav class="me-menu" aria-label={t("ตั้งค่า", "Settings")}>
-        {props.links.map((l) => (
+      {props.quick}
+
+      {[...new Set(props.links.map((l) => l.group ?? ""))].map((g) => (
+      <>
+      {g ? <h2 class="me-group">{g}</h2> : null}
+      <nav class="me-menu" aria-label={g || t("ตั้งค่า", "Settings")}>
+        {props.links.filter((l) => (l.group ?? "") === g).map((l) => (
           <a href={l.href} class={`me-row tint-${l.tint}`} title={l.hint}>
             <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
               {l.emoji}
@@ -130,6 +137,8 @@ export function MeHub(props: {
           </a>
         ))}
       </nav>
+      </>
+      ))}
 
       <div class="me-lang" role="group" aria-label={t("ภาษา", "Language")}>
         <a href="/lang/th?back=/settings" lang="th" aria-current={lang === "th" ? "true" : undefined}>

@@ -16,7 +16,7 @@
  *   POST /settings/password
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
-import { DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS } from "../domain/rules";
+import { canBeWomenOnly, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS } from "../domain/rules";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
 import { Flow } from "../ui/flow";
 import { cleanPrefs, EXIT_REASONS } from "../content/dating";
@@ -221,6 +221,18 @@ settingsRoutes.get("/settings", async (c) => {
         </noscript>
       </form>
     ) : undefined;
+  const gOut = t("ออกไปเจอกัน", "Out and about");
+  const gYou = t("ตัวฉันและสิ่งที่ชอบ", "You and your preferences");
+  const gAcct = t("ความเป็นส่วนตัวและบัญชี", "Privacy and account");
+  const paused = isPaused(p, now);
+  const quick = (
+    <section class="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
+      <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
+      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ วงและแชตยังอยู่", "No new buddies; circle and chats stay")} />
+      {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
+      {canBeWomenOnly(p.gender) ? <QuickSwitch k="womenOnly" on={p.womenOnly} emoji="🌸" title={t("เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only")} hint={t("บัดดี้ การ์ด แมตช์ และแชต", "Buddies, deck, matches and chats")} /> : null}
+    </section>
+  );
   return page(
     c,
     { title: t("ฉัน", "Me"), tab: "me" },
@@ -247,29 +259,69 @@ settingsRoutes.get("/settings", async (c) => {
       steps={steps}
       type={typeCard}
       badge={badge}
+      quick={quick}
       links={[
-        { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky" },
-        { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint" },
+        { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky", group: gOut },
+        { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
         canHost(user.account, true)
-          ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const }
-          : { href: "/circles/lead", emoji: "👑", title: t("นำวงของคุณเอง", "Lead a circle"), hint: t("ขอเป็นหัวหน้าวงเพื่อจัดแฮงเอาต์", "Ask to lead a circle and host hangouts"), tint: "lime" as const },
+          ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
+          : { href: "/circles/lead", emoji: "👑", title: t("นำวงของคุณเอง", "Lead a circle"), hint: t("ขอเป็นหัวหน้าวงเพื่อจัดแฮงเอาต์", "Ask to lead a circle and host hangouts"), tint: "lime" as const, group: gOut },
         ...(dates
-          ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดทแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const }]
+          ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดทแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),
-        { href: "/me/month", emoji: "🌱", title: t("เดือนนี้ของฉัน", "My month in people"), hint: t("คนที่เจอ ที่ที่ไป ไม่นับเวลาบนจอ", "People met, places, never screen time"), tint: "green" },
-        { href: "/thanks", emoji: "💌", title: t("คำขอบคุณ", "Thank-yous"), hint: t("ข้อความส่วนตัวจากคนที่เจอ", "Private notes from people you met"), tint: "sun" },
-        { href: "/settings/habits", emoji: "🌿", title: t("นิสัยดี ๆ และการพัก", "Healthy habits"), hint: isPaused(p, now) ? t("กำลังพักอยู่", "On a break") : t("นัดต่อสัปดาห์ พัก Jurrgun", "Plans a week, take a break"), tint: "mint" },
-        { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
-        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },
-        { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
-        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint" },
+        { href: "/me/month", emoji: "🌱", title: t("เดือนนี้ของฉัน", "My month in people"), hint: t("คนที่เจอ ที่ที่ไป ไม่นับเวลาบนจอ", "People met, places, never screen time"), tint: "green", group: gOut },
+        { href: "/thanks", emoji: "💌", title: t("คำขอบคุณ", "Thank-yous"), hint: t("ข้อความส่วนตัวจากคนที่เจอ", "Private notes from people you met"), tint: "sun", group: gOut },
+        { href: "/settings/habits", emoji: "🌿", title: t("นิสัยดี ๆ และการพัก", "Healthy habits"), hint: isPaused(p, now) ? t("กำลังพักอยู่", "On a break") : t("นัดต่อสัปดาห์ พัก Jurrgun", "Plans a week, take a break"), tint: "mint", group: gYou },
+        { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green", group: gYou },
+        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky", group: gAcct },
+        { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
+        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint", group: gAcct },
         // Google / LINE accounts have no password to change.
         ...(isPasswordless(user.account.username)
           ? []
-          : [{ href: "/settings/password", emoji: "🔑", title: t("เปลี่ยนรหัสผ่าน", "Change password"), hint: t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password"), tint: "sun" as const }]),
+          : [{ href: "/settings/password", emoji: "🔑", title: t("เปลี่ยนรหัสผ่าน", "Change password"), hint: t("ต้องใช้รหัสผ่านปัจจุบัน", "Needs your current password"), tint: "sun" as const, group: gAcct }]),
       ]}
     />,
   );
+});
+
+/** A one-tap switch on Me: posts to /settings/quick and comes back. */
+function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string }) {
+  return (
+    <form method="post" action="/settings/quick">
+      <input type="hidden" name="key" value={props.k} />
+      <input type="hidden" name="on" value={props.on ? "0" : "1"} />
+      <button type="submit" class="qs" aria-pressed={props.on ? "true" : "false"}>
+        <span aria-hidden="true">{props.emoji}</span>
+        <span>
+          <b>{props.title}</b>
+          <small>{props.hint}</small>
+        </span>
+        <span class="sw" aria-hidden="true" />
+      </button>
+    </form>
+  );
+}
+
+settingsRoutes.post("/settings/quick", async (c) => {
+  const user = me(c);
+  const p = user.profile!;
+  const body = await c.req.parseBody();
+  const on = str(body.on) === "1";
+  const set: Partial<typeof profiles.$inferInsert> = {};
+  switch (str(body.key)) {
+    case "pause":
+      set.pausedUntil = on ? new Date(Date.now() + 7 * 86_400_000) : null;
+      break;
+    case "pronouns":
+      if (p.pronouns) set.showPronouns = on;
+      break;
+    case "womenOnly":
+      if (canBeWomenOnly(p.gender)) set.womenOnly = on;
+      break;
+  }
+  if (Object.keys(set).length) await getDb(c.env).update(profiles).set({ ...set, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+  return c.redirect("/settings?notice=saved");
 });
 
 settingsRoutes.post("/settings/badge", async (c) => {

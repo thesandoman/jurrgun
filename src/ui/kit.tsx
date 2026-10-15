@@ -13,10 +13,11 @@ import { VISUAL_CSS } from "./visual";
 import { QUESTION_ART_CSS } from "./question-art";
 import { LAYOUT_CSS } from "./layout";
 import { NATIVE_CSS } from "./native";
+import { ALIVE_CSS, ALIVE_JS } from "./alive";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + LAYOUT_CSS;
+const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS;
 import { BrandMark } from "./brand";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
@@ -42,26 +43,29 @@ export type PageOpts = {
   fullscreen?: boolean;
 };
 
+/** Notices worth a little confetti. */
+const PARTY = new Set(["rsvp_confirmed", "offer_accepted", "connected", "stamped", "welcome", "checked_in"]);
+
 /** `?notice=` keys pages can redirect with. */
 const NOTICES: Record<string, [string, string]> = {
   saved: ["บันทึกแล้ว", "Saved"],
   welcome: ["ยินดีต้อนรับสู่ Jurrgun!", "Welcome to Jurrgun!"],
-  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ใน 'กิจกรรมของฉัน'", "You're in — your pass is in My events"],
-  rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่จะแจ้งทันที", "You're on the waitlist — we'll tell you if a spot opens"],
+  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ใน 'กิจกรรมของฉัน'", "You're in, your pass is in My events"],
+  rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่จะแจ้งทันที", "You're on the waitlist, we'll tell you if a spot opens"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
-  late_cancel: ["ยกเลิกแล้ว ยกเลิกก่อนงานไม่ถึง 24 ชม. จะนับเป็น 1 strike", "Cancelled — cancelling within 24h counts as 1 strike"],
+  late_cancel: ["ยกเลิกแล้ว ยกเลิกก่อนงานไม่ถึง 24 ชม. จะนับเป็น 1 strike", "Cancelled, cancelling within 24h counts as 1 strike"],
   offer_accepted: ["รับที่นั่งแล้ว!", "Spot accepted!"],
   checked_in: ["เช็กอินสำเร็จ", "Checked in"],
-  choices_saved: ["บันทึกแล้ว จะแจ้งก็ต่อเมื่อเลือกกันทั้งสองฝ่าย", "Saved — you'll only hear if it's mutual"],
-  reported: ["ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ", "Report received — our team will review it"],
-  blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked — you won't see each other again"],
+  choices_saved: ["บันทึกแล้ว จะแจ้งก็ต่อเมื่อเลือกกันทั้งสองฝ่าย", "Saved, you'll only hear if it's mutual"],
+  reported: ["ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ", "Report received, our team will review it"],
+  blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked, you won't see each other again"],
   thanks: ["ขอบคุณสำหรับความคิดเห็น", "Thanks for your feedback"],
   shared: ["แชร์ช่องทางติดต่อแล้ว", "Contact shared"],
   deactivated: ["ปิดบัญชีแล้ว", "Account deactivated"],
   done: ["เรียบร้อย", "Done"],
   connected: ["เป็นคนรู้จักกันแล้ว!", "You're connected!"],
   offered: ["ส่งข้อเสนอที่นั่งให้คิวถัดไปแล้ว", "Offered the spot to the next person"],
-  groups_suggested: ["จัดกลุ่มแนะนำแล้ว — ตรวจสอบแล้วกดเผยแพร่", "Groups suggested — review, then publish"],
+  groups_suggested: ["จัดกลุ่มแนะนำแล้ว, ตรวจสอบแล้วกดเผยแพร่", "Groups suggested, review, then publish"],
   groups_published: ["เผยแพร่กลุ่มแล้ว", "Groups published"],
   notice_sent: ["ส่งประกาศแล้ว", "Notice sent"],
   strikes_recorded: ["บันทึกผู้ไม่มาแล้ว", "No-shows recorded"],
@@ -79,7 +83,11 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   const errorText = c.req.query("error");
   return c.html(
     <Layout v={v} opts={opts}>
-      {notice ? <Notice kind="ok">{v.t(notice[0], notice[1])}</Notice> : null}
+      {notice ? (
+        <Notice kind="ok" class={PARTY.has(noticeKey) ? "toast party" : "toast"}>
+          {v.t(notice[0], notice[1])}
+        </Notice>
+      ) : null}
       {errorText ? <Notice kind="error">{errorText}</Notice> : null}
       {body}
     </Layout>,
@@ -156,6 +164,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
         <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS }} />
+        <script dangerouslySetInnerHTML={{ __html: ALIVE_JS }} />
         {member && !opts.fullscreen ? <script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}
         <script
           dangerouslySetInnerHTML={{
@@ -241,9 +250,9 @@ function AdminNav(props: { v: View }) {
 
 // ------------------------------------------------------------ components --
 
-export function Notice(props: { kind?: "ok" | "error" | "info" | "warn"; children: Child }) {
+export function Notice(props: { kind?: "ok" | "error" | "info" | "warn"; class?: string; children: Child }) {
   return (
-    <div class={`notice ${props.kind ?? "info"}`} role={props.kind === "error" ? "alert" : "status"}>
+    <div class={`notice ${props.kind ?? "info"}${props.class ? ` ${props.class}` : ""}`} role={props.kind === "error" ? "alert" : "status"}>
       {props.children}
     </div>
   );

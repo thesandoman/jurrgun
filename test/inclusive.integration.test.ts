@@ -37,4 +37,18 @@ describe.skipIf(!HAS_DB)("inclusive dating and women-only spaces", () => {
     expect((await req(`/events/${id}/rsvp`, { cookie: m.cookie, form: { rhythmOk: "1" } })).status).toBe(403);
     expect((await req(`/events/${id}/rsvp`, { cookie: w.cookie, form: { rhythmOk: "1" } })).status).toBe(302);
   });
+
+  it("quick switches on Me: one tap pauses, and women-only needs the right gender", async () => {
+    const [w, m] = await Promise.all([createMember(), createMember()]);
+    await db().update(profiles).set({ gender: "non-binary" }).where(eq(profiles.accountId, w.id));
+    const html = await (await req("/settings", { cookie: `${w.cookie}; lang=en` })).text();
+    expect(html).toContain("Quick switches");
+    expect(html).toContain("Women &amp; non-binary only");
+    expect((await req("/settings/quick", { cookie: w.cookie, form: { key: "pause", on: "1" } })).headers.get("location")).toBe("/settings?notice=saved");
+    expect((await prof(w.id)).pausedUntil).not.toBeNull();
+    await req("/settings/quick", { cookie: w.cookie, form: { key: "womenOnly", on: "1" } });
+    await req("/settings/quick", { cookie: m.cookie, form: { key: "womenOnly", on: "1" } });
+    expect((await prof(w.id)).womenOnly).toBe(true);
+    expect((await prof(m.id)).womenOnly).toBe(false);
+  });
 });
