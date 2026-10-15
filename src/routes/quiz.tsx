@@ -41,7 +41,6 @@ import {
   MATCH_LABELS,
   codeLetters,
   CODE_AXES,
-  displayName,
   flavourBadges,
   normalizeType,
   suggestedMatches,
@@ -52,13 +51,16 @@ import {
   resultOf,
 } from "../vibe/archetypes";
 import { DISTRICTS } from "../lib/constants";
-import { AvatarStack, Big, Pill, Tile, artFor } from "../ui/visual";
+import { AvatarStack, Pill, Tile, artFor } from "../ui/visual";
 
 const districtName = (lang: Lang, key: string) => {
   const d = DISTRICTS.find((x) => x.value === key);
   return d ? (lang === "en" ? d.en : d.th) : key;
 };
+import { closeLetters, followUpPlan, MAX_FOLLOW_UPS } from "../vibe/adaptive";
+import { letterWords, whyOf, type Why } from "../vibe/explain";
 import {
+  followUpQuestions,
   generateSession,
   generateStyleQuestions,
   isStyleQuestion,
@@ -216,6 +218,10 @@ function HostStyle(props: { v: View; bio: unknown }) {
 export function QuizFlow(props: {
   v: View;
   questions: AnyQuestion[];
+  /** Which questions this page asks (indices into `questions`); default all. Q7's follow-ups ask only the last 1 or 2. */
+  ask?: number[];
+  /** Earlier answers carried as hidden fields (a{i}, a{i}_{j}, "none"), and anything else to post back. */
+  carry?: Record<string, string | string[]>;
   seed: string;
   next: string;
   stage?: Stage;
@@ -229,20 +235,25 @@ export function QuizFlow(props: {
   reflect?: Reflections | null;
 }) {
   const { t, lang } = props.v;
+  const ask = props.ask ?? props.questions.map((_, i) => i);
+  const followUp = props.ask !== undefined && ask[0] > 0;
   const n = props.questions.length;
   const types = typeQuestions(props.questions).length;
   // About 9 seconds a question.
   const minutes = Math.max(2, Math.round((n * 9) / 60));
+  // A follow-up page carries on the progress bar from where the 16 left off.
+  const outer = props.stage ?? { at: 0, of: 1 };
+  const stage: Stage | undefined = followUp ? { at: (outer.at * n + ask[0]) / ask.length, of: (outer.of * n) / ask.length } : props.stage;
   return (
     <Flow
       v={props.v}
       action="/quiz"
       submit={t("ดูผลลัพธ์", "See my type")}
       hidden={{ seed: props.seed, next: props.next }}
-      stage={props.stage}
+      stage={stage}
       close={props.close}
       autoSubmit
-      start={props.startAt !== undefined ? props.startAt + 1 : undefined}
+      start={props.startAt !== undefined ? props.startAt + (followUp ? 0 : 1) : undefined}
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={
         props.skipAction ? (
@@ -254,7 +265,7 @@ export function QuizFlow(props: {
     >
       <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS + QUIZ_NONE_CSS + REFLECTION_CSS }} />
       <NoneData v={props.v} />
-      <FlowStep
+      {followUp ? null : <FlowStep
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
         hint={t(
@@ -268,20 +279,28 @@ export function QuizFlow(props: {
           <span class="tile"><b>🤷</b>{t("ไม่ตรงเลย ก็บอกได้", "Nothing fits? Just say so")}</span>
           <span class="tile"><b>🔒</b>{t("มีแค่คุณที่เห็น", "Only you see it")}</span>
         </div>
-      </FlowStep>
-      {props.questions.map((q, i) => (
-        <FlowStep title={L(lang, q.prompt)} auto class="q q-choice">
-          <QuestionArt art={q.art} lang={lang} />
-          <StyleLabel v={props.v} q={q} />
-          {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ตรงกับคุณที่สุด", "Tap the answer that's most you")}</span> : null}
-          <span class="muted q-count">
-            {i + 1} / {n}
-          </span>
-          <AnswerField v={props.v} q={q} i={i} />
-          <NoneOfThese v={props.v} q={q} i={i} />
-        </FlowStep>
-      ))}
-      {props.reflect !== undefined ? <ReflectionSteps v={props.v} value={props.reflect} /> : null}
+      </FlowStep>}
+      {ask.map((i, k) => {
+        const q = props.questions[i];
+        return (
+          <FlowStep title={L(lang, q.prompt)} auto class="q q-choice">
+            <QuestionArt art={q.art} lang={lang} />
+            <StyleLabel v={props.v} q={q} />
+            {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ตรงกับคุณที่สุด", "Tap the answer that's most you")}</span> : null}
+            {followUp && k === 0 ? (
+              <span class="muted q-more">{t("อีกนิดเดียว ให้เราเดาน้อยลง", "A couple more, so we guess less.")}</span>
+            ) : null}
+            <span class="muted q-count">
+              {i + 1} / {followUp ? n : ask.length}
+            </span>
+            <AnswerField v={props.v} q={q} i={i} />
+            <NoneOfThese v={props.v} q={q} i={i} />
+          </FlowStep>
+        );
+      })}
+      {props.reflect !== undefined && !followUp ? <ReflectionSteps v={props.v} value={props.reflect} /> : null}
+      {/* Q7: the first page's answers (and reflections) ride along on the follow-up page. */}
+      {Object.entries(props.carry ?? {}).flatMap(([k, val]) => (Array.isArray(val) ? val : [val]).map((x) => <input type="hidden" name={k} value={x} />))}
       {/* After the steps, so the radios it sets up are already parsed. */}
       <script dangerouslySetInnerHTML={{ __html: QUIZ_NONE_JS }} />
     </Flow>
@@ -313,6 +332,29 @@ export function parseAnswers(body: Record<string, unknown>, questions: AnyQuesti
   return { answers, invalid, none };
 }
 
+/** The follow-ups a form says it asked: distinct valid indices, at most MAX_FOLLOW_UPS. */
+export function followUpsFrom(raw: string, count: number): number[] {
+  const out: number[] = [];
+  for (const part of raw.split(",")) {
+    const k = /^\d$/.test(part) ? Number(part) : -1;
+    if (k >= 0 && k < count && !out.includes(k)) out.push(k);
+  }
+  return out.slice(0, MAX_FOLLOW_UPS);
+}
+
+/** The first page's answers (a{i}, a{i}_{j}, "none") as hidden fields for the follow-up page, plus which follow-ups it asks. */
+function carryFrom(body: Record<string, unknown>, first: number, fu: number[]): Record<string, string | string[]> {
+  const out: Record<string, string | string[]> = { fu: fu.join(",") };
+  for (const [k, val] of Object.entries(body)) {
+    const m = /^a(\d+)(?:_\d+)?$/.exec(k);
+    // The first page's answers, and its "My Bangkok" reflections (r_*, some sent more than once).
+    if (!(m && Number(m[1]) < first) && !k.startsWith("r_")) continue;
+    if (typeof val === "string") out[k] = val;
+    else if (Array.isArray(val)) out[k] = val.filter((x): x is string => typeof x === "string");
+  }
+  return out;
+}
+
 export function answersFrom(body: Record<string, unknown>, questions: AnyQuestion[]): Answers {
   return parseAnswers(body, questions).answers;
 }
@@ -337,10 +379,9 @@ function Meter(props: { lang: Lang; vector: Record<string, number>; margin?: Par
         const left = val >= 0 ? 50 : 50 - w;
         const info = POLES[c];
         const leanPlus = val >= 0;
-        const pct = Math.round(50 + Math.abs(val) * 50);
-        const pm = Math.round(m * 50);
         const side = L(lang, leanPlus ? info.plus.label : info.minus.label);
-        const verdict = unsure ? (en ? "Not sure yet" : "ยังไม่ชัด") : `${pct}% ${side}`;
+        // Words, not percentages (owner, D26): the person sees a lean, never a score.
+        const verdict = unsure ? (en ? "Not sure yet" : "ยังไม่ชัด") : s === "strong" ? (en ? `Clearly ${side}` : `${side} ชัดเจน`) : en ? `Leans ${side}` : `ค่อนไปทาง${side}`;
         const bandL = Math.max(0, 50 + (val - m) * 50);
         const bandR = Math.min(100, 50 + (val + m) * 50);
         return (
@@ -349,11 +390,10 @@ function Meter(props: { lang: Lang; vector: Record<string, number>; margin?: Par
               <span>{!unsure && !leanPlus ? <b>{L(lang, info.minus.label)}</b> : L(lang, info.minus.label)}</span>
               <span>
                 {L(lang, info.name)} · {verdict}
-                {m > 0 ? <small class="pm"> ±{pm}%</small> : null}
               </span>
               <span>{!unsure && leanPlus ? <b>{L(lang, info.plus.label)}</b> : L(lang, info.plus.label)}</span>
             </div>
-            <div class="track" role="img" aria-label={`${L(lang, info.name)}: ${verdict}${m > 0 ? ` ±${pm}%` : ""}`}>
+            <div class="track" role="img" aria-label={`${L(lang, info.name)}: ${verdict}`}>
               {m > 0 ? <em class="band" style={`left:${bandL.toFixed(1)}%;width:${(bandR - bandL).toFixed(1)}%`} /> : null}
               <i class={s} style={`left:${left.toFixed(1)}%;width:${w.toFixed(1)}%`} />
             </div>
@@ -390,7 +430,10 @@ function Certainty(props: { v: View; res: TypeResult & { range: ArchetypeKey[] }
       </p>
       {consistency !== null ? (
         <p class="muted">
-          🔁 {t(`คำถามที่ถามซ้ำด้วยคำต่างกัน: ตอบตรงกัน ${Math.round(consistency * 100)}%`, `Questions asked twice in different words: ${Math.round(consistency * 100)}% consistent`)}
+          🔁{" "}
+          {consistency >= 0.75
+            ? t("คำถามที่ถามซ้ำด้วยคำต่างกัน คุณตอบไปทางเดียวกัน", "Questions asked twice in different words: you answered them the same way.")
+            : t("คำถามที่ถามซ้ำด้วยคำต่างกัน คุณตอบต่างกันบ้าง คุณอาจอยู่ระหว่างสองแบบ", "Questions asked twice in different words: you answered them a little differently, so you may sit between two types.")}
         </p>
       ) : null}
     </>
@@ -477,7 +520,7 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
 /** The type, its wing and a third, as three tiles with big percentages. */
 function Blend(props: { v: View; blend: TypeResult["types"] }) {
   const { t, lang } = props.v;
-  const roles = [t("ไทป์หลัก", "Your type"), t("ไทป์รอง", "Wing"), t("อีกด้าน", "Also in you")];
+  const roles = [t("ตอนนี้ใกล้สุด", "Closest right now"), t("ใกล้เคียงรองลงมา", "A close second"), t("อีกด้านของคุณ", "Also in you")];
   return (
     <>
       <h2>🧬 {t("ส่วนผสมของคุณ", "Your blend")}</h2>
@@ -485,12 +528,32 @@ function Blend(props: { v: View; blend: TypeResult["types"] }) {
         {props.blend.map((b, i) => (
           <Tile href={`/types/${typeSlug(b.key)}`} tone={i === 0 ? "brand" : "plain"}>
             <AvatarStack items={[{ label: L(lang, ARCHETYPES[b.key].name), emoji: ARCHETYPES[b.key].emoji, seed: b.key }]} size={44} />
-            <Big n={`${b.fit}%`} label={roles[i]} />
+            {/* No percentages: a blend, not a score (owner, D26). */}
+            <b class="blend-role">{roles[i]}</b>
             <small>{L(lang, ARCHETYPES[b.key].name).replace(/^The /, "")}</small>
           </Tile>
         ))}
       </div>
     </>
+  );
+}
+
+/** "Why you got this": two of the person's own picks and the letters they share with the type. No numbers. */
+function WhyYou(props: { v: View; archetype: ArchetypeKey; why?: Why }) {
+  const { t, lang } = props.v;
+  const why = props.why;
+  if (!why || why.picks.length === 0) return null;
+  const quotes = why.picks.map((p) => `“${L(lang, p)}”`);
+  const name = L(lang, ARCHETYPES[props.archetype].name);
+  const words = L(lang, letterWords(why.letters));
+  return (
+    <section class="card why-you" aria-label={t("ทำไมได้ไทป์นี้", "Why you got this")}>
+      <h2>🔎 {t("ทำไมคุณได้ไทป์นี้", "Why you got this")}</h2>
+      <p>{t(`คุณเลือก ${quotes.join(" และ ")}`, `You picked ${quotes.join(" and ")}.`)}</p>
+      {why.letters.length > 0 ? (
+        <p class="muted">{t(`นี่แหละสาย${words} แบบ${name}`, `That's ${words}, like ${name.replace(/^The /, "a ")}.`)}</p>
+      ) : null}
+    </section>
   );
 }
 
@@ -558,15 +621,20 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
   const key = (isArchetype(props.row.archetype) ? props.row.archetype : DEFAULT_TYPE) as ArchetypeKey;
   const a = ARCHETYPES[key];
   const res = resultOf({ archetype: key, vector: props.row.vector, blend: props.row.blend });
-  const others = res.range.filter((k) => k !== key);
+  // Only genuinely close letters read as "not sure yet" or bring near types into the headline (owner, 10-15).
+  const close = closeLetters(props.row.vector, res.unsure);
+  const others = close.length > 0 ? res.range.filter((k) => k !== key) : [];
   return (
     <>
       <div class={`stack-card type-hero2 ${props.reveal ? "reveal" : ""}`}>
         <Tile tone="brand" art={{ tone: "evening", icons: [], seed: 3 }} lang={lang}>
-          <Pill dot>{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</Pill>
+          <Pill dot>{t("ตอนนี้คุณดูจะชอบกรุงเทพฯ แบบนี้", "How you seem to enjoy Bangkok right now")}</Pill>
           <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
-          <h1>{L(lang, displayName(key, props.row.modifier))}</h1>
+          <h1>{L(lang, a.name)}</h1>
           <small>{L(lang, a.tagline)}</small>
+          <small class="starting-point">
+            {t("เป็นจุดเริ่มต้น ไม่ใช่ป้ายติดตัว คนเราเปลี่ยนได้ ทำใหม่เมื่อไหร่ก็ได้", "A starting point, not a label. People change; retake it any time.")}
+          </small>
           {others.length > 0 ? (
             <span class="type-range">
               {t("ใกล้เคียง", "Close to")}{" "}
@@ -584,6 +652,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
       </div>
       <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
       {res.moves ? <p class="type-moves">{L(lang, motiveSentence(res.moves.motive, res.moves.place))}</p> : null}
+      <WhyYou v={props.v} archetype={key} why={(props.row.blend as { why?: Why } | null)?.why} />
       <TypeFacts v={props.v} a={a} />
       <details class="how">
         <summary>{t("เกี่ยวกับไทป์นี้", "About this type")}</summary>
@@ -594,8 +663,8 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
       <Clicks v={props.v} a={a} />
       <details class="how card">
         <summary>🎯 {t("ผลแม่นแค่ไหน และตัวอักษรของคุณ", "How sure we are, and your letters")}</summary>
-        <Certainty v={props.v} res={res} />
-        <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? res.unsure : undefined} />
+        <Certainty v={props.v} res={{ ...res, unsure: close }} />
+        <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? close : undefined} />
       </details>
       <Matches v={props.v} archetype={key} />
       <ShareType v={props.v} archetype={key} />
@@ -699,9 +768,13 @@ quizRoutes.post("/quiz", async (c) => {
   }
   // The onboarding quiz (onboarding.tsx) is built without profile inputs, only plain English for English readers; match it.
   const personal = next === "/onboarding/type" ? (v.lang === "en" ? { explainLocal: true } : undefined) : personalOf(user.profile, user.account.role);
-  const questions = quizQuestions(seed, row, personal);
+  const base = quizQuestions(seed, row, personal);
+  // Q7: the follow-ups this form asked, if any (fu = their indices in the member's curated follow-ups).
+  const followUps = followUpQuestions(personal);
+  const fu = followUpsFrom(str(body.fu), followUps.length);
+  const questions: AnyQuestion[] = [...base, ...fu.map((k) => followUps[k])];
   const { answers, invalid, none } = parseAnswers(body, questions);
-  // Only the 16 type questions score: style answers never move the type.
+  // Only the type questions score (the 16 and any follow-ups): style answers never move the type.
   const result = scoreSession(typeQuestions(questions), answers);
   // Every type question needs a response; "None of these" is one, it just isn't a vote.
   const typeIdx = typeQuestions(questions).map((q) => questions.indexOf(q));
@@ -720,25 +793,58 @@ quizRoutes.post("/quiz", async (c) => {
               `Question ${bad + 1} still needs an answer: pick one, or "None of these are me".`,
             )
           : v.t("เลือกคำตอบที่ใกล้ตัวคุณที่สุดอย่างน้อยหนึ่งข้อ", "Pick the closest answer on at least one question.");
+    // On the follow-up page, show only the follow-ups again; the 16 ride along as they were.
+    const onFollowUps = fu.length > 0 && bad >= base.length;
     return page(
       c,
       { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), status: 400, bare: true },
       <QuizFlow
         v={v}
         questions={questions}
+        ask={onFollowUps ? fu.map((_, k) => base.length + k) : undefined}
+        carry={onFollowUps ? carryFrom(body, base.length, fu) : undefined}
         seed={seed}
         next={next}
         close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
         skipAction={next === "/onboarding/type" ? "/onboarding/quiz/skip" : undefined}
         stage={next === "/onboarding/type" ? { at: 1, of: 7 } : undefined}
         error={error}
-        startAt={bad}
+        startAt={onFollowUps ? bad - base.length : bad}
         reflect={member ? (reflections ?? null) : undefined}
       />,
     );
   }
+  // Q7: a letter still unsure after the 16? Ask 1 or 2 curated follow-ups first (18 at most).
+  if (fu.length === 0) {
+    const plan = followUpPlan(typeQuestions(base), answers, followUps);
+    if (plan.length > 0) {
+      const withFollowUps: AnyQuestion[] = [...base, ...plan.map((k) => followUps[k])];
+      return page(
+        c,
+        { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), bare: true },
+        <QuizFlow
+          v={v}
+          questions={withFollowUps}
+          ask={plan.map((_, k) => base.length + k)}
+          carry={carryFrom(body, base.length, plan)}
+          seed={seed}
+          next={next}
+          close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
+          stage={next === "/onboarding/type" ? { at: 1, of: 7 } : undefined}
+        />,
+      );
+    }
+  }
   const { archetype, modifier, blend: types } = typeOf(result.vector, result.affinity, result.unsure);
-  const blend: TypeResult = { types, unsure: result.unsure, consistency: result.consistency, margin: result.margin, answered: result.answered, ...(result.moves ? { moves: result.moves } : {}) };
+  const blend: TypeResult & { why: Why } = {
+    types,
+    unsure: result.unsure,
+    consistency: result.consistency,
+    margin: result.margin,
+    answered: result.answered,
+    why: whyOf(typeQuestions(questions), answers, archetype),
+    ...(result.moves ? { moves: result.moves } : {}),
+  };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);
   const values = { vector: result.vector, archetype, modifier, blend, seen, takenAt: new Date() };
   const db = getDb(c.env);

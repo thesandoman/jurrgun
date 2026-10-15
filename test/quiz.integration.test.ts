@@ -12,7 +12,8 @@ import { randomToken } from "../src/lib/crypto";
 import { parseAnswers, personalOf, quizQuestions, quizSeed, typeSlug } from "../src/routes/quiz";
 import { scoreSession, typeQuestions, type AnyQuestion } from "../src/vibe/generator";
 import { answersAs } from "./quiz-helpers";
-import { ARCHETYPES, displayName, typeOf, type ArchetypeKey } from "../src/vibe/archetypes";
+import { ARCHETYPES, typeOf, type ArchetypeKey } from "../src/vibe/archetypes";
+import { MAX_FOLLOW_UPS } from "../src/vibe/adaptive";
 
 const seedIn = (html: string) => /name="seed" value="([^"]+)"/.exec(html)?.[1] ?? "";
 /** Question indices that have a field in the form (a3). */
@@ -30,6 +31,22 @@ function form(seed: string, questions: AnyQuestion[], count = questions.length):
 }
 
 const answersOf = (f: Record<string, string>, questions: AnyQuestion[]) => parseAnswers(f, questions).answers;
+
+/**
+ * Posts a quiz and, if it comes back with Q7's follow-up page (a letter was
+ * close), answers the follow-ups "None of these are me" (no vote, so the
+ * score is what the first page alone gives) and posts again.
+ */
+async function submit(cookie: string, f: Record<string, string>, base: number): Promise<Response> {
+  const r = await req("/quiz", { cookie, form: f });
+  if (r.status !== 200) return r;
+  const html = await r.text();
+  const fu = /name="fu" value="([^"]*)"/.exec(html)?.[1];
+  if (!fu) return new Response(html, { status: r.status });
+  const g: Record<string, string> = { ...f, fu };
+  fu.split(",").forEach((_, k) => (g[`a${base + k}`] = "none"));
+  return req("/quiz", { cookie, form: g });
+}
 
 describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
   it("renders the 16 curated questions for a member", async () => {
@@ -156,7 +173,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const blank = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, [`a${c}`]: "" } });
     expect(blank.status).toBe(400);
     expect(await blank.text()).toContain("still needs an answer");
-    expect((await req("/quiz", { cookie: m.cookie, form: { ...good, [`a${c}`]: "none" } })).status).toBe(302);
+    expect((await submit(m.cookie, { ...good, [`a${c}`]: "none" }, qs.length)).status).toBe(302);
   });
 
   it('takes "None of these are me" as no vote', async () => {
@@ -165,7 +182,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const qs = quizQuestions(seed, null, MEMBER);
     const good = form(seed, qs);
     const three = { ...good, a1: "none", a2: "none", a3: "none" };
-    expect((await req("/quiz", { cookie: m.cookie, form: three })).status).toBe(302);
+    expect((await submit(m.cookie, three, qs.length)).status).toBe(302);
     const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
     // Scored as if those three were never answered.
     const without = Object.fromEntries(Object.entries(answersOf(good, qs)).filter(([id]) => ![1, 2, 3].some((i) => qs[i].id === id)));
@@ -196,7 +213,13 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(row.visible).toBe(false);
 
     const result = await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text();
-    expect(result).toContain(displayName(row.archetype as ArchetypeKey, row.modifier).en);
+    // A starting point, not a label: the plain name, no score anywhere (owner, D26).
+    expect(result).toContain(ARCHETYPES[row.archetype as ArchetypeKey].name.en);
+    expect(result).toContain("How you seem to enjoy Bangkok right now");
+    expect(result).toContain("A starting point, not a label");
+    expect(result).toContain("Why you got this");
+    expect(result).not.toMatch(/>\s*\d{1,3}%/);
+    expect(result).not.toContain("Wing");
     expect(result).toContain('action="/quiz/visibility"');
     expect(result).toContain("How sure we are");
     expect(result).toContain("Clicks with");
@@ -280,5 +303,49 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(r.headers.get("location")).toBe("/onboarding/type?new=1");
     expect((await req("/onboarding/type", { cookie })).status).toBe(200);
     expect((await req("/onboarding", { cookie })).headers.get("location")).toBe("/onboarding/basics");
+  });
+
+  it("asks 1 or 2 curated follow-ups only when a letter is unsure, then saves with them (Q7)", async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    // Half one type, half its opposite on energy: the energy letter comes out unsure.
+    const a = answersAs(typeQuestions(qs), "BFSH");
+    const b = answersAs(typeQuestions(qs), "CFSH");
+    const f: Record<string, string> = { seed };
+    qs.forEach((q, i) => (f[`a${i}`] = String((i % 2 ? a[q.id] : b[q.id]) ?? 0)));
+    // A reflection answered on the first page must survive the follow-up page.
+    f.r_present = "1";
+    f.r_change_note = "More shade on the walk to the BTS";
+    const r = await req("/quiz?lang=en", { cookie: m.cookie, form: f });
+    expect(r.status).toBe(200);
+    const html = await r.text();
+    expect(html).toContain('type="hidden" name="r_change_note" value="More shade on the walk to the BTS"');
+    const fu = /name="fu" value="([^"]*)"/.exec(html)?.[1] ?? "";
+    const asked = fu.split(",").filter(Boolean);
+    expect(asked.length).toBeGreaterThanOrEqual(1);
+    expect(asked.length).toBeLessThanOrEqual(MAX_FOLLOW_UPS);
+    // Only the follow-ups are asked; the first answers ride along as hidden fields.
+    const shown = [...answerNames(html)].map(Number).filter((i) => html.includes(`name="a${i}" value="`) && !html.includes(`type="hidden" name="a${i}"`));
+    for (const i of shown) expect(i).toBeGreaterThanOrEqual(qs.length);
+    expect(html).toContain(`type="hidden" name="a0"`);
+    expect(html).toContain("A couple more, so we guess less.");
+    expect(html).not.toContain("What's your Bangkok Type?");
+    // Answer them and the result is saved, follow-ups included.
+    const g: Record<string, string> = { ...f, fu };
+    asked.forEach((_, k) => (g[`a${qs.length + k}`] = "0"));
+    const done = await req("/quiz", { cookie: m.cookie, form: g });
+    expect(done.status).toBe(302);
+    const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    expect(row.seen).toHaveLength(qs.length + asked.length);
+    expect((row.blend as { answered?: number }).answered).toBe(typeQuestions(qs).length + asked.length);
+  });
+
+  it("asks no follow-ups when every letter is clear", async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    const r = await req("/quiz", { cookie: m.cookie, form: form(seed, qs) });
+    expect(r.status).toBe(302);
   });
 });

@@ -105,3 +105,18 @@ These are tally numbers. The real simulator run happens once it's built, and the
 3. 16 questions.
 4. No home-district lean, no seen-avoidance.
 5. "None of these" with no cap; a rough-start note under 10 picks.
+
+## Q7: follow-ups and the result (owner, 10-15)
+
+- **Follow-ups only when a letter is genuinely close** (its lean under 0.2, about a 60/40 split or nearer): one curated follow-up per two close letters, at most 2, so 18 questions at most (`src/vibe/adaptive.ts`). They come from the member's own set (`followUpQuestions`) in a fixed order, so the same answers always get the same follow-ups.
+- **Why not every letter inside the 95% margin?** With 16 questions, 98.6% of simulated real people have a letter inside it, so that trigger asked nearly everyone 2 more and was less accurate.
+- **"Not sure yet" and the near types in the headline are shown only for close letters.** Q5's 95% margin still decides whether a letter can be claimed; a letter outside "close" reads "Leans …".
+- **The result is a starting point:** "How you seem to enjoy Bangkok right now", the plain type name, "A starting point, not a label. People change; retake it any time." No percentages anywhere (blend tiles and letter meters use words). "Why you got this" quotes two of the person's own picks. "Not quite me?" is gone; Retake is one tap.
+
+`npx tsx scripts/quiz-followups-sim.ts` (5,000 people, 95% Wilson intervals):
+
+| Person | Own type after the 16 | After follow-ups | Follow-ups asked (none / one / two) | Questions on average |
+|---|---|---|---|---|
+| Real (best fit 70%) | 91.1% (90.2–91.8) | **93.0% (92.3–93.7)** | 60% / 39% / 1% | 16.4 |
+| Noisy (best fit 50%) | 64.9% (63.5–66.2) | **67.8% (66.5–69.1)** | 24% / 69% / 7% | 16.8 |
+| No preference | n/a | n/a | 4% / 59% / 37% | 17.3 |
