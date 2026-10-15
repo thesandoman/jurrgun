@@ -27,7 +27,7 @@ export const DATES: Scenario[] = [
       CDMN: a("🎨", "phra_nakhon", "A quiet walk past the Khlong Ong Ang murals, then a tiny café neither of you knows", "เดินเงียบ ๆ ดูภาพวาดริมคลองโอ่งอ่าง แล้วแวะคาเฟ่เล็ก ๆ ที่ทั้งสองคนยังไม่เคยไป"),
       CDMH: a("🍰", "thon_buri", "A slow stroll through Kudi Chin's lanes, new to you both, trying its old-style Portuguese cake", "เดินช้า ๆ ในซอยชุมชนกุฎีจีนกันสองคน ที่ที่ทั้งสองคนยังไม่เคยไป ลองขนมฝรั่งกุฎีจีนสูตรเก่า"),
       CDSN: a("☕", "phaya_thai", "A window seat at an Ari café neither of you has tried, talking for hours", "นั่งริมหน้าต่างที่คาเฟ่ในอารีย์ที่ทั้งสองคนยังไม่เคยลอง คุยกันยาวหลายชั่วโมง"),
-      CDSH: a("🏠", "bang_rak", "The little Bangkokian Museum, a first visit for you both, then a long coffee talking about its old family house", "ไปพิพิธภัณฑ์ชาวบางกอกครั้งแรกกันสองคน แล้วนั่งจิบกาแฟคุยเรื่องบ้านเก่าหลังนั้นยาว ๆ"),
+      CDSH: a("🛶", "wang_thonglang", "A first canal-boat ride for you both to Wat Thepleela, then slow tea", "นั่งเรือคลองแสนแสบไปวัดเทพลีลาครั้งแรกของทั้งสองคน แล้วนั่งจิบชาช้า ๆ"),
       CFMN: a("🏸", "din_daeng", "Your usual evening badminton court at the Thai-Japanese Sports Centre, a friendly game for two", "สนามแบดประจำตอนเย็นที่ศูนย์เยาวชนไทย-ญี่ปุ่น ดินแดง ตีกันสบาย ๆ สองคน"),
       CFMH: a("🥥", "prawet", "Your favourite lap of Suan Luang Rama IX as the evening cools, then fresh coconut", "เดินรอบสวนหลวง ร.9 เส้นโปรดตอนอากาศเริ่มเย็นลง แล้วปิดท้ายด้วยมะพร้าวสด"),
       CFSN: a("🎬", "pathum_wan", "Your usual indie film night at House Samyan, then talking it over at a quiet table", "คืนดูหนังอินดี้ประจำที่โรงหนังเฮาส์ สามย่าน แล้วไปนั่งคุยเรื่องหนังที่โต๊ะเงียบ ๆ"),

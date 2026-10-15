@@ -81,7 +81,7 @@ export const CLASSIC: Scenario[] = [
       CDSH: a("🌙", "bangkok_yai", "One friend, a riverside table facing Wat Arun, and an old-recipe Thai dinner you've never had", "เพื่อนสนิทหนึ่งคน โต๊ะริมน้ำที่มองเห็นวัดอรุณ กับอาหารไทยสูตรเก่าที่ยังไม่เคยกิน"),
       CFMN: a("🧘", "pathum_wan", "Your usual Friday evening yoga with one friend on the lawn at Chula Centenary Park", "โยคะเย็นวันศุกร์ประจำกับเพื่อนสนิทบนสนามหญ้า อุทยาน 100 ปี จุฬาฯ"),
       CFMH: a("🦆", "bueng_kum", "An evening walk with your sibling around the lake at Seri Thai Park, the usual loop", "เดินเล่นตอนเย็นรอบบึงสวนเสรีไทยกับพี่น้อง เส้นทางเดิม"),
-      CFSN: a("🍿", "chatuchak", "Movie night at your usual cinema, Major Cineplex Ratchayothin, with one close friend", "ดูหนังที่โรงประจำ เมเจอร์ ซีนีเพล็กซ์ รัชโยธิน กับเพื่อนสนิทคนเดียว"),
+      CFSN: a("☕", "bang_sue", "One friend, the mall café at Gateway at Bangsue that knows your order", "เพื่อนสนิทหนึ่งคน ร้านกาแฟในห้างเกตเวย์ แอท บางซื่อ ที่พนักงานจำเมนูของคุณได้"),
       CFSH: a("🍚", "thon_buri", "Your usual Talat Phlu khao man gai with one old friend, same stools, same chat", "ข้าวมันไก่ร้านประจำที่ตลาดพลูกับเพื่อนเก่า เก้าอี้เดิม เรื่องคุยเดิม"),
     },
   },
