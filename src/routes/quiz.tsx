@@ -29,6 +29,9 @@ import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
 import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, POLES } from "../vibe/content";
 import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
+import { REFLECTION_CSS, ReflectionSteps } from "../ui/reflections";
+import { reflectionsFromForm, type Reflections } from "../content/reflections";
+import { recordQuizChange } from "./pulse";
 import {
   ARCHETYPES,
   ARCHETYPE_KEYS,
@@ -216,6 +219,8 @@ export function QuizFlow(props: {
   error?: string;
   /** Open on this question (0-based), e.g. the one a server-side error refers to. */
   startAt?: number;
+  /** "My Bangkok" reflections after the questions (member quiz only, never onboarding), prefilled with these. */
+  reflect?: Reflections | null;
 }) {
   const { t, lang } = props.v;
   const n = props.questions.length;
@@ -238,7 +243,7 @@ export function QuizFlow(props: {
         ) : undefined
       }
     >
-      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS + REFLECTION_CSS }} />
       <FlowStep
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
@@ -262,6 +267,7 @@ export function QuizFlow(props: {
           <AnswerField v={props.v} q={q} i={i} />
         </FlowStep>
       ))}
+      {props.reflect !== undefined ? <ReflectionSteps v={props.v} value={props.reflect} /> : null}
     </Flow>
   );
 }
@@ -626,15 +632,26 @@ quizRoutes.get("/quiz", async (c) => {
   return page(
     c,
     { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row, personalOf(user.profile, user.account.role))} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
+    <QuizFlow
+      v={v}
+      questions={quizQuestions(seed, row, personalOf(user.profile, user.account.role))}
+      seed={seed}
+      next="/quiz/result"
+      close={row ? "/quiz/result" : "/settings"}
+      reflect={cleanBio(user.profile.bio).reflections ?? null}
+    />,
   );
 });
 
 quizRoutes.post("/quiz", async (c) => {
   const v = view(c);
   const user = v.user!;
-  const body = await c.req.parseBody();
+  // all: the reflections post some fields more than once (checkboxes).
+  const body = await c.req.parseBody({ all: true });
   const next = str(body.next) === "/onboarding/type" ? "/onboarding/type" : "/quiz/result";
+  // Reflections come only from the member quiz (onboarding has no profile to keep them in yet).
+  const member = next === "/quiz/result" && !!user.profile;
+  const reflections = member ? reflectionsFromForm(body) : undefined;
   const row = await loadVibe(c.env, user.account.id);
   const seed = quizSeed(user.account.id, row);
   if (str(body.seed) !== seed) {
@@ -675,6 +692,7 @@ quizRoutes.post("/quiz", async (c) => {
         stage={next === "/onboarding/type" ? { at: 1, of: 7 } : undefined}
         error={error}
         startAt={bad}
+        reflect={member ? (reflections ?? null) : undefined}
       />,
     );
   }
@@ -691,13 +709,17 @@ quizRoutes.post("/quiz", async (c) => {
   // romance data, so it lives in the bio and is cleared with romance mode (withoutDating).
   const dateStyle = personal?.openToMore ? styleOf(questions, answers, "open-to-more") : {};
   const hostStyle = personal?.tableHost ? styleOf(questions, answers, "table-host") : {};
-  if (user.profile && (Object.keys(dateStyle).length || Object.keys(hostStyle).length)) {
-    const bio = cleanBio(user.profile.bio);
+  // The reflections were prefilled, so what comes back is the whole answer: it replaces the last one (all blank clears it).
+  if (user.profile && (member || Object.keys(dateStyle).length || Object.keys(hostStyle).length)) {
+    const { reflections: _old, ...bio } = cleanBio(user.profile.bio);
+    const kept = member ? {} : _old ? { reflections: _old } : {};
     await db
       .update(profiles)
       .set({
         bio: {
           ...bio,
+          ...kept,
+          ...(member && reflections ? { reflections } : {}),
           ...(Object.keys(dateStyle).length ? { dateStyle: { ...bio.dateStyle, ...dateStyle } } : {}),
           ...(Object.keys(hostStyle).length ? { hostStyle: { ...bio.hostStyle, ...hostStyle } } : {}),
         },
@@ -705,6 +727,7 @@ quizRoutes.post("/quiz", async (c) => {
       })
       .where(eq(profiles.accountId, user.account.id));
   }
+  if (reflections?.change) await recordQuizChange(c, reflections.change);
   return c.redirect(`${next}?new=1`);
 });
 

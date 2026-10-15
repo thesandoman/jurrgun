@@ -9,7 +9,8 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { Context } from "hono";
-import { and, asc, count, desc, eq, gt, lt, ne, or, sql, type AnyColumn } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql, type AnyColumn } from "drizzle-orm";
+import { cleanBio } from "../content/profile";
 import { getDb } from "../db";
 import type { AppEnv } from "../lib/env";
 import { DISTRICTS, label } from "../lib/constants";
@@ -212,11 +213,18 @@ export async function firstTable(env: AppEnv["Bindings"], p: Profile, now = new 
   const db = getDb(env);
   const [mine] = await db.select({ n: count() }).from(registrations).where(eq(registrations.accountId, p.accountId));
   if (Number(mine?.n ?? 0) > 0) return null;
+  // After home: the districts they told the quiz they haven't been to yet ("My Bangkok" reflections).
+  const wish = cleanBio(p.bio).reflections?.notYet?.districts ?? [];
   const rows = await db
     .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district, costThb: events.costThb, tags: events.tags })
     .from(events)
     .where(and(eq(events.status, "published"), ne(events.visibility, "private"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * 86_400_000))))
-    .orderBy(desc(sql`${events.district} = ${p.district}`), desc(or(...SEGMENT_TAGS[segmentOf(p)].map((tag) => has(events.tags, tag)))!), asc(events.startsAt))
+    .orderBy(
+      desc(sql`${events.district} = ${p.district}`),
+      ...(wish.length ? [desc(inArray(events.district, wish))] : []),
+      desc(or(...SEGMENT_TAGS[segmentOf(p)].map((tag) => has(events.tags, tag)))!),
+      asc(events.startsAt),
+    )
     .limit(10);
   const ok = rows.find((e) => romanceEventOk(e.tags, p) && womenOnlyEventOk(e.tags, p));
   return ok ? { id: ok.id, title: ok.title, titleEn: ok.titleEn, startsAt: ok.startsAt, district: ok.district, costThb: ok.costThb } : null;

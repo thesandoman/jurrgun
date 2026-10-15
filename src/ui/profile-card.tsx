@@ -10,6 +10,7 @@
  * "Here for" chips so romance mode is never revealed.
  */
 import type { Child } from "hono/jsx";
+import { reflectionFacts } from "./reflections";
 import {
   COMM_STYLES,
   ENERGY,
@@ -176,6 +177,7 @@ export function ProfileCard(props: {
   const res = RESIDENCY.find((x) => x.value === bio.residency && x.value !== "lives");
   if (res) facts.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
   if (bio.hometown) facts.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
+  facts.push(...reflectionFacts(bio.reflections, lang, t));
   if (bio.guide) facts.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
   const occupation = occupationLabel(bio, lang);
   if (occupation) facts.push([occupation.emoji, t("อาชีพ", "Work"), occupation.text]);

@@ -492,11 +492,28 @@ function freshStamps(rows: { district: string; createdAt: Date }[], now = new Da
   return new Set(rows.filter((r) => now.getTime() - r.createdAt.getTime() < FRESH_STAMP_MS).map((r) => r.district));
 }
 
-function Passport(props: { v: View; stamped: Set<string>; fresh?: Set<string>; compact?: boolean; badges?: { key: string; icon: string; theme: { en: string; th: string } }[] }) {
+function Passport(props: {
+  v: View;
+  stamped: Set<string>;
+  fresh?: Set<string>;
+  compact?: boolean;
+  badges?: { key: string; icon: string; theme: { en: string; th: string } }[];
+  /** Districts the member hasn't been to yet ("My Bangkok" reflections from the quiz). */
+  wish?: string[];
+}) {
   const { t, lang } = props.v;
   const items = districtsAZ(lang).map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value), fresh: props.fresh?.has(d.value) }));
-  // Stamped first in the compact view, so progress is visible at a glance.
-  const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on)].slice(0, 12);
+  const wish = new Set((props.wish ?? []).filter((d) => !props.stamped.has(d)));
+  // Stamped first in the compact view, so progress is visible at a glance; then the ones they want to explore.
+  const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on && wish.has(x.key)), ...items.filter((x) => !x.on && !wish.has(x.key))].slice(0, 12);
+  const next = items.filter((x) => wish.has(x.key));
+  const nextLine = next.length ? (
+    <p class="chips2" aria-label={t("อยากไปสำรวจ", "Next to explore")}>
+      {next.map((x) => (
+        <span>🗺️ {x.name}</span>
+      ))}
+    </p>
+  ) : null;
   return (
     <Card class="passport-card">
       <div class="passport-head">
@@ -509,6 +526,7 @@ function Passport(props: { v: View; stamped: Set<string>; fresh?: Set<string>; c
       {props.compact ? (
         <>
           <Stamps items={preview} />
+          {nextLine}
           <a href="/buddy/passport">{t("ดูทั้ง 50 เขต", "All 50 districts")} →</a>
         </>
       ) : (
@@ -525,6 +543,8 @@ function Passport(props: { v: View; stamped: Set<string>; fresh?: Set<string>; c
             <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนให้ครบ เพื่อสะสมเหรียญประจำฤดู", "Finish monthly big quests to collect season badges.")}</p>
           )}
           <Stamps items={items} />
+          {next.length ? <h3>🗺️ {t("อยากไปสำรวจ", "Next to explore")}</h3> : null}
+          {nextLine}
           <p class="chips2">
             {items.filter((x) => x.on).map((x) => (
               <span>✅ {x.name}</span>
@@ -694,7 +714,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
           </div>
         </>
       )}
-      <Passport v={v} stamped={stamped} fresh={fresh} compact />
+      <Passport v={v} stamped={stamped} fresh={fresh} compact wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
       {optin?.active ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
@@ -723,7 +743,7 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
       <p>
         <a href="/buddy">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
       </p>
-      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} fresh={freshStamps(stamps)} badges={badges} />
+      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} fresh={freshStamps(stamps)} badges={badges} wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
     </>,
   );
 });

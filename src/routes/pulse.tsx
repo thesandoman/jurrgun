@@ -20,6 +20,7 @@ import { requireMember } from "../lib/session";
 import { consents, pulseQuestions, pulseResponses, registrations, wellbeing } from "../schema";
 import { Button, Card, Choices, Empty, LinkButton, list, Notice, page, Select, str, TextArea, view, type View } from "../ui/kit";
 import { UCLA3, UCLA_SCALE } from "./onboarding";
+import { CHANGE_PULSE_ID, CHANGE_PULSE_QUESTION } from "../content/reflections";
 
 export const pulseRoutes = new Hono<AppEnv>();
 pulseRoutes.use("/pulse", requireMember);
@@ -40,6 +41,27 @@ async function researchConsent(c: C, accountId: string): Promise<boolean> {
     .orderBy(desc(consents.createdAt))
     .limit(1);
   return !!row?.granted;
+}
+
+/**
+ * The quiz's "what would you change" answer (content/reflections.ts), counted
+ * in City Pulse like any answer: only with research consent, only the option
+ * (never the member's words), under the research id. Its question row is
+ * archived, so admins see the totals and members are never asked it here.
+ * A retake replaces the earlier answer.
+ */
+export async function recordQuizChange(c: C, value: string): Promise<boolean> {
+  const user = c.var.user;
+  const rid = user?.account.researchId;
+  if (!user?.profile || !rid || !(await researchConsent(c, user.account.id))) return false;
+  const db = getDb(c.env);
+  await db.insert(pulseQuestions).values(CHANGE_PULSE_QUESTION).onConflictDoNothing();
+  const seg = segmentOf(c);
+  await db
+    .insert(pulseResponses)
+    .values({ id: newId(), questionId: CHANGE_PULSE_ID, researchId: rid, answer: value, district: seg.district, ageBand: seg.ageBand })
+    .onConflictDoUpdate({ target: [pulseResponses.questionId, pulseResponses.researchId], set: { answer: value, district: seg.district, ageBand: seg.ageBand } });
+  return true;
 }
 
 /** The member's coarse segment: district and age band. */

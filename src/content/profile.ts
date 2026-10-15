@@ -11,6 +11,7 @@
  * here so the routes and the tests share one set of rules.
  */
 import { createRng, shuffle } from "../vibe/rng";
+import { cleanReflections, type Reflections } from "./reflections";
 import { cleanStyle, type StyleCard } from "../vibe/styles";
 import { universityById, universityByName, universityName } from "./universities";
 
@@ -1355,6 +1356,8 @@ export type Bio = {
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
   answers?: Record<string, Answer>;
+  /** "My Bangkok" reflections from the end of the quiz (content/reflections.ts). Never scored; `change` is never shown on the card. */
+  reflections?: Reflections;
 };
 
 // ---------------------------------------------------------- validation --
@@ -1477,6 +1480,8 @@ export function cleanBio(raw: unknown): Bio {
   if (hostStyle) out.hostStyle = hostStyle;
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;
+  const reflections = cleanReflections(b.reflections);
+  if (reflections) out.reflections = reflections;
   return out;
 }
 
