@@ -1,8 +1,6 @@
 import type { Scenario } from "../scenarios";
 
 const a = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ icon, district, en, th, ...(flavour ? { flavour } : {}) });
-/** Same as a(), for a place the owner should double-check (still open, right district). */
-const av = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ ...a(icon, district, en, th, flavour), verify: true as const });
 
 export const EVERYDAY_HOME: Scenario[] = [
   {
@@ -151,7 +149,7 @@ export const EVERYDAY_HOME: Scenario[] = [
     answers: {
       BDMN: a("🏙️", "pathum_wan", "All the cousins exploring One Bangkok, phones out only for photos", "ญาติ ๆ ทั้งแก๊งเดินสำรวจวัน แบงค็อก หยิบมือถือแค่ตอนถ่ายรูป"),
       BDMH: a("✈️", "don_mueang", "All the cousins wandering the Air Force Museum, curious about every plane", "ญาติ ๆ ทั้งแก๊งเดินดูพิพิธภัณฑ์กองทัพอากาศ ตื่นเต้นกับเครื่องบินทุกลำ"),
-      BDSN: av("🍔", "bang_kho_laem", "Their friends join, lunch somewhere trending at Terminal 21 Rama 3", "ชวนเพื่อนน้องมาด้วย กินมื้อเที่ยงร้านที่กำลังดังในเทอร์มินอล 21 พระราม 3"),
+      BDSN: a("🍔", "bang_kho_laem", "Their friends join, lunch somewhere trending at Terminal 21 Rama 3", "ชวนเพื่อนน้องมาด้วย กินมื้อเที่ยงร้านที่กำลังดังในเทอร์มินอล 21 พระราม 3"),
       BDSH: a("🍡", "bang_khen", "Their friends too, a Liab Duan stall crawl the kids found online", "ชวนเพื่อนน้องมาด้วย ตระเวนกินตลาดนัดเลียบด่วนตามที่เด็ก ๆ เจอในเน็ต"),
       BFMN: a("⚽", "bang_na", "Your crew's Saturday futsal in Bang Na, the cousin on your team", "แก๊งฟุตซอลวันเสาร์ย่านบางนา ให้น้องลงทีมเดียวกับคุณ"),
       BFMH: a("⛰️", "pom_prap", "The family's Golden Mount climb, every visit, all 344 steps", "ปีนภูเขาทองกับทั้งบ้านเหมือนทุกครั้งที่มา ครบ 344 ขั้น"),
@@ -291,7 +289,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       BDSH: a("🥣", "din_daeng", "Tipped off: a midnight bowl at a busy Din Daeng flats stall", "เพื่อนบอกต่อมา ก๋วยเตี๋ยวเที่ยงคืนร้านคนแน่นแถวแฟลตดินแดง", 1),
       BFMN: a("🏃", "pathum_wan", "The 8pm Sunday run, your crew at Chula Centenary Park", "วิ่งสองทุ่มคืนวันอาทิตย์กับแก๊งประจำ ที่อุทยาน 100 ปี จุฬาฯ", 1),
       BFMH: a("☯️", "bueng_kum", "6am tai chi, Seri Thai Park crowd, aunties save your spot", "รำไทเก๊กหกโมงเช้ากับกลุ่มใหญ่ในสวนเสรีไทย ป้า ๆ จองที่ไว้ให้", -1),
-      BFSN: av("🎶", "din_daeng", "The whole Regular Table, Sunday dinner at Jodd Fairs till late", "โต๊ะประจำมากันครบ มื้อเย็นวันอาทิตย์ที่จ๊อดแฟร์ อยู่กันจนดึก", 1),
+      BFSN: a("🎶", "din_daeng", "The whole Regular Table, Sunday dinner at Jodd Fairs Ratchada, late", "โต๊ะประจำมากันครบ มื้อเย็นวันอาทิตย์ที่จ๊อดแฟร์ รัชดา อยู่กันจนดึก", 1),
       BFSH: a("🌙", "bang_khen", "Late Sunday supper in the Liab Duan market crowd, your order cooking", "มื้อดึกคืนวันอาทิตย์ท่ามกลางคนเยอะ ๆ ในตลาดเลียบด่วน เมนูประจำกำลังทำอยู่แล้ว", 1),
       CDMN: a("🚲", "sai_mai", "A 6am solo ride to a Sai Mai café you spotted online", "ปั่นจักรยานคนเดียวตอนหกโมงเช้า ไปคาเฟ่แถวสายไหมที่เห็นในเน็ต", -1),
       CDMH: a("🌅", "chom_thong", "A dawn walk exploring the old Bang Mot orchards, alone", "เดินสำรวจสวนเก่าย่านบางมดตอนรุ่งสาง คนเดียว", -1),
@@ -299,7 +297,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       CDSH: a("🥣", "thon_buri", "7am jok at a Talat Phlu stall a friend swears by", "เจ็ดโมงเช้า โจ๊กร้านในตลาดพลูที่เพื่อนบอกว่าห้ามพลาด", -1),
       CFMN: a("🧘", "sai_mai", "Sunday 7am yoga near Wongsakorn, the ritual that plans your week", "โยคะเจ็ดโมงเช้าวันอาทิตย์แถววงศกร กิจวัตรที่ทำให้วางแผนทั้งอาทิตย์ได้", -1),
       CFMH: a("🌸", "thawi_watthana", "Every Sunday, 6am, the walk past the Thawi Watthana orchid farms", "ทุกวันอาทิตย์ หกโมงเช้า เดินผ่านสวนกล้วยไม้ทวีวัฒนา", -1),
-      CFSN: av("📓", "huai_khwang", "11pm, your corner seat at a Huai Khwang café, planning the week", "ห้าทุ่ม มุมประจำในคาเฟ่ย่านห้วยขวาง นั่งวางแผนทั้งอาทิตย์", 1),
+      CFSN: a("📓", "pathum_wan", "11pm, your corner seat at Samyan Mitrtown's 24-hour zone, planning the week", "ห้าทุ่ม มุมประจำในโซน 24 ชั่วโมงของสามย่านมิตรทาวน์ นั่งวางแผนทั้งอาทิตย์", 1),
       CFSH: a("🍚", "bang_khae", "7am rice soup at a Phetkasem 69 stall, out before you order", "เจ็ดโมงเช้า ข้าวต้มร้านในซอยเพชรเกษม 69 มาวางก่อนสั่งด้วยซ้ำ", -1),
     },
   },
@@ -324,7 +322,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       CDMH: a("🏡", "saphan_sung", "A first walk for two past the Saphan Sung canal homes", "สองคนเดินผ่านบ้านริมคลองสะพานสูงครั้งแรก"),
       CDSN: a("☕", "bang_kapi", "Coffee for two at a Bang Kapi café neither has tried", "กาแฟสองแก้วที่คาเฟ่แถวบางกะปิที่ยังไม่มีใครเคยลอง"),
       CDSH: a("🍲", "min_buri", "Halal noodles for two, round a corner in Min Buri market", "ก๋วยเตี๋ยวฮาลาลสองชาม ร้านที่หลบมุมอยู่ในตลาดมีนบุรี"),
-      CFMN: av("🏸", "nong_chok", "Badminton at your court by Bangkok Arena, the two of you paired", "ตีแบดที่คอร์ตประจำข้างบางกอกอารีนา สองคนจับคู่กัน"),
+      CFMN: a("🏸", "nong_chok", "Your court at Nong Chok Park, badminton for two", "คอร์ตแบดประจำในสวนหนองจอก ตีกันสองคน"),
       CFMH: a("🌺", "chom_thong", "Your walking route round Wat Ratchaorasaram every Sunday, now for two", "เส้นเดินวันอาทิตย์ประจำรอบวัดราชโอรสาราม คราวนี้เดินสองคน"),
       CFSN: a("🧋", "bueng_kum", "Your corner at a Nawamin café, now a table for two", "มุมประจำในคาเฟ่แถวนวมินทร์ คราวนี้นั่งกันสองคน"),
       CFSH: a("🍗", "lak_si", "Two chicken rice plates by Wat Lak Si, served before you ask", "ข้าวมันไก่สองจานร้านแถววัดหลักสี่ มาวางก่อนสั่งด้วยซ้ำ"),
@@ -343,7 +341,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       BDMH: a("🛶", "taling_chan", "The whole family exploring Taling Chan Floating Market at their pace", "ทั้งบ้านเดินสำรวจตลาดน้ำตลิ่งชันช้า ๆ ตามจังหวะท่าน"),
       BDSN: a("🍽️", "pathum_wan", "A long family lunch at a One Bangkok restaurant someone recommended", "มื้อเที่ยงยาว ๆ กับทั้งบ้าน ร้านในวัน แบงค็อกที่มีคนแนะนำมา"),
       BDSH: a("🦀", "bang_khun_thian", "The cousins too, Rama 2 seafood a friend swears by", "ชวนญาติ ๆ มาด้วย กินซีฟู้ดริมถนนพระราม 2 ร้านที่เพื่อนบอกว่าห้ามพลาด"),
-      BFMN: av("🛍️", "prawet", "Every Sunday, the whole family's slow lap of Paradise Park mall", "ทุกวันอาทิตย์ ทั้งบ้านเดินช้า ๆ รอบห้างพาราไดซ์ พาร์ค"),
+      BFMN: a("🛍️", "prawet", "Every Sunday, the whole family's slow lap of Paradise Park mall", "ทุกวันอาทิตย์ ทั้งบ้านเดินช้า ๆ รอบห้างพาราไดซ์ พาร์ค"),
       BFMH: a("🌸", "thawi_watthana", "The family's yearly wander through the Thawi Watthana flower farms", "ทั้งบ้านเดินชมสวนไม้ดอกทวีวัฒนาช้า ๆ เหมือนทุกปี"),
       BFSN: a("🍰", "khlong_toei", "Everyone round your table at a café in the Queen Sirikit Centre", "ทุกคนนั่งล้อมโต๊ะประจำที่คาเฟ่ในศูนย์ประชุมสิริกิติ์"),
       BFSH: a("🫓", "bang_kho_laem", "Family lunch at the halal Charoen Krung 103 shop they always pick", "มื้อเที่ยงครอบครัวที่ร้านฮาลาลซอยเจริญกรุง 103 ร้านที่ท่านเลือกทุกครั้ง"),

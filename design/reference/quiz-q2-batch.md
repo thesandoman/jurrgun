@@ -26,48 +26,38 @@
 
 - `bank-rules.ts`: a few more detail cues for D (hidden, untried, unfamiliar, found, a tip, swore by, first try/taste/visit…) and F (by heart, for ages, since school, the aunties, your crew/court/order, every Thursday…).
 - `generator.ts`: twin pairs out of season go last, like every other scenario. With a bigger bank, the seasonal twin "rain" was otherwise shown as often outside its months as in them (test/quiz-sets.test.ts caught it).
-- `scripts/check-bank.ts` lists the `verify` places; `Answer.verify` marks them in the bank.
+- `scripts/check-bank.ts` lists any `verify` places; `Answer.verify` marks them in the bank.
 
-## Places to verify (57 answers)
+## Places checked (all 57 flagged answers)
 
-Written from memory. Each is marked `verify: true` in the bank; please confirm it's open and in that district.
+Every answer that was marked `verify` has now been checked. Commit 6a768c1 fixed 12 (Science Centre, Wat Nimmanoradee, Sena Nikhom café, Warehouse 30, Wongsakorn, Wat Thepleela, the Rama III walkway, orchards, Bangkok Arena futsal, Soi Nana, Seacon, jay lanes). The other 45 were checked on the web on 2026-10-15, and no `verify` marks are left in these seven files.
 
-| Place | District key | Scenarios |
+**Confirmed and kept:** Brown Sugar (18 Soi Nana, Pom Prap, live music to about 1 am, closed Mondays); Baan Kudichin Museum; Lumpinee Stadium, Ram Inthra (Bang Khen); Esplanade Ratchada bowling (Din Daeng); Central Rama 2 (Bang Khun Thian); Liab Duan Ram Inthra night market (Bang Khen, 17:00 to 02:00); Terminal 21 Rama 3 (Bang Kho Laem); Paradise Park (Prawet); Central EastVille (Lat Phrao); Seri Thai Park (on BMA's 2025 Loy Krathong list); Saranrom Park (opens 05:00, morning tai chi); Nong Bon Water Sports Centre (public paddling with a cheap yearly membership); Chokchai 4 is in Lat Phrao.
+
+**Fixed or replaced:**
+
+| Was | Now | Why |
 |---|---|---|
-| Jodd Fairs Ratchada (open till late or midnight) | din_daeng | eh-sunday-reset, er-odd-hour-hunger, jg-met-again, jg-after-table |
-| Brown Sugar jazz (address, open till midnight) | pom_prap | er-friend-of-friend, jg-after-table |
-| Warehouse 30 (clay workshop, indie film night, openings) | bang_rak | eh-grandparent-afternoon, er-routine-friend, jg-weekly-picks |
-| Wat Thepleela and the Saen Saep canal path (walkable) | bang_kapi | er-routine-friend, jg-coworker-table, le-east-side ×2 |
-| Chao Phraya Bodindecha house museum (open to walk-ins) | wang_thonglang | lc-museum-family, le-east-side, se-office-year-end |
-| Science Centre for Education / planetarium, Ekkamai (open after renovation; district) | watthana / khlong_toei | eh-teen-cousin, lc-museum-family, le-young-cousins |
-| Chao Phraya Sky Park (free, open; district key) | khlong_san / phra_nakhon | ev-month-end, jg-icebreaker |
-| Central Rama 2 | bang_khun_thian | ev-storm-stranded, lc-thonburi-day |
-| Central EastVille | lat_phrao | le-local-mall, se-december-lights |
-| Nong Bon Water Sports Centre / Nong Bon Park (public paddling; Loy Krathong) | prawet | jg-plus-one, se-loy-krathong |
-| Bangkok Arena (public badminton and futsal courts) | nong_chok | eh-neighbour, jg-plus-one |
-| Fashion Island pop-up classes | khan_na_yao | jg-join-regular |
-| Seacon Square board game café | prawet | jg-join-regular |
-| Paradise Park mall | prawet | eh-grandparent-afternoon |
-| Terminal 21 Rama 3 | bang_kho_laem | eh-teen-cousin |
-| IT Square Lak Si café | lak_si | lc-study-spot |
-| Esplanade Ratchada bowling | din_daeng | le-local-mall |
-| Lumpinee Stadium, Ram Inthra | bang_khen | le-pickup-sport |
-| Liab Duan Ram Inthra night market (open at 11 pm) | bang_khen | ev-deadline-week |
-| Pattavikorn Market, Nawamin | bueng_kum | ev-new-job-area |
-| Wat Nimmanoradee canal-side houses | bang_khae | ev-errand-saturday |
-| Wongsakorn Market at midnight | sai_mai | lc-market-hours |
-| Baan Kudichin Museum | thon_buri | lc-museum-family |
-| Rama III riverside jogging path | yan_nawa | le-down-river |
-| Escape room in Ratchada | huai_khwang | jg-icebreaker |
-| A Huai Khwang café open at 11 pm | huai_khwang | eh-sunday-reset |
-| Soi Nana street art, Chinatown | pom_prap | jg-table-poll |
-| Thawi Watthana orchid farm taking groups; canal orchards for mangoes | thawi_watthana | jg-table-host, se-mango-season |
-| Chom Thong canal orchards | chom_thong | se-mango-season |
-| Thonburirom Park; Seri Thai Park (Loy Krathong) | thung_khru; bueng_kum | se-loy-krathong |
-| Saranrom Park 6 am tai chi | phra_nakhon | se-cool-season |
-| A Chokchai 4 café open till midnight | lat_phrao | se-cool-season |
-| Jay stalls round Wongwian 22 Karakadakhom; a Suk Sawat jay café; an old Sai Mai jay shop | pom_prap; rat_burana; sai_mai | se-jay-festival |
-| Saphan Sung garden café | saphan_sung | se-kite-season |
-| W District café | watthana | se-mango-season |
+| Chao Phraya Sky Park keyed Khlong San | `phra_nakhon` | the park's address is Phra Pok Klao Rd, Phra Nakhon |
+| "Jodd Fairs" | Jodd Fairs Ratchada | the Rama 9 one closed in Jan 2025; Ratchada (Din Daeng) runs 17:00 to 01:00 |
+| a Huai Khwang café at 11 pm | Samyan Mitrtown's 24-hour zone | no café open that late found in Huai Khwang |
+| badminton at Bangkok Arena (×2) | Nong Chok Park's courts | the arena is a futsal venue with no public court booking; the park's youth centre has badminton courts |
+| Wat Nimmanoradee canal-side houses | its quiet, fading canal market | only a few of the old houses still trade; no walking route found |
+| the longest food queue at Pattavikorn | weekend crowds there | no source for food queues |
+| Bodindecha house museum (×3) | Suan Pakkad's teak houses; the Khlong Thap Chang canal by Wat Lat Bua Khao; the Bangkokian Museum | the museum is inside a school, weekdays only, call first |
+| a café at IT Square Lak Si | its food court | no café confirmed open |
+| Fashion Island pop-up classes | its pop-up events | events confirmed, classes not |
+| an escape room in Ratchada | Puzzle Room, Sukhumvit 18 (Khlong Toei) | none found in Ratchada |
+| a Warehouse 30 exhibition opening | a Warehouse 30 exhibition | exhibitions confirmed, recent openings not |
+| boat noodles by Wat Thepleela | noodles by Wat Thepleela pier | noodle shops on Ramkhamhaeng 39, no boat noodles |
+| Ekkamai planetarium | Children's Discovery Museum II (Thung Khru) | the planetarium closed 30 Mar 2026 for renovation, due back late 2026 |
+| Nong Bon Park's lit lake (Loy Krathong) | Suan Wanatham on Loy Krathong night | Nong Bon isn't on BMA's 2025 Loy Krathong park list; Suan Wanatham (Prawet) is |
+| bread for the fish at Thonburirom | a slow lakeside lap | BMA asks people not to bring bread krathong or feed; the park is on the Loy Krathong list |
+| a Chokchai 4 café open till midnight | a 9 pm latte there | the café closes at 22:00 |
+| a Suk Sawat vegan café | Broccoli Revolution (Sukhumvit 49) | no vegan café confirmed on Suk Sawat |
+| an old jay shop in Sai Mai | a jay stall on Song Wat Road | no established jay shop confirmed; Chinatown is the festival's centre |
+| a named Saphan Sung garden café | a leafy café off Ramkhamhaeng 118 | several exist there, none confirmed open in 2026 by name |
+| a W District café | an EmQuartier café | no café confirmed inside W District |
+| EastVille's December lights | EastVille's year-end garden decorations | the mall runs a year-end campaign; lights not confirmed |
 
-`npx vite-node scripts/check-bank.ts src/vibe/bank/<file>.ts <EXPORT>` prints the exact answers.
+Main sources: Time Out Bangkok (Brown Sugar, Sky Park, Loy Krathong parks 22 Oct 2025, planetarium 13 Mar 2026), Thai Holiday Guide (Bodindecha, Kudichin, Lumpinee, Saranrom), Wikipedia (Central Rama 2, Pattavikorn, Bangkok Arena, Nong Chok Park, Paradise Park, Wat Nimmanoradee), TrueID (Liab Duan), Major Cineplex investor pages (Esplanade bowling), Central Pattana (EastVille), The Smart Local (Nong Bon), Wongnai (Chokchai 4, Ramkhamhaeng 39).

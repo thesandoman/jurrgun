@@ -1,8 +1,6 @@
 import type { Scenario } from "../scenarios";
 
 const a = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ icon, district, en, th, ...(flavour ? { flavour } : {}) });
-/** Same as a(), for a place the owner should double-check (still open, right district). */
-const av = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ ...a(icon, district, en, th, flavour), verify: true as const });
 
 export const LANDMARKS_CITY: Scenario[] = [
   {
@@ -131,13 +129,13 @@ export const LANDMARKS_CITY: Scenario[] = [
       BFSN: a("🖼️", "chatuchak", "The whole family's MOCA tradition: one gallery floor, then coconut cake", "ธรรมเนียมของทั้งบ้านที่ MOCA ดูแกลเลอรีหนึ่งชั้น แล้วกินเค้กมะพร้าว"),
       BFSH: a("🎭", "huai_khwang", "Everyone watching old Thai dance at the Thailand Cultural Centre, every year", "ดูนาฏศิลป์ไทยที่ศูนย์วัฒนธรรมแห่งประเทศไทย ไปกันทั้งบ้านทุกปี"),
       CDMN: a("🏟️", "bang_na", "Your sibling and you exploring a BITEC expo you just heard about", "คุณกับพี่น้องเดินดูงานเอ็กซ์โปที่ไบเทคที่เพิ่งได้ยินชื่อ"),
-      CDMH: av("🏛️", "wang_thonglang", "Walking Bodindecha's house museum with your grandparent, curious at last", "เดินชมบ้านเจ้าพระยาบดินทรเดชากับตายาย หายสงสัยซะที"),
+      CDMH: a("🏛️", "ratchathewi", "With your grandparent, finally walking Suan Pakkad's old teak houses", "พาตายายเดินชมเรือนไทยไม้สักในวังสวนผักกาดซะที"),
       CDSN: a("🖼️", "sathon", "A Sathon gallery show a friend swears by, with one parent", "นิทรรศการในแกลเลอรีย่านสาทรที่เพื่อนยืนยันว่าต้องดู ไปกับพ่อหรือแม่"),
       CDSH: a("🚣", "bangkok_noi", "You and a grandparent, both new to the Royal Barges museum", "คุณกับตายาย มาพิพิธภัณฑ์เรือพระราชพิธีเป็นครั้งแรกทั้งคู่"),
       CFMN: a("🎨", "pathum_wan", "Up the BACC ramps with your sibling, the monthly show crawl", "เดินขึ้นทางลาด BACC กับพี่น้อง ทริปดูนิทรรศการประจำเดือน"),
       CFMH: a("🌿", "pathum_wan", "Strolling Jim Thompson House's garden with your grandparent, the guide waves", "เดินเล่นในสวนบ้านจิม ทอมป์สันกับตายาย ไกด์โบกมือทัก"),
       CFSN: a("☕", "phaya_thai", "A Pradiphat gallery café with one parent, the staff remember your order", "คาเฟ่แกลเลอรีแถวประดิพัทธ์กับพ่อหรือแม่ พนักงานจำเมนูคุณได้"),
-      CFSH: av("🍰", "thon_buri", "Baan Kudichin Museum with your parents, then Kudi Chin cakes since childhood", "พิพิธภัณฑ์บ้านกุฎีจีนกับพ่อแม่ แล้วซื้อขนมฝรั่งกุฎีจีนที่กินมาตั้งแต่เด็ก"),
+      CFSH: a("🍰", "thon_buri", "Baan Kudichin Museum with your parents, then Kudi Chin cakes since childhood", "พิพิธภัณฑ์บ้านกุฎีจีนกับพ่อแม่ แล้วซื้อขนมฝรั่งกุฎีจีนที่กินมาตั้งแต่เด็ก"),
     },
   },
   {
@@ -155,7 +153,7 @@ export const LANDMARKS_CITY: Scenario[] = [
       BDSH: a("🍜", "thon_buri", "The whole family squeezed into a Wongwian Yai noodle shop, no signboard", "ทั้งบ้านเบียดกันในร้านก๋วยเตี๋ยวไม่มีป้ายแถววงเวียนใหญ่"),
       BFMN: a("🚴", "thung_khru", "Bike lanes at Thonburirom Park with the whole family, every Saturday", "ทั้งบ้านปั่นจักรยานในสวนธนบุรีรมย์ทุกวันเสาร์"),
       BFMH: a("🛕", "bangkok_yai", "The whole family's Wat Arun riverside walk, since you were small", "ทางเดินริมน้ำวัดอรุณของทั้งบ้าน เดินมาตั้งแต่คุณยังเล็ก"),
-      BFSN: av("🍱", "bang_khun_thian", "Central Rama 2 mall, the family's Sunday ritual at one big table", "ห้างเซ็นทรัล พระราม 2 กิจวัตรวันอาทิตย์ของครอบครัว นั่งโต๊ะใหญ่โต๊ะเดียว"),
+      BFSN: a("🍱", "bang_khun_thian", "Central Rama 2 mall, the family's Sunday ritual at one big table", "ห้างเซ็นทรัล พระราม 2 กิจวัตรวันอาทิตย์ของครอบครัว นั่งโต๊ะใหญ่โต๊ะเดียว"),
       BFSH: a("🍡", "bangkok_noi", "Wang Lang Market lunch, the aunties piling extra on the family's plates", "ข้าวกลางวันที่ตลาดวังหลัง ป้า ๆ ตักเพิ่มให้ทั้งบ้าน"),
       CDMN: a("🚲", "chom_thong", "Cycling with your sibling to a Chom Thong café trending now", "ปั่นจักรยานกับพี่น้องไปคาเฟ่ย่านจอมทองที่กำลังฮิต"),
       CDMH: a("🛕", "thon_buri", "Exploring the lanes round Wat Kalayanamit with your sibling", "เดินสำรวจซอยรอบวัดกัลยาณมิตรกับพี่น้อง"),
@@ -372,7 +370,7 @@ export const LANDMARKS_CITY: Scenario[] = [
       BDSH: a("📰", "phra_nakhon", "Reading in a busy old Bang Lamphu coffee shop someone posted", "นั่งอ่านในร้านกาแฟเก่าคนเยอะย่านบางลำพูที่มีคนโพสต์ไว้"),
       BFMN: a("💻", "huai_khwang", "Your crew at a Ratchada co-working café, walking laps between chapters", "ก๊วนอ่านหนังสือประจำที่คาเฟ่โคเวิร์กกิงย่านรัชดา เดินพักระหว่างบท"),
       BFMH: a("🌳", "phra_nakhon", "Chapter, lap, chapter round Santichaiprakarn Park, the evening crowd waves", "อ่านหนึ่งบท เดินหนึ่งรอบ ในสวนสันติชัยปราการ ผู้คนยามเย็นโบกมือทัก"),
-      BFSN: av("🖥️", "lak_si", "Your table among the crowd at an IT Square Lak Si café", "โต๊ะประจำท่ามกลางผู้คนในคาเฟ่ที่ไอทีสแควร์ หลักสี่"),
+      BFSN: a("🖥️", "lak_si", "Your table among the crowd at IT Square Lak Si's food court", "โต๊ะประจำท่ามกลางผู้คนในฟู้ดคอร์ตไอทีสแควร์ หลักสี่"),
       BFSH: a("🥤", "ratchathewi", "Your seat at a busy Victory Monument kopi shop, students all round", "ที่นั่งประจำในร้านกาแฟโบราณคนเยอะแถวอนุสาวรีย์ชัยฯ นักเรียนเต็มรอบตัว"),
       CDMN: a("🏞️", "thung_khru", "Walking and reading round KMUTT's campus lake, a spot just found", "เดินไปอ่านไปรอบบึงใน มจธ. ที่เพิ่งเจอ"),
       CDMH: a("🛕", "phra_khanong", "Walking Wat Thammamongkhon's shaded grounds, a chapter per bench, about time", "เดินในลานร่มรื่นวัดธรรมมงคล อ่านหนึ่งบทต่อม้านั่ง ได้มาซะที"),

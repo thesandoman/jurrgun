@@ -1,8 +1,6 @@
 import type { Scenario } from "../scenarios";
 
 const a = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ icon, district, en, th, ...(flavour ? { flavour } : {}) });
-/** Same as a(), for a place the owner should double-check (still open, right district). */
-const av = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ ...a(icon, district, en, th, flavour), verify: true as const });
 
 /**
  * Jurrgun's own offerings: Tables, Regular Tables, Table Hosts, hosting
@@ -102,7 +100,7 @@ export const JURRGUN: Scenario[] = [
     icon: "🔁",
     tone: "morning",
     answers: {
-      BDMN: av("🛼", "khan_na_yao", "A big Table at a different Fashion Island pop-up class each month", "โต๊ะใหญ่ไปคลาสป๊อปอัปที่แฟชั่นไอส์แลนด์ เดือนละแบบไม่ซ้ำ"),
+      BDMN: a("🎪", "khan_na_yao", "A big Table walking Fashion Island's different pop-up events each month", "โต๊ะใหญ่เดินตะลุยงานป๊อปอัปที่แฟชั่นไอส์แลนด์ เดือนละงานไม่ซ้ำ"),
       BDMH: a("🧺", "lat_krabang", "A big Table hunting old markets monthly, starting with Hua Takhe", "โต๊ะใหญ่ตามล่าตลาดเก่าเดือนละที่ เริ่มที่ตลาดหัวตะเข้"),
       BDSN: a("🎸", "huai_khwang", "A big Table catching whichever RCA gig is trending that month", "โต๊ะใหญ่ไปดูกิ๊กแถว RCA ที่กำลังฮิตในเดือนนั้น"),
       BDSH: a("🍗", "bang_kapi", "Lat Phrao 101 street food for six, whatever stall someone mentioned", "สตรีทฟู้ดลาดพร้าว 101 สำหรับ 6 คน ร้านไหนก็ได้ที่มีคนบอกต่อ"),
@@ -244,7 +242,7 @@ export const JURRGUN: Scenario[] = [
       BDSH: a("🍢", "bueng_kum", "The whole Table at Pattavikorn Market, trying whatever's trending", "ทั้งโต๊ะไปตลาดนัดปัฐวิกรณ์ ลองร้านที่กำลังฮิต"),
       BFMN: a("🎳", "prawet", "The whole Table bowling at Seacon Square, your lane booked", "ทั้งโต๊ะไปโบว์ลิ่งที่ซีคอนสแควร์ จองเลนประจำไว้แล้ว"),
       BFMH: a("⛰️", "pom_prap", "The whole Table climbing the Golden Mount again, your favourite view", "ทั้งโต๊ะเดินขึ้นภูเขาทองอีกรอบ วิวโปรดของคุณ"),
-      BFSN: av("🎶", "din_daeng", "The whole Table at Jodd Fairs Ratchada, the vendors wave you in", "ทั้งโต๊ะไปจ๊อดแฟร์ รัชดา แม่ค้าโบกมือเรียกคุณ"),
+      BFSN: a("🎶", "din_daeng", "The whole Table at Jodd Fairs Ratchada, the vendors wave you in", "ทั้งโต๊ะไปจ๊อดแฟร์ รัชดา แม่ค้าโบกมือเรียกคุณ"),
       BFSH: a("🥟", "phaya_thai", "Push tables together for everyone at your stall, Saphan Khwai market", "ต่อโต๊ะให้ทุกคนที่ร้านประจำในตลาดสะพานควาย"),
       CDMN: a("🚲", "yan_nawa", "You two exploring Rama III's back sois by bike", "แค่สองคนปั่นจักรยานสำรวจซอยลึกแถวพระราม 3"),
       CDMH: a("⛵", "sathon", "Just you two wandering hidden lanes by Wat Yannawa", "แค่สองคนเดินเล่นตรอกลับ ๆ แถววัดยานนาวา"),
@@ -269,7 +267,7 @@ export const JURRGUN: Scenario[] = [
       BDMH: a("⚓", "bang_kho_laem", "A big Table exploring Bang Kho Laem's old riverside, friend in tow", "โต๊ะใหญ่สำรวจริมน้ำเก่าบางคอแหลม พาเพื่อนมาด้วย"),
       BDSN: a("🎬", "chatuchak", "The whole Table at Major Cineplex Ratchayothin, a film nobody has seen", "โต๊ะเต็มที่เมเจอร์ รัชโยธิน ดูหนังที่ยังไม่มีใครดู"),
       BDSH: a("🥟", "ratchathewi", "A long Table at a Pratunam stall your friend just heard about", "โต๊ะยาวที่ร้านในประตูน้ำที่เพื่อนเพิ่งได้ยินมา"),
-      BFMN: av("⚽", "nong_chok", "Your crew's badminton at Bangkok Arena again, your friend subbed in", "แก๊งประจำตีแบดที่บางกอกอารีนาอีกรอบ เพื่อนลงเป็นตัวสำรอง"),
+      BFMN: a("🏸", "nong_chok", "Your crew's badminton at Nong Chok Park again, your friend subbed in", "แก๊งประจำตีแบดที่สวนหนองจอกอีกรอบ เพื่อนลงเป็นตัวสำรอง"),
       BFMH: a("🎎", "phasi_charoen", "The whole Table on Khlong Bang Luang, your route, friend walking along", "ทั้งโต๊ะเดินริมคลองบางหลวง เส้นประจำของคุณ เพื่อนเดินไปด้วย"),
       BFSN: a("🎤", "chatuchak", "Your booth at Union Mall karaoke, the whole crew plus your friend", "ห้องคาราโอเกะประจำในยูเนี่ยน มอลล์ ทั้งแก๊งบวกเพื่อนของคุณ"),
       BFSH: a("🍡", "sai_mai", "The whole Table on the Wongsakorn Market bench it's held for years", "ทั้งโต๊ะนั่งม้านั่งในตลาดวงศกรที่จับจองมาหลายปี"),
@@ -277,7 +275,7 @@ export const JURRGUN: Scenario[] = [
       CDMH: a("🌴", "taling_chan", "A small Table walking the Khlong Lat Mayom lanes, all unfamiliar", "โต๊ะเล็ก ๆ เดินซอยริมคลองลัดมะยม ไม่คุ้นสักที่"),
       CDSN: a("☕", "suan_luang", "A small Table at an On Nut café your friend found", "โต๊ะเล็ก ๆ ที่คาเฟ่แถวอ่อนนุชที่เพื่อนไปเจอมา"),
       CDSH: a("🍜", "rat_burana", "Old-style noodles round a corner off Suk Sawat, a small Table", "ก๋วยเตี๋ยวสูตรเก่าหัวมุมซอยแถวถนนสุขสวัสดิ์ โต๊ะเล็ก ๆ"),
-      CFMN: av("🛶", "prawet", "A small Table's weekly paddle at Nong Bon Water Sports Centre", "พายเรือประจำสัปดาห์ของโต๊ะเล็ก ๆ ที่ศูนย์กีฬาทางน้ำหนองบอน"),
+      CFMN: a("🛶", "prawet", "A small Table's weekly paddle at Nong Bon Water Sports Centre", "พายเรือประจำสัปดาห์ของโต๊ะเล็ก ๆ ที่ศูนย์กีฬาทางน้ำหนองบอน"),
       CFMH: a("🛍️", "taling_chan", "A small Table walking Taling Chan's canal market; the aunties wave", "โต๊ะเล็ก ๆ เดินตลาดน้ำตลิ่งชัน ป้า ๆ โบกมือทัก"),
       CFSN: a("🪟", "bang_rak", "A small Table at the Silom café where they know your order", "โต๊ะเล็ก ๆ ที่คาเฟ่ย่านสีลมที่จำเมนูคุณได้"),
       CFSH: a("🍲", "bang_sue", "Bang Pho's old noodle shop, a small Table, friend trying your order", "ร้านก๋วยเตี๋ยวเก่าย่านบางโพ โต๊ะเล็ก ๆ ให้เพื่อนลองเมนูของคุณ"),
@@ -292,7 +290,7 @@ export const JURRGUN: Scenario[] = [
     icon: "💬",
     tone: "evening",
     answers: {
-      BDMN: av("🔐", "huai_khwang", "All six cracking a new escape room game in Ratchada", "ทั้ง 6 คนไขเกมห้องปริศนาเปิดใหม่ย่านรัชดา"),
+      BDMN: a("🔐", "khlong_toei", "All six cracking a new Puzzle Room game off Sukhumvit 18", "ทั้ง 6 คนไขเกมใหม่ที่ Puzzle Room ซอยสุขุมวิท 18"),
       BDMH: a("🧵", "phra_nakhon", "All six of you exploring Phahurat's fabric lanes and Indian sweets", "ทั้ง 6 คนสำรวจตรอกผ้าพาหุรัดกับขนมอินเดีย"),
       BDSN: a("🌇", "sathon", "All six at a Sathon rooftop none of you have tried, mocktails", "ทั้ง 6 คนที่รูฟท็อปย่านสาทรที่ยังไม่มีใครเคยไป ม็อกเทลในมือ"),
       BDSH: a("🍢", "lak_si", "All six on a stall hunt round Wat Lak Si", "ทั้ง 6 คนตะลุยล่าร้านอร่อยรอบวัดหลักสี่"),
@@ -300,7 +298,7 @@ export const JURRGUN: Scenario[] = [
       BFMH: a("🛕", "bang_khen", "All six on the Bang Khen temple walk you do every Sunday", "ทั้ง 6 คนเดินรอบวัดในบางเขน เส้นที่คุณเดินทุกวันอาทิตย์"),
       BFSN: a("🎸", "pathum_wan", "All six at Lido Connect's monthly indie gig night", "ทั้ง 6 คนไปคืนกิ๊กอินดี้ประจำเดือนที่ลิโด้ คอนเน็คท์"),
       BFSH: a("🍘", "don_mueang", "All six at Talat Mai Don Mueang, your stall, favourites for everyone", "ทั้ง 6 คนที่ตลาดใหม่ดอนเมือง ร้านประจำ เมนูโปรดให้ทุกคน"),
-      CDMN: av("🌉", "phra_nakhon", "You and two others finally walking Chao Phraya Sky Park", "คุณกับอีกสองคน ได้เดินสวนลอยฟ้าเจ้าพระยาสักที"),
+      CDMN: a("🌉", "phra_nakhon", "You and two others finally walking Chao Phraya Sky Park", "คุณกับอีกสองคน ได้เดินสวนลอยฟ้าเจ้าพระยาสักที"),
       CDMH: a("🍊", "chom_thong", "Three of you exploring Bang Mot's old orchards", "3 คนสำรวจสวนเก่าบางมด"),
       CDSN: a("☕", "phra_khanong", "Three of you at a Punnawithi café you got a tip about", "3 คนที่คาเฟ่แถวปุณณวิถีที่มีคนบอกต่อมา"),
       CDSH: a("🏚️", "phra_nakhon", "Three of you in a hidden Khlong Ong Ang shophouse café", "3 คนในคาเฟ่ตึกแถวเก่าลับ ๆ ริมคลองโอ่งอ่าง"),
@@ -321,7 +319,7 @@ export const JURRGUN: Scenario[] = [
     answers: {
       BDMN: a("💃", "pathum_wan", "On the spot: dancing with strangers at a One Bangkok pop-up", "ตอบตกลงทันที ไปเต้นกับคนแปลกหน้าที่ป๊อปอัปในวัน แบงค็อก", 1),
       BDMH: a("🛶", "bang_bon", "Decide that morning: a big walk round Wat Bang Bon's hidden canals", "ตัดสินใจเช้านั้นเลย เดินกลุ่มใหญ่รอบคลองลับ ๆ แถววัดบางบอน", 1),
-      BDSN: av("🖼️", "bang_rak", "Say yes to the busier pick: a crowded exhibition opening, Warehouse 30", "ตอบตกลงอันที่คนเยอะกว่า งานเปิดนิทรรศการคนแน่นที่ Warehouse 30", 1),
+      BDSN: a("🖼️", "bang_rak", "Say yes to the busier pick: Warehouse 30's trending exhibition", "ตอบตกลงอันที่คนเยอะกว่า นิทรรศการที่กำลังดังใน Warehouse 30", 1),
       BDSH: a("🫓", "nong_chok", "Last minute: halal curry for six in Nong Chok, someone mentioned it", "นาทีสุดท้าย แกงฮาลาลสำหรับ 6 คนในหนองจอก ร้านที่มีคนบอกต่อ", 1),
       BFMN: a("🏸", "din_daeng", "Into the calendar days ahead: Thursday badminton with your crew", "ลงปฏิทินล่วงหน้าหลายวัน แบดวันพฤหัสกับแก๊งประจำ", -1),
       BFMH: a("🧺", "phra_nakhon", "Whichever pick passes Bang Lamphu's busy market, walked every Sunday", "อันไหนก็ได้ที่ผ่านตลาดบางลำพูคนคึกคัก ที่เดินทุกวันอาทิตย์", 1),
@@ -379,8 +377,8 @@ export const JURRGUN: Scenario[] = [
       BDSH: a("🍢", "huai_khwang", "The whole Table at Huai Khwang market at midnight, stalls someone posted", "ทั้งโต๊ะไปตลาดห้วยขวางตอนเที่ยงคืน ร้านที่มีคนโพสต์ไว้", 1),
       BFMN: a("🏃", "ratchathewi", "At 6 am the whole Table runs Santiphap Park again", "6 โมงเช้า ทั้งโต๊ะวิ่งสวนสันติภาพอีกรอบ", -1),
       BFMH: a("🏯", "phra_nakhon", "At 6 am, the old crew walking Rattanakosin's old walls", "6 โมงเช้า แก๊งเก่าเดินเลียบกำแพงเก่าเกาะรัตนโกสินทร์", -1),
-      BFSN: av("🎷", "pom_prap", "Your table at Brown Sugar until midnight, live jazz for everyone", "โต๊ะประจำที่บราวน์ชูการ์ยันเที่ยงคืน แจ๊สสดให้ทุกคน", 1),
-      BFSH: av("🍡", "din_daeng", "Jodd Fairs street food for everyone till midnight; the vendor waves", "สตรีทฟู้ดจ๊อดแฟร์สำหรับทุกคนจนเที่ยงคืน แม่ค้าโบกมือทัก", 1),
+      BFSN: a("🎷", "pom_prap", "Your table at Brown Sugar until midnight, live jazz for everyone", "โต๊ะประจำที่บราวน์ชูการ์ยันเที่ยงคืน แจ๊สสดให้ทุกคน", 1),
+      BFSH: a("🍡", "din_daeng", "Jodd Fairs Ratchada street food for everyone till midnight; the vendor waves", "สตรีทฟู้ดจ๊อดแฟร์ รัชดา สำหรับทุกคนจนเที่ยงคืน แม่ค้าโบกมือทัก", 1),
       CDMN: a("🚲", "phra_khanong", "At 7 am, three of you cycling to a café nobody knows", "7 โมงเช้า 3 คนปั่นจักรยานไปคาเฟ่ที่ไม่มีใครรู้จัก", -1),
       CDMH: a("🛕", "phra_nakhon", "Up at 6 am, three of you exploring lanes round Wat Suthat", "ตื่น 6 โมงเช้า 3 คนสำรวจตรอกรอบวัดสุทัศน์", -1),
       CDSN: a("🌃", "bang_kapi", "Three finally trying that Bang Kapi café open till 1 am", "3 คนได้ลองคาเฟ่ย่านบางกะปิที่เปิดถึงตี 1 สักที", 1),

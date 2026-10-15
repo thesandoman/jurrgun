@@ -1,8 +1,6 @@
 import type { Scenario } from "../scenarios";
 
 const a = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ icon, district, en, th, ...(flavour ? { flavour } : {}) });
-/** Same as a(), for a place the owner should double-check (still open, right district). */
-const av = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ ...a(icon, district, en, th, flavour), verify: true as const });
 
 /** The outer districts of Bangkok: west, east, north, the coast and the far end of the lines. */
 export const LANDMARKS_EDGE: Scenario[] = [
@@ -132,13 +130,13 @@ export const LANDMARKS_EDGE: Scenario[] = [
       BFSN: a("🍝", "bang_kapi", "Your gang's food hall at The Mall Bang Kapi, every payday", "แก๊งคุณยกขบวนไปฟู้ดฮอลล์เดอะมอลล์บางกะปิ ทุกวันเงินออก"),
       BFSH: a("🍖", "bang_kapi", "Grilled pork and rice by Ramkhamhaeng University, the uncle knows your gang", "หมูปิ้งข้าวเหนียวแถวมหาวิทยาลัยรามคำแหง ลุงจำทั้งแก๊งได้"),
       CDMN: a("🚶", "bang_kapi", "Walking the Saen Saep path with one friend to a pop-up café", "เดินทางเลียบคลองแสนแสบกับเพื่อนอีกคน ไปคาเฟ่ป๊อปอัป"),
-      CDMH: av("🏛️", "wang_thonglang", "Finally walking round the old Bodindecha house museum with one friend", "ในที่สุดก็ได้เดินชมบ้านเจ้าพระยาบดินทรเดชากับเพื่อนอีกคน"),
+      CDMH: a("🛕", "saphan_sung", "With one friend, finally walking the Khlong Thap Chang canal", "กับเพื่อนอีกคน ในที่สุดก็ได้เดินริมคลองทับช้าง"),
       CDSN: a("🥗", "bueng_kum", "Two of you at the garden café off Nawamin someone posted", "สองคนนั่งคาเฟ่ในสวนแถวนวมินทร์ ร้านที่มีคนโพสต์ไว้"),
       CDSH: a("🍝", "lat_phrao", "Rice noodle curry for two at a Chokchai 4 shophouse you spotted", "ขนมจีนน้ำยาสองที่ ร้านห้องแถวในโชคชัย 4 ที่เพิ่งสังเกตเห็น"),
       CFMN: a("🏸", "wang_thonglang", "Badminton with one friend at your court in Wang Thonglang, every week", "ตีแบดกับเพื่อนอีกคนที่คอร์ตประจำในวังทองหลาง ทุกสัปดาห์"),
       CFMH: a("🍍", "bueng_kum", "Walking Pattavikorn market with one friend, the fruit uncle waves", "เดินตลาดนัดปัฐวิกรณ์กับเพื่อนอีกคน ลุงร้านผลไม้โบกมือทัก"),
       CFSN: a("🧋", "khan_na_yao", "Your corner at a Ram Inthra café with one friend, open late", "มุมประจำที่คาเฟ่ถนนรามอินทรากับเพื่อนอีกคน ร้านเปิดถึงดึก"),
-      CFSH: av("🍜", "bang_kapi", "Boat noodles with one friend by Wat Thepleela, since uni days", "ก๋วยเตี๋ยวเรือกับเพื่อนอีกคนแถววัดเทพลีลา กินกันมาตั้งแต่สมัยมหาวิทยาลัย"),
+      CFSH: a("🍜", "bang_kapi", "Noodles with one friend by Wat Thepleela pier, since uni days", "ก๋วยเตี๋ยวกับเพื่อนอีกคนแถวท่าเรือวัดเทพลีลา กินกันมาตั้งแต่สมัยมหาวิทยาลัย"),
     },
   },
   {
@@ -266,7 +264,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
       BFMN: a("🏸", "din_daeng", "Badminton with your crew at the Thai-Japanese Sports Centre, as ever", "ตีแบดกับก๊วนที่ศูนย์เยาวชนไทย-ญี่ปุ่น ดินแดง เหมือนเคย"),
       BFMH: a("🏐", "bang_phlat", "Evening takraw with your crew in a Bang Phlat soi, every week", "เตะตะกร้อตอนเย็นกับก๊วนในซอยย่านบางพลัด ทุกสัปดาห์"),
       BFSN: a("🎲", "huai_khwang", "Board games with your crew, the Huai Khwang café saves your table", "เล่นบอร์ดเกมกับก๊วน คาเฟ่ที่ห้วยขวางเก็บโต๊ะไว้ให้"),
-      BFSH: av("🥊", "bang_khen", "Muay Thai ringside seats with your crew at Lumpinee, every payday", "ที่นั่งข้างเวทีมวยไทยกับก๊วนที่สนามมวยเวทีลุมพินี ทุกวันเงินออก"),
+      BFSH: a("🥊", "bang_khen", "Muay Thai ringside seats with your crew at Lumpinee, every payday", "ที่นั่งข้างเวทีมวยไทยกับก๊วนที่สนามมวยเวทีลุมพินี ทุกวันเงินออก"),
       CDMN: a("🏸", "sathon", "Pick-up badminton with one app friend at a Sathon court someone posted", "ตีแบดขาจรกับเพื่อนจากแอปอีกคน ที่คอร์ตในสาทรที่มีคนโพสต์ไว้"),
       CDMH: a("🏐", "thon_buri", "Takraw lesson at a Thonburi community net, one app friend, both curious", "เรียนเตะตะกร้อที่ตาข่ายชุมชนฝั่งธนฯ กับเพื่อนจากแอปอีกคน อยากลองทั้งคู่"),
       CDSN: a("🧩", "huai_khwang", "Board games with two app friends at a café you spotted", "เล่นบอร์ดเกมกับเพื่อนจากแอปสองคน ที่คาเฟ่ที่เพิ่งเห็นผ่าน ๆ"),
@@ -290,7 +288,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
       BDMH: a("🚣", "bangkok_noi", "All the cousins exploring the Royal Barges museum, gold dragons up close", "พาลูกพี่ลูกน้องทั้งหมดสำรวจพิพิธภัณฑ์เรือพระราชพิธี ดูหัวเรือทองใกล้ ๆ"),
       BDSN: a("🦒", "khlong_sam_wa", "The whole family's first Safari World, watching the giraffes", "ทั้งบ้านไปซาฟารีเวิลด์ครั้งแรก นั่งดูยีราฟ"),
       BDSH: a("🍡", "taling_chan", "All the cousins on a Khlong Lat Mayom raft, every snack untried", "ลูกพี่ลูกน้องทั้งหมดนั่งแพคลองลัดมะยม ขนมทุกอย่างยังไม่เคยกิน"),
-      BFMN: av("🔭", "khlong_toei", "All the cousins racing round the Ekkamai Science Centre, every school holiday", "ลูกพี่ลูกน้องทั้งหมดวิ่งทั่วท้องฟ้าจำลองเอกมัย ทุกปิดเทอม"),
+      BFMN: a("🧒", "thung_khru", "All the cousins racing round Children's Discovery Museum II, every school holiday", "ลูกพี่ลูกน้องทั้งหมดวิ่งเล่นทั่วพิพิธภัณฑ์เด็กกรุงเทพฯ แห่งที่ 2 ทุ่งครุ ทุกปิดเทอม"),
       BFMH: a("🛩️", "don_mueang", "The cousins' yearly run round the Air Force Museum's old planes", "น้อง ๆ วิ่งรอบเครื่องบินเก่าที่พิพิธภัณฑ์กองทัพอากาศ เหมือนทุกปี"),
       BFSN: a("🎡", "bang_kho_laem", "The cousins' Ferris wheel at Asiatique, then dessert, like every holiday", "น้อง ๆ ขึ้นชิงช้าสวรรค์ที่เอเชียทีค แล้วต่อของหวาน เหมือนทุกวันหยุด"),
       BFSH: a("🍜", "phra_nakhon", "All the cousins at the Bang Lamphu noodle shop your grandparents loved", "ลูกพี่ลูกน้องครบทุกคนที่ร้านก๋วยเตี๋ยวบางลำพู ร้านที่ตายายชอบมาตลอด"),
@@ -398,7 +396,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
       BDMH: a("🪵", "bang_sue", "The whole family exploring Bang Pho's woodworking shops under the awnings", "ทั้งบ้านเดินสำรวจร้านงานไม้ย่านบางโพใต้กันสาด"),
       BDSN: a("🥗", "huai_khwang", "Family lunch at the Central Rama 9 mall buffet everyone's talking about", "มื้อเที่ยงทั้งบ้านที่บุฟเฟ่ต์ในห้างเซ็นทรัล พระราม 9 ร้านที่ใคร ๆ ก็พูดถึง"),
       BDSH: a("🍛", "yan_nawa", "A family feast of old recipes a cousin swears by", "ฉลองทั้งบ้านด้วยอาหารสูตรเก่าที่ลูกพี่ลูกน้องเชียร์นักหนา"),
-      BFMN: av("🎳", "din_daeng", "Rainy-day bowling at Esplanade Ratchada, the family's lanes for years", "โบว์ลิ่งวันฝนตกที่เอสพลานาด รัชดา เลนประจำของครอบครัวมาหลายปี"),
+      BFMN: a("🎳", "din_daeng", "Rainy-day bowling at Esplanade Ratchada, the family's lanes for years", "โบว์ลิ่งวันฝนตกที่เอสพลานาด รัชดา เลนประจำของครอบครัวมาหลายปี"),
       BFMH: a("🧺", "bangkok_noi", "The whole family walking Wang Lang Market's covered lanes, vendors wave", "ทั้งบ้านเดินซอยมีหลังคาในตลาดวังหลัง แม่ค้าโบกมือทัก"),
       BFSN: a("🍱", "chatuchak", "Family lunch at the Central Ladprao mall food hall, every rainy season", "มื้อเที่ยงของครอบครัวที่ฟู้ดฮอลล์ห้างเซ็นทรัล ลาดพร้าว ทุกหน้าฝน"),
       BFSH: a("🍛", "yan_nawa", "The family's favourite curry shop in Central Rama 3, menu unopened", "ร้านแกงร้านโปรดของครอบครัวในเซ็นทรัล พระราม 3 ไม่ต้องเปิดเมนู"),
@@ -406,7 +404,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
       CDMH: a("🚣", "bangkok_noi", "A slow first walk round the Royal Barges museum with your grandparent", "พาคุณตาคุณยายเดินช้า ๆ ชมพิพิธภัณฑ์เรือพระราชพิธีเป็นครั้งแรก"),
       CDSN: a("🍨", "bang_kapi", "Dessert for three at a Mall Bang Kapi café you just found", "ของหวานสามที่ที่คาเฟ่ในเดอะมอลล์บางกะปิที่เพิ่งเจอ"),
       CDSH: a("🥢", "lak_si", "Old-recipe lunch with your grandparent at an IT Square spot someone posted", "มื้อเที่ยงสูตรเก่ากับคุณตาคุณยายที่ร้านในไอทีสแควร์ ที่มีคนโพสต์ไว้"),
-      CFMN: av("🚶", "lat_phrao", "Rainy-day mall laps of Central EastVille with your parents, a ritual", "เดินวนห้างเซ็นทรัล อีสต์วิลล์วันฝนตกกับพ่อแม่ เป็นธรรมเนียม"),
+      CFMN: a("🚶", "lat_phrao", "Rainy-day mall laps of Central EastVille with your parents, a ritual", "เดินวนห้างเซ็นทรัล อีสต์วิลล์วันฝนตกกับพ่อแม่ เป็นธรรมเนียม"),
       CFMH: a("💐", "dusit", "Strolling Thewet's flower stalls under umbrellas with your grandparent, as ever", "เดินดูร้านดอกไม้ตลาดเทเวศร์กับคุณตาคุณยาย กางร่มเหมือนทุกครั้ง"),
       CFSN: a("🎬", "chatuchak", "A film with your sibling at Major Ratchayothin, the same row", "ดูหนังกับพี่น้องที่เมเจอร์ รัชโยธิน แถวเดิม"),
       CFSH: a("🍜", "bang_phlat", "Lunch at Pata Pinklao's old food court, your grandparent's favourite", "มื้อเที่ยงที่ศูนย์อาหารเก่าในพาต้า ปิ่นเกล้า ร้านโปรดของคุณตาคุณยาย"),

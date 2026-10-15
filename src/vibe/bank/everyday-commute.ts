@@ -1,8 +1,6 @@
 import type { Scenario } from "../scenarios";
 
 const a = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ icon, district, en, th, ...(flavour ? { flavour } : {}) });
-/** Same as a(), for a place the owner should double-check (still open, right district). */
-const av = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ ...a(icon, district, en, th, flavour), verify: true as const });
 
 export const EVERYDAY_COMMUTE: Scenario[] = [
   {
@@ -131,7 +129,7 @@ export const EVERYDAY_COMMUTE: Scenario[] = [
       BFMH: a("🍜", "pom_prap", "The gang's walk along Khlong Phadung Krung Kasem again, cheap boat noodles", "แก๊งเดินเลียบคลองผดุงกรุงเกษมอีกรอบ แล้วกินก๋วยเตี๋ยวเรือถูก ๆ"),
       BFSN: a("🍕", "chatuchak", "Your gang's table in the Union Mall food court, talking for hours", "แก๊งเดิมนั่งโต๊ะประจำในศูนย์อาหารยูเนี่ยน มอลล์ คุยกันยาว ๆ"),
       BFSH: a("🍗", "bang_khen", "40-baht plates at Saphan Mai Market, the gang's month-end ritual", "จานละ 40 บาทที่ตลาดสะพานใหม่ ธรรมเนียมปลายเดือนของแก๊ง"),
-      CDMN: av("🌇", "khlong_san", "Walk the free Chao Phraya Sky Park with one friend, finally", "เดินสวนลอยฟ้าเจ้าพระยาฟรีกับเพื่อนสักคน ได้มาสักที"),
+      CDMN: a("🌇", "phra_nakhon", "Walk the free Chao Phraya Sky Park with one friend, finally", "เดินสวนลอยฟ้าเจ้าพระยาฟรีกับเพื่อนสักคน ได้มาสักที"),
       CDMH: a("🏡", "saphan_sung", "A free walk past Saphan Sung's canal homes with one friend, exploring", "เดินฟรีกับเพื่อนสักคน สำรวจบ้านริมคลองย่านสะพานสูง"),
       CDSN: a("🧋", "lat_krabang", "One dessert, two spoons, at a KMITL café you just found", "ของหวานจานเดียว ช้อนสองคัน ที่คาเฟ่แถว สจล. ที่เพิ่งเจอ"),
       CDSH: a("🥘", "min_buri", "One friend, a 50-baht halal lunch on Suwinthawong, no signboard", "กับเพื่อนสักคน ข้าวฮาลาล 50 บาทริมถนนสุวินทวงศ์ ร้านไม่มีป้าย"),
@@ -208,7 +206,7 @@ export const EVERYDAY_COMMUTE: Scenario[] = [
     answers: {
       BDMN: a("🕹️", "prawet", "Duck into Seacon Square's packed arcade, neither of you has been", "หลบเข้าโซนเกมตู้คนแน่นในซีคอนสแควร์ ที่ทั้งสองคนยังไม่เคยไป"),
       BDMH: a("🧥", "ratchathewi", "Dash into Pratunam Market's busy covered lanes, exploring", "วิ่งหลบเข้าตลาดประตูน้ำ เดินสำรวจทางเดินมีหลังคาที่คนพลุกพล่าน"),
-      BDSN: av("🍝", "bang_khun_thian", "Three more friends, dinner somewhere random at Central Rama 2", "ทักเพื่อนมาเพิ่มอีกสามคน สุ่มร้านกินมื้อเย็นในเซ็นทรัล พระราม 2"),
+      BDSN: a("🍝", "bang_khun_thian", "Three more friends, dinner somewhere random at Central Rama 2", "ทักเพื่อนมาเพิ่มอีกสามคน สุ่มร้านกินมื้อเย็นในเซ็นทรัล พระราม 2"),
       BDSH: a("🍛", "khlong_san", "A lively halal curry shop by Khlong San market, finally", "ร้านแกงฮาลาลคึกคักแถวตลาดคลองสาน ได้ลองสักที"),
       BFMN: a("🎳", "bang_kapi", "Call your crew to a Bang Kapi bowling alley, storm outside", "เรียกก๊วนเดิมมาโบว์ลิ่งแถวบางกะปิ ปล่อยพายุไว้ข้างนอก"),
       BFMH: a("🍧", "min_buri", "Walk busy Min Buri market in the rain, your home turf", "เดินตลาดมีนบุรีที่คนแน่นท่ามกลางฝน ถิ่นของคุณเอง"),
@@ -267,7 +265,7 @@ export const EVERYDAY_COMMUTE: Scenario[] = [
       BFMN: a("🚲", "khlong_toei", "6 am at Benjakitti, the team's cycling loop since January", "6 โมงเช้าที่เบญจกิติ ทีมปั่นจักรยานรอบนี้กันมาตั้งแต่มกราคม", -1),
       BFMH: a("🌳", "prawet", "A 6 am team walk round Suan Luang Rama IX, as ever", "ทีมเดิน 6 โมงเช้ารอบสวนหลวง ร.9 เหมือนเคย", -1),
       BFSN: a("🎷", "ratchathewi", "The whole team at your table for Saxophone's jazz past midnight", "ทั้งทีมนั่งโต๊ะประจำฟังแจ๊สที่แซกโซโฟนเลยเที่ยงคืน", 1),
-      BFSH: av("🍡", "bang_khen", "11 pm snacks at Liab Duan market, aunties waving the team in", "ของกิน 5 ทุ่มที่ตลาดนัดเลียบด่วน ป้า ๆ โบกมือเรียกทั้งทีม", 1),
+      BFSH: a("🍡", "bang_khen", "11 pm snacks at Liab Duan market, aunties waving the team in", "ของกิน 5 ทุ่มที่ตลาดนัดเลียบด่วน ป้า ๆ โบกมือเรียกทั้งทีม", 1),
       CDMN: a("🚲", "pathum_wan", "6 am, your first bike loop round Chula with one teammate", "6 โมงเช้า ปั่นจักรยานรอบจุฬาฯ ครั้งแรกกับเพื่อนร่วมทีมสักคน", -1),
       CDMH: a("🌼", "dusit", "6 am, walking Thewet flower market with one teammate, finally", "6 โมงเช้า เดินตลาดดอกไม้เทเวศร์กับเพื่อนร่วมทีมสักคน ได้มาสักที", -1),
       CDSN: a("🍮", "bang_kapi", "10 pm dessert with one teammate, a Bang Kapi café just found", "ของหวาน 4 ทุ่มกับเพื่อนร่วมทีมสักคน ที่คาเฟ่แถวบางกะปิที่เพิ่งเจอ", 1),
@@ -296,7 +294,7 @@ export const EVERYDAY_COMMUTE: Scenario[] = [
       BFSN: a("🛋️", "khan_na_yao", "Iced coffee at The Promenade, errands done, the Saturday crowd waves", "กาแฟเย็นที่เดอะ พรอมานาด ธุระเสร็จหมด คนหน้าคุ้นวันเสาร์โบกมือทัก"),
       BFSH: a("🍛", "bang_kapi", "Lunch at your stall in a busy Bang Kapi market, same order", "มื้อเที่ยงที่ร้านเดิมในตลาดคนแน่นย่านบางกะปิ สั่งเมนูเดิม"),
       CDMN: a("🗺️", "phra_khanong", "Walk errands down Bang Chak's side sois, a design shop just found", "เดินทำธุระตามซอยย่านบางจาก เจอร้านดีไซน์โดยบังเอิญ"),
-      CDMH: av("🏘️", "phasi_charoen", "A walk past Wat Nimmanoradee's canal-side houses, unfamiliar and quiet", "เดินผ่านบ้านริมคลองแถววัดนิมมานรดี ย่านที่ไม่คุ้นและเงียบสงบ"),
+      CDMH: a("🏘️", "phasi_charoen", "A quiet walk past Wat Nimmanoradee's fading canal market, unfamiliar ground", "เดินเงียบ ๆ ผ่านตลาดริมคลองเก่าแถววัดนิมมานรดี ย่านที่ไม่คุ้น"),
       CDSN: a("🥐", "lak_si", "A quiet IT Square café you've meant to try, list half done", "คาเฟ่เงียบ ๆ แถวไอทีสแควร์ที่ตั้งใจจะลองมานาน ลิสต์เสร็จไปครึ่งแล้ว"),
       CDSH: a("🍜", "min_buri", "Boat noodles alone at a Saen Saep pier stall with no signboard", "ก๋วยเตี๋ยวเรือคนเดียวที่ร้านไม่มีป้ายข้างท่าเรือคลองแสนแสบ"),
       CFMN: a("🏊", "bueng_kum", "Errands by bike on your route, then a swim at Bueng Kum", "ปั่นจักรยานทำธุระตามเส้นเดิม แล้วไปว่ายน้ำที่บึงกุ่ม"),
@@ -344,7 +342,7 @@ export const EVERYDAY_COMMUTE: Scenario[] = [
       BDMN: a("🖥️", "lak_si", "Follow the after-work crowd round IT Square, exploring floor by floor", "เดินตามคนเลิกงานสำรวจไอทีสแควร์ทีละชั้น"),
       BDMH: a("🏮", "don_mueang", "Follow the evening crowd into Talat Mai Don Mueang, curious", "เดินตามฝูงคนตอนเย็นเข้าตลาดใหม่ดอนเมือง ด้วยความอยากรู้"),
       BDSN: a("🍜", "chatuchak", "Dinner amid the after-work crowd at Central Ladprao, everything unfamiliar", "มื้อเย็นท่ามกลางคนเลิกงานที่เซ็นทรัล ลาดพร้าว ทุกอย่างยังไม่คุ้น"),
-      BDSH: av("🍢", "bueng_kum", "The longest food queue at Pattavikorn Market, joined sight unseen", "ต่อคิวร้านที่ยาวที่สุดในตลาดนัดปัฐวิกรณ์ ไม่รู้ด้วยซ้ำว่าขายอะไร"),
+      BDSH: a("🍢", "bueng_kum", "Weekend crowds at Pattavikorn Market, ordering stalls sight unseen", "ตลาดนัดปัฐวิกรณ์วันหยุดคนแน่น สั่งร้านที่ไม่รู้จักมาก่อนเลย"),
       BFMN: a("🏋️", "bang_kapi", "The same gym chain near The Mall Bang Kapi, a busy class", "ยิมเครือเดิมแถวเดอะมอลล์บางกะปิ เข้าคลาสที่คนแน่น"),
       BFMH: a("🤸", "khlong_sam_wa", "Aerobics by Khlong Sam Wa's rice fields, the whole class waves", "แอโรบิกริมทุ่งนาคลองสามวา ทั้งคลาสโบกมือทัก"),
       BFSN: a("🍕", "watthana", "Your crew meets you halfway at Terminal 21's food court", "ก๊วนเดิมมาเจอกันครึ่งทางที่ศูนย์อาหารเทอร์มินอล 21"),

@@ -1,8 +1,6 @@
 import type { Scenario } from "../scenarios";
 
 const a = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ icon, district, en, th, ...(flavour ? { flavour } : {}) });
-/** Same as a(), for a place the owner should double-check (still open, right district). */
-const av = (icon: string, district: string, en: string, th: string, flavour?: 1 | -1) => ({ ...a(icon, district, en, th, flavour), verify: true as const });
 
 /** Breaking the everyday rut: tired of the usual places, routines and screens. */
 export const EVERYDAY_RUT: Scenario[] = [
@@ -130,7 +128,7 @@ export const EVERYDAY_RUT: Scenario[] = [
       BDSH: a("🍗", "ratchathewi", "Halal khao mok for a big group, an unmarked Ban Khrua shop", "ข้าวหมกฮาลาลกับกลุ่มใหญ่ ที่ร้านไม่มีป้ายในบ้านครัว"),
       BFMN: a("🏃", "khlong_toei", "Your crew's evening run round Benjakitti, newcomers always welcome", "วิ่งตอนเย็นรอบเบญจกิติกับแก๊งประจำ คนมาใหม่ต้อนรับเสมอ"),
       BFMH: a("🏮", "samphanthawong", "Your crew's evening walk through Talat Noi's lanes, them in the middle", "เดินตรอกตลาดน้อยตอนเย็นกับแก๊งประจำ ให้เขาเดินตรงกลาง"),
-      BFSN: av("🎷", "pom_prap", "Jazz night at Brown Sugar, introducing them to all the regulars", "คืนแจ๊สที่บราวน์ชูการ์ แนะนำเขาให้ขาประจำทุกคนรู้จัก"),
+      BFSN: a("🎷", "pom_prap", "Jazz night at Brown Sugar, introducing them to all the regulars", "คืนแจ๊สที่บราวน์ชูการ์ แนะนำเขาให้ขาประจำทุกคนรู้จัก"),
       BFSH: a("🍢", "sai_mai", "Your table at Wongsakorn Market again, everyone squeezed in", "โต๊ะประจำที่ตลาดวงศกรอีกครั้ง ทุกคนเบียดกันนั่ง"),
       CDMN: a("🎨", "phra_khanong", "Just the two of you exploring Phra Khanong's canal lanes and murals", "แค่สองคน เดินสำรวจตรอกริมคลองพระโขนงและภาพสตรีทอาร์ต"),
       CDMH: a("🧁", "thon_buri", "Two of you wandering Kudi Chin at dusk, both curious", "สองคนเดินเล่นกุฎีจีนตอนพลบค่ำ อยากรู้จักย่านนี้ทั้งคู่"),
@@ -259,7 +257,7 @@ export const EVERYDAY_RUT: Scenario[] = [
     tone: "night",
     mood: "everyday",
     answers: {
-      BDMN: av("🎡", "din_daeng", "11 pm in the Jodd Fairs crowd, hunting stalls spotted online", "5 ทุ่มเดินกลางฝูงคนที่จ๊อดแฟร์ ตามหาร้านที่เห็นในออนไลน์", 1),
+      BDMN: a("🎡", "din_daeng", "11 pm in the Jodd Fairs Ratchada crowd, hunting stalls spotted online", "5 ทุ่มเดินกลางฝูงคนที่จ๊อดแฟร์ รัชดา ตามหาร้านที่เห็นในออนไลน์", 1),
       BDMH: a("🌄", "nong_chok", "6 am wandering busy Nong Chok market, trying whatever looks good", "6 โมงเช้าเดินตลาดหนองจอกที่คึกคัก อะไรน่ากินก็ลองหมด", -1),
       BDSN: a("🌃", "watthana", "1 am in a buzzing 24-hour café off Asok that's trending", "ตีหนึ่งในคาเฟ่ 24 ชั่วโมงแถวอโศกที่คนยังแน่น ร้านที่กำลังเป็นกระแส", 1),
       BDSH: a("🌶️", "huai_khwang", "1 am Isan food at a packed Huai Khwang stall, first try", "ตีหนึ่งกินอาหารอีสานที่ร้านคนแน่นย่านห้วยขวาง ลองครั้งแรก", 1),
