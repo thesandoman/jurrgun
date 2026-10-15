@@ -276,6 +276,8 @@ export const events = pgTable(
     /** Host-launched icebreaker shown on the live page. */
     activePrompt: text("active_prompt"),
     visitBangkokRoute: text("visitbangkok_route"),
+    /** A Table Host's hangout for their regular table (social_regular_tables.id): it goes to the table's members. */
+    regularTableId: text("regular_table_id"),
     createdBy: text("created_by").notNull(),
     createdAt: created(),
   },
@@ -283,6 +285,7 @@ export const events = pgTable(
     index("social_events_starts_idx").on(t.startsAt),
     index("social_events_district_idx").on(t.district),
     index("social_events_status_idx").on(t.status),
+    index("social_events_regular_table_idx").on(t.regularTableId),
   ],
 );
 
@@ -957,6 +960,45 @@ export const circleShares = pgTable(
   (t) => [uniqueIndex("social_circle_shares_idx").on(t.eventId, t.toAccount), index("social_circle_shares_to_idx").on(t.toAccount)],
 );
 
+/**
+ * A regular table (โต๊ะประจำ): the recurring group a Table Host leads. Made
+ * when an admin approves the host's request (social_circle_head_requests).
+ * Members join through the host's invite link, or after a hangout with them.
+ */
+export const regularTables = pgTable(
+  "social_regular_tables",
+  {
+    id: text("id").primaryKey(),
+    hostAccountId: text("host_account_id").notNull(),
+    name: text("name").notNull(),
+    district: text("district").notNull(),
+    /** A line or two, in the host's words. */
+    description: text("description").notNull().default(""),
+    /** Only women and non-binary members may join. Only a woman or non-binary host can set it. */
+    womenOnly: boolean("women_only").notNull().default(false),
+    /** Secret for the invite link (/tables/:id?t=…). Never logged; the host can reset it. */
+    joinToken: text("join_token").notNull(),
+    /** The approved Table Host request it came from, if any. */
+    requestId: text("request_id"),
+    createdAt: created(),
+    archivedAt: ts("archived_at"),
+  },
+  (t) => [index("social_regular_tables_host_idx").on(t.hostAccountId), uniqueIndex("social_regular_tables_token_idx").on(t.joinToken)],
+);
+
+/** Who sits at a regular table (the host is not a row). Leaving sets left_at; joining again clears it. */
+export const regularTableMembers = pgTable(
+  "social_regular_table_members",
+  {
+    id: text("id").primaryKey(),
+    tableId: text("table_id").notNull(),
+    accountId: text("account_id").notNull(),
+    joinedAt: ts("joined_at").notNull().defaultNow(),
+    leftAt: ts("left_at"),
+  },
+  (t) => [uniqueIndex("social_regular_table_members_idx").on(t.tableId, t.accountId), index("social_regular_table_members_account_idx").on(t.accountId)],
+);
+
 // ------------------------------------------------------------------- audit --
 
 export const auditLog = pgTable(
@@ -977,5 +1019,6 @@ export type Account = typeof accounts.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;
+export type RegularTable = typeof regularTables.$inferSelect;
 export type BuddyMatch = typeof buddyMatches.$inferSelect;
 export type BuddyQuest = typeof buddyQuests.$inferSelect;

@@ -8,6 +8,11 @@
  *   GET  /host/:id/edit  POST …/edit    change a proposal (draft, waiting or sent back)
  *   POST /host/:id/withdraw             take a proposal back (it becomes a draft)
  *   POST /host/:id/private-link/reset   new private link; the old one stops working
+ *   POST /host/:id/table                send a hangout to my regular table (again: only new members get it)
+ *   POST /host/:id/circle               send a private hangout to my people (connections) instead
+ *
+ * A Table Host's hangout is for their regular table by default (src/routes/tables.tsx):
+ * it is private, and goes to the table's members when it's published.
  *
  * A circle head's public event waits for review (src/routes/admin/review.tsx)
  * unless they're trusted; their private circle hangouts, admins and verified
@@ -26,7 +31,8 @@ import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireUser } from "../lib/session";
-import { accounts, blocks, circleShares, connections, events, type Event } from "../schema";
+import { accounts, blocks, circleShares, connections, events, type Event, type RegularTable } from "../schema";
+import { hostTable, sendToTable } from "../services/regular-tables";
 import { Button, Card, Choices, Empty, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 
 export const hostRoutes = new Hono<AppEnv>();
@@ -172,6 +178,7 @@ hostRoutes.get("/host", async (c) => {
     .orderBy(desc(events.startsAt))
     .limit(50);
   const direct = publishesDirectly(me, "public");
+  const table = await hostTable(getDb(c.env), me.id);
   const privateIds = mine.filter((e) => e.visibility === "private").map((e) => e.id);
   const shared = privateIds.length
     ? await getDb(c.env).select({ eventId: circleShares.eventId }).from(circleShares).where(inArray(circleShares.eventId, privateIds)).limit(5000)
@@ -199,6 +206,12 @@ hostRoutes.get("/host", async (c) => {
       {c.req.query("notice") === "published" ? <Notice kind="ok">{t("เผยแพร่แล้ว!", "It's live!")}</Notice> : null}
       {c.req.query("notice") === "link_reset" ? <Notice kind="ok">{t("สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีก", "New private link made. The old one no longer works.")}</Notice> : null}
       {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้คนรู้จักของคุณแล้ว", "Sent to your people.")}</Notice> : null}
+      {c.req.query("notice") === "table_sent" ? <Notice kind="ok">{t("ส่งให้คนในโต๊ะประจำแล้ว", "Sent to your regular table.")}</Notice> : null}
+      {table ? (
+        <p>
+          <a href={`/tables/${table.id}`}>👥 {t(`โต๊ะประจำของคุณ: ${table.name}`, `Your regular table: ${table.name}`)}</a>
+        </p>
+      ) : null}
       <p>
         <LinkButton href="/host/new">＋ {t("เสนอกิจกรรม", "Propose an event")}</LinkButton>
       </p>
@@ -214,6 +227,7 @@ hostRoutes.get("/host", async (c) => {
             <p class="muted" style="margin:4px 0">
               {fmtDate(e.startsAt, lang)} · {e.venueName} · {label(DISTRICTS, e.district, lang)}
               {e.visibility === "private" ? ` · 🔒 ${t("ส่วนตัว", "Private")}` : ""}
+              {e.regularTableId ? ` · 👥 ${t("โต๊ะประจำ", "Regular table")}` : ""}
             </p>
             {e.status === "rejected" && e.reviewNote ? (
               <Notice kind="warn">
@@ -239,6 +253,11 @@ hostRoutes.get("/host", async (c) => {
               {e.status === "pending" || e.status === "rejected" ? (
                 <form method="post" action={`/host/${e.id}/withdraw`}>
                   <Button kind="ghost">{t("ถอนออก", "Withdraw")}</Button>
+                </form>
+              ) : null}
+              {table && e.regularTableId === table.id && e.status === "published" ? (
+                <form method="post" action={`/host/${e.id}/table`}>
+                  <Button kind="ghost">👥 {t("ส่งให้โต๊ะประจำ", "Send to my regular table")}</Button>
                 </form>
               ) : null}
               {e.visibility === "private" && e.status === "published" ? (
@@ -269,7 +288,7 @@ hostRoutes.get("/host", async (c) => {
 
 // ------------------------------------------------------------------ form --
 
-function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors?: string[]; editing: boolean; direct: boolean }) {
+function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors?: string[]; editing: boolean; direct: boolean; table?: RegularTable | null; audience?: string }) {
   const { v, d } = props;
   const { t, lang } = v;
   const tags = EVENT_TAGS.filter((x) => x.value !== "city_quest");
@@ -319,6 +338,18 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Guests can bring a friend (+1)")} checked={d.plusOneAllowed} />
         <Select label={t("ใครเห็นกิจกรรมนี้", "Who can see it")} name="visibility" options={visOpts} value={d.visibility} lang={lang} />
+        {props.table ? (
+          <Select
+            label={t("ชวนใคร", "Who's it for")}
+            name="audience"
+            options={[
+              { value: "table", th: `โต๊ะประจำ "${props.table.name}": ส่งให้ทุกคนในโต๊ะ (เป็นกิจกรรมส่วนตัว)`, en: `Your regular table "${props.table.name}": everyone at the table gets it (private)` },
+              { value: "none", th: "ไม่ใช่ของโต๊ะ: ใครเห็นตามที่ตั้งไว้ข้างบน", en: "Not for the table: as set above" },
+            ]}
+            value={props.audience ?? "none"}
+            lang={lang}
+          />
+        ) : null}
       </Card>
       <Card>
         <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>
@@ -380,9 +411,13 @@ async function pendingCount(c: C, accountId: string): Promise<number> {
   return rows.length;
 }
 
-hostRoutes.get("/host/new", (c) => {
+/** "table" puts the hangout on the host's regular table: private, and it goes to the members. */
+const audienceOf = (body: Record<string, unknown>) => (str(body.audience) === "table" ? "table" : "none");
+
+hostRoutes.get("/host/new", async (c) => {
   const v = view(c);
   const me = c.var.user!.account;
+  const table = await hostTable(getDb(c.env), me.id);
   // Prefill from a Bangkok Buddy quest ("Make it a table"): a suggestion only, the form validates as usual.
   const d = emptyInput(v.lang);
   const title = (c.req.query("title") ?? "").slice(0, 120);
@@ -391,20 +426,27 @@ hostRoutes.get("/host/new", (c) => {
   if (DISTRICTS.some((x) => x.value === district)) d.district = district;
   // "Host a hangout for your circle": private, link-only by default.
   if (c.req.query("visibility") === "private") d.visibility = "private";
-  return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me, d.visibility) });
+  // A Table Host's hangout goes to their regular table by default.
+  const audience = table && (d.visibility === "private" || c.req.query("table") === "1") ? "table" : "none";
+  if (audience === "table") d.visibility = "private";
+  return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me, d.visibility), table, audience });
 });
 
 hostRoutes.post("/host/new", async (c) => {
   const v = view(c);
   const me = c.var.user!.account;
-  const d = inputFromBody(await c.req.parseBody({ all: true }));
+  const body = await c.req.parseBody({ all: true });
+  const d = inputFromBody(body);
+  const table = await hostTable(getDb(c.env), me.id);
+  const audience = table ? audienceOf(body) : "none";
+  if (audience === "table") d.visibility = "private";
   let direct = publishesDirectly(me, d.visibility);
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   const msgs = errors.map((e) => v.t(e.th, e.en));
   if (!direct && (await pendingCount(c, me.id)) >= MAX_PENDING) {
     msgs.push(v.t(`มีกิจกรรมรอตรวจพร้อมกันได้ไม่เกิน ${MAX_PENDING} งาน`, `You can have up to ${MAX_PENDING} events waiting for review at once.`));
   }
-  if (!vals || msgs.length) return formPage(c, { v, d, action: "/host/new", errors: msgs, editing: false, direct }, 400);
+  if (!vals || msgs.length) return formPage(c, { v, d, action: "/host/new", errors: msgs, editing: false, direct, table, audience }, 400);
   // Late-night and very long events always get a second pair of eyes.
   if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
 
@@ -422,12 +464,20 @@ hostRoutes.post("/host/new", async (c) => {
       privateToken: vals.visibility === "private" ? randomToken(32) : null,
       status: direct ? "published" : "pending",
       submittedAt: now,
+      regularTableId: audience === "table" && table ? table.id : null,
       createdBy: me.id,
     }),
     audit(db, me.id, direct ? "event.host_publish" : "event.host_submit", { type: "event", id }),
   ]);
+  if (direct && audience === "table" && table) await sendPublished(c, id, table);
   return c.redirect(`/host?notice=${direct ? "published" : "submitted"}`);
 });
+
+/** Sends a just-published table hangout to the table's members. */
+async function sendPublished(c: C, eventId: string, table: RegularTable) {
+  const [e] = await getDb(c.env).select().from(events).where(eq(events.id, eventId)).limit(1);
+  if (e) await sendToTable(c.env, e, table, c.var.user!.profile?.nickname ?? "");
+}
 
 /** The member's own event, if they may still change it; null otherwise. */
 async function ownEditable(c: C): Promise<Event | null> {
@@ -439,7 +489,9 @@ hostRoutes.get("/host/:id/edit", async (c) => {
   const v = view(c);
   const e = await ownEditable(c);
   if (!e) return c.redirect("/host");
-  return formPage(c, { v, d: inputFromEvent(e), action: `/host/${e.id}/edit`, editing: true, direct: publishesDirectly(c.var.user!.account, e.visibility) });
+  const table = await hostTable(getDb(c.env), c.var.user!.account.id);
+  const audience = table && e.regularTableId === table.id ? "table" : "none";
+  return formPage(c, { v, d: inputFromEvent(e), action: `/host/${e.id}/edit`, editing: true, direct: publishesDirectly(c.var.user!.account, e.visibility), table, audience });
 });
 
 hostRoutes.post("/host/:id/edit", async (c) => {
@@ -447,10 +499,14 @@ hostRoutes.post("/host/:id/edit", async (c) => {
   const me = c.var.user!.account;
   const e = await ownEditable(c);
   if (!e) return c.redirect("/host");
-  const d = inputFromBody(await c.req.parseBody({ all: true }));
+  const body = await c.req.parseBody({ all: true });
+  const d = inputFromBody(body);
+  const table = await hostTable(getDb(c.env), me.id);
+  const audience = table ? audienceOf(body) : "none";
+  if (audience === "table") d.visibility = "private";
   let direct = publishesDirectly(me, d.visibility);
   const { values: vals, errors } = checkProposal(d, ALLOWED());
-  if (!vals) return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct }, 400);
+  if (!vals) return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct, table, audience }, 400);
   if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
   const db = getDb(c.env);
   await batch(c.env, [
@@ -462,10 +518,12 @@ hostRoutes.post("/host/:id/edit", async (c) => {
         status: direct ? "published" : "pending",
         reviewNote: null,
         submittedAt: new Date(),
+        regularTableId: audience === "table" && table ? table.id : null,
       })
       .where(and(eq(events.id, e.id), inArray(events.status, ["draft", "pending", "rejected"]))),
     audit(db, me.id, direct ? "event.host_publish" : "event.host_resubmit", { type: "event", id: e.id }),
   ]);
+  if (direct && audience === "table" && table) await sendPublished(c, e.id, table);
   return c.redirect(`/host?notice=${direct ? "published" : "submitted"}`);
 });
 
@@ -479,6 +537,16 @@ hostRoutes.post("/host/:id/withdraw", async (c) => {
     ]);
   }
   return c.redirect("/host");
+});
+
+/** (Re)sends a published table hangout to the table: only members who haven't had it yet. */
+hostRoutes.post("/host/:id/table", async (c) => {
+  const db = getDb(c.env);
+  const [e] = await db.select().from(events).where(eq(events.id, c.req.param("id"))).limit(1);
+  const table = await hostTable(db, c.var.user!.account.id);
+  if (!e || !table || !ownsEvent(e, viewerOf(c)) || e.status !== "published" || e.regularTableId !== table.id) return c.redirect("/host");
+  await sendToTable(c.env, e, table, c.var.user!.profile?.nickname ?? "");
+  return c.redirect("/host?notice=table_sent");
 });
 
 const CIRCLE_SEND_MAX = 100;

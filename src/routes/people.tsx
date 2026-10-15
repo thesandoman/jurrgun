@@ -16,6 +16,7 @@
  */
 import { MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
+import { myTables } from "../services/regular-tables";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
@@ -587,6 +588,7 @@ type CircleExtras = {
   buddy: { state: string; nickname: string } | null;
   hangouts: { id: string; title: string; startsAt: Date; district: string; host: string; href: string }[];
   ideas: { emoji: string; name: string; why: string; district: string; type: string }[];
+  tables: { id: string; name: string; district: string; hosting: boolean }[];
 };
 
 /**
@@ -599,7 +601,7 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
   const me = c.var.user!.account.id;
   const lang = view(c).lang;
   const now = new Date();
-  const [matches, shares] = await Promise.all([
+  const [matches, shares, tables] = await Promise.all([
     db
       .select()
       .from(buddyMatches)
@@ -607,6 +609,7 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
       .orderBy(desc(buddyMatches.createdAt))
       .limit(1),
     db.select({ eventId: circleShares.eventId, from: circleShares.fromAccount }).from(circleShares).where(eq(circleShares.toAccount, me)).orderBy(desc(circleShares.createdAt)).limit(50),
+    myTables(db, me),
   ]);
   const m = matches[0];
   const buddyId = m ? (m.aAccount === me ? m.bAccount : m.aAccount) : null;
@@ -643,14 +646,20 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
       break;
     }
   }
-  return { buddy: m && buddyId ? { state: m.state, nickname: nick(buddyId) } : null, hangouts, ideas };
+  return {
+    buddy: m && buddyId ? { state: m.state, nickname: nick(buddyId) } : null,
+    hangouts,
+    ideas,
+    tables: tables.map((x) => ({ id: x.id, name: x.name, district: x.district, hosting: x.hosting })),
+  };
 }
 
 function CircleTop(props: { v: View; extras: CircleExtras; people: { name: string; emoji?: string; seed: string }[] }) {
   const { t, lang } = props.v;
-  const { buddy, hangouts, ideas } = props.extras;
+  const { buddy, hangouts, ideas, tables } = props.extras;
   // Only circle heads, verified partners and admins host; everyone else can ask to lead a circle.
   const host = !!props.v.user && canHost(props.v.user.account, true);
+  const hostsTable = tables.some((x) => x.hosting);
   return (
     <>
       <h2 class="sr-only">{t("ทางลัด", "Shortcuts")}</h2>
@@ -666,7 +675,12 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
               : t("หาบัดดี้", "Get a buddy")}
           </h3>
         </Tile>
-        {host ? (
+        {host && hostsTable ? (
+          <Tile href="/host/new?table=1" tone="brand">
+            <span class="ico" aria-hidden="true">＋</span>
+            <h3>{t("ชวนโต๊ะประจำไปแฮงเอาต์", "Plan a hangout for your regular table")}</h3>
+          </Tile>
+        ) : host ? (
           <Tile href="/host/new?visibility=private" tone="brand">
             <span class="ico" aria-hidden="true">＋</span>
             <h3>{t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your people")}</h3>
@@ -682,6 +696,25 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
           <h3>{t("กิจกรรมกลุ่ม", "Browse group events")}</h3>
         </Tile>
       </Bento>
+      <h2 class="spread">
+        <span>🪑 {t("โต๊ะประจำของฉัน", "My regular tables")}</span>
+        <a href="/tables" class="muted">{t("ดูทั้งหมด", "See all")}</a>
+      </h2>
+      {tables.length ? (
+        <div class="rail2">
+          {tables.map((x) => (
+            <a href={`/tables/${x.id}`} class="place-card">
+              <QuestionArt art={artFor(x.name, "👥", { en: label(DISTRICTS, x.district, "en"), th: label(DISTRICTS, x.district, "th") })} lang={lang} />
+              <div>
+                <strong>{x.name}</strong>
+                <small>{x.hosting ? t("👑 คุณเป็นเจ้าภาพโต๊ะ", "👑 You're the Table Host") : label(DISTRICTS, x.district, lang)}</small>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p class="muted">{t("ยังไม่ได้นั่งโต๊ะประจำไหน ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง แล้วเข้าร่วมได้จากหน้ากิจกรรมนั้น", "No regular tables yet. Go to a hangout with a Table Host, then join from that event's page.")}</p>
+      )}
       <h2>👥 {t("แฮงเอาต์กลุ่ม", "Group hangouts")}</h2>
       {hangouts.length ? (
         <div class="rail2">

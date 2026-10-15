@@ -5,7 +5,7 @@
  *   GET  /admin/review                         requests and proposals waiting, oldest first
  *   POST /admin/review/:id/approve             publish (optionally trust the host from now on)
  *   POST /admin/review/:id/reject              send back with a note the host sees
- *   POST /admin/review/circle/:id/approve      make the member a circle head (they can host)
+ *   POST /admin/review/circle/:id/approve      make the member a Table Host (circle_head) and open their regular table
  *   POST /admin/review/circle/:id/decline      decline, with a note the member sees
  *
  * Trusting a host means their future events skip this queue.
@@ -19,6 +19,7 @@ import { fmtDate } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { accounts, circleHeadRequests, events, profiles } from "../../schema";
+import { getTable, hostTable, newTable, sendToTable } from "../../services/regular-tables";
 import { Button, Card, Empty, Notice, page, str, Tag, TextArea, Toggle, view } from "../../ui/kit";
 
 export const adminReview = new Hono<AppEnv>();
@@ -56,7 +57,7 @@ adminReview.get("/", async (c) => {
       <p class="muted">
         {t("เจ้าภาพโต๊ะจัดแฮงเอาต์ให้โต๊ะประจำของตัวเองได้ อนุมัติเมื่อมั่นใจว่าจะดูแลคนในโต๊ะได้ดี", "Table Hosts can run hangouts for their regular table. Approve people you trust to look after a group.")}
       </p>
-      {notice === "circle_approved" ? <Notice kind="ok">{t("อนุมัติแล้ว สมาชิกจัดแฮงเอาต์ได้แล้ว", "Approved. They can host now.")}</Notice> : null}
+      {notice === "circle_approved" ? <Notice kind="ok">{t("อนุมัติแล้ว เปิดโต๊ะประจำให้แล้ว และจัดแฮงเอาต์ได้เลย", "Approved. Their regular table is open and they can host now.")}</Notice> : null}
       {notice === "circle_declined" ? <Notice kind="ok">{t("ปฏิเสธแล้ว และแจ้งสมาชิกแล้ว", "Declined, and the member has been told.")}</Notice> : null}
       {requests.length === 0 ? (
         <Empty>{t("ไม่มีคำขอรอตรวจ", "No requests waiting.")}</Empty>
@@ -196,6 +197,14 @@ adminReview.post("/:id/approve", async (c) => {
   ];
   if (trust) ops.push(db.update(accounts).set({ trustedHost: true }).where(inArray(accounts.id, [e.createdBy])));
   await batch(c.env, ops);
+  // A Table Host's hangout for their regular table goes to the table once it's live.
+  if (e.regularTableId) {
+    const table = await getTable(db, e.regularTableId);
+    if (table && table.hostAccountId === (e.hostAccountId ?? e.createdBy)) {
+      const [host] = await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, table.hostAccountId)).limit(1);
+      await sendToTable(c.env, { ...e, status: "published" }, table, host?.nickname ?? "");
+    }
+  }
   return c.redirect("/admin/review?notice=approved");
 });
 
@@ -232,11 +241,25 @@ adminReview.post("/circle/:id/approve", async (c) => {
   if (r.accountId === me.id) return c.redirect("/admin/review?notice=own");
   const db = getDb(c.env);
   const now = new Date();
+  // Their regular table opens with the name they asked for (one open table per host).
+  const [existing, [prof]] = await Promise.all([
+    hostTable(db, r.accountId),
+    db.select({ district: profiles.district }).from(profiles).where(eq(profiles.accountId, r.accountId)).limit(1),
+  ]);
+  const made = existing ? null : newTable(db, { hostAccountId: r.accountId, name: r.circleName, district: prof?.district ?? "", requestId: r.id });
   await batch(c.env, [
     db.update(circleHeadRequests).set({ status: "approved", reviewedBy: me.id, reviewedAt: now }).where(and(eq(circleHeadRequests.id, r.id), eq(circleHeadRequests.status, "pending"))),
     // Only a plain member becomes a circle head; staff and partners keep their role.
     db.update(accounts).set({ role: "circle_head" }).where(and(eq(accounts.id, r.accountId), eq(accounts.role, "user"))),
-    notify(db, r.accountId, "circle_head", `คุณเป็นเจ้าภาพโต๊ะประจำ "${r.circleName}" แล้ว`, `You're now the Table Host of "${r.circleName}"`, "/connections"),
+    ...(made ? [made.query] : []),
+    notify(
+      db,
+      r.accountId,
+      "circle_head",
+      `คุณเป็นเจ้าภาพโต๊ะประจำ "${r.circleName}" แล้ว ส่งลิงก์ชวนให้คนที่อยากนั่งด้วยได้เลย`,
+      `You're now the Table Host of "${r.circleName}". Send your invite link to the people you'd like at your table.`,
+      `/tables/${made?.id ?? existing!.id}`,
+    ),
     audit(db, me.id, "circle_head.approve", { type: "account", id: r.accountId }, { request: r.id }),
   ]);
   return c.redirect("/admin/review?notice=circle_approved");

@@ -94,6 +94,8 @@ import { kaipaEvents, type PartnerEvent } from "../services/kaipa";
 import { PartnerSection } from "../ui/partner-events";
 import { deferFor } from "./partners";
 import { canView } from "../domain/hosting";
+import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
+import { blockedAmong, getTable, hostTable, memberIds, seatedFor, standing } from "../services/regular-tables";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -844,7 +846,10 @@ async function visibleEvent(c: Ctx, id: string): Promise<Event | null> {
     .from(registrations)
     .where(and(eq(registrations.eventId, id), eq(registrations.accountId, a.id)))
     .limit(1);
-  if (!canView(event, viewer, { token, registered: !!reg })) return null;
+  if (!canView(event, viewer, { token, registered: !!reg })) {
+    // A regular table's hangout opens for everyone sitting at that table.
+    return event.status === "published" && (await seatedFor(db, event, a.id)) ? event : null;
+  }
   if (fromLink && event.visibility === "private" && event.privateToken && fromLink === event.privateToken) {
     setCookie(c, privateCookie(id), fromLink, { path: `/events/${id}`, httpOnly: true, sameSite: "Lax", secure: new URL(c.req.url).protocol === "https:", maxAge: 60 * 86_400 });
   }
@@ -929,6 +934,56 @@ function BuddyBox(props: { names: string[] | null; event: Event; t: T }) {
   );
 }
 
+type TableBoxData = { id: string; name: string; seated: boolean; canJoin: boolean } | null;
+
+/**
+ * The host's regular table on their event page: members see a link to it;
+ * someone who went to this hangout (a confirmed seat, once it has started)
+ * gets "Join this regular table" if the table's rules let them in.
+ */
+async function tablePrompt(db: Db, event: Event, user: CurrentUser, now: Date): Promise<TableBoxData> {
+  const hostId = event.hostAccountId;
+  if (!hostId || event.status !== "published") return null;
+  const table = event.regularTableId ? await getTable(db, event.regularTableId) : await hostTable(db, hostId);
+  if (!table || table.hostAccountId !== hostId) return null;
+  const me = user.account.id;
+  const st = await standing(db, table, me);
+  if (st.isMember) return { id: table.id, name: table.name, seated: true, canJoin: false };
+  if (!tableVisible(table, user.profile ?? {}, st.blockedWithHost)) return null;
+  // Only after the hangout has started, and only for people who had a seat at it.
+  if (event.startsAt.getTime() > now.getTime()) return null;
+  const [reg] = await db
+    .select({ id: registrations.id })
+    .from(registrations)
+    .where(and(eq(registrations.eventId, event.id), eq(registrations.accountId, me), eq(registrations.status, "confirmed")))
+    .limit(1);
+  if (!reg) return null;
+  const members = await memberIds(db, table.id);
+  const blocked = await blockedAmong(db, me, [hostId, ...members]);
+  const check = canJoinTable({ archived: false, isHost: false, invited: true, blocked: blocked.size > 0, womenOnly: table.womenOnly, viewer: user.profile ?? {}, memberCount: members.length });
+  return check.ok ? { id: table.id, name: table.name, seated: false, canJoin: true } : null;
+}
+
+function TableBox(props: { box: TableBoxData; t: T }) {
+  const { box, t } = props;
+  if (!box) return null;
+  return (
+    <Card class="hint">
+      <h2>👥 {t(`โต๊ะประจำ "${box.name}"`, `Regular table "${box.name}"`)}</h2>
+      {box.seated ? (
+        <LinkButton href={`/tables/${box.id}`} kind="ghost">
+          {t("ไปที่โต๊ะประจำ", "Go to the regular table")}
+        </LinkButton>
+      ) : (
+        <form method="post" action={`/tables/${box.id}/join`}>
+          <p class="muted">{t("สนุกไหม อยากเจอกันอีกก็นั่งโต๊ะนี้ประจำเลย เจ้าภาพจะชวนไปแฮงเอาต์ครั้งต่อไป", "Had a good time? Join the regular table and the host will invite you to the next hangout.")}</p>
+          <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this regular table")}</Button>
+        </form>
+      )}
+    </Card>
+  );
+}
+
 type DetailOpts = { error?: string; status?: 200 | 400 | 403 | 409 };
 
 async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
@@ -938,7 +993,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const db = getDb(c.env);
   const now = new Date();
 
-  const [reg, state, host, buddies, standingRows, cover, partner] = await Promise.all([
+  const [reg, state, host, buddies, standingRows, cover, partner, tableBox] = await Promise.all([
     myRegistration(db, event.id, user.account.id),
     seatState(db, event),
     event.hostAccountId
@@ -950,6 +1005,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
     event.partnerOrgId
       ? db.select({ name: partnerOrgs.name }).from(partnerOrgs).where(eq(partnerOrgs.id, event.partnerOrgId)).limit(1)
       : Promise.resolve([] as { name: string }[]),
+    tablePrompt(db, event, user, now),
   ]);
 
   // Bring-a-friend (PRD §8.2): my open invite link, if I have one.
@@ -989,7 +1045,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง สมาชิกยังไม่เห็นกิจกรรมนี้", "Draft: members can't see this yet")}</Notice> : null}
       {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review: members can't see this yet")}</Notice> : null}
       {event.status === "rejected" ? <Notice kind="warn">{t("ทีมงานส่งกลับให้แก้ไข", "Sent back by the team for changes")}{event.reviewNote ? `: ${event.reviewNote}` : ""}</Notice> : null}
-      {event.visibility === "private" ? (
+      {event.visibility === "private" && event.regularTableId ? (
+        <Notice kind="info">🔒 {t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A regular table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
+      ) : event.visibility === "private" ? (
         <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
       ) : null}
       <Cover e={event} src={cover} class="ev-scene" />
@@ -1136,6 +1194,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       </Card>
 
       <BuddyBox names={buddies} event={event} t={t} />
+      <TableBox box={tableBox} t={t} />
 
       {event.status === "cancelled" ? null : (
         <Card>

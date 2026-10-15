@@ -25,11 +25,13 @@ export const HANGOUT_OPEN_DAYS = 7;
 export const QUIET_FROM = 23;
 export const QUIET_TO = 7;
 
-export type ThreadKind = "buddy" | "conn" | "circle";
+export type ThreadKind = "buddy" | "conn" | "circle" | "table";
+/** Group threads: a hangout's chat, or a regular table's. Photos and polls work in these. */
+export const isGroupKind = (k: ThreadKind) => k === "circle" || k === "table";
 export type ThreadKey = { kind: ThreadKind; ref: string };
 
 export function parseThread(key: string): ThreadKey | null {
-  const m = /^(buddy|conn|circle):([A-Za-z0-9_-]{1,80})$/.exec(key);
+  const m = /^(buddy|conn|circle|table):([A-Za-z0-9_-]{1,80})$/.exec(key);
   return m ? { kind: m[1] as ThreadKind, ref: m[2] } : null;
 }
 export const threadKey = (t: ThreadKey) => `${t.kind}:${t.ref}`;
@@ -121,7 +123,7 @@ export function checkPhoto(
   ctx: { kind: ThreadKind; met: boolean; open: boolean; sentToday: number },
 ): { ok: true } | { ok: false; reason: "closed" | "not_circle" | "not_yet" | "type" | "size" | "photo_cap" } {
   if (!ctx.open) return { ok: false, reason: "closed" };
-  if (ctx.kind !== "circle") return { ok: false, reason: "not_circle" };
+  if (!isGroupKind(ctx.kind)) return { ok: false, reason: "not_circle" };
   if (!ctx.met) return { ok: false, reason: "not_yet" };
   if (!file || !(PHOTO_TYPES as readonly string[]).includes(file.type)) return { ok: false, reason: "type" };
   if (file.size <= 0 || file.size > PHOTO_MAX_BYTES) return { ok: false, reason: "size" };
@@ -136,7 +138,7 @@ export function checkPoll(
   ctx: { kind: ThreadKind; open: boolean },
 ): { ok: true; question: string; options: string[] } | { ok: false; reason: "closed" | "not_circle" | "question" | "options" } {
   if (!ctx.open) return { ok: false, reason: "closed" };
-  if (ctx.kind !== "circle") return { ok: false, reason: "not_circle" };
+  if (!isGroupKind(ctx.kind)) return { ok: false, reason: "not_circle" };
   const q = question.replace(/\s+/g, " ").trim();
   if (!q || q.length > POLL_Q_MAX) return { ok: false, reason: "question" };
   const opts = [...new Set(options.map((o) => o.replace(/\s+/g, " ").trim()).filter(Boolean))];

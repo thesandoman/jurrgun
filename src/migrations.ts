@@ -218,5 +218,18 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"social_chat_messages\" ADD COLUMN \"poll_options\" jsonb;",
       "CREATE UNIQUE INDEX \"social_chat_votes_pk\" ON \"social_chat_votes\" (\"message_id\",\"account_id\");"
     ]
+  },
+  {
+    "id": "0017_good_titanium_man",
+    "statements": [
+      "CREATE TABLE \"social_regular_table_members\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"table_id\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"joined_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"left_at\" timestamp with time zone\n);",
+      "CREATE TABLE \"social_regular_tables\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"host_account_id\" text NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"district\" text NOT NULL,\n\t\"description\" text DEFAULT '' NOT NULL,\n\t\"women_only\" boolean DEFAULT false NOT NULL,\n\t\"join_token\" text NOT NULL,\n\t\"request_id\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"archived_at\" timestamp with time zone\n);",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"regular_table_id\" text;",
+      "CREATE UNIQUE INDEX \"social_regular_table_members_idx\" ON \"social_regular_table_members\" (\"table_id\",\"account_id\");",
+      "CREATE INDEX \"social_regular_table_members_account_idx\" ON \"social_regular_table_members\" (\"account_id\");",
+      "CREATE INDEX \"social_regular_tables_host_idx\" ON \"social_regular_tables\" (\"host_account_id\");",
+      "CREATE UNIQUE INDEX \"social_regular_tables_token_idx\" ON \"social_regular_tables\" (\"join_token\");",
+      "CREATE INDEX \"social_events_regular_table_idx\" ON \"social_events\" (\"regular_table_id\");"
+    ]
   }
 ];

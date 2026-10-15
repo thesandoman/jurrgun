@@ -2,7 +2,7 @@
  * Chat with limits (rules in src/domain/chat.ts).
  *
  *   GET  /chat                         my open threads
- *   GET  /chat/:thread                 one thread (buddy:<id>, conn:<id>, circle:<eventId>)
+ *   GET  /chat/:thread                 one thread (buddy:<id>, conn:<id>, circle:<eventId>, table:<regularTableId>)
  *   POST /chat/:thread                 send
  *   POST /chat/:thread/report/:msgId   report a message (goes to the moderation queue)
  *   POST /chat/:thread/photo           circle chats: share a photo from the day
@@ -19,7 +19,7 @@
  * week past. No read receipts, typing indicators or online status.
  */
 import { Hono, type Context } from "hono";
-import { and, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
 import { newId } from "../lib/crypto";
@@ -31,6 +31,7 @@ import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, c
 import { getObject, getObjectUrl, putObject } from "../storage";
 import { PROMPT_BANK } from "../content/profile";
 import { getStatefulObject } from "../state";
+import { blockedAmong, getTable, memberIds, myTables, standing } from "../services/regular-tables";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
 
 export const chatRoutes = new Hono<AppEnv>();
@@ -38,6 +39,8 @@ chatRoutes.use("/chat", requireMember);
 chatRoutes.use("/chat/*", requireMember);
 
 const DAY = 86_400_000;
+/** Group threads (a hangout's or a regular table's) show their title and get photos and polls. */
+const isGroup = (key: string) => key.startsWith("circle:") || key.startsWith("table:");
 type Db = ReturnType<typeof getDb>;
 type C = Context<AppEnv>;
 
@@ -79,6 +82,23 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     const met = cn.eventId.startsWith("buddy:") ? await buddiesMet(db, cn.eventId.slice(6)) : true;
     return { key, members: [cn.aAccount, cn.bAccount], open: !cn.removedAt, met, title: { th: "คนรู้จัก", en: "My people" }, back: "/connections" };
   }
+  if (t.kind === "table") {
+    // A regular table's chat: the host and current members only (a block with the host puts you outside it).
+    const table = await getTable(db, t.ref);
+    if (!table || !(await standing(db, table, me)).isMember) return null;
+    const [ids, started] = await Promise.all([
+      memberIds(db, table.id),
+      db
+        .select({ id: events.id })
+        .from(events)
+        .where(and(eq(events.regularTableId, table.id), eq(events.status, "published"), lte(events.startsAt, now)))
+        .limit(1),
+    ]);
+    const outside = await blockedAmong(db, table.hostAccountId, ids);
+    const members = [table.hostAccountId, ...ids.filter((id) => !outside.has(id))];
+    // "Met" once the table has had a hangout: before that, the before-meet limits apply to everyone.
+    return { key, members, open: true, met: started.length > 0, title: { th: table.name, en: table.name }, back: `/tables/${table.id}`, host: table.hostAccountId };
+  }
   const [e] = await db.select().from(events).where(eq(events.id, t.ref)).limit(1);
   if (!e || e.visibility !== "private" || e.status !== "published") return null;
   const regs = await db
@@ -101,7 +121,7 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
 
 /** The threads `me` is in right now, newest activity first. */
 async function myThreads(db: Db, me: string, now: Date): Promise<string[]> {
-  const [matches, conns, regs, hosted] = await Promise.all([
+  const [matches, conns, regs, hosted, tables] = await Promise.all([
     db
       .select({ id: buddyMatches.id })
       .from(buddyMatches)
@@ -123,11 +143,13 @@ async function myThreads(db: Db, me: string, now: Date): Promise<string[]> {
       .from(events)
       .where(and(eq(events.hostAccountId, me), eq(events.visibility, "private"), eq(events.status, "published"), gte(events.endsAt, new Date(now.getTime() - 7 * DAY))))
       .limit(30),
+    myTables(db, me),
   ]);
   return [
     ...matches.map((m) => `buddy:${m.id}`),
     ...conns.map((c) => `conn:${c.id}`),
     ...[...new Set([...regs, ...hosted].map((e) => e.id))].map((id) => `circle:${id}`),
+    ...tables.map((x) => `table:${x.id}`),
   ];
 }
 
@@ -161,7 +183,7 @@ chatRoutes.get("/chat", async (c) => {
       <h1>💬 {t("แชต", "Chats")}</h1>
       <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์ และไม่บอกว่าอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
       {rows.length === 0 ? (
-        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met or a private hangout.")}</Empty>
+        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a regular table or a private hangout.")}</Empty>
       ) : (
         <ul class="chat-list">
           {rows.map(({ th, last }) => {
@@ -170,9 +192,9 @@ chatRoutes.get("/chat", async (c) => {
             return (
               <li>
                 <a href={`/chat/${th.key}`} class={unread ? "unread" : undefined}>
-                  <b aria-hidden="true">{th.key.startsWith("buddy") ? "🤝" : th.key.startsWith("circle") ? "👥" : "💬"}</b>
+                  <b aria-hidden="true">{th.key.startsWith("buddy") ? "🤝" : isGroup(th.key) ? "👥" : "💬"}</b>
                   <span>
-                    <strong>{th.key.startsWith("circle") ? L(lang, th.title) : who.join(", ")}</strong>
+                    <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
                     <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
                   </span>
                   {!th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : unread ? <i class="dot" aria-label={t("ใหม่", "New")} /> : null}
@@ -285,13 +307,13 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       ? db.select({ name: circleHeadRequests.circleName }).from(circleHeadRequests).where(and(eq(circleHeadRequests.accountId, th.host), eq(circleHeadRequests.status, "approved"))).orderBy(desc(circleHeadRequests.createdAt)).limit(1)
       : Promise.resolve([]),
   ]);
-  const isCircle = th.key.startsWith("circle");
-  const hostLabel = headOf[0]?.name ? `👑 ${headOf[0].name}` : t("👑 ผู้จัด", "👑 Host");
+  const isCircle = isGroup(th.key);
+  const hostLabel = key.startsWith("table:") ? t("👑 เจ้าภาพโต๊ะ", "👑 Table Host") : headOf[0]?.name ? `👑 ${headOf[0].name}` : t("👑 ผู้จัด", "👑 Host");
   await db
     .insert(chatReads)
     .values({ thread: key, accountId: me, lastReadAt: now })
     .onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } });
-  const title = th.key.startsWith("circle") ? L(lang, th.title) : others.map((x) => nameOf.get(x) ?? "?").join(", ");
+  const title = isCircle ? L(lang, th.title) : others.map((x) => nameOf.get(x) ?? "?").join(", ");
   return page(
     c,
     { title: t("แชต", "Chat"), tab: "connections", status },

@@ -120,6 +120,13 @@
       "when": 1792056937492,
       "tag": "0016_wild_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792065225986,
+      "tag": "0017_good_titanium_man",
+      "breakpoints": true
     }
   ]
 }

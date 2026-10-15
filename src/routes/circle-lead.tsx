@@ -46,7 +46,12 @@ circleLeadRoutes.get("/circles/lead", requireMember, async (c) => {
       {host ? (
         <Card>
           <h2 style="margin-top:0">✅ {t("คุณจัดกิจกรรมได้แล้ว", "You can host")}</h2>
-          <LinkButton href="/host/new?visibility=private">{t("จัดแฮงเอาต์ให้โต๊ะประจำ", "Host a regular table hangout")}</LinkButton>
+          <p class="row">
+            <LinkButton href="/host/new?table=1">{t("จัดแฮงเอาต์ให้โต๊ะประจำ", "Host a regular table hangout")}</LinkButton>
+            <LinkButton href="/tables" kind="ghost">
+              🪑 {t("โต๊ะประจำของฉัน", "My regular tables")}
+            </LinkButton>
+          </p>
         </Card>
       ) : last?.status === "pending" ? (
         <Notice kind="info">

@@ -289,6 +289,7 @@ settingsRoutes.get("/settings", async (c) => {
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
           : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table"), hint: t("ขอเป็นเจ้าภาพโต๊ะเพื่อจัดแฮงเอาต์", "Ask to become a Table Host and run hangouts"), tint: "lime" as const, group: gOut },
+        { href: "/tables", emoji: "🪑", title: t("โต๊ะประจำของฉัน", "My regular tables"), hint: t("กลุ่มเล็ก ๆ ที่นัดเจอกันบ่อย ๆ", "Small groups that keep meeting"), tint: "teal" as const, group: gOut },
         ...(dates
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดตแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),
