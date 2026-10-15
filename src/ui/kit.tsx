@@ -19,10 +19,11 @@ import { WARM_CSS } from "./warm";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + A11Y_CSS;
+const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS;
 import { BRAND, BrandMark } from "./brand";
 import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
 import { A11Y_CSS } from "./a11y-css";
+import { MOMENTS_CSS } from "./moments";
 import { asset, type AssetPath } from "../assets";
 import { A11Y_FORM_JS, A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
@@ -86,6 +87,17 @@ const NOTICES: Record<string, [string, string]> = {
   romance_single: ["เปิดใจมากกว่าเพื่อนได้เฉพาะคนโสด เปลี่ยนสถานะได้ที่นี่", "Open to something more is for people who are single. You can change your status here."],
 };
 
+/** A new mutual connection: two circles slide together and a spark pops. Decorative only; the toast says it in words. */
+function SparkPop(props: { initial: string }) {
+  return (
+    <div class="spark-pop" aria-hidden="true">
+      <i class="sp-a">{props.initial || "•"}</i>
+      <b>✨</b>
+      <i class="sp-b">👋</i>
+    </div>
+  );
+}
+
 export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   const v = view(c);
   const noticeKey = c.req.query("notice");
@@ -98,6 +110,7 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
           {v.t(notice[0], notice[1])}
         </Notice>
       ) : null}
+      {noticeKey === "connected" ? <SparkPop initial={(v.user?.profile?.nickname ?? "").slice(0, 1).toUpperCase()} /> : null}
       {errorText ? <Notice kind="error">{errorText}</Notice> : null}
       {body}
     </Layout>,
@@ -320,7 +333,7 @@ export function Field(props: {
   maxlength?: number;
   pattern?: string;
   /** Password fields: labels for a Show / Hide toggle (needs JS; without it the field stays hidden-text). */
-  reveal?: { show: string; hide: string };
+  reveal?: { show: string; hide: string; caps?: string };
   /** What's wrong with the value, shown under the field and read with it. */
   error?: string;
 }) {
@@ -364,6 +377,12 @@ export function Field(props: {
       ) : (
         input
       )}
+      {props.type === "password" ? (
+        <small class="caps-warn" role="status" hidden>
+          <span aria-hidden="true">⇪ </span>
+          {props.reveal?.caps ?? "Caps Lock"}
+        </small>
+      ) : null}
       <FieldNotes id={id} hint={props.hint} error={props.error} />
     </div>
   );

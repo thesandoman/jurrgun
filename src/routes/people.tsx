@@ -455,7 +455,8 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
     );
   }
   await batch(c.env, writes);
-  return c.redirect(`/events/${eventId}/people?notice=choices_saved`);
+  // A new mutual connection gets its moment (the spark); anything else just says saved.
+  return c.redirect(`/events/${eventId}/people?notice=${notifyIds.length ? "connected" : "choices_saved"}`);
 });
 
 // ----------------------------------------------------- My Bangkok circle --
@@ -1022,6 +1023,7 @@ const refusal = (c: Ctx, v: View, status: 400 | 403 | 404) =>
     c,
     { title: v.t("รายงาน", "Report"), status },
     <>
+      <h1>{v.t("รายงาน", "Report")}</h1>
       <Emergency v={v} />
       <Card>
         <p>

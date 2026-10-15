@@ -39,7 +39,7 @@ export const PLAN: Scenario[] = [
     tone: "morning",
     mood: "everyday",
     answers: {
-      BDMN: a("📸", "bang_sue", "Register on Monday for Saturday's photo walk with new faces around Krung Thep Aphiwat terminal, route saved", "ลงชื่อตั้งแต่วันจันทร์ไปเดินถ่ายรูปกับกลุ่มหน้าใหม่รอบสถานีกลางกรุงเทพอภิวัฒน์วันเสาร์ เซฟเส้นทางไว้แล้ว", -1),
+      BDMN: a("📸", "chatuchak", "Register on Monday for Saturday's photo walk with new faces around Krung Thep Aphiwat terminal, route saved", "ลงชื่อตั้งแต่วันจันทร์ไปเดินถ่ายรูปกับกลุ่มหน้าใหม่รอบสถานีกลางกรุงเทพอภิวัฒน์วันเสาร์ เซฟเส้นทางไว้แล้ว", -1),
       BDMH: a("🧺", "min_buri", "Tap join on whichever walk leaves soonest, like a same-day group stroll through Min Buri's old market", "กดเข้าร่วมทริปเดินที่ออกเร็วที่สุด เช่นเดินกลุ่มตลาดเก่ามีนบุรีวันนั้นเลย", 1),
       BDSN: a("🌇", "sathon", "Grab tonight's last-minute seat at a strangers' dinner on a Sathon rooftop you've never tried", "คว้าที่นั่งนาทีสุดท้ายของดินเนอร์กับคนแปลกหน้าคืนนี้ บนรูฟท็อปย่านสาทรที่ยังไม่เคยไป", 1),
       BDSH: a("🥟", "samphanthawong", "Book the Saturday food-tour meetup a week out: six strangers, eight old stalls around Talat Noi", "จองมีตอัปทัวร์อาหารวันเสาร์ล่วงหน้า 1 อาทิตย์ คนแปลกหน้า 6 คน ร้านเก่า 8 ร้านรอบตลาดน้อย", -1),
@@ -121,7 +121,7 @@ export const PLAN: Scenario[] = [
     tone: "afternoon",
     mood: "everyday",
     answers: {
-      BDMN: a("🛹", "wang_thonglang", "Show up with the gang at Chokchai 4 market on a whim and walk wherever the newest pop-up stalls are", "ยกแก๊งไปตลาดโชคชัย 4 แบบไม่ได้นัด แล้วเดินตามบูธป๊อปอัปที่ใหม่ที่สุด", 1),
+      BDMN: a("🛹", "lat_phrao", "Show up with the gang at Chokchai 4 market on a whim and walk wherever the newest pop-up stalls are", "ยกแก๊งไปตลาดโชคชัย 4 แบบไม่ได้นัด แล้วเดินตามบูธป๊อปอัปที่ใหม่ที่สุด", 1),
       BDMH: a("🪚", "bang_sue", "Set the itinerary a week ahead: a group walk down Bang Pho woodworking street, then the river, all firsts", "จัดแพลนล่วงหน้า 1 อาทิตย์ เดินเป็นกลุ่มในย่านค้าไม้บางโพ แล้วต่อริมน้ำ ไม่มีใครเคยไปสักที่", -1),
       BDSN: a("🍝", "watthana", "Book a long table for ten ahead at a new Thonglor restaurant everyone has wanted to try", "จองโต๊ะยาว 10 คนล่วงหน้าที่ร้านเปิดใหม่ในทองหล่อที่ทุกคนอยากลองมานาน", -1),
       BDSH: a("🍡", "rat_burana", "Jump in a shared ride with whoever's free and eat along the Suk Sawat road stalls nobody has tried", "นั่งรถไปด้วยกันกับใครก็ได้ที่ว่าง แล้วกินไล่ร้านริมถนนสุขสวัสดิ์ที่ยังไม่มีใครเคยลอง", 1),

@@ -400,7 +400,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
       <h1>{t("แก้ไขโปรไฟล์", "Edit profile")}</h1>
       <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
-      <form method="post" action="/settings/profile" enctype="multipart/form-data">
+      <form method="post" action="/settings/profile" enctype="multipart/form-data" data-guard="">
         {/* Enter / "Go" submits with the FIRST submit button. Without this one that
             would be a prompt's "↻ Different question", which swaps the prompt and
             deletes its answer. Off-screen rather than display:none so Safari uses it. */}
@@ -1353,9 +1353,9 @@ function PasswordForm(props: { v: View; error?: string }) {
       <h1>{t("เปลี่ยนรหัสผ่าน", "Change password")}</h1>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
       <form method="post">
-        <Field label={t("รหัสผ่านปัจจุบัน", "Current password")} name="current" type="password" required autocomplete="current-password"  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") }} />
-        <Field label={t("รหัสผ่านใหม่", "New password")} name="password" type="password" required autocomplete="new-password" hint={t("อย่างน้อย 8 ตัวอักษร", "At least 8 characters")}  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") }} />
-        <Field label={t("ยืนยันรหัสผ่านใหม่", "Confirm new password")} name="confirm" type="password" required autocomplete="new-password"  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") }} />
+        <Field label={t("รหัสผ่านปัจจุบัน", "Current password")} name="current" type="password" required autocomplete="current-password"  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide"), caps: t("Caps Lock เปิดอยู่", "Caps Lock is on") }} />
+        <Field label={t("รหัสผ่านใหม่", "New password")} name="password" type="password" required autocomplete="new-password" hint={t("อย่างน้อย 8 ตัวอักษร", "At least 8 characters")}  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide"), caps: t("Caps Lock เปิดอยู่", "Caps Lock is on") }} />
+        <Field label={t("ยืนยันรหัสผ่านใหม่", "Confirm new password")} name="confirm" type="password" required autocomplete="new-password"  reveal={{ show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide"), caps: t("Caps Lock เปิดอยู่", "Caps Lock is on") }} />
         <Button>{t("เปลี่ยนรหัสผ่าน", "Change password")}</Button>
       </form>
     </>

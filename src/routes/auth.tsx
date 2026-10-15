@@ -107,7 +107,7 @@ function AuthForm(props: {
   next?: string;
 }) {
   const { t, mode } = props;
-  const reveal = { show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide") };
+  const reveal = { show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide"), caps: t("Caps Lock เปิดอยู่", "Caps Lock is on") };
   return (
     <Card>
       <form method="post" action={mode === "signup" ? "/signup" : "/login"}>

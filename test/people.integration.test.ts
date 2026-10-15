@@ -173,7 +173,8 @@ describe.skipIf(!HAS_DB)("People I Met", () => {
     expect(await connectionBetween(ev, x, y)).toBeUndefined();
     expect(await notesFor(y)).toHaveLength(0); // unreturned interest never disclosed
 
-    await choose(ev, y, { [x.id]: "friend" });
+    const mutual = await choose(ev, y, { [x.id]: "friend" });
+    expect(mutual.headers.get("location")).toBe(`/events/${ev}/people?notice=connected`);
     const conn = await connectionBetween(ev, x, y);
     expect(conn.level).toBe("friend");
     expect(conn.removedAt).toBeNull();
