@@ -79,7 +79,7 @@ export const PLAN: Scenario[] = [
       CDMH: a("🖼️", "bang_kho_laem", "Plan a quiet walk for two weeks ahead to the murals of Wat Chong Nonsi, new to you both, opening hours checked", "วางแผนล่วงหน้าหลายอาทิตย์ เดินเงียบ ๆ สองคนไปดูจิตรกรรมฝาผนังวัดช่องนนทรีที่ยังไม่เคยเห็น เช็กเวลาเปิดไว้แล้ว", -1),
       CDSN: a("🎟️", "pathum_wan", "Book two seats a week ahead for a new indie film at House Samyan, dinner spot already picked", "จองตั๋วหนังอินดี้เรื่องใหม่สองที่ที่เฮาส์ สามย่าน ล่วงหน้า 1 อาทิตย์ เลือกร้านมื้อเย็นไว้แล้วด้วย", -1),
       CDSH: a("☕", "thon_buri", "Wander into the first old coffee shop found near Talat Phlu, just the two of you, no plan", "เดินเข้าร้านกาแฟเก่าร้านแรกที่เจอแถวตลาดพลู สองคนแบบไม่ได้วางแผน", 1),
-      CFMN: a("🌿", "khlong_toei", "Ping 'walk?' an hour before and do the usual Benjasiri Park loop together", "ทักไปก่อนแค่ชั่วโมงเดียวว่า “ไปเดินไหม” แล้วเดินรอบสวนเบญจสิริเส้นประจำด้วยกัน", 1),
+      CFMN: a("🌿", "yan_nawa", "Ping 'walk?' an hour before and do your usual evening loop along the Rama III riverside together", "ทักไปก่อนแค่ชั่วโมงเดียวว่า “ไปเดินไหม” แล้วเดินเส้นประจำริมน้ำถนนพระราม 3 ด้วยกันตอนเย็น", 1),
       CFMH: a("🚲", "chom_thong", "Plan a quiet Sunday ride through the old orchards of Bang Mot, the regular route, start time fixed", "วางแผนปั่นจักรยานเงียบ ๆ วันอาทิตย์ผ่านสวนเก่าบางมด เส้นประจำ กำหนดเวลาออกไว้แล้ว", -1),
       CFSN: a("🧁", "phaya_thai", "Ask on the spot to meet at the usual quiet window seat in a favourite Ari café", "ชวนแบบปุบปับไปนั่งริมหน้าต่างมุมประจำที่คาเฟ่โปรดในอารีย์", 1),
       CFSH: a("🍲", "pom_prap", "Book the regular corner table at a decades-old Nang Loeng restaurant a week ahead", "จองโต๊ะมุมประจำที่ร้านเก่าแก่หลายสิบปีในตลาดนางเลิ้งล่วงหน้า 1 อาทิตย์", -1),
