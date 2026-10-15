@@ -66,7 +66,7 @@ None right now. New questions go to the Branding chat.
 | **quiz-fork** | Film edits | paused | handing over to the re-render chat; captured 27 Thai screens in `~/jurgun-films/screens2/` |
 | **Re-render the five films** | Films G1 to G12 per `design/reference/film-revisions.md` | running | has D5 and O1 to O3 (sent 18:30); uses `screens2/` |
 | **film-review** | Film review and brief | done | |
-| **UI/UX** | Accessibility and UX audit (light, dark, 320 px, large text) in worktree `.claude/worktrees/a11y` (branch `a11y-pass`) | running | branched at `ae24ac6`, so it must rebase on `31ecc25` (new names, segments, women-only, /international) before fixing |
+| **UI/UX** | Accessibility and UX pass (WCAG 2.1 AA, 56 pages, light, dark, 320 px, large text): field edges, brand green #11763f, skip link, focus ring, hint and error wiring, radio group labels, switch off state, heading order, friendly 404 and 500 pages, 12 px text floor, 24 px taps, /new hero CTA, denser Discover cards, sticky RSVP, Me tiles | merged | owner-approved per change (10-15); styles in `src/ui/a11y-css.ts` load last |
 | **2.0** | Admins (sandosit, pjj, aey) | idle | |
 | Quiz: audit and blueprint | Bank audit and blueprint (worktree gifted-visvesvaraya) | running | merges 1st (D14) |
 | Quiz: Q5 profile and mode | Profile-aware question sets (worktree dreamy-leavitt) | running | merges 2nd, after the blueprint (D14) |

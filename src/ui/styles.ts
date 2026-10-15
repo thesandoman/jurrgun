@@ -16,7 +16,7 @@ html[data-theme="dark"]{color-scheme:dark}
   --bg:#f3fbf5;--surface:#ffffff;--surface-2:#e7f6ec;--ink:#10281b;--ink-2:#3d5a49;--ink-3:#668473;
   --line:#d3eadb;--brand:#11763f;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
   --gold:#e8a50b;--gold-soft:#fff5d1;
-  /* Love red: only for the romance opt-in moments, never decoration. */
+  /* Love red: only for the 💘 opt-in moments, never decoration. */
   --love:#e23744;--love-ink:#c0222f;--love-soft:#fde3e5;
   --ok:#15803d;--ok-soft:#dcfce7;--warn:#a35a00;--warn-soft:#fff1cc;--err:#c2261d;--err-soft:#fde8e6;
   --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(19,127,69,.08);
