@@ -82,6 +82,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .seg{flex-wrap:nowrap}
 .seg a{flex:1 1 auto;min-width:0;white-space:normal;text-align:center;line-height:1.15;padding:6px 8px;font-size:.86rem}
 body:has(.view-switch) .discover-list{padding-bottom:72px}
+/* Laptops: the Map / Cards switch sits in the page, not over the cards. */
+@media (min-width:900px){body:not(.fullmap-body) .view-switch{position:static;transform:none;display:inline-flex;margin:0 0 12px;box-shadow:none}body:has(.view-switch) .discover-list{padding-bottom:0}}
 
 /* Event page: the RSVP bar sits above the tab bar until the form is on screen. */
 .sticky-cta{position:fixed;z-index:8;left:12px;right:12px;bottom:calc(106px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:616px;margin:0 auto;padding:10px 10px 10px 16px;border-radius:20px;background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.16);transition:transform .25s ease,opacity .25s ease}

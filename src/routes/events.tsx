@@ -603,6 +603,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
+      {/* Phones: floats by the thumb. Laptops: sits here, under the heading, instead of over the cards. */}
+      <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
       <a href="/plan" class="feature plan-teaser">
         <b aria-hidden="true">🗓️</b>
         <strong>{t("แผนสัปดาห์นี้: เราเลือกให้ 2 อย่าง", "This week's plan: 2 picks made for you")}</strong>
@@ -622,7 +624,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
           })}
         </nav>
       </div>
-      <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
       <ForYou v={v} segment={segmentOf(user.profile)} />
       {myVibe.length === 0 ? (
         <Card class="hint quiz-hint">
