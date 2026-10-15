@@ -21,7 +21,6 @@ import { batch, getDb } from "../db";
 import { ageOn, canBeWomenOnly, canSwitchToSingle, MIN_AGE } from "../domain/rules";
 import {
   DISTRICTS,
-  EVENT_STYLES,
   GENDER_IDENTITIES,
   ORIENTATIONS,
   INTENTS,
@@ -54,8 +53,9 @@ import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
 import { INTERNATIONAL_COOKIE, NEWCOMER_COOKIE } from "./newcomers";
+import { GROUP_SIZES, groupSizeOrLegacy, SIZE_STYLES, TIME_WINDOWS, timesOrLegacy, withGroupStyle } from "../content/profile";
 import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation, withoutDating } from "../content/profile";
-import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
+import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript } from "../ui/profile-form";
 import { safeNext } from "../ui/table-intro";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
@@ -515,13 +515,11 @@ function YouForm(props: { v: View; next: string; error?: string; storyHint?: str
         <InterestPicker v={props.v} values={p?.interests} />
       </FlowStep>
       <FlowStep emoji="👥" title={t("ชอบเจอคนแบบไหน?", "How do you like to meet people?")} hint={t("ไม่บังคับ ข้ามได้", "Optional. You can skip this.")}>
-        <Pills name="socialStyles" options={SOCIAL_STYLES} values={p?.socialStyles} lang={lang} />
-        <p class="field-label">{t("เวลาไหนสะดวกที่สุด?", "When suits you best?")}</p>
-        <div class="answers">
-          {EVENT_STYLES.map((o) => (
-            <AnswerCard name="eventStyle" value={o.value} label={lang === "en" ? o.en : o.th} checked={p?.eventStyle === o.value} />
-          ))}
-        </div>
+        <Pills name="socialStyles" options={SOCIAL_STYLES.filter((o) => !SIZE_STYLES.includes(o.value))} values={p?.socialStyles} lang={lang} />
+        <p class="field-label">{t("ขนาดกลุ่มที่สบายใจ", "Group size I'm comfortable with")}</p>
+        <OptRadios v={props.v} name="groupSize" options={GROUP_SIZES} value={groupSizeOrLegacy(bio.groupSize, p?.socialStyles ?? [])} />
+        <p class="field-label">{t("ช่วงเวลาที่มักว่าง", "When I'm usually free")}</p>
+        <OptChecks v={props.v} name="times" options={TIME_WINDOWS} values={timesOrLegacy(bio.times, p?.eventStyle)} />
         <p class="field-label">{t("มาที่นี่เพื่อ…", "I'm here for…")}</p>
         <Pills name="intents" options={INTENTS} values={p?.intents.filter((i) => i !== "romance").length ? p.intents : ["friends"]} lang={lang} />
       </FlowStep>
@@ -558,8 +556,10 @@ onboarding.post("/you", async (c) => {
   const languages = pickAll("languages", values(LANGUAGES));
   const interests = [...new Set(pickAll("interests", INTEREST_VALUES))];
   const comm = [...new Set(pickAll("comm", COMM_STYLES.map((x) => x.value)))];
-  const socialStyles = pickAll("socialStyles", values(SOCIAL_STYLES));
-  const eventStyle = pickAll("eventStyle", values(EVENT_STYLES))[0] ?? null;
+  const groupSize = GROUP_SIZES.some((g) => g.value === str(body.groupSize)) ? str(body.groupSize) : undefined;
+  const times = [...new Set(pickAll("times", TIME_WINDOWS.map((x) => x.value)))];
+  // Small / big group follow the group size answer (seating reads them).
+  const socialStyles = withGroupStyle(pickAll("socialStyles", values(SOCIAL_STYLES)), groupSize);
   const intents = pickAll("intents", values(INTENTS)).filter((i) => i !== "romance");
   const pronouns = str(body.pronouns).slice(0, 30) || null;
   if (languages.length === 0 || interests.length === 0) {
@@ -580,11 +580,10 @@ onboarding.post("/you", async (c) => {
       languages,
       interests,
       socialStyles,
-      eventStyle,
       pronouns,
       showPronouns: !!pronouns && str(body.showPronouns) === "1",
       intents: [...(intents.length ? intents : ["friends"]), ...keepRomance],
-      bio: { ...cleanBio(user.profile.bio), comm, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }), ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)) },
+      bio: { ...cleanBio(user.profile.bio), comm, groupSize, times, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }), ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)) },
       updatedAt: new Date(),
     })
     .where(eq(profiles.accountId, user.account.id));

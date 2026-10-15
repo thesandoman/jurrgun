@@ -50,7 +50,7 @@ function EmojiPill(props: { name: string; o: Opt; lang: "th" | "en"; checked?: b
 }
 
 /** Interests by group, with search and a cap of MAX_INTERESTS. */
-export function InterestPicker(props: { v: View; values?: string[]; name?: string }) {
+export function InterestPicker(props: { v: View; values?: string[]; name?: string; folded?: boolean }) {
   const { t, lang } = props.v;
   const selected = new Set(props.values ?? []);
   const name = props.name ?? "interests";
@@ -68,10 +68,12 @@ export function InterestPicker(props: { v: View; values?: string[]; name?: strin
       {INTEREST_GROUPS.map((g, i) => {
         const picked = g.items.filter((x) => selected.has(x.value)).length;
         return (
-          <details class="ip-group" open={picked > 0 || i < 2}>
+          <details class="ip-group" open={!props.folded && (picked > 0 || i < 2)}>
             <summary>
               <span aria-hidden="true">{g.emoji}</span> {L(lang, g)}
               {picked ? <small class="ip-picked">{picked}</small> : null}
+              {/* Folded (profile edit): the chosen ones stay readable without opening the group. */}
+              {props.folded ? <small class="ip-chosen">{g.items.filter((x) => selected.has(x.value)).map((x) => `✓ ${L(lang, x)}`).join("  ")}</small> : null}
             </summary>
             <div class="pills">
               {g.items.map((x) => (
@@ -81,6 +83,13 @@ export function InterestPicker(props: { v: View; values?: string[]; name?: strin
           </details>
         );
       })}
+      {props.folded ? (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var ip=document.currentScript.parentNode;ip.addEventListener("change",function(e){var g=e.target.closest(".ip-group");if(!g)return;var c=g.querySelector(".ip-chosen");if(!c)return;c.textContent=[].slice.call(g.querySelectorAll("input:checked")).map(function(i){return "\u2713 "+i.nextElementSibling.textContent.replace(/^\\s+/,"").trim()}).join("  ")})})();`,
+          }}
+        />
+      ) : null}
       <p class="ip-none muted" hidden>
         {t("ไม่เจอ ลองคำอื่นดู", "Nothing found. Try another word.")}
       </p>
@@ -516,7 +525,9 @@ export const PROFILE_FORM_CSS = `
 .ip-count{font-size:.9rem;color:var(--ink-3);white-space:nowrap}
 .ip-count b{color:var(--brand)}
 .ip-group{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:4px 16px;margin:10px 0}
-.ip-group summary{cursor:pointer;font-weight:600;padding:12px 0;display:flex;align-items:center;gap:8px}
+.ip-group summary{cursor:pointer;font-weight:600;padding:12px 0;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ip-chosen{flex-basis:100%;font-weight:500;color:var(--brand);font-size:.84rem;line-height:1.5}
+.ip-chosen:empty,.ip-group[open] .ip-chosen{display:none}
 .ip-group .pills{padding:0 0 14px}
 .ip-picked{margin-left:auto;background:var(--brand);color:var(--brand-ink);border-radius:999px;padding:1px 9px;font-size:.78rem}
 .pf-limit{color:var(--warn);font-size:.86rem;margin:6px 0}

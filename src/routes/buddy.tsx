@@ -720,12 +720,17 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
             <SafeArrivalForm v={v} context={`buddy:${match.id}`} />
           </Card>
           <WrapUp v={v} m={match} me={me} offApp={offApp} />
-          <div class="row">
+          <div class="row safety-row">
             <a href={`/report?account=${otherId}`}>{t("รายงาน", "Report")}</a>
-            <form method="post" action={`/block/${otherId}`}>
-              <input type="hidden" name="back" value="/buddy" />
-              <Button kind="danger">{t("บล็อก", "Block")}</Button>
-            </form>
+            <details class="more-menu">
+              <summary aria-label={t("ตัวเลือกเพิ่มเติม", "More options")}>⋯ {t("เพิ่มเติม", "More")}</summary>
+              <div>
+                <form method="post" action={`/block/${otherId}`}>
+                  <input type="hidden" name="back" value="/buddy" />
+                  <Button kind="danger">{t("บล็อก", "Block")}</Button>
+                </form>
+              </div>
+            </details>
           </div>
         </>
       )}

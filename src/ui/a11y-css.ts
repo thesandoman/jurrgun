@@ -123,6 +123,22 @@ html[lang="th"] body{line-height:1.7}
 /* "+3" on avatar stacks: readable size. */
 .av.more{font-size:.75rem}
 
+/* Profile edit: sticky section shortcuts under the header; sections land below them. */
+.pf-jump{position:sticky;top:calc(56px + env(safe-area-inset-top,0px));z-index:4;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 calc(-1 * var(--gx,20px)) 8px;padding:8px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line)}
+.pf-jump::-webkit-scrollbar{display:none}
+.pf-jump a{flex:none;display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:.9rem;text-decoration:none;white-space:nowrap}
+.pf-section{scroll-margin-top:130px}
+@media (min-width:1024px){.pf-jump{top:72px}}
+
+/* Person cards: Report, then a "⋯ More" menu holding Remove and Block. */
+.safety-row{justify-content:space-between;align-items:center}
+main details.more-menu{position:relative;margin:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
+.more-menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);font-weight:600;color:var(--ink-2)}
+.more-menu>summary::-webkit-details-marker{display:none}
+.more-menu>div{position:absolute;right:0;bottom:calc(100% + 6px);z-index:6;display:grid;gap:8px;min-width:220px;padding:10px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.16)}
+.more-menu>div form{margin:0}
+.more-menu>div .btn{width:100%}
+
 /* Notifications page: the inbox list, unread rows tinted, with room between rows. */
 .notif-page{gap:8px;margin-top:8px}
 .notif-page a,.notif-page div{background:var(--surface);border:1px solid var(--line);padding:12px 14px}

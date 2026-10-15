@@ -240,38 +240,6 @@ export function ProfileCard(props: {
           ) : null}
         </section>
       ) : null}
-      {p.dating && datingChips(p.dating, lang).length ? (
-        <section class="pc-lines" aria-label={t("เรื่องเดต", "Dating")}>
-          <div class="pc-chips">
-            {datingChips(p.dating, lang).map((x) => (
-              <span class="pc-chip">{x}</span>
-            ))}
-          </div>
-        </section>
-      ) : null}
-      {datingAnswered.length || dateStyle.length ? (
-        <section class="pc-dating" aria-label={t("คำถามเรื่องเดต", "Dating prompts")}>
-          <p class="eyebrow">💘 {t("เปิดใจมากกว่าเพื่อน", "Open to something more")}</p>
-          {dateStyle.length ? (
-            <div class="pc-datestyle">
-              <h2>{t("สไตล์การเดตของฉัน", "How I date")}</h2>
-              <dl class="pc-facts">
-                {dateStyle.map((x) => (
-                  <div>
-                    <dt>
-                      <span aria-hidden="true">{x.emoji}</span> {x.title}
-                    </dt>
-                    <dd>{x.label}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ) : null}
-          {datingAnswered.map(({ q, a }) => (
-            <PromptCard v={props.v} q={q} a={a} photo={null} />
-          ))}
-        </section>
-      ) : null}
       {props.actions ? <div class="pc-actions">{props.actions}</div> : null}
 
       {slot()}
@@ -300,6 +268,39 @@ export function ProfileCard(props: {
               ))}
             </dl>
           ) : null}
+        </section>
+      ) : null}
+
+      {/* 💘 below the friendship facts, saying who can see it (owner card). */}
+      {(p.dating && datingChips(p.dating, lang).length) || datingAnswered.length || dateStyle.length ? (
+        <section class="pc-dating" aria-label={t("เรื่องเดต", "Dating")}>
+          <p class="eyebrow">💘 {t("เปิดใจมากกว่าเพื่อน", "Open to something more")}</p>
+          <p class="pc-lock">🔒 {t("เห็นได้เฉพาะคนที่เปิดใจเรื่องเดตเหมือนกัน", "Only people who also opted in to dating see this")}</p>
+          {p.dating && datingChips(p.dating, lang).length ? (
+            <div class="pc-chips">
+              {datingChips(p.dating, lang).map((x) => (
+                <span class="pc-chip">{x}</span>
+              ))}
+            </div>
+          ) : null}
+          {dateStyle.length ? (
+            <div class="pc-datestyle">
+              <h2>{t("สไตล์การเดตของฉัน", "How I date")}</h2>
+              <dl class="pc-facts">
+                {dateStyle.map((x) => (
+                  <div>
+                    <dt>
+                      <span aria-hidden="true">{x.emoji}</span> {x.title}
+                    </dt>
+                    <dd>{x.label}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
+          {datingAnswered.map(({ q, a }) => (
+            <PromptCard v={props.v} q={q} a={a} photo={null} />
+          ))}
         </section>
       ) : null}
 
@@ -492,6 +493,7 @@ export const PROFILE_CSS = `
 .pc-datestyle{background:var(--surface);border-radius:var(--radius);padding:14px 16px}
 .pc-datestyle h2{margin:0 0 8px;font-size:1.05rem}
 .pc-datestyle .pc-facts{margin:0}
+.pc-lock{margin:-4px 0 10px;font-size:.86rem;color:var(--love-ink)}
 .pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
 .pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
 .pc-actions{display:flex;gap:10px;flex-wrap:wrap}

@@ -29,7 +29,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { isPasswordless, passwordProblem } from "../domain/rules";
-import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values, districtsAZ } from "../lib/constants";
+import { DISTRICTS, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values, districtsAZ } from "../lib/constants";
 import {
   cleanBio,
   COMM_STYLES,
@@ -68,6 +68,10 @@ import {
   parseBangkok,
   parseEducation,
   parseOccupation,
+  SIZE_STYLES,
+  withGroupStyle,
+  groupSizeOrLegacy,
+  timesOrLegacy,
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
@@ -404,6 +408,15 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
       <h1>{t("แก้ไขโปรไฟล์", "Edit profile")}</h1>
       <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
+      {/* A long page: shortcuts to each part, kept in view while scrolling. */}
+      <nav class="pf-jump" aria-label={t("ไปยังส่วนต่าง ๆ", "Jump to")}>
+        <a href="#basics">{t("พื้นฐาน", "Basics")}</a>
+        <a href="#interests">{t("ความสนใจ", "Interests")}</a>
+        <a href="#bangkok">{t("กรุงเทพฯ", "Bangkok")}</a>
+        <a href="#facts">{t("ข้อมูลสั้น ๆ", "Facts")}</a>
+        <a href="#prefs">{t("การนัดเจอ", "Meetups")}</a>
+        <a href="#prompts">{t("คำถาม", "Prompts")}</a>
+      </nav>
       <form method="post" action="/settings/profile" enctype="multipart/form-data" data-guard="">
         {/* Enter / "Go" submits with the FIRST submit button. Without this one that
             would be a prompt's "↻ Different question", which swaps the prompt and
@@ -429,7 +442,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           {props.hasPhoto ? <Toggle name="removePhoto" label={t("ลบรูปโปรไฟล์", "Remove my photo")} /> : null}
         </Section>
 
-        <Section emoji="👋" title={t("ข้อมูลพื้นฐาน", "The basics")}>
+        <Section id="basics" emoji="👋" title={t("ข้อมูลพื้นฐาน", "The basics")}>
           <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} />
           <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={districtsAZ(lang)} value={vals.district} lang={lang} required />
           <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
@@ -448,12 +461,12 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
 
         <Section emoji="🎯" title={t("มาที่นี่เพื่อ", "Here for")}>
           <Choices legend={t("มาที่นี่เพื่อ…", "I'm here for…")} name="intents" options={INTENTS} values={vals.intents} lang={lang} />
-          <Choices legend={t("ชอบเจอคนแบบไหน", "How do you like to meet people?")} name="socialStyles" options={SOCIAL_STYLES} values={vals.socialStyles} lang={lang} />
-          <Choices legend={t("เวลาที่สะดวก", "When suits you best?")} name="eventStyle" options={EVENT_STYLES} values={vals.eventStyle ? [vals.eventStyle] : []} lang={lang} type="radio" />
+          {/* Group size and free times are asked once, under Meetup preferences. */}
+          <Choices legend={t("ชอบเจอคนแบบไหน", "How do you like to meet people?")} name="socialStyles" options={SOCIAL_STYLES.filter((o) => !SIZE_STYLES.includes(o.value))} values={vals.socialStyles} lang={lang} />
         </Section>
 
         <Section id="interests" emoji="🍜" title={t("ความสนใจ", "Interests")} hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ใช้จัดโต๊ะให้เจอคนที่ชอบคล้ายกัน`, `Pick 1 to ${MAX_INTERESTS}. We use them to seat you with people who share them.`)}>
-          <InterestPicker v={props.v} values={vals.interests} />
+          <InterestPicker v={props.v} values={vals.interests} folded />
         </Section>
 
         <Section id="comm" emoji="💬" title={t("สไตล์การติดต่อ", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
@@ -502,11 +515,11 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           </fieldset>
           <fieldset class="choices">
             <legend>{t("ขนาดกลุ่มที่สบายใจ", "Group size I'm comfortable with")}</legend>
-            <OptRadios v={props.v} name="groupSize" options={GROUP_SIZES} value={bio.groupSize} />
+            <OptRadios v={props.v} name="groupSize" options={GROUP_SIZES} value={groupSizeOrLegacy(bio.groupSize, vals.socialStyles)} />
           </fieldset>
           <fieldset class="choices">
             <legend>{t("ช่วงเวลาที่มักว่าง", "When I'm usually free")}</legend>
-            <OptChecks v={props.v} name="times" options={TIME_WINDOWS} values={bio.times} />
+            <OptChecks v={props.v} name="times" options={TIME_WINDOWS} values={timesOrLegacy(bio.times, vals.eventStyle)} />
           </fieldset>
           <fieldset class="choices">
             <legend>{t("ความต้องการด้านการเข้าถึง", "Access needs")}</legend>
@@ -681,8 +694,10 @@ function parseProfileForm(c: C, body: Body): Parsed {
     district: str(body.district),
     languages: pickAll("languages", values(LANGUAGES)),
     interests: pickAll("interests", INTEREST_VALUES),
-    socialStyles: pickAll("socialStyles", values(SOCIAL_STYLES)),
-    eventStyle: pickAll("eventStyle", values(EVENT_STYLES))[0] ?? null,
+    // Small / big group follow the group size answer (seating reads them).
+    socialStyles: withGroupStyle(pickAll("socialStyles", values(SOCIAL_STYLES)), bio.groupSize),
+    // No longer asked (it duplicated "When I'm usually free"); kept as it was.
+    eventStyle: p.eventStyle,
     intents: pickAll("intents", values(INTENTS)),
     newcomer: str(body.newcomer) === "1",
     locale: str(body.locale) === "en" ? "en" : "th",

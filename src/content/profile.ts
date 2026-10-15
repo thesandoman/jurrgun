@@ -1500,3 +1500,23 @@ export function optLabel(list: Opt[], value: string | undefined | null, lang: "t
   const x = list.find((i) => i.value === value);
   return x ? `${x.emoji} ${lang === "en" ? x.en : x.th}` : "";
 }
+
+/**
+ * One question each for group size and free times (owner card): the detailed
+ * "Group size I'm comfortable with" and "When I'm usually free" stay; the old
+ * Small / Big group pills and the single "When suits you best?" go. Seating
+ * still reads small_group / big_group from socialStyles, so they follow the
+ * group size answer, and old answers fill the kept questions until changed.
+ */
+export const SIZE_STYLES = ["small_group", "big_group"];
+export function withGroupStyle(styles: string[], groupSize: string | undefined | null): string[] {
+  const rest = styles.filter((x) => !SIZE_STYLES.includes(x));
+  return groupSize === "small" ? [...rest, "small_group"] : groupSize === "big" ? [...rest, "big_group"] : rest;
+}
+export function groupSizeOrLegacy(groupSize: string | undefined, styles: readonly string[]): string | undefined {
+  return groupSize ?? (styles.includes("small_group") ? "small" : styles.includes("big_group") ? "big" : undefined);
+}
+const LEGACY_TIMES: Record<string, string> = { weekday_evening: "weekday_evening", weekend_morning: "weekend_morning", weekend_afternoon: "weekend_afternoon", weekend_night: "weekend_evening" };
+export function timesOrLegacy(times: string[] | undefined, eventStyle: string | null | undefined): string[] {
+  return times?.length ? times : eventStyle && LEGACY_TIMES[eventStyle] ? [LEGACY_TIMES[eventStyle]] : [];
+}

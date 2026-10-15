@@ -852,15 +852,21 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
               <Button kind="ghost">{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</Button>
             </form>
             </details>
-            <div class="row">
-              <form method="post" action={`/connections/${r.id}/remove`}>
-                <Button kind="ghost">{t("ลบออกจากคนรู้จัก", "Remove connection")}</Button>
-              </form>
+            {/* Report stays one tap away; Remove and Block sit behind "More" so they aren't hit by mistake. */}
+            <div class="row safety-row">
               <a href={`/report?account=${r.other.id}${r.event ? `&event=${r.event.id}` : ""}`}>{t("รายงาน", "Report")}</a>
-              <form method="post" action={`/block/${r.other.id}`}>
-                <input type="hidden" name="back" value="/connections" />
-                <Button kind="danger">{t("บล็อก", "Block")}</Button>
-              </form>
+              <details class="more-menu">
+                <summary aria-label={t(`ตัวเลือกเพิ่มเติมสำหรับ ${r.other.name}`, `More options for ${r.other.name}`)}>⋯ {t("เพิ่มเติม", "More")}</summary>
+                <div>
+                  <form method="post" action={`/connections/${r.id}/remove`}>
+                    <Button kind="ghost">{t("ลบออกจากคนรู้จัก", "Remove connection")}</Button>
+                  </form>
+                  <form method="post" action={`/block/${r.other.id}`}>
+                    <input type="hidden" name="back" value="/connections" />
+                    <Button kind="danger">{t("บล็อก", "Block")}</Button>
+                  </form>
+                </div>
+              </details>
             </div>
           </Card>
         ))
