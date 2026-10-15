@@ -1208,18 +1208,20 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีการแจ้งเตือน", "No notifications yet.")}</Empty>
       ) : (
-        <ul class="list">
+        <ul class="notif-list notif-page">
           {rows.map((n) => {
             const title = lang === "en" ? n.titleEn : n.titleTh;
-            return (
-              <li>
-                <Card href={n.link && safeNext(n.link, "") ? n.link : undefined}>
-                  {!n.readAt ? <strong>{title}</strong> : <span>{title}</span>}
-                  <br />
-                  <small>{fmtDate(n.createdAt, lang)}</small>
-                </Card>
-              </li>
+            const href = n.link && safeNext(n.link, "") ? n.link : undefined;
+            const body = (
+              <>
+                <span class="notif-title">{title}</span>
+                <small>
+                  {!n.readAt ? <b class="notif-new">{t("ใหม่", "New")} · </b> : null}
+                  {fmtDate(n.createdAt, lang)}
+                </small>
+              </>
             );
+            return <li class={n.readAt ? undefined : "unread"}>{href ? <a href={href}>{body}</a> : <div>{body}</div>}</li>;
           })}
         </ul>
       )}

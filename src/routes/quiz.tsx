@@ -524,7 +524,7 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
         <input type="checkbox" name="visible" value="1" checked={props.visible} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
         <span>
           {t("แสดงไทป์ของฉันให้คนที่โต๊ะเห็น", "Show my type to people at my Tables")}
-          <small>{t("ปิดไว้เป็นค่าเริ่มต้น", "Off by default")}</small>
+          <small>{t("เฉพาะคนในโต๊ะประจำของคุณที่เห็น", "Only people at your Tables see it")}</small>
         </span>
       </label>
       <noscript>

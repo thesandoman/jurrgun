@@ -115,6 +115,18 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 body{font-size:17px}
 html[lang="th"] body{line-height:1.7}
 
+/* Notifications page: the inbox list, unread rows tinted, with room between rows. */
+.notif-page{gap:8px;margin-top:8px}
+.notif-page a,.notif-page div{background:var(--surface);border:1px solid var(--line);padding:12px 14px}
+.notif-page .notif-new{color:var(--brand);font-weight:700}
+/* "Clear answer" on profile prompts: a full-size tap target (2.5.8). */
+.pf-clear{display:inline-flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}
+.pf-clear input{width:22px;height:22px;margin:0}
+/* Me: the stat tiles line up (the playful offset read as broken). */
+.me-stat:nth-child(2){transform:none}
+/* Public profile on laptops: three wider fact columns instead of five narrow ones. */
+@media (min-width:900px){.pc-facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 /* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
 .flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
 .flow-body .field-label+.muted{margin-top:-2px}

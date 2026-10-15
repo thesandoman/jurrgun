@@ -480,11 +480,26 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
   );
 }
 
-/** "Phra Nakhon" → "PN", "Chatuchak" → "CHA". */
-const shortName = (en: string) => {
-  const words = en.split(/\s+/).filter(Boolean);
-  return words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 3) : en.slice(0, 3);
-};
+/**
+ * "Phra Nakhon" → "PN", "Chatuchak" → "CHA". Every district gets its own code:
+ * Bang Kapi, Bang Khae and Bang Khen would all be "BK", so later ones take a
+ * letter or two more from the last word ("BKh", "BKn").
+ */
+const SHORT_NAMES: Map<string, string> = (() => {
+  const used = new Set<string>();
+  const out = new Map<string, string>();
+  for (const d of [...DISTRICTS].sort((a, b) => a.value.localeCompare(b.value))) {
+    const words = d.en.split(/\s+/).filter(Boolean);
+    const last = words[words.length - 1];
+    const head = words.slice(0, -1).map((w) => w[0]).join("");
+    const tries = words.length > 1 ? [words.map((w) => w[0]).join("").slice(0, 3), head + last.slice(0, 2), head + last[0] + last[last.length - 1], head + last.slice(0, 3)] : [d.en.slice(0, 3), d.en.slice(0, 4)];
+    const code = tries.find((x) => !used.has(x)) ?? d.en.slice(0, 5);
+    used.add(code);
+    out.set(d.en, code);
+  }
+  return out;
+})();
+const shortName = (en: string) => SHORT_NAMES.get(en) ?? en.slice(0, 3);
 
 /** Stamps earned in the last three days land with a stamp animation. */
 const FRESH_STAMP_MS = 3 * 86_400_000;

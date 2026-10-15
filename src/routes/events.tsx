@@ -301,8 +301,10 @@ function ShieldIcon() {
   );
 }
 
-function SpotsTag(props: { e: Event; taken: number; t: T }) {
+function SpotsTag(props: { e: Event; taken: number; t: T; going?: boolean }) {
   const left = Math.max(0, props.e.capacity - props.taken);
+  // Someone already going doesn't need "Full, join the waitlist".
+  if (props.going) return <Tag tone="ok">{props.t("✓ คุณได้ที่นั่งแล้ว", "✓ You're in")}</Tag>;
   return left > 0 ? (
     <Tag tone="ok">{props.t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`)}</Tag>
   ) : (
@@ -1019,7 +1021,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
 
   return page(
     c,
-    { title: title(event, lang), tab: "events", status: opts.status },
+    // Going: the event lives under My events, so that tab lights up.
+    { title: title(event, lang), tab: reg?.status === "confirmed" ? "mine" : "events", status: opts.status },
     <>
       {opts.error ? <Notice kind="error">{opts.error}</Notice> : null}
       {event.status === "cancelled" ? (
@@ -1086,7 +1089,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         </p>
         <div class="tags">
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
-          <SpotsTag e={event} taken={state.taken} t={t} />
+          <SpotsTag e={event} taken={state.taken} t={t} going={reg?.status === "confirmed"} />
           {event.tags.map((tag) => (
             <Tag tone={tag === OPEN_TO_MORE_TAG ? "love" : "muted"}>{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
@@ -1999,8 +2002,8 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
           <p class="eyebrow">{t("บัตรเข้างาน", "Event pass")} · {user.profile.nickname}</p>
           <h1>{title(event, lang)}</h1>
           <p>
+            {/* The venue only: the full address is one tap away under Directions, and often repeats the name. */}
             {fmtDate(event.startsAt, lang)} · {event.venueName}
-            {event.venueAddress ? `, ${event.venueAddress}` : ""}
           </p>
         </div>
         <div class="ticket-perf" aria-hidden="true" />
@@ -2051,7 +2054,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
             <b>{t("เช็กอินกับโฮสต์", "Check in with your host")}</b>
             <small>
               {event.safetyInfo
-                ? t(`เปิด 30 นาทีก่อนเริ่ม · จุดนัดพบ: ${event.safetyInfo}`, `Opens 30 min before the start · Meet: ${event.safetyInfo}`)
+                ? t(`เปิด 30 นาทีก่อนเริ่ม · จุดนัดพบ: ${event.safetyInfo}`, `Opens 30 min before the start · ${event.safetyInfo}`)
                 : t("เปิด 30 นาทีก่อนเริ่ม", "Opens 30 min before the start")}
             </small>
           </span>

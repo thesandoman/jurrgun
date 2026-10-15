@@ -102,13 +102,16 @@ export function datingTeaser(bio: Bio, deck: string[], lang: "th" | "en"): strin
   return null;
 }
 
+/** "Open to women, non-binary people": plural and lower case in a sentence. */
+const OPEN_TO_EN: Record<string, string> = { woman: "women", man: "men", "non-binary": "non-binary people" };
+
 /** The dating details as chips, bilingual. */
 export function datingChips(d: DatingShown, lang: "th" | "en"): string[] {
   const out: string[] = [];
   if (d.orientation) out.push(`🫶 ${label(ORIENTATIONS, d.orientation, lang)}`);
   if (d.openTo === "everyone") out.push(lang === "en" ? "💘 Open to everyone" : "💘 เปิดใจกับทุกคน");
   else if (Array.isArray(d.openTo) && d.openTo.length)
-    out.push(`💘 ${lang === "en" ? "Open to" : "อยากเจอ"} ${d.openTo.map((g) => label(GENDER_IDENTITIES, g, lang)).join(", ")}`);
+    out.push(`💘 ${lang === "en" ? "Open to" : "อยากเจอ"} ${d.openTo.map((g) => (lang === "en" ? OPEN_TO_EN[g] ?? label(GENDER_IDENTITIES, g, lang).toLowerCase() : label(GENDER_IDENTITIES, g, lang))).join(", ")}`);
   return out;
 }
 

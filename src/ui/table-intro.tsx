@@ -4,6 +4,7 @@
  * confirmation and on the pass, until the member has picked an interest.
  */
 import type { View } from "./kit";
+export { safeNext } from "./kit";
 
 export const TABLE_INTRO_PATH = "/onboarding/you";
 
@@ -22,9 +23,4 @@ export function TableIntroPrompt(props: { v: View; next: string }) {
       </a>
     </aside>
   );
-}
-
-/** Only same-site paths, so ?next= can't send anyone off the app. */
-export function safeNext(raw: string | undefined, fallback: string): string {
-  return raw && /^\/(?!\/)[^\s\\]*$/.test(raw) ? raw : fallback;
 }
