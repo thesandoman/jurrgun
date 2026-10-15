@@ -11,10 +11,11 @@ import { tr, type Lang, type T } from "../lib/i18n";
 import { STYLES } from "./styles";
 import { VISUAL_CSS } from "./visual";
 import { QUESTION_ART_CSS } from "./question-art";
+import { LAYOUT_CSS } from "./layout";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS);
+const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + LAYOUT_CSS;
 import { BrandMark } from "./brand";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
@@ -194,6 +195,10 @@ function TabBar(props: { v: View; tab: Tab }) {
   ];
   return (
     <nav class="tabbar" aria-label={t("เมนูหลัก", "Main")}>
+      {/* Only shown in the laptop sidebar. */}
+      <a href="/events" class="tab-brand" aria-label="Jurrgun">
+        <BrandMark /> Jurrgun <small lang="th">เจอกัน</small>
+      </a>
       {items.map(([key, href, icon, text]) => (
         <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && (props.tab === "pulse" || props.tab === "learn")) ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
           <span aria-hidden="true">{icon}</span>

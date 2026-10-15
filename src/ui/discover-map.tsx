@@ -485,4 +485,9 @@ body.fullmap-body .tabbar{z-index:11}
   .fd-sheet-body{max-height:calc(100dvh - 300px - var(--tab-h))}
   .fullmap .svm-key{left:424px}
 }
+/* laptops: the map sits beside the sidebar; fixed overlays position inside it */
+@media (min-width:1024px){
+  .fullmap{left:var(--side,236px);transform:translateZ(0);--tab-h:0px}
+  .fd-logo{display:none}
+}
 `;
