@@ -2012,6 +2012,7 @@ function FeedbackForm(props: { v: View; event: Event; values: Record<string, str
         <Choices legend={t("ได้รู้จักคนใหม่ไหม?", "Did you meet someone new?")} name="metNewPerson" type="radio" options={YES_NO} values={[val.metNewPerson ?? ""]} lang={lang} required />
         <Choices legend={t("อยากเจอใครสักคนอีกไหม?", "Would you meet someone from today again?")} name="wouldMeetAgain" type="radio" options={YES_NO} values={[val.wouldMeetAgain ?? ""]} lang={lang} required />
         <Choices legend={t("รู้สึกปลอดภัยแค่ไหน (1–5)", "How safe did you feel? (1–5)")} name="feltSafe" type="radio" options={SCALE} values={[val.feltSafe ?? ""]} lang={lang} required />
+        <Choices legend={t("รู้สึกว่ามีคนฟังคุณแค่ไหน (1–5)", "Did you feel heard? (1–5)")} name="feltHeard" type="radio" options={SCALE} values={[val.feltHeard ?? ""]} lang={lang} />
         <Choices legend={t("ให้คะแนนโต๊ะ/กลุ่มของคุณ (1–5)", "Rate your table (1–5)")} name="groupRating" type="radio" options={SCALE} values={[val.groupRating ?? ""]} lang={lang} required />
         <TextArea label={t("อยากบอกอะไรเพิ่มไหม (ไม่บังคับ)", "Anything else? (optional)")} name="comment" value={val.comment} maxlength={500} />
         <Button>{t("ส่งความคิดเห็น", "Send feedback")}</Button>
@@ -2037,6 +2038,7 @@ eventRoutes.get("/events/:id/feedback", requireMember, async (c) => {
         metNewPerson: yn(fb.metNewPerson),
         wouldMeetAgain: yn(fb.wouldMeetAgain),
         feltSafe: fb.feltSafe ? String(fb.feltSafe) : "",
+        feltHeard: fb.feltHeard ? String(fb.feltHeard) : "",
         groupRating: fb.groupRating ? String(fb.groupRating) : "",
         comment: fb.comment,
       }
@@ -2056,6 +2058,7 @@ eventRoutes.post("/events/:id/feedback", requireMember, async (c) => {
     metNewPerson: str(body.metNewPerson),
     wouldMeetAgain: str(body.wouldMeetAgain),
     feltSafe: str(body.feltSafe),
+    feltHeard: str(body.feltHeard),
     groupRating: str(body.groupRating),
     comment: str(body.comment),
   };
@@ -2072,11 +2075,13 @@ eventRoutes.post("/events/:id/feedback", requireMember, async (c) => {
       <FeedbackForm v={v} event={gate.event!} values={vals} error={t("ตอบให้ครบทุกข้อ (ความเห็นไม่เกิน 500 ตัวอักษร)", "Please answer every question (comment up to 500 characters).")} />,
     );
   }
-  const data = { metNewPerson: met, wouldMeetAgain: again, feltSafe: safe, groupRating: rating, comment: vals.comment };
+  const data = { metNewPerson: met, wouldMeetAgain: again, feltSafe: safe, feltHeard: scale(vals.feltHeard) ?? null, groupRating: rating, comment: vals.comment };
   const db = getDb(c.env);
   await db
     .insert(feedback)
     .values({ id: newId(), eventId: id, accountId: user.account.id, ...data })
     .onConflictDoUpdate({ target: [feedback.eventId, feedback.accountId], set: data });
+  // Felt unsafe: make reporting one tap away.
+  if (safe <= 2) return c.redirect(`/report?event=${encodeURIComponent(id)}&from=feedback`);
   return c.redirect("/me/events?notice=thanks");
 });

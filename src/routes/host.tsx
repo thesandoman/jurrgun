@@ -182,6 +182,10 @@ hostRoutes.get("/host", async (c) => {
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("จัดกิจกรรมของคุณเอง", "Host your own event")}</h1>
+      <p class="chips2">
+        <a class="btn ghost" href="/host/insights">📈 {t("ผลลัพธ์กิจกรรม", "How my events went")}</a>
+        <a class="btn ghost" href="/host/ideas">💡 {t("ไอเดียจัดกิจกรรม", "Ideas")}</a>
+      </p>
       <p class="muted">
         {direct
           ? t("กิจกรรมของคุณเผยแพร่ได้ทันที", "Your events go live straight away.")

@@ -61,7 +61,7 @@ import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, buddySwipes, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, buddySwipes, meetFeedback, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
 import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View } from "../ui/kit";
 import { AvatarStack, Bento, Big, Pill, PostcardFan, Ring, Stamps, Tile, artFor } from "../ui/visual";
 import type { Child } from "hono/jsx";
@@ -446,7 +446,12 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
         <span>{theirsDone ? "✅" : "⬜"} {props.buddyName}</span>
       </p>
       {mineDone && theirsDone ? (
-        <Notice kind="ok">{t(`สำเร็จ! ได้แสตมป์${place}แล้ว`, `Done! ${place} stamped.`)}</Notice>
+        <>
+          <Notice kind="ok">{t(`สำเร็จ! ได้แสตมป์${place}แล้ว`, `Done! ${place} stamped.`)}</Notice>
+          <LinkButton href={`/buddy/quest/${props.q.id}/feedback`} kind="ghost">
+            📝 {t("เจอกันเป็นยังไงบ้าง (ส่วนตัว)", "How was the meet? (private)")}
+          </LinkButton>
+        </>
       ) : mineDone ? null : (
         <form method="post" action={`/buddy/${props.m.id}/quest`}>
           <input type="hidden" name="quest" value={props.q.week} />
@@ -1050,3 +1055,71 @@ c.addEventListener("pointermove",function(e){if(x0===null)return;dx=e.clientX-x0
 function up(){if(x0===null)return;x0=null;if(dx>110)send("keen");else if(dx<-110)send("pass");else{c.style.transition="transform .2s ease";c.style.transform="";c.classList.remove("is-keen","is-pass")}}
 c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
 document.querySelectorAll("form[data-choice]").forEach(function(f){f.addEventListener("submit",function(e){if(f.dataset.sent)return;e.preventDefault();f.dataset.sent="1";send(f.dataset.choice)})})})()`;
+
+// ------------------------------------------------------ meet feedback --
+//
+// Private, mutual feedback after a quest: never shown to the buddy, only used
+// in aggregate (k-anonymous M&E) and for safety. Felt unsafe offers a report.
+
+const YN = [
+  { value: "yes", th: "ใช่", en: "Yes" },
+  { value: "no", th: "ไม่", en: "No" },
+];
+const FIVE = ["1", "2", "3", "4", "5"].map((n) => ({ value: n, th: n, en: n }));
+
+async function questOfMine(c: Ctx) {
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const [q] = await db.select().from(buddyQuests).where(eq(buddyQuests.id, c.req.param("qid") ?? "")).limit(1);
+  if (!q || !q.aDoneAt || !q.bDoneAt) return null;
+  const [m] = await db.select().from(buddyMatches).where(eq(buddyMatches.id, q.matchId)).limit(1);
+  if (!m || (m.aAccount !== me && m.bAccount !== me)) return null;
+  return { db, me, q, other: m.aAccount === me ? m.bAccount : m.aAccount };
+}
+
+buddyRoutes.get("/buddy/quest/:qid/feedback", requireMember, async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const found = await questOfMine(c);
+  if (!found) return c.redirect("/buddy");
+  const [prev] = await found.db.select().from(meetFeedback).where(and(eq(meetFeedback.kind, "quest"), eq(meetFeedback.ref, found.q.id), eq(meetFeedback.accountId, found.me))).limit(1);
+  const yn = (b?: boolean | null) => (b === true ? ["yes"] : b === false ? ["no"] : []);
+  return page(
+    c,
+    { title: t("เจอกันเป็นยังไงบ้าง", "How was the meet?"), tab: "buddy" },
+    <>
+      <h1>📝 {t("เจอกันเป็นยังไงบ้าง?", "How was the meet?")}</h1>
+      <p class="muted">{t("เป็นความลับ บัดดี้ไม่เห็นคำตอบ ใช้ปรับการจับคู่และความปลอดภัยเท่านั้น", "Private: your buddy never sees this. It only helps matching and safety.")}</p>
+      {prev ? <Notice kind="ok">{t("ส่งแล้ว แก้ไขได้", "Sent. You can still change it.")}</Notice> : null}
+      <Card>
+        <form method="post">
+          <Choices legend={t("บัดดี้มาตามนัดไหม", "Did your buddy show up?")} name="showedUp" type="radio" options={YN} values={yn(prev?.showedUp)} lang={lang} required />
+          <Choices legend={t("มาตรงเวลาไหม", "On time?")} name="onTime" type="radio" options={YN} values={yn(prev?.onTime)} lang={lang} />
+          <Choices legend={t("รู้สึกปลอดภัยแค่ไหน (1-5)", "How safe did you feel? (1-5)")} name="feltSafe" type="radio" options={FIVE} values={prev?.feltSafe ? [String(prev.feltSafe)] : []} lang={lang} required />
+          <Choices legend={t("รู้สึกว่ามีคนฟังคุณแค่ไหน (1-5)", "Did you feel heard? (1-5)")} name="feltHeard" type="radio" options={FIVE} values={prev?.feltHeard ? [String(prev.feltHeard)] : []} lang={lang} />
+          <Choices legend={t("อยากเจอกันอีกไหม", "Would you meet again?")} name="again" type="radio" options={YN} values={yn(prev?.wouldMeetAgain)} lang={lang} required />
+          <Button>{t("ส่ง", "Send")}</Button>
+        </form>
+      </Card>
+    </>,
+  );
+});
+
+buddyRoutes.post("/buddy/quest/:qid/feedback", requireMember, async (c) => {
+  const found = await questOfMine(c);
+  if (!found) return c.redirect("/buddy");
+  const body = await c.req.parseBody();
+  const yn = (x: string) => (x === "yes" ? true : x === "no" ? false : null);
+  const five = (x: string) => (/^[1-5]$/.test(x) ? Number(x) : null);
+  const showedUp = yn(str(body.showedUp));
+  const feltSafe = five(str(body.feltSafe));
+  const again = yn(str(body.again));
+  if (showedUp === null || feltSafe === null || again === null) return c.redirect(`/buddy/quest/${found.q.id}/feedback`);
+  const data = { showedUp, onTime: yn(str(body.onTime)), feltSafe, feltHeard: five(str(body.feltHeard)), wouldMeetAgain: again };
+  await found.db
+    .insert(meetFeedback)
+    .values({ id: newId(), kind: "quest", ref: found.q.id, accountId: found.me, aboutAccount: found.other, ...data })
+    .onConflictDoUpdate({ target: [meetFeedback.kind, meetFeedback.ref, meetFeedback.accountId], set: data });
+  if (feltSafe <= 2) return c.redirect(`/report?account=${encodeURIComponent(found.other)}&from=feedback`);
+  return c.redirect("/buddy?notice=saved");
+});

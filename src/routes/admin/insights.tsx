@@ -1,6 +1,5 @@
 /**
- * City Insight dashboard (/admin/insights) — insight viewers and BMA admins
- * (PRD §13.4, §18).
+ * City Insight dashboard (/admin/insights): insight viewers and admins.
  *
  * Everything here is an SQL aggregate; no rows about people are loaded. Every
  * count and every ratio whose base is under k = 10 is suppressed and shown as
@@ -198,7 +197,7 @@ adminInsights.get("/", async (c) => {
       unit: "%",
       base: activeMembers,
       target: pctTarget(30),
-      hint: t("เป้าหมาย PRD วัดภายใน 60 วัน", "PRD target is measured within 60 days"),
+      hint: t("เป้าหมายวัดภายใน 60 วัน", "Target is measured within 60 days"),
     },
     {
       label: t("กิจกรรมเฉลี่ยต่อสมาชิกที่มาร่วม", "Avg events per active member"),
@@ -295,6 +294,55 @@ adminInsights.get("/", async (c) => {
     );
   };
 
+  // Healthy connections: chat, safety checks, weekly plans and mutual meet feedback.
+  const winTs = sql`created_at >= ${since}::timestamptz and created_at < ${until}::timestamptz`;
+  const [chatRow, safeRow, planRow, skipRows, meetRow, heardRow, pitchRow] = await Promise.all([
+    db.execute(sql`select count(*), sum(case when money_flag then 1 else 0 end),
+      (select count(*) from social_reports where target_message is not null and ${winTs})
+      from social_chat_messages where ${winTs}`),
+    db.execute(sql`select count(*), sum(case when answer = 'help' then 1 else 0 end), sum(case when answer is not null then 1 else 0 end)
+      from social_safe_arrivals where ${winTs}`),
+    db.execute(sql`select count(*), sum(case when status = 'accepted' then 1 else 0 end), sum(case when status = 'skipped' then 1 else 0 end)
+      from social_weekly_plans where ${winTs}`),
+    db.execute(sql`select skip_reason, count(*) from social_weekly_plans where status = 'skipped' and ${winTs} group by skip_reason`),
+    db.execute(sql`select count(*), sum(case when felt_safe >= 4 then 1 else 0 end), avg(felt_heard), count(felt_heard),
+      sum(case when would_meet_again then 1 else 0 end), sum(case when showed_up then 1 else 0 end)
+      from social_meet_feedback where ${winTs}`),
+    db.execute(sql`select avg(felt_heard), count(felt_heard) from social_feedback where ${winTs}`),
+    db.execute(sql`select count(*), (select count(*) from social_pitch_joins where ${winTs}) from social_plan_pitches where ${winTs}`),
+  ]);
+  const [msgs, moneyN, chatReports] = nums(chatRow);
+  const [arrivals, helpN, answeredN] = nums(safeRow);
+  const [plans, acceptedN, skippedN] = nums(planRow);
+  const [meetN, meetSafe, meetHeardAvg, meetHeardN, meetAgain, meetShowed] = nums(meetRow);
+  const [evHeardAvg, evHeardN] = nums(heardRow);
+  const [pitchesN, joinsN] = nums(pitchRow);
+  const avg1 = (v: number, n: number) => (safeCount(n) === null ? null : Math.round(v * 10) / 10);
+  const healthy: Kpi[] = [
+    { label: t("ยอมรับแผนประจำสัปดาห์", "Weekly plan accepted"), value: pct(acceptedN, plans), unit: "%", base: plans },
+    { label: t("ข้ามแผนประจำสัปดาห์", "Weekly plan skipped"), value: pct(skippedN, plans), unit: "%", base: plans },
+    { label: t("ไอเดียที่สมาชิกเสนอ (คนเข้าร่วม)", "Member pitches (joins)"), value: safeCount(pitchesN), unit: "", base: pitchesN, hint: safeCount(joinsN) !== null ? `${joinsN} ${t("คนร่วม", "joins")}` : undefined },
+    { label: t("บัดดี้มาตามนัด", "Buddies showed up"), value: pct(meetShowed, meetN), unit: "%", base: meetN, target: pctTarget(90) },
+    { label: t("รู้สึกปลอดภัยตอนเจอบัดดี้ (4–5)", "Felt safe with buddy (4–5)"), value: pct(meetSafe, meetN), unit: "%", base: meetN, target: pctTarget(90) },
+    { label: t("อยากเจอบัดดี้อีก", "Would meet buddy again"), value: pct(meetAgain, meetN), unit: "%", base: meetN },
+    { label: t("รู้สึกว่ามีคนฟัง: บัดดี้ (1–5)", "Felt heard: buddy (1–5)"), value: avg1(meetHeardAvg, meetHeardN), unit: "", base: meetHeardN, digits: 1 },
+    { label: t("รู้สึกว่ามีคนฟัง: กิจกรรม (1–5)", "Felt heard: events (1–5)"), value: avg1(evHeardAvg, evHeardN), unit: "", base: evHeardN, digits: 1 },
+    { label: t("ขอความช่วยเหลือหลังนัด", "Asked for help after a meet"), value: pct(helpN, answeredN), unit: "%", base: answeredN, hint: safeCount(arrivals) !== null ? `${arrivals} ${t("การตั้งเวลา", "checks set")}` : undefined },
+    {
+      label: t("ข้อความที่ถูกรายงานต่อ 1,000", "Chat reports per 1,000 messages"),
+      value: safeCount(msgs) === null ? null : Math.round((chatReports / msgs) * 10000) / 10,
+      unit: "",
+      base: msgs,
+      digits: 1,
+    },
+    { label: t("ข้อความที่พูดถึงเงิน", "Messages flagged for money"), value: pct(moneyN, msgs), unit: "%", base: msgs },
+  ];
+  const skipCounts = table(skipRows)
+    .map(([r, n]) => ({ r: String(r ?? "other"), n: Number(n) }))
+    .filter((x) => safeCount(x.n) !== null)
+    .sort((a, b) => b.n - a.n);
+  const SKIP_LABEL: Record<string, [string, string]> = { time: ["ไม่มีเวลา", "No time"], money: ["งบไม่พอ", "Money"], distance: ["ไกลไป", "Distance"], mood: ["ไม่มีอารมณ์", "Mood"], other: ["อื่น ๆ", "Other"] };
+
   return page(
     c,
     { title: "City Insight", admin: true },
@@ -327,6 +375,19 @@ adminInsights.get("/", async (c) => {
           <KpiTile k={k} />
         ))}
       </div>
+
+      <h2>{t("การเชื่อมต่ออย่างมีสุขภาวะ", "Healthy connections")}</h2>
+      <div class="stats">
+        {healthy.map((k) => (
+          <KpiTile k={k} />
+        ))}
+      </div>
+      {skipCounts.length ? (
+        <p class="muted">
+          {t("เหตุผลที่ข้ามแผน: ", "Why plans were skipped: ")}
+          {skipCounts.map((x) => `${t(SKIP_LABEL[x.r]?.[0] ?? x.r, SKIP_LABEL[x.r]?.[1] ?? x.r)} ${x.n}`).join(" · ")}
+        </p>
+      ) : null}
 
       <h2>{t("ความเหงา UCLA-3 (3–9, ต่ำ = เหงาน้อย)", "UCLA-3 loneliness (3–9, lower is better)")}</h2>
       <div class="stats">
