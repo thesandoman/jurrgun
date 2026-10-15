@@ -292,7 +292,7 @@ export function Card(props: { children: Child; class?: string; href?: string }) 
   return <section class={`card ${props.class ?? ""}`}>{props.children}</section>;
 }
 
-export function Tag(props: { children: Child; tone?: "accent" | "warn" | "muted" | "ok" }) {
+export function Tag(props: { children: Child; tone?: "accent" | "warn" | "muted" | "ok" | "love" }) {
   return <span class={`tag ${props.tone ?? ""}`}>{props.children}</span>;
 }
 

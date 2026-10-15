@@ -73,6 +73,10 @@ export const ALIVE_CSS = `
 .qs .sw{margin-left:auto;flex:none;position:relative;width:46px;height:28px;border-radius:999px;background:color-mix(in srgb,var(--ink-3) 30%,transparent);transition:background-color .25s ease}
 .qs .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.2,1.5,.4,1)}
 .qs[aria-pressed=true] .sw{background:var(--brand)}
+.qs.love[aria-pressed=true] .sw{background:var(--love)}
+.qs.love[aria-pressed=true]{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--love) 45%,transparent)}
+#dating-prompts{padding:14px;border-radius:var(--radius);background:var(--love-soft)}
+#dating-prompts h2{color:var(--love-ink)}
 .qs[aria-pressed=true] .sw::after{transform:translateX(18px)}
 .me-group+.me-menu{margin-top:6px}
 /* a fieldset card keeps its title inside the card */

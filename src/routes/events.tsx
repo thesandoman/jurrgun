@@ -971,7 +971,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
           <SpotsTag e={event} taken={state.taken} t={t} />
           {event.tags.map((tag) => (
-            <Tag tone="muted">{label(EVENT_TAGS, tag, lang)}</Tag>
+            <Tag tone={tag === OPEN_TO_MORE_TAG ? "love" : "muted"}>{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
         </div>
         {description(event, lang).length > 220 ? (

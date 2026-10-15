@@ -13,7 +13,7 @@ import { getDb } from "../db";
 import { accounts, notifications, profiles, sessions, type Role } from "../schema";
 import { randomToken, sha256 } from "./crypto";
 import type { AppEnv } from "./env";
-import { pickLang } from "./i18n";
+import { langFromHeader, pickLang } from "./i18n";
 
 export const SESSION_COOKIE = "bkk_sid";
 const SESSION_DAYS = 30;
@@ -45,7 +45,8 @@ export async function endSession(c: Context<AppEnv>): Promise<void> {
  */
 export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.set("user", null);
-  c.set("lang", pickLang(c.req.query("lang") ?? getCookie(c, "lang")));
+  const chosen = c.req.query("lang") ?? getCookie(c, "lang");
+  c.set("lang", chosen ? pickLang(chosen) : langFromHeader(c.req.header("accept-language")));
   const token = getCookie(c, SESSION_COOKIE);
   if (token) {
     const db = getDb(c.env);

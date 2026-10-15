@@ -15,6 +15,19 @@ export function pickLang(raw: string | undefined | null): Lang {
   return raw === "en" ? "en" : "th";
 }
 
+/**
+ * First visit, no choice made yet: read the browser's Accept-Language (Task 10).
+ * Thai anywhere in the list means Thai (many Thai phones run an English UI with
+ * Thai second). No Thai at all means English. No header at all stays Thai, the
+ * default. The visitor can always switch, and that choice is remembered.
+ */
+export function langFromHeader(header: string | undefined | null): Lang {
+  if (!header) return "th";
+  const tags = header.split(",").map((part) => part.trim().split(";")[0].toLowerCase()).filter(Boolean);
+  if (!tags.length || tags[0] === "*") return "th";
+  return tags.some((tag) => tag === "th" || tag.startsWith("th-")) ? "th" : "en";
+}
+
 /** For `{ th, en }` objects stored in data (pulse questions, constants). */
 export function L(lang: Lang, text: { th: string; en: string }): string {
   return lang === "en" ? text.en : text.th;

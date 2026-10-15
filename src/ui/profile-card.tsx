@@ -461,8 +461,8 @@ export const PROFILE_CSS = `
 .pc-badges{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pc-badges .type-spark small{margin-top:6px}
 .pc-lines{display:grid;gap:10px}
-.pc-dating{display:grid;gap:12px;padding:14px;border-radius:var(--radius);background:color-mix(in srgb,var(--coral,#ff7a5c) 12%,var(--surface))}
-.pc-dating .eyebrow{margin:0;color:var(--ink-2)}
+.pc-dating{display:grid;gap:12px;padding:14px;border-radius:var(--radius);background:var(--love-soft);border:1px solid color-mix(in srgb,var(--love) 30%,transparent)}
+.pc-dating .eyebrow{margin:0;color:var(--love-ink)}
 .pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
 .pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
 .pc-actions{display:flex;gap:10px;flex-wrap:wrap}

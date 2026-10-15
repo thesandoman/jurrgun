@@ -16,6 +16,8 @@ html[data-theme="dark"]{color-scheme:dark}
   --bg:#f3fbf5;--surface:#ffffff;--surface-2:#e7f6ec;--ink:#10281b;--ink-2:#3d5a49;--ink-3:#668473;
   --line:#d3eadb;--brand:#137f45;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
   --gold:#e8a50b;--gold-soft:#fff5d1;
+  /* Love red: only for the romance opt-in moments, never decoration. */
+  --love:#e23744;--love-ink:#c0222f;--love-soft:#fde3e5;
   --ok:#15803d;--ok-soft:#dcfce7;--warn:#a35a00;--warn-soft:#fff1cc;--err:#c2261d;--err-soft:#fde8e6;
   --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(19,127,69,.08);
   --hero:linear-gradient(135deg,#137f45 0%,#22c55e 55%,#a3e635 120%);
@@ -28,6 +30,7 @@ html[data-theme="dark"]{color-scheme:dark}
   --bg:#0b1610;--surface:#122019;--surface-2:#192b21;--ink:#eaf7ef;--ink-2:#b5cfbe;--ink-3:#84a190;
   --line:#24392c;--brand:#3ddc84;--brand-ink:#04210f;--brand-soft:#163a25;--fresh:#4ade80;--lime:#bef264;
   --gold:#f5c04a;--gold-soft:#3a2f12;
+  --love:#ff6b78;--love-ink:#ffb3ba;--love-soft:#3a1a1e;
   --ok:#6ee7a0;--ok-soft:#15351f;--warn:#f6c063;--warn-soft:#3a2c12;--err:#ff8a80;--err-soft:#3d1b19;
   --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.25);
   --hero:linear-gradient(135deg,#0f5c32 0%,#16a34a 55%,#65a30d 120%);
@@ -78,6 +81,7 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 .tag.accent{background:var(--brand-soft);color:var(--brand)}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
 .tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.love{background:var(--love-soft);color:var(--love-ink)}
 .tag.muted{opacity:.75}
 .notice{border-radius:12px;padding:10px 14px;margin:10px 0;font-size:.94rem}
 .notice.ok{background:var(--ok-soft);color:var(--ok)}

@@ -239,6 +239,7 @@ settingsRoutes.get("/settings", async (c) => {
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
         <QuickSwitch
           k="romance"
+          love
           on={romanceEligible(p)}
           emoji="💘"
           title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")}
@@ -305,12 +306,12 @@ settingsRoutes.get("/settings", async (c) => {
 });
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
-function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string }) {
+function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean }) {
   return (
     <form method="post" action="/settings/quick">
       <input type="hidden" name="key" value={props.k} />
       <input type="hidden" name="on" value={props.on ? "0" : "1"} />
-      <button type="submit" class="qs" aria-pressed={props.on ? "true" : "false"}>
+      <button type="submit" class={props.love ? "qs love" : "qs"} aria-pressed={props.on ? "true" : "false"}>
         <span aria-hidden="true">{props.emoji}</span>
         <span>
           <b>{props.title}</b>
