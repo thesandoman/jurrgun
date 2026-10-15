@@ -87,11 +87,11 @@ adminDashboard.get("/", async (c) => {
   const d7 = new Date(now.getTime() - 7 * DAY);
   const d30 = new Date(now.getTime() - 30 * DAY);
 
-  const showHost = role === "host" || role === "partner_admin";
+  const showHost = role === "host" || role === "partner_admin" || role === "circle_head";
   const showMod = isAdmin || role === "moderator";
 
   let hostWhere: SQL | undefined;
-  if (role === "host") hostWhere = eq(events.hostAccountId, acct.id);
+  if (role === "host" || role === "circle_head") hostWhere = eq(events.hostAccountId, acct.id);
   else if (role === "partner_admin") {
     hostWhere = acct.partnerOrgId ? or(eq(events.partnerOrgId, acct.partnerOrgId), eq(events.hostAccountId, acct.id)) : eq(events.hostAccountId, acct.id);
   }

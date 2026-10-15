@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { accounts, events, notifications, profiles, registrations } from "../src/schema";
+import { accounts, circleHeadRequests, events, notifications, profiles, registrations } from "../src/schema";
 import { canView, checkProposal } from "../src/domain/hosting";
 
 const bkk = (daysAhead: number, hour: number) => {
@@ -63,8 +63,8 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     return e;
   };
 
-  it("a member proposes; it waits hidden until a moderator approves; approving makes them a host", async () => {
-    const [m, other, mod] = await Promise.all([createMember(), createMember(), createMember({ role: "moderator" })]);
+  it("a circle head proposes; it waits hidden until a moderator approves", async () => {
+    const [m, other, mod] = await Promise.all([createMember({ role: "circle_head" }), createMember(), createMember({ role: "moderator" })]);
     const r = await req("/host/new", { cookie: m.cookie, form: proposal() });
     expect(r.headers.get("location")).toBe("/host?notice=submitted");
     const e = await latest(m.id);
@@ -80,13 +80,13 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     const [after] = await db().select().from(events).where(eq(events.id, e.id));
     expect(after.status).toBe("published");
     const [acct] = await db().select({ role: accounts.role, trusted: accounts.trustedHost }).from(accounts).where(eq(accounts.id, m.id));
-    expect(acct).toEqual({ role: "host", trusted: false });
+    expect(acct).toEqual({ role: "circle_head", trusted: false });
     expect(await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), eq(notifications.kind, "host_approved")))).toHaveLength(1);
     expect(await (await req("/events?view=list", { cookie: other.cookie })).text()).toContain(`/events/${e.id}"`);
   });
 
   it("sending back needs a note; the host sees it, edits, and resubmits", async () => {
-    const [m, mod] = await Promise.all([createMember(), createMember({ role: "moderator" })]);
+    const [m, mod] = await Promise.all([createMember({ role: "circle_head" }), createMember({ role: "moderator" })]);
     await req("/host/new", { cookie: m.cookie, form: proposal() });
     const e = await latest(m.id);
     expect((await req(`/admin/review/${e.id}/reject`, { cookie: mod.cookie, form: { note: "" } })).headers.get("location")).toBe("/admin/review?notice=need_note");
@@ -101,7 +101,7 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
   });
 
   it("refuses bad proposals, more than 3 waiting, and edits by someone else", async () => {
-    const [m, other] = await Promise.all([createMember(), createMember()]);
+    const [m, other] = await Promise.all([createMember({ role: "circle_head" }), createMember({ role: "circle_head" })]);
     expect((await req("/host/new", { cookie: m.cookie, form: proposal({ startsAt: bkk(-2, 10), endsAt: bkk(-2, 12) }) })).status).toBe(400);
     for (let i = 0; i < 3; i++) await req("/host/new", { cookie: m.cookie, form: proposal({ title: `Games night ${i}` }) });
     expect((await req("/host/new", { cookie: m.cookie, form: proposal({ title: "One too many" }) })).status).toBe(400);
@@ -115,7 +115,7 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
   });
 
   it("trusted hosts publish straight away", async () => {
-    const [m, mod] = await Promise.all([createMember(), createMember({ role: "moderator" })]);
+    const [m, mod] = await Promise.all([createMember({ role: "circle_head" }), createMember({ role: "moderator" })]);
     await req("/host/new", { cookie: m.cookie, form: proposal() });
     const first = await latest(m.id);
     await req(`/admin/review/${first.id}/approve`, { cookie: mod.cookie, form: { trust: "1" } });
@@ -125,26 +125,63 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     expect(second.status).toBe("published");
   });
 
-  it("members, moderators and admins can all host; staff publish directly, even without a member profile", async () => {
-    const [mod, admin, member] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "bma_admin" }), createMember()]);
-    // Staff accounts may never have done member onboarding.
-    await db().update(profiles).set({ onboardedAt: null }).where(inArray(profiles.accountId, [mod.id, admin.id]));
-    for (const staff of [mod, admin]) {
+  it("only admins, verified partners and circle heads host; members are pointed to lead a circle", async () => {
+    const [mod, admin, partnerHost, member, head] = await Promise.all([
+      createMember({ role: "moderator" }),
+      createMember({ role: "bma_admin" }),
+      createMember({ role: "host" }),
+      createMember(),
+      createMember({ role: "circle_head" }),
+    ]);
+    // Admins and verified partners may never have done member onboarding, and publish directly.
+    await db().update(profiles).set({ onboardedAt: null }).where(inArray(profiles.accountId, [admin.id, partnerHost.id]));
+    for (const staff of [admin, partnerHost]) {
       expect((await req("/host/new", { cookie: staff.cookie })).status).toBe(200);
       const r = await req("/host/new", { cookie: staff.cookie, form: proposal({ title: `Staff meet-up ${staff.id.slice(0, 4)}` }) });
       expect(r.headers.get("location")).toBe("/host?notice=published");
     }
-    // A member who hasn't finished onboarding is sent to finish it.
-    await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, member.id));
-    expect((await req("/host/new", { cookie: member.cookie })).headers.get("location")).toBe("/onboarding");
-    // Moderators run check-in for the events they host.
-    const [mine] = await db().select({ id: events.id }).from(events).where(eq(events.createdBy, mod.id));
-    expect((await req("/admin/events", { cookie: mod.cookie })).status).toBe(200);
-    expect((await req(`/admin/events/${mine.id}`, { cookie: mod.cookie })).status).toBe(200);
+    // Members and moderators can't host.
+    for (const who of [member, mod]) {
+      expect((await req("/host/new", { cookie: who.cookie })).headers.get("location")).toBe("/circles/lead");
+      await req("/host/new", { cookie: who.cookie, form: proposal({ title: `Nope ${who.id.slice(0, 4)}` }) });
+      expect(await db().select().from(events).where(eq(events.createdBy, who.id))).toHaveLength(0);
+    }
+    // A circle head's private hangout publishes directly; a public event waits for review.
+    expect((await req("/host/new", { cookie: head.cookie, form: proposal({ title: "Circle picnic", visibility: "private" }) })).headers.get("location")).toBe("/host?notice=published");
+    expect((await req("/host/new", { cookie: head.cookie, form: proposal({ title: "Open picnic" }) })).headers.get("location")).toBe("/host?notice=submitted");
+    // Circle heads run check-in for their own events.
+    const [mine] = await db().select({ id: events.id }).from(events).where(eq(events.createdBy, head.id));
+    expect((await req("/admin/events", { cookie: head.cookie })).status).toBe(200);
+    expect((await req(`/admin/events/${mine.id}`, { cookie: head.cookie })).status).toBe(200);
+  });
+
+  it("a member asks to lead a circle; a moderator approves; they can host", async () => {
+    const [m, mod] = await Promise.all([createMember(), createMember({ role: "moderator" })]);
+    expect(await (await req("/circles/lead", { cookie: `${m.cookie}; lang=en` })).text()).toContain("Lead your own circle");
+    await req("/circles/lead", { cookie: m.cookie, form: { circleName: "Ari coffee walkers", plan: "Saturday coffee walks", agree: "1" } });
+    await req("/circles/lead", { cookie: m.cookie, form: { circleName: "Twice", agree: "1" } });
+    const reqs = await db().select().from(circleHeadRequests).where(eq(circleHeadRequests.accountId, m.id));
+    expect(reqs).toHaveLength(1);
+    expect(await (await req("/admin/review", { cookie: mod.cookie })).text()).toContain("Ari coffee walkers");
+    expect((await req(`/admin/review/circle/${reqs[0].id}/approve`, { cookie: mod.cookie, method: "POST", form: {} })).headers.get("location")).toBe("/admin/review?notice=circle_approved");
+    const [acct] = await db().select({ role: accounts.role }).from(accounts).where(eq(accounts.id, m.id));
+    expect(acct.role).toBe("circle_head");
+    expect((await req("/host/new", { cookie: m.cookie })).status).toBe(200);
+  });
+
+  it("declining needs a note the member sees", async () => {
+    const [m, mod] = await Promise.all([createMember(), createMember({ role: "moderator" })]);
+    await req("/circles/lead", { cookie: m.cookie, form: { circleName: "Night owls", agree: "1" } });
+    const [r] = await db().select().from(circleHeadRequests).where(eq(circleHeadRequests.accountId, m.id));
+    expect((await req(`/admin/review/circle/${r.id}/decline`, { cookie: mod.cookie, form: { note: "" } })).headers.get("location")).toBe("/admin/review?notice=need_note");
+    await req(`/admin/review/circle/${r.id}/decline`, { cookie: mod.cookie, form: { note: "Please host one public event first." } });
+    expect(await (await req("/circles/lead", { cookie: `${m.cookie}; lang=en` })).text()).toContain("Please host one public event first.");
+    const [acct] = await db().select({ role: accounts.role }).from(accounts).where(eq(accounts.id, m.id));
+    expect(acct.role).toBe("user");
   });
 
   it("nobody approves their own proposal", async () => {
-    const m = await createMember();
+    const m = await createMember({ role: "circle_head" });
     await req("/host/new", { cookie: m.cookie, form: proposal({ title: "My own idea" }) });
     const e = await latest(m.id);
     await db().update(accounts).set({ role: "moderator" }).where(eq(accounts.id, m.id));

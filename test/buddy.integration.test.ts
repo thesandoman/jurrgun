@@ -10,7 +10,7 @@ import { roundIfDue } from "../src/routes/buddy";
 import { dayKey } from "../src/domain/buddy";
 import { monthKey, seasonQuestFor } from "../src/domain/seasons";
 import { randomToken } from "../src/lib/crypto";
-import { blocks, datingIntents, notifications, buddyMatches, buddyOptins, buddyQuests, buddyRounds, circleShares, connections, events, passportStamps, profiles, vibes } from "../src/schema";
+import { accounts, blocks, datingIntents, notifications, buddyMatches, buddyOptins, buddyQuests, buddyRounds, circleShares, connections, events, passportStamps, profiles, vibes } from "../src/schema";
 import type { AppEnv } from "../src/lib/env";
 
 const env = ENV as unknown as AppEnv["Bindings"];
@@ -92,7 +92,8 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy", () => {
     // This week's quest, then both say "we did it": the district is stamped for both.
     const withQuest = await (await req("/buddy?lang=en", { cookie: a.cookie })).text();
     expect(withQuest).toContain("This week&#39;s quest");
-    expect(withQuest).toContain("Make it a table");
+    // Only hosts (circle heads, partners, admins) see "Make it a table".
+    expect(withQuest).not.toContain("Make it a table");
     const q = (await db().select().from(buddyQuests).where(eq(buddyQuests.matchId, m.id))).find((x) => x.scenario !== "season")!;
     await req(`/buddy/${m.id}/quest`, { cookie: a.cookie, form: { go: "1" } });
     expect(await db().select().from(passportStamps).where(eq(passportStamps.accountId, a.id))).toHaveLength(0);
@@ -220,7 +221,7 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy", () => {
   });
 
   it("'Make it a table' prefills the host form with the quest's district", async () => {
-    const m = await createMember();
+    const m = await createMember({ role: "circle_head" });
     const html = await (await req("/host/new?district=nong_chok&title=Rice%20fields%20walk&lang=en", { cookie: m.cookie })).text();
     expect(html).toContain("Rice fields walk");
     expect(html).toMatch(/value="nong_chok"[^>]*selected|selected[^>]*value="nong_chok"/);
@@ -358,6 +359,7 @@ describe.skipIf(!HAS_DB)("Dating or not, from the first screen", () => {
 describe.skipIf(!HAS_DB)("Circle: group hangouts", () => {
   it("a host sends a private hangout to their circle; it shows on the circle page with a working link", async () => {
     const { a, b } = await activePair("BDSN", "CDSN");
+    await db().update(accounts).set({ role: "circle_head" }).where(eq(accounts.id, a.id));
     const id = `ev-${randomToken(6)}`;
     const token = randomToken(16);
     const startsAt = new Date(Date.now() + 3 * DAY);
@@ -375,7 +377,9 @@ describe.skipIf(!HAS_DB)("Circle: group hangouts", () => {
     expect(circle).toContain("Circle dinner");
     expect(circle).toContain(`/events/${id}?t=${token}`);
     expect(circle).toContain("Bangkok Buddy");
-    expect(circle).toContain('href="/host/new?visibility=private"');
+    // b isn't a circle head: they're offered to lead a circle instead of hosting.
+    expect(circle).toContain('href="/circles/lead"');
+    expect(circle).not.toContain('href="/host/new?visibility=private"');
     // Someone else can't send another host's event.
     const stranger = await createMember();
     await req(`/host/${id}/circle`, { cookie: stranger.cookie, form: { go: "1" } });

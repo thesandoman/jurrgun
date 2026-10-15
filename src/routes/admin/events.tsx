@@ -63,7 +63,7 @@ import {
 
 export const adminEvents = new Hono<AppEnv>();
 // Moderators host events too: they see and operate only the events they host (scopeWhere / canSee).
-adminEvents.use("*", requireRole("host", "partner_admin", "moderator"));
+adminEvents.use("*", requireRole("host", "partner_admin", "circle_head"));
 
 type Ctx = Context<AppEnv>;
 type Db = ReturnType<typeof getDb>;
@@ -516,7 +516,7 @@ async function loadFormCtx(db: Db, a: Account): Promise<FormCtx> {
       .select({ id: accounts.id, username: accounts.username, nickname: profiles.nickname, role: accounts.role })
       .from(accounts)
       .leftJoin(profiles, eq(profiles.accountId, accounts.id))
-      .where(and(inArray(accounts.role, ["host", "partner_admin", "bma_admin"]), eq(accounts.status, "active")))
+      .where(and(inArray(accounts.role, ["host", "partner_admin", "bma_admin", "circle_head"]), eq(accounts.status, "active")))
       .orderBy(asc(accounts.username))
       .limit(200),
     a.role === "bma_admin"

@@ -134,5 +134,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "CREATE TABLE \"social_dating_intents\" (\n\t\"account_id\" text PRIMARY KEY NOT NULL,\n\t\"mode\" text NOT NULL,\n\t\"reasons\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"challenges\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);"
     ]
+  },
+  {
+    "id": "0009_rainy_shape",
+    "statements": [
+      "CREATE TABLE \"social_circle_head_requests\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"status\" text DEFAULT 'pending' NOT NULL,\n\t\"circle_name\" text NOT NULL,\n\t\"plan\" text DEFAULT '' NOT NULL,\n\t\"reviewed_by\" text,\n\t\"reviewed_at\" timestamp with time zone,\n\t\"review_note\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE INDEX \"social_circle_head_requests_status_idx\" ON \"social_circle_head_requests\" (\"status\",\"created_at\");",
+      "CREATE INDEX \"social_circle_head_requests_account_idx\" ON \"social_circle_head_requests\" (\"account_id\");"
+    ]
   }
 ];

@@ -29,17 +29,29 @@ export type HostedEvent = {
 /** People who review member proposals. */
 export const isReviewer = (role: string) => role === "bma_admin" || role === "moderator";
 
-/** Staff who may host without member onboarding (they may not have a member profile). */
-export const isStaffHost = (role: string) => role === "bma_admin" || role === "moderator" || role === "partner_admin";
+/**
+ * Who may host, edit and curate events (and nobody else):
+ *  1. verified partners: partner admins of an organisation, and verified
+ *     partner hosts, vendors and event platforms (role "host"), both set by an admin;
+ *  2. admins;
+ *  3. circle heads: members an admin or moderator approved to lead a circle.
+ * Moderators review proposals and circle-head requests; they don't host.
+ */
+export const HOST_ROLES = ["bma_admin", "partner_admin", "host", "circle_head"] as const;
+
+/** Hosts who may skip member onboarding (they may not have a member profile). */
+export const isStaffHost = (role: string) => role === "bma_admin" || role === "partner_admin" || role === "host";
+
+export const canHost = (a: { role: string }, onboarded: boolean) =>
+  (HOST_ROLES as readonly string[]).includes(a.role) && (onboarded || isStaffHost(a.role));
 
 /**
- * Who can host: members (once onboarded), moderators and admins.
- * Whose events publish without review: the Jurrgun team (admins and
- * moderators, who would otherwise review their own), partner admins, and
- * members marked trusted.
+ * Whose events publish without review: admins and verified partners, members
+ * marked trusted, and a circle head's private hangouts for their own circle.
+ * A circle head's public events wait for review.
  */
-export const canHost = (a: { role: string }, onboarded: boolean) => onboarded || isStaffHost(a.role);
-export const publishesDirectly = (a: { role: string; trustedHost: boolean }) => a.trustedHost || isStaffHost(a.role);
+export const publishesDirectly = (a: { role: string; trustedHost: boolean }, visibility = "public") =>
+  a.trustedHost || isStaffHost(a.role) || (a.role === "circle_head" && visibility === "private");
 
 /** The host, the member who proposed it, or a partner admin of its organisation. */
 export function ownsEvent(e: HostedEvent, v: Viewer): boolean {

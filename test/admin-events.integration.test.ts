@@ -84,11 +84,9 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     const mod = await createMember({ role: "moderator" });
     const insight = await createMember({ role: "insight_viewer" });
     const member = await createMember();
-    // Moderators host events too: the list opens, but only with events they host, and they can't create here.
-    expect((await req("/admin/events", { cookie: mod.cookie })).status).toBe(200);
+    // Moderators review; they don't host or edit events.
+    expect((await req("/admin/events", { cookie: mod.cookie })).status).toBe(403);
     expect((await req("/admin/events/new", { cookie: mod.cookie })).status).toBe(403);
-    const someoneElses = await mkEvent(admin.id, { hostAccountId: host.id });
-    expect((await req(`/admin/events/${someoneElses}`, { cookie: mod.cookie })).status).toBe(404);
     expect((await req("/admin/events", { cookie: insight.cookie })).status).toBe(403);
     expect((await req("/admin/events", { cookie: member.cookie })).status).toBe(403);
     expect((await req("/admin/events")).status).toBe(302); // signed out → login

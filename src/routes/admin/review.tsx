@@ -1,13 +1,14 @@
 /**
- * Review queue for members' event proposals (bma_admin, moderator).
+ * Review queue (bma_admin, moderator): circle heads' event proposals, and
+ * members asking to lead a circle.
  *
- *   GET  /admin/review                 proposals waiting, oldest first
- *   POST /admin/review/:id/approve     publish (optionally trust the host from now on)
- *   POST /admin/review/:id/reject      send back with a note the host sees
+ *   GET  /admin/review                         requests and proposals waiting, oldest first
+ *   POST /admin/review/:id/approve             publish (optionally trust the host from now on)
+ *   POST /admin/review/:id/reject              send back with a note the host sees
+ *   POST /admin/review/circle/:id/approve      make the member a circle head (they can host)
+ *   POST /admin/review/circle/:id/decline      decline, with a note the member sees
  *
- * Approving gives a plain member the "host" role, so they can run check-in and
- * groups for their own events in /admin/events. Trusting a host means their
- * future events skip this queue.
+ * Trusting a host means their future events skip this queue.
  */
 import { Hono, type Context } from "hono";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -17,7 +18,7 @@ import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
-import { accounts, events, profiles } from "../../schema";
+import { accounts, circleHeadRequests, events, profiles } from "../../schema";
 import { Button, Card, Empty, Notice, page, str, Tag, TextArea, Toggle, view } from "../../ui/kit";
 
 export const adminReview = new Hono<AppEnv>();
@@ -38,12 +39,51 @@ adminReview.get("/", async (c) => {
     .where(eq(events.status, "pending"))
     .orderBy(asc(events.submittedAt))
     .limit(100);
+  const requests = await db
+    .select({ r: circleHeadRequests, nickname: profiles.nickname, role: accounts.role })
+    .from(circleHeadRequests)
+    .leftJoin(accounts, eq(accounts.id, circleHeadRequests.accountId))
+    .leftJoin(profiles, eq(profiles.accountId, circleHeadRequests.accountId))
+    .where(eq(circleHeadRequests.status, "pending"))
+    .orderBy(asc(circleHeadRequests.createdAt))
+    .limit(100);
   const notice = c.req.query("notice");
   return page(
     c,
     { title: t("ตรวจกิจกรรม", "Event review"), admin: true },
     <>
-      <h1>{t("กิจกรรมที่สมาชิกเสนอ", "Events proposed by members")}</h1>
+      <h1>{t("คำขอเป็นหัวหน้าวง", "Circle head requests")}</h1>
+      <p class="muted">
+        {t("หัวหน้าวงจัดแฮงเอาต์ให้วงของตัวเองได้ อนุมัติเมื่อมั่นใจว่าจะดูแลคนในวงได้ดี", "Circle heads can host hangouts for their circle. Approve people you trust to look after a group.")}
+      </p>
+      {notice === "circle_approved" ? <Notice kind="ok">{t("อนุมัติแล้ว สมาชิกจัดแฮงเอาต์ได้แล้ว", "Approved. They can host now.")}</Notice> : null}
+      {notice === "circle_declined" ? <Notice kind="ok">{t("ปฏิเสธแล้ว และแจ้งสมาชิกแล้ว", "Declined, and the member has been told.")}</Notice> : null}
+      {requests.length === 0 ? (
+        <Empty>{t("ไม่มีคำขอรอตรวจ", "No requests waiting.")}</Empty>
+      ) : (
+        requests.map(({ r, nickname }) => (
+          <Card>
+            <div class="spread">
+              <h2 style="margin:0">👥 {r.circleName}</h2>
+              <Tag>{nickname ?? t("(ไม่มีโปรไฟล์)", "(no profile)")}</Tag>
+            </div>
+            <p style="white-space:pre-line">{r.plan || t("(ไม่ได้เขียนแผน)", "(no plan written)")}</p>
+            <p class="muted">
+              {fmtDate(r.createdAt, lang)} · <a href={`/admin/users/${encodeURIComponent(r.accountId)}`}>{t("ดูบัญชี", "View account")}</a>
+            </p>
+            <div class="grid2">
+              <form method="post" action={`/admin/review/circle/${r.id}/approve`}>
+                <Button>✓ {t("อนุมัติเป็นหัวหน้าวง", "Approve as circle head")}</Button>
+              </form>
+              <form method="post" action={`/admin/review/circle/${r.id}/decline`}>
+                <TextArea label={t("ปฏิเสธพร้อมเหตุผล", "Decline with a note")} name="note" rows={2} maxlength={MAX_NOTE} hint={t("สมาชิกจะเห็นข้อความนี้", "The member sees this")} />
+                <Button kind="ghost">{t("ปฏิเสธ", "Decline")}</Button>
+              </form>
+            </div>
+          </Card>
+        ))
+      )}
+      <h1>{t("กิจกรรมที่รอตรวจ", "Events waiting for review")}</h1>
       <p class="muted">{t("ตรวจความปลอดภัย ความถูกต้อง และหลักปฏิบัติ ก่อนเผยแพร่", "Check safety, accuracy and the code of conduct before anything goes live.")}</p>
       {notice === "approved" ? <Notice kind="ok">{t("เผยแพร่แล้ว และแจ้งผู้จัดแล้ว", "Published, and the host has been told.")}</Notice> : null}
       {notice === "rejected" ? <Notice kind="ok">{t("ส่งกลับให้ผู้จัดแก้ไขแล้ว", "Sent back to the host with your note.")}</Notice> : null}
@@ -149,10 +189,8 @@ adminReview.post("/:id/approve", async (c) => {
   if (e.createdBy === me.id) return c.redirect("/admin/review?notice=own");
   const trust = str((await c.req.parseBody()).trust) === "1";
   const db = getDb(c.env);
-  const ops = [
+  const ops: { toSQL(): { sql: string; params: unknown[] } }[] = [
     db.update(events).set({ status: "published", reviewNote: null }).where(and(eq(events.id, e.id), eq(events.status, "pending"))),
-    // A plain member becomes a host, so they can run check-in and groups for their event.
-    db.update(accounts).set({ role: "host" }).where(and(eq(accounts.id, e.createdBy), eq(accounts.role, "user"))),
     notify(db, e.createdBy, "host_approved", `เผยแพร่แล้ว: ${e.title}`, `Your event is live: ${e.titleEn ?? e.title}`, `/events/${e.id}`),
     audit(db, me.id, "event.review_approve", { type: "event", id: e.id }, { trust }),
   ];
@@ -174,4 +212,50 @@ adminReview.post("/:id/reject", async (c) => {
     audit(db, me.id, "event.review_reject", { type: "event", id: e.id }),
   ]);
   return c.redirect("/admin/review?notice=rejected");
+});
+
+// ------------------------------------------------------- circle heads --
+
+async function pendingRequest(c: C) {
+  const [r] = await getDb(c.env)
+    .select()
+    .from(circleHeadRequests)
+    .where(and(eq(circleHeadRequests.id, c.req.param("id") ?? ""), eq(circleHeadRequests.status, "pending")))
+    .limit(1);
+  return r ?? null;
+}
+
+adminReview.post("/circle/:id/approve", async (c) => {
+  const r = await pendingRequest(c);
+  if (!r) return c.redirect("/admin/review?notice=gone");
+  const me = c.var.user!.account;
+  if (r.accountId === me.id) return c.redirect("/admin/review?notice=own");
+  const db = getDb(c.env);
+  const now = new Date();
+  await batch(c.env, [
+    db.update(circleHeadRequests).set({ status: "approved", reviewedBy: me.id, reviewedAt: now }).where(and(eq(circleHeadRequests.id, r.id), eq(circleHeadRequests.status, "pending"))),
+    // Only a plain member becomes a circle head; staff and partners keep their role.
+    db.update(accounts).set({ role: "circle_head" }).where(and(eq(accounts.id, r.accountId), eq(accounts.role, "user"))),
+    notify(db, r.accountId, "circle_head", `คุณเป็นหัวหน้าวง "${r.circleName}" แล้ว`, `You now lead "${r.circleName}"`, "/connections"),
+    audit(db, me.id, "circle_head.approve", { type: "account", id: r.accountId }, { request: r.id }),
+  ]);
+  return c.redirect("/admin/review?notice=circle_approved");
+});
+
+adminReview.post("/circle/:id/decline", async (c) => {
+  const r = await pendingRequest(c);
+  if (!r) return c.redirect("/admin/review?notice=gone");
+  const note = str((await c.req.parseBody()).note);
+  if (!note || note.length > MAX_NOTE) return c.redirect("/admin/review?notice=need_note");
+  const me = c.var.user!.account;
+  const db = getDb(c.env);
+  await batch(c.env, [
+    db
+      .update(circleHeadRequests)
+      .set({ status: "declined", reviewedBy: me.id, reviewedAt: new Date(), reviewNote: note })
+      .where(and(eq(circleHeadRequests.id, r.id), eq(circleHeadRequests.status, "pending"))),
+    notify(db, r.accountId, "circle_head", "คำขอเป็นหัวหน้าวงยังไม่ผ่าน ดูเหตุผลได้", "Your circle head request wasn't approved yet. See why", "/circles/lead"),
+    audit(db, me.id, "circle_head.decline", { type: "account", id: r.accountId }, { request: r.id }),
+  ]);
+  return c.redirect("/admin/review?notice=circle_declined");
 });

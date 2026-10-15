@@ -90,7 +90,8 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
   const { v, opts } = props;
   const { t, user } = v;
   const member = !!user?.profile?.onboardedAt;
-  const staff = user && user.account.role !== "user";
+  // Circle heads are members who host; they reach their check-in tools from Host.
+  const staff = user && user.account.role !== "user" && user.account.role !== "circle_head";
   const other = v.lang === "th" ? "en" : "th";
   return (
     <html lang={v.lang}>
@@ -215,9 +216,9 @@ function AdminNav(props: { v: View }) {
   const all = role === "bma_admin";
   const links: [string, string, boolean][] = [
     ["/admin", t("ภาพรวม", "Overview"), true],
-    ["/admin/events", t("กิจกรรม", "Events"), all || ["host", "partner_admin", "moderator"].includes(role)],
+    ["/admin/events", t("กิจกรรม", "Events"), all || ["host", "partner_admin", "circle_head"].includes(role)],
     ["/admin/review", t("ตรวจกิจกรรม", "Event review"), all || role === "moderator"],
-    ["/host", t("🎪 จัดกิจกรรม", "🎪 Host an event"), all || role === "moderator" || role === "partner_admin"],
+    ["/host", t("🎪 จัดกิจกรรม", "🎪 Host an event"), all || role === "partner_admin" || role === "host" || role === "circle_head"],
     ["/admin/moderation", t("รายงาน", "Moderation"), all || role === "moderator"],
     ["/admin/users", t("ผู้ใช้", "Users"), all || role === "moderator"],
     ["/admin/pulse", "City Pulse", all],

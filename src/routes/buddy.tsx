@@ -28,6 +28,7 @@
  *    shared a contact (they moved off the app), or after a kind wrap-up note
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
+import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
@@ -428,9 +429,11 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
         <button type="button" class="btn ghost" data-share={shareText}>
           📍 {t("เช็กอิน", "Check in")}
         </button>
-        <LinkButton href={hostHref} kind="ghost">
-          🍽️ {t("ชวนเป็นโต๊ะ", "Make it a table")}
-        </LinkButton>
+        {props.v.user && canHost(props.v.user.account, true) ? (
+          <LinkButton href={hostHref} kind="ghost">
+            🍽️ {t("ชวนเป็นโต๊ะ", "Make it a table")}
+          </LinkButton>
+        ) : null}
       </div>
       <script
         dangerouslySetInnerHTML={{

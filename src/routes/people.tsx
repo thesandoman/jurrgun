@@ -14,6 +14,7 @@
  * `use("*")`, because this sub-app is mounted at "/" and a wildcard would
  * wrap every page in the app.
  */
+import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
@@ -586,6 +587,8 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
 function CircleTop(props: { v: View; extras: CircleExtras; people: { name: string; emoji?: string; seed: string }[] }) {
   const { t, lang } = props.v;
   const { buddy, hangouts, ideas } = props.extras;
+  // Only circle heads, verified partners and admins host; everyone else can ask to lead a circle.
+  const host = !!props.v.user && canHost(props.v.user.account, true);
   return (
     <>
       <Bento>
@@ -600,10 +603,17 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
               : t("หาบัดดี้", "Get a buddy")}
           </h3>
         </Tile>
-        <Tile href="/host/new?visibility=private" tone="brand">
-          <span class="ico" aria-hidden="true">＋</span>
-          <h3>{t("ชวนวงไปแฮงเอาต์", "Host a hangout for your circle")}</h3>
-        </Tile>
+        {host ? (
+          <Tile href="/host/new?visibility=private" tone="brand">
+            <span class="ico" aria-hidden="true">＋</span>
+            <h3>{t("ชวนวงไปแฮงเอาต์", "Host a hangout for your circle")}</h3>
+          </Tile>
+        ) : (
+          <Tile href="/circles/lead" tone="brand">
+            <span class="ico" aria-hidden="true">👑</span>
+            <h3>{t("นำวงของคุณเอง", "Lead a circle")}</h3>
+          </Tile>
+        )}
         <Tile href="/events">
           <span class="ico" aria-hidden="true">🗓️</span>
           <h3>{t("กิจกรรมกลุ่ม", "Browse group events")}</h3>
@@ -632,7 +642,7 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
           <h3>💡 {t("ไอเดียจากไทป์ในวงของคุณ", "Ideas from the types in your circle")}</h3>
           <div class="rail2">
             {ideas.map((i) => (
-              <a href={`/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}`} class="place-card">
+              <a href={host ? `/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}` : "/circles/lead"} class="place-card">
                 <QuestionArt art={artFor(i.name, i.emoji, { en: label(DISTRICTS, i.district, "en"), th: label(DISTRICTS, i.district, "th") })} lang={lang} />
                 <div>
                   <strong>{i.name}</strong>

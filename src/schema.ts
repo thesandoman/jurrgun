@@ -54,7 +54,12 @@ const created = () => ts("created_at").notNull().defaultNow();
 
 // ---------------------------------------------------------------- identity --
 
-export const ROLES = ["user", "host", "partner_admin", "moderator", "insight_viewer", "bma_admin"] as const;
+/**
+ * host: a verified partner host, vendor or event platform (set by an admin).
+ * circle_head: a member who leads a circle, approved by an admin or moderator
+ * (social_circle_head_requests). Only these, partner admins and admins host.
+ */
+export const ROLES = ["user", "circle_head", "host", "partner_admin", "moderator", "insight_viewer", "bma_admin"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const accounts = pgTable(
@@ -659,6 +664,26 @@ export const datingIntents = pgTable("social_dating_intents", {
   challenges: jsonb("challenges").$type<string[]>().notNull().default([]),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
+
+/** A member asking to lead a circle (and so host its hangouts). Reviewed in /admin/review. */
+export const circleHeadRequests = pgTable(
+  "social_circle_head_requests",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    /** pending | approved | declined */
+    status: text("status").notNull().default("pending"),
+    circleName: text("circle_name").notNull(),
+    /** What they'd host, in their words. */
+    plan: text("plan").notNull().default(""),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: ts("reviewed_at"),
+    /** Why it was declined, shown to the member. */
+    reviewNote: text("review_note"),
+    createdAt: created(),
+  },
+  (t) => [index("social_circle_head_requests_status_idx").on(t.status, t.createdAt), index("social_circle_head_requests_account_idx").on(t.accountId)],
+);
 
 /** A private hangout a host sent to their circle: shows on the recipient's circle page. */
 export const circleShares = pgTable(

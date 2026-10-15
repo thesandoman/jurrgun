@@ -17,7 +17,7 @@ import { adminReview } from "./review";
 export const adminRoutes = new Hono<AppEnv>();
 
 // Anyone who isn't plain staff is turned away here; modules narrow further.
-adminRoutes.use("*", requireRole("host", "partner_admin", "moderator", "insight_viewer"));
+adminRoutes.use("*", requireRole("host", "partner_admin", "circle_head", "moderator", "insight_viewer"));
 
 adminRoutes.route("/", adminDashboard);
 adminRoutes.route("/events", adminEvents);

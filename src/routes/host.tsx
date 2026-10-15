@@ -1,5 +1,7 @@
 /**
- * Community hosting (Phase 1): any onboarded member can propose an event.
+ * Hosting: only admins, verified partners (partner admins and verified
+ * partner hosts) and approved circle heads can host (domain/hosting.ts
+ * canHost). Everyone else is pointed to /circles/lead to ask to lead a circle.
  *
  *   GET  /host                          my hosted events, with status and private links
  *   GET  /host/new   POST /host/new     propose an event
@@ -7,9 +9,9 @@
  *   POST /host/:id/withdraw             take a proposal back (it becomes a draft)
  *   POST /host/:id/private-link/reset   new private link; the old one stops working
  *
- * Members, moderators and admins can host. A member's proposal waits for
- * review (src/routes/admin/review.tsx) unless they're a trusted host; the
- * Jurrgun team (admins, moderators) and partner admins publish directly. Rules live
+ * A circle head's public event waits for review (src/routes/admin/review.tsx)
+ * unless they're trusted; their private circle hangouts, admins and verified
+ * partners publish directly. Rules live
  * in src/domain/hosting.ts. Money never passes through Jurrgun: the host says
  * whether it's free or paid at the venue, and may link their own payment page.
  */
@@ -27,10 +29,10 @@ import { accounts, blocks, circleShares, connections, events, type Event } from 
 import { Button, Card, Choices, Empty, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 
 export const hostRoutes = new Hono<AppEnv>();
-// Members (once onboarded), moderators and admins can host; staff don't need a member profile.
+// Hosts only (see the top). Partners and admins don't need a member profile.
 const requireHost = async (c: Context<AppEnv>, next: () => Promise<void>) => {
   const u = c.var.user!;
-  if (!canHost(u.account, !!u.profile?.onboardedAt)) return c.redirect("/onboarding");
+  if (!canHost(u.account, !!u.profile?.onboardedAt)) return c.redirect(u.profile?.onboardedAt || u.account.role !== "user" ? "/circles/lead" : "/onboarding");
   await next();
 };
 hostRoutes.use("/host", requireUser, requireHost);
@@ -165,7 +167,7 @@ hostRoutes.get("/host", async (c) => {
     .where(or(eq(events.hostAccountId, me.id), eq(events.createdBy, me.id)))
     .orderBy(desc(events.startsAt))
     .limit(50);
-  const direct = publishesDirectly(me);
+  const direct = publishesDirectly(me, "public");
   const privateIds = mine.filter((e) => e.visibility === "private").map((e) => e.id);
   const shared = privateIds.length
     ? await getDb(c.env).select({ eventId: circleShares.eventId }).from(circleShares).where(inArray(circleShares.eventId, privateIds)).limit(5000)
@@ -372,14 +374,14 @@ hostRoutes.get("/host/new", (c) => {
   if (DISTRICTS.some((x) => x.value === district)) d.district = district;
   // "Host a hangout for your circle": private, link-only by default.
   if (c.req.query("visibility") === "private") d.visibility = "private";
-  return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me) });
+  return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me, d.visibility) });
 });
 
 hostRoutes.post("/host/new", async (c) => {
   const v = view(c);
   const me = c.var.user!.account;
-  const direct = publishesDirectly(me);
   const d = inputFromBody(await c.req.parseBody({ all: true }));
+  const direct = publishesDirectly(me, d.visibility);
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   const msgs = errors.map((e) => v.t(e.th, e.en));
   if (!direct && (await pendingCount(c, me.id)) >= MAX_PENDING) {
@@ -418,7 +420,7 @@ hostRoutes.get("/host/:id/edit", async (c) => {
   const v = view(c);
   const e = await ownEditable(c);
   if (!e) return c.redirect("/host");
-  return formPage(c, { v, d: inputFromEvent(e), action: `/host/${e.id}/edit`, editing: true, direct: publishesDirectly(c.var.user!.account) });
+  return formPage(c, { v, d: inputFromEvent(e), action: `/host/${e.id}/edit`, editing: true, direct: publishesDirectly(c.var.user!.account, e.visibility) });
 });
 
 hostRoutes.post("/host/:id/edit", async (c) => {
@@ -426,8 +428,8 @@ hostRoutes.post("/host/:id/edit", async (c) => {
   const me = c.var.user!.account;
   const e = await ownEditable(c);
   if (!e) return c.redirect("/host");
-  const direct = publishesDirectly(me);
   const d = inputFromBody(await c.req.parseBody({ all: true }));
+  const direct = publishesDirectly(me, d.visibility);
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   if (!vals) return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct }, 400);
   const db = getDb(c.env);
