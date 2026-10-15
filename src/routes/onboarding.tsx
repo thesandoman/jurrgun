@@ -557,7 +557,7 @@ export function ConnectionsFields(props: { v: View }) {
   return (
     <>
       <Select
-        label={t("สถานะความสัมพันธ์ (ส่วนตัว ไม่แสดงต่อผู้อื่น)", "Relationship status (private — never shown)")}
+        label={t("สถานะความสัมพันธ์ (ส่วนตัว ไม่แสดงต่อผู้อื่น)", "Relationship status (private, never shown)")}
         name="relationship"
         options={RELATIONSHIP}
         value={p?.relationship ?? "prefer_not"}
@@ -570,7 +570,7 @@ export function ConnectionsFields(props: { v: View }) {
       <small>{t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events, and kept private.")}</small>
       <WomenOnlyFields v={props.v} />
       <details open={!!p?.romanceOn}>
-        <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ เฉพาะคนโสด)", "Open to something more (optional — Single only)")}</summary>
+        <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ เฉพาะคนโสด)", "Open to something more (optional, Single only)")}</summary>
         <p class="muted">{t(ROMANCE_INFO[0], ROMANCE_INFO[1])}</p>
         <RomanceFields v={props.v} openTo={openTo} />
         <Field label={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")} name="pronouns" value={p?.pronouns} maxlength={30} />

@@ -74,7 +74,7 @@ export function datingShown(
 /** The dating details as chips, bilingual. */
 export function datingChips(d: DatingShown, lang: "th" | "en"): string[] {
   const out: string[] = [];
-  if (d.orientation) out.push(`🏳️‍🌈 ${label(ORIENTATIONS, d.orientation, lang)}`);
+  if (d.orientation) out.push(`🫶 ${label(ORIENTATIONS, d.orientation, lang)}`);
   if (d.openTo === "everyone") out.push(lang === "en" ? "💘 Open to everyone" : "💘 เปิดใจกับทุกคน");
   else if (Array.isArray(d.openTo) && d.openTo.length)
     out.push(`💘 ${lang === "en" ? "Open to" : "อยากเจอ"} ${d.openTo.map((g) => label(GENDER_IDENTITIES, g, lang)).join(", ")}`);

@@ -75,6 +75,9 @@ export const ALIVE_CSS = `
 .qs[aria-pressed=true] .sw{background:var(--brand)}
 .qs[aria-pressed=true] .sw::after{transform:translateX(18px)}
 .me-group+.me-menu{margin-top:6px}
+/* a fieldset card keeps its title inside the card */
+fieldset.card>legend{float:left;width:100%;padding:0;margin:0 0 10px;font-weight:700;font-size:1.02rem}
+fieldset.card>legend+*{clear:both}
 .me-group{margin:18px 4px 6px;font-size:.78rem;font-weight:700;color:var(--ink-3);letter-spacing:.02em}
 
 @media (prefers-reduced-motion:reduce){

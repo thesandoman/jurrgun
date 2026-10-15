@@ -67,6 +67,6 @@ describe("dating details on a profile", () => {
     expect(datingShown(target, { romanceOn: true, relationship: "single" })).not.toBeNull();
     expect(datingShown(target, { romanceOn: false, relationship: "single" })).toBeNull();
     expect(datingShown({ ...target, showDatingPrefs: false }, { romanceOn: true, relationship: "single" })).toBeNull();
-    expect(datingChips(datingShown(target, { romanceOn: true, relationship: "single" })!, "en")).toEqual(["🏳️‍🌈 Bisexual", "💘 Open to Woman, Non-binary"]);
+    expect(datingChips(datingShown(target, { romanceOn: true, relationship: "single" })!, "en")).toEqual(["🫶 Bisexual", "💘 Open to Woman, Non-binary"]);
   });
 });
