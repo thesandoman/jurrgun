@@ -30,6 +30,14 @@ CFMH Park Regular · CFSN Cosy Creative · CFSH Neighbourhood Keeper
 Check every answer letter by letter: a BFSN answer must be **with people** (B),
 somewhere **familiar** (F), **seated/slow** (S) and **modern/creative** (N).
 
+**Say D and F in words** (the checker enforces it): a D answer says it is new
+to you ("new", "never", "first", "none of you know", "just opened"); an F
+answer says it is your usual ("usual", "regular", "every week", "same",
+"favourite"). A D answer must not read as a habit, and an F answer must not
+read as a first. Do the same for the other letters even though only a hint
+checks them: riding a boat, watching a show or floating a krathong is not M; a
+mall food court is not H; a plain park needs a detail that says N or H.
+
 ## Places: all of Bangkok
 
 - Every answer names a **real place** and carries its `district` key. Use
@@ -74,7 +82,13 @@ somewhere **familiar** (F), **seated/slow** (S) and **modern/creative** (N).
   café nobody has posted yet".
 - Thai: natural, casual-polite, not a word-for-word translation. Same meaning.
 - Icon: one emoji per answer that fits it; one emoji for the scenario.
-- `tone`: "dawn" | "morning" | "afternoon" | "evening" | "night" | "rain".
+- `tone`: "dawn" | "morning" | "afternoon" | "evening" | "night" | "rain" (the postcard sky).
+- `mood`: "everyday" | "landmark" | "seasonal" | "funny" | "personality" (what kind of moment it is).
+- `months`: seasonal scenarios only, the months (1 to 12) they fit.
+- `audience`: optional, `["newcomer"]`, `["international"]` or `["local"]` when a scenario is written for one Bangkok story only.
+- Never "circle" (or Thai "วง" for a group), "dating mode" or "Made with the BMA"; use Table, Regular Table, Table Host, My people and "Open to something more" (project-state D4, D5).
+- Thai uses the glossary spellings in `design/reference/thai-voice.md` (เดต, แชต, เช็กอิน) and no polite particles.
+- Name the same place in both languages, with the same numbers.
 - Do not repeat an answer's wording from another scenario.
 
 ## rhythm and plan scenarios
@@ -101,6 +115,7 @@ export const FAMILY: Scenario[] = [
     prompt: { en: "Your grandparent's 80th birthday lunch. Where do you suggest?", th: "มื้อเที่ยงวันเกิด 80 ปีของคุณตาคุณยาย คุณจะเสนอที่ไหน?" },
     icon: "🎂",
     tone: "afternoon",
+    mood: "everyday",
     answers: {
       BDSH: a("🥟", "thon_buri", "A long table at a Talat Phlu shop none of you have tried, the whole family invited", "โต๊ะยาวที่ร้านในตลาดพลูที่ยังไม่มีใครเคยลอง ชวนมาทั้งบ้าน"),
       // ... all 16 codes
@@ -117,7 +132,13 @@ Only `import type` from `../scenarios` (no other imports).
 npx vite-node scripts/check-bank.ts src/vibe/bank/<file>.ts <EXPORT_NAME>
 ```
 
-It must print `OK`. Fix every error it reports.
+It must print `OK`. Fix every error it reports, and read every `WARN` line: it
+means nothing in the English shows one of the letters.
+
+Then do the sense check in `design/reference/quiz-blueprint.md` (section 3.2)
+for every answer: letter by letter, would a real person do it then and there,
+is the place real and in that district, and do the Thai and English say the
+same thing. The mix the whole bank is aiming for is in the same file.
 
 ## What the app is
 

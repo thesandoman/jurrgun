@@ -43,6 +43,33 @@ describe("quiz bank", () => {
     }
   });
 
+  it("tags every scenario with a mood, and months only on seasonal ones", () => {
+    for (const s of SCENARIOS) expect(["everyday", "landmark", "seasonal", "funny", "personality"], s.id).toContain(s.mood);
+    for (const s of SCENARIOS.filter((x) => x.months)) expect(s.mood, s.id).toBe("seasonal");
+  });
+
+  it("catches the sense rules: letters said in words, retired names, Thai spellings, both languages naming the same place", () => {
+    const base = SCENARIOS.find((s) => s.id === "saturday")!;
+    const bad = structuredClone(base);
+    bad.id = "bad";
+    bad.twin = undefined;
+    bad.prompt = { en: "A free Saturday afternoon", th: "บ่ายวันเสาร์ว่าง ๆ" };
+    bad.answers.CDSN = { ...bad.answers.CDSN, en: "Your usual seat at the new café in Ari with your circle, a quiet read" };
+    bad.answers.CFSN = { ...bad.answers.CFSN, en: "A café in Ari none of you has tried, slow coffee and a long talk" };
+    bad.answers.CFSH = { ...bad.answers.CFSH, en: "Wang Lang Market with your grandparent, 50-baht curry, same stall", th: "ตลาดวังหลังกับตายาย แกงจานละ 40 บาท แชทกันยาว ๆ" };
+    bad.answers.CDMH = { ...bad.answers.CDMH, en: "Paddle Khlong Lat Mayom with one friend past wooden houses on Yaowarat" };
+    const { errors } = checkScenarios([bad]);
+    const has = (s: string) => expect(errors.some((e) => e.includes(s)), `${s} in\n${errors.join("\n")}`).toBe(true);
+    has('prompt must end with "?"');
+    has("CDSN: a D answer reads as a habit");
+    has("CDSN: retired name");
+    has("CFSN: an F answer must say it is your usual");
+    has("CFSN: an F answer reads as a first");
+    has("CFSH: 50 baht in English but not in Thai");
+    has("CFSH: glossary spelling");
+    has("CDMH: names Yaowarat in English but not in Thai");
+  });
+
   it("every district has a landmark, and every landmark and type hangout is in a real district", () => {
     for (const d of DISTRICT_KEYS) expect(LANDMARKS.some((l) => l.district === d && l.kind === "landmark"), d).toBe(true);
     for (const l of LANDMARKS) expect(DISTRICT_KEYS.has(l.district), l.name.en).toBe(true);

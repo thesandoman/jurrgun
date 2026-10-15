@@ -20,8 +20,10 @@ if (!Array.isArray(list)) {
   console.error(`${file} has no array export named ${name}`);
   process.exit(2);
 }
-const { errors, districts } = checkScenarios(list, { requireEveryDistrict: true });
+const { errors, warnings, districts } = checkScenarios(list, { requireEveryDistrict: true });
 const missing = districts.missing;
+// Warnings are hints a human should look at (a letter with no word that shows it); they never fail the check.
+for (const w of warnings) console.log("WARN", w);
 if (errors.length === 0 && missing.length === 0) {
   console.log(`OK: ${list.length} scenarios, ${list.length * 16} answers, all 50 districts used.`);
 } else {
