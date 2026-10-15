@@ -105,7 +105,7 @@ adminReview.get("/", async (c) => {
               <dd>{nickname ?? t("(ไม่มีโปรไฟล์)", "(no profile)")}</dd>
               <dt>{t("เมื่อไหร่", "When")}</dt>
               <dd>
-                {fmtDate(e.startsAt, lang)} – {fmtDate(e.endsAt, lang)}
+                {fmtDate(e.startsAt, lang)} {t("ถึง", "to")} {fmtDate(e.endsAt, lang)}
               </dd>
               <dt>{t("ที่ไหน", "Where")}</dt>
               <dd>
@@ -122,7 +122,7 @@ adminReview.get("/", async (c) => {
               </dd>
               <dt>{t("ใครมาได้", "Who")}</dt>
               <dd>
-                {t(`${e.capacity} คน · อายุ ${e.ageMin}–${e.ageMax} · ${label(INTENSITY, e.intensity, lang)}`, `${e.capacity} people · ages ${e.ageMin}–${e.ageMax} · ${label(INTENSITY, e.intensity, lang)}`)} ·{" "}
+                {t(`${e.capacity} คน · อายุ ${e.ageMin} ถึง ${e.ageMax} ปี · ${label(INTENSITY, e.intensity, lang)}`, `${e.capacity} people · ages ${e.ageMin}-${e.ageMax} · ${label(INTENSITY, e.intensity, lang)}`)} ·{" "}
                 {e.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")}
               </dd>
               <dt>{t("ค่าใช้จ่าย", "Cost")}</dt>
@@ -254,7 +254,7 @@ adminReview.post("/circle/:id/decline", async (c) => {
       .update(circleHeadRequests)
       .set({ status: "declined", reviewedBy: me.id, reviewedAt: new Date(), reviewNote: note })
       .where(and(eq(circleHeadRequests.id, r.id), eq(circleHeadRequests.status, "pending"))),
-    notify(db, r.accountId, "circle_head", "คำขอเป็นหัวหน้าวงยังไม่ผ่าน ดูเหตุผลได้", "Your circle head request wasn't approved yet. See why", "/circles/lead"),
+    notify(db, r.accountId, "circle_head", "คำขอเป็นหัวหน้าวงยังไม่ผ่านรอบนี้ ดูเหตุผลได้ที่นี่", "Your circle head request wasn't approved yet. See why", "/circles/lead"),
     audit(db, me.id, "circle_head.decline", { type: "account", id: r.accountId }, { request: r.id }),
   ]);
   return c.redirect("/admin/review?notice=circle_declined");

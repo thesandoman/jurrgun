@@ -86,7 +86,7 @@ newcomerRoutes.get("/new", async (c) => {
         <Tile href="/quiz" tone="deep">
           <span class="ico" aria-hidden="true">🧩</span>
           <h3>{t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}</h3>
-          <small>{t("2 นาที ช่วยจัดโต๊ะให้เข้ากับคุณ", "2 minutes. It seats you at the right table.")}</small>
+          <small>{t("18 ข้อ ราว 3 นาที ช่วยจัดโต๊ะให้เข้ากับคุณ", "18 taps, about 3 minutes. It seats you at the right table.")}</small>
         </Tile>
       </Bento>
 

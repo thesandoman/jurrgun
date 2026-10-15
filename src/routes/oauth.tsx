@@ -190,7 +190,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
       return fail(t(`บัญชี ${name} นี้เชื่อมกับบัญชี Jurrgun อื่นอยู่แล้ว`, `This ${name} account is already linked to a different Jurrgun account.`));
     }
     const [acct] = await db.select().from(accounts).where(eq(accounts.id, link.accountId)).limit(1);
-    if (!acct || !accountUsable(acct)) return fail(t("บัญชีนี้ใช้งานไม่ได้ในขณะนี้", "This account can't be used right now."));
+    if (!acct || !accountUsable(acct)) return fail(t("บัญชีนี้ใช้งานไม่ได้ตอนนี้", "This account can't be used right now."));
     if (!current) await startSession(c, acct.id);
     return c.redirect(tx.next || "/onboarding");
   }

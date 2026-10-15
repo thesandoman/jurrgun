@@ -111,7 +111,7 @@ export function datingChips(d: DatingShown, lang: "th" | "en"): string[] {
 }
 
 const LEGACY: Record<string, { th: string; en: string; emoji: string }> = {
-  weekend: { th: "วันหยุดในฝันของฉันคือ…", en: "My perfect Bangkok weekend is…", emoji: "🧺" },
+  weekend: { th: "สุดสัปดาห์ในฝันที่กรุงเทพฯ ของฉันคือ…", en: "My perfect Bangkok weekend is…", emoji: "🧺" },
   bkk_spot: { th: "มุมโปรดในกรุงเทพฯ ของฉันคือ…", en: "My favourite Bangkok spot is…", emoji: "📍" },
 };
 
@@ -230,7 +230,7 @@ export function ProfileCard(props: {
         </section>
       ) : null}
       {p.dating && datingChips(p.dating, lang).length ? (
-        <section class="pc-lines" aria-label={t("เรื่องเดท", "Dating")}>
+        <section class="pc-lines" aria-label={t("เรื่องเดต", "Dating")}>
           <div class="pc-chips">
             {datingChips(p.dating, lang).map((x) => (
               <span class="pc-chip">{x}</span>
@@ -239,7 +239,7 @@ export function ProfileCard(props: {
         </section>
       ) : null}
       {datingAnswered.length ? (
-        <section class="pc-dating" aria-label={t("คำถามเรื่องเดท", "Dating prompts")}>
+        <section class="pc-dating" aria-label={t("คำถามเรื่องเดต", "Dating prompts")}>
           <p class="eyebrow">💘 {t("เปิดใจมากกว่าเพื่อน", "Open to something more")}</p>
           {datingAnswered.map(({ q, a }) => (
             <PromptCard v={props.v} q={q} a={a} photo={null} />

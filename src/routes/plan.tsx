@@ -160,7 +160,7 @@ function reasonText(v: View, r: string): string {
     case "time":
       return t(`${label(TIME_WINDOWS, arg, "th")} คุณว่าง`, `${label(TIME_WINDOWS, arg, "en")} work for you`);
     case "friends":
-      return t(`คนในวงไป ${arg} คน`, `${arg} from your circle going`);
+      return t(`คนรู้จักของคุณไป ${arg} คน`, `${arg} from your circle going`);
     case "step_free":
       return t("ไม่มีขั้นบันได", "Step-free");
     case "short":
@@ -215,13 +215,13 @@ planRoutes.get("/plan", async (c) => {
     { title: t("แผนสัปดาห์นี้", "This week's plan"), tab: "events" },
     <>
       <h1>🗓️ {t("แผนสัปดาห์นี้", "This week's plan")}</h1>
-      <p class="muted">{t("เราเลือกให้สองอย่างจากสิ่งที่คุณชอบ ไม่ต้องไล่ดูทั้งหมด ดีพอก็ดีแล้ว", "Two picks made for you from what you told us. No scrolling needed: good enough is great.")}</p>
+      <p class="muted">{t("เราเลือกให้ 2 อย่างจากสิ่งที่คุณบอกไว้ ไม่ต้องไล่ดูทั้งหมด ไม่ต้องเพอร์เฟกต์ก็สนุกได้", "Two picks made for you from what you told us. No scrolling needed: good enough is great.")}</p>
       {askEnergy ? (
         <Card class="hint energy">
           <strong>🔋 {t("เดือนนี้พลังโซเชียลของคุณเป็นยังไง?", "How's your social energy this month?")}</strong>
-          <p class="muted">{t("ส่วนตัว ใช้ปรับแผนให้เหมาะกับคุณ", "Private. We use it to fit your plan to you.")}</p>
+          <p class="muted">{t("เป็นความลับ เราใช้ปรับแผนให้เหมาะกับคุณ", "Private. We use it to fit your plan to you.")}</p>
           <form method="post" action="/plan/energy" class="row">
-            <button class="btn ghost" name="energy" value="low">🪫 {t("ต่ำ", "Low")}</button>
+            <button class="btn ghost" name="energy" value="low">🪫 {t("น้อย", "Low")}</button>
             <button class="btn ghost" name="energy" value="okay">🔋 {t("กลาง ๆ", "Okay")}</button>
             <button class="btn ghost" name="energy" value="full">⚡ {t("เต็มที่", "Full")}</button>
           </form>
@@ -229,7 +229,7 @@ planRoutes.get("/plan", async (c) => {
       ) : null}
       {bio.socialEnergy === "low" ? (
         <Notice kind="info">
-          {t("พลังต่ำ: เราเลือกแผนที่ใกล้ เล็ก และสั้นให้ หรือพักก็ได้นะ", "Low energy: we picked closer, smaller, shorter plans. Resting is fine too.")}
+          {t("พลังน้อย: เราเลือกแผนที่ใกล้กว่า เล็กกว่า และสั้นกว่าให้ จะพักก่อนก็ได้นะ", "Low energy: we picked closer, smaller, shorter plans. Resting is fine too.")}
         </Notice>
       ) : null}
       {lowTwice ? (
@@ -244,17 +244,17 @@ planRoutes.get("/plan", async (c) => {
           </p>
         </Card>
       ) : null}
-      {plan.status === "accepted" ? <Notice kind="ok">{t("เยี่ยม! เจอกันที่นั่น", "Lovely. See you there.")}</Notice> : null}
+      {plan.status === "accepted" ? <Notice kind="ok">{t("เยี่ยมเลย แล้วเจอกันที่นั่นนะ", "Lovely. See you there.")}</Notice> : null}
       {plan.status === "skipped" ? <Notice kind="info">{t("ข้ามสัปดาห์นี้แล้ว ไม่เป็นไรเลย", "Skipped this week. That's fine.")}</Notice> : null}
       {restHint ? (
         <Card class="hint">
           <strong>🌿 {t("อยากพักสักสัปดาห์ไหม?", "Fancy a rest week?")}</strong>
-          <p class="muted">{t("ข้ามมาสองสัปดาห์แล้ว พักได้นะ วงของคุณยังอยู่", "Two skips in a row. Taking a break is fine; your circle stays.")}</p>
+          <p class="muted">{t("ข้ามมา 2 สัปดาห์ติดแล้ว พักได้นะ คนรู้จักของคุณยังอยู่ตรงนี้", "Two skips in a row. Taking a break is fine; your circle stays.")}</p>
           <LinkButton href="/settings/habits" kind="ghost">{t("พัก Jurrgun", "Take a break")}</LinkButton>
         </Card>
       ) : null}
       {plan.picks.length === 0 ? (
-        <Notice kind="info">{t("สัปดาห์นี้ยังไม่มีอะไรที่ตรงกับคุณ ลองเพิ่มความชอบในโปรไฟล์ หรือเสนอแผนเองด้านล่าง", "Nothing fits you this week yet. Add meetup preferences to your profile, or pitch your own below.")}</Notice>
+        <Notice kind="info">{t("สัปดาห์นี้ยังไม่มีอะไรที่ตรงกับคุณ ลองเพิ่มสิ่งที่ชอบในโปรไฟล์ หรือเสนอแผนเองด้านล่าง", "Nothing fits you this week yet. Add meetup preferences to your profile, or pitch your own below.")}</Notice>
       ) : (
         <div class="plan-picks">
           {plan.picks.map((pk, i) => {
@@ -277,7 +277,7 @@ planRoutes.get("/plan", async (c) => {
                 {plan.status === "open" ? (
                   <form method="post" action="/plan/accept">
                     <input type="hidden" name="ref" value={pk.ref} />
-                    <Button>{t("เอาอันนี้", "I'll go")}</Button>
+                    <Button>{t("ไปอันนี้", "I'll go")}</Button>
                   </form>
                 ) : null}
               </Card>
@@ -309,7 +309,7 @@ planRoutes.get("/plan", async (c) => {
             name="audience"
             options={[
               ...(circle.buddy ? [{ value: "buddy", th: "บัดดี้ของฉัน", en: "My buddy" }] : []),
-              { value: "circle", th: "คนในวงของฉัน", en: "My circle" },
+              { value: "circle", th: "คนรู้จักของฉัน", en: "My circle" },
             ]}
             value={circle.buddy ? "buddy" : "circle"}
             lang={lang}
@@ -320,7 +320,7 @@ planRoutes.get("/plan", async (c) => {
       </Card>
       {visible.length ? (
         <>
-          <h3>🙌 {t("ไอเดียจากวงของคุณ", "Pitches from your circle")}</h3>
+          <h3>🙌 {t("ไอเดียจากคนรู้จักของคุณ", "Pitches from your circle")}</h3>
           {visible.map(({ p, nickname }) => {
             const going = joins.filter((j) => j.pitchId === p.id);
             const iJoined = going.some((j) => j.accountId === me);
@@ -444,7 +444,7 @@ planRoutes.get("/me/month", requireMember, async (c) => {
   const places = [...new Set([...went.map((x) => x.district), ...stamps.map((x) => x.district)])];
   const tiles: [string, number, string][] = [
     ["🍽️", went.length, t("โต๊ะที่ได้ไปนั่ง", "Tables you sat at")],
-    ["🫂", conns.length, t("คนใหม่ในวงของคุณ", "New people in your circle")],
+    ["🫂", conns.length, t("คนรู้จักใหม่", "New people in your circle")],
     ["💬", shared.length, t("คนที่ยังคุยกันต่อ", "People you kept in touch with")],
     ["📍", places.length, t("ย่านที่ได้ไป", "Districts you explored")],
   ];
@@ -452,8 +452,8 @@ planRoutes.get("/me/month", requireMember, async (c) => {
     c,
     { title: t("เดือนนี้ของฉัน", "My month in people"), tab: "me" },
     <>
-      <h1>🌱 {t("เดือนนี้ของคุณ เป็นเรื่องของผู้คน", "Your month, in people")}</h1>
-      <p class="muted">{t("30 วันที่ผ่านมา เรานับคนและที่ ไม่นับเวลาบนหน้าจอ", "The last 30 days. We count people and places, never time on screen.")}</p>
+      <h1>🌱 {t("เดือนนี้ คุณได้เจอใครบ้าง", "Your month, in people")}</h1>
+      <p class="muted">{t("30 วันที่ผ่านมา เรานับคนและสถานที่ ไม่นับเวลาที่อยู่หน้าจอ", "The last 30 days. We count people and places, never time on screen.")}</p>
       <div class="stats month">
         {tiles.map(([e, n, label]) => (
           <div class="fact">

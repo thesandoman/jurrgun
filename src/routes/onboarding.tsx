@@ -153,7 +153,7 @@ onboarding.get("/welcome", (c) => {
           <AnswerCard name="mode" value={o.value} emoji={o.emoji} label={lang === "en" ? o.label.en : o.label.th} checked={chosen ? chosen === o.value : i === 0} />
         ))}
       </div>
-      <p class="muted">🔒 {t("เปลี่ยนได้ทุกเมื่อ เรื่องเดทเป็นความลับเสมอ", "Change it anytime. Dating stays private.")}</p>
+      <p class="muted">🔒 {t("เปลี่ยนได้ทุกเมื่อ เรื่องเดตเป็นความลับเสมอ", "Change it anytime. Dating stays private.")}</p>
       <div class="flow-bar">
         <button type="submit" class="btn primary">{t("ไปกันเลย", "Let's go")}</button>
       </div>
@@ -193,7 +193,7 @@ export function DatingPrefSteps(props: { t: (th: string, en: string) => string; 
       <FlowStep emoji="🐢" title={t("จังหวะที่สบายใจ", "Your pace")}>
         <Pills name="pace" type="radio" options={prefOpts(DATING_PACE)} values={one(p.pace)} lang={lang} />
       </FlowStep>
-      <FlowStep emoji="☕" title={t("เดทแรกในฝัน", "Ideal first date")} hint={t(`เลือกได้สูงสุด ${MAX_FIRST}`, `Pick up to ${MAX_FIRST}.`)}>
+      <FlowStep emoji="☕" title={t("เดตแรกในฝัน", "Ideal first date")} hint={t(`เลือกได้สูงสุด ${MAX_FIRST}`, `Pick up to ${MAX_FIRST}.`)}>
         <Pills name="firstDate" options={prefOpts(DATING_FIRST)} values={p.firstDate} lang={lang} />
       </FlowStep>
       <FlowStep emoji="🚇" title={t("ไปเจอได้ไกลแค่ไหน", "How far would you go?")}>
@@ -216,7 +216,7 @@ onboarding.get("/dating", (c) => {
     c,
     { title: TITLE, bare: true },
     <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")}>
-      <FlowStep emoji="💘" title={t("ทำไมถึงมาหาเดทที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
+      <FlowStep emoji="💘" title={t("อะไรทำให้อยากมาเดตที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
         <Pills name="reasons" options={DATING_REASONS.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
         <script
           dangerouslySetInnerHTML={{
@@ -224,7 +224,7 @@ onboarding.get("/dating", (c) => {
           }}
         />
       </FlowStep>
-      <FlowStep emoji="🏙️" title={t("อะไรทำให้การเดทในกรุงเทพฯ ยาก?", "What makes dating in Bangkok hard?")} hint={t("เลือกได้หลายข้อ", "Pick any.")}>
+      <FlowStep emoji="🏙️" title={t("อะไรทำให้การเดตในกรุงเทพฯ ยาก?", "What makes dating in Bangkok hard?")} hint={t("เลือกได้หลายข้อ", "Pick any.")}>
         <Pills name="challenges" options={DATING_CHALLENGES.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
       </FlowStep>
       <DatingPrefSteps t={t} lang={lang} />
@@ -265,7 +265,7 @@ onboarding.post("/dating", async (c) => {
         </ul>
       ) : null}
       <p>
-        🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัยเวลาเดท", "Your dating safety net")}</a>
+        🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัยเวลาไปเดต", "Your dating safety net")}</a>
       </p>
       <div class="flow-bar">
         <a class="btn primary" href="/onboarding/quiz">{t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ", "Next: your Bangkok Type")}</a>
@@ -388,12 +388,12 @@ function PrivacyForm(props: { v: View; error?: string }) {
       <FlowStep
         emoji="🤝"
         title={t("สิ่งที่จำเป็น", "The must-haves")}
-        hint={t("ต้องยอมรับ 3 ข้อนี้ก่อนเริ่มใช้งาน", "These three keep the app working and safe.")}
+        hint={t("3 ข้อนี้ทำให้แอปใช้งานได้และปลอดภัย ต้องยอมรับก่อนเริ่มใช้งาน", "These three keep the app working and safe.")}
         info={
           <>
             <p>
               {t(
-                "บริการ: ใช้บัญชีและการจองกิจกรรมของคุณ ความปลอดภัย: ใช้ตรวจสอบรายงานและป้องกันการคุกคาม",
+                "บริการ: ใช้สำหรับบัญชีและการจองกิจกรรมของคุณ ความปลอดภัย: ใช้ตรวจสอบรายงานและป้องกันการคุกคาม",
                 "Service: your account and bookings. Safety: used to review reports and prevent harassment.",
               )}
             </p>
@@ -414,7 +414,7 @@ function PrivacyForm(props: { v: View; error?: string }) {
         title={t("ตัวเลือกเพิ่มเติม", "Optional extras")}
         hint={t("เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "Change any of these later in Settings.")}
         info={t(
-          "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนงานและเมื่อมีที่ว่าง",
+          "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง",
           "Seating uses your interests and languages. City Pulse: results are only shown as totals from 10 or more people. Reminders: before events and when a spot opens.",
         )}
       >
@@ -441,7 +441,7 @@ onboarding.post("/privacy", async (c) => {
     return page(
       c,
       { title: TITLE, status: 400, bare: true },
-      <PrivacyForm v={v} error={v.t("ต้องยอมรับบริการ ความปลอดภัย และหลักปฏิบัติ เพื่อใช้งานต่อ", "Service, safety and the code of conduct are needed to continue.")} />,
+      <PrivacyForm v={v} error={v.t("ต้องยอมรับเรื่องบริการ ความปลอดภัย และหลักปฏิบัติ ก่อนจึงจะไปต่อได้", "Service, safety and the code of conduct are needed to continue.")} />,
     );
   }
   const db = getDb(c.env);
@@ -527,7 +527,7 @@ onboarding.post("/you", async (c) => {
     return page(
       c,
       { title: TITLE, status: 400, bare: true },
-      <YouForm v={v} error={v.t(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} และสไตล์การสื่อสารไม่เกิน ${MAX_COMM}`, `Pick at most ${MAX_INTERESTS} interests and ${MAX_COMM} ways to keep in touch.`)} />,
+      <YouForm v={v} error={v.t(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง และช่องทางติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_INTERESTS} interests and ${MAX_COMM} ways to keep in touch.`)} />,
     );
   }
   // Keep romance if it was already on; this form only edits non-romance intents.
@@ -582,7 +582,7 @@ export function ConnectionsFields(props: { v: View }) {
 }
 
 const ROMANCE_INFO: [string, string] = [
-  "ค่าเริ่มต้นคือโหมดเพื่อนเท่านั้น หากเปิด คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' ได้หลังกิจกรรม และจะรู้ก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน ข้อมูลด้านล่างเป็นความลับ เจ้าหน้าที่ดูไม่ได้ และจะถูกลบเมื่อปิดโหมดนี้",
+  "ค่าเริ่มต้นคือโหมดเพื่อน ถ้าเปิดโหมดนี้ คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' กับคนที่เจอหลังกิจกรรมได้ และจะรู้ผลก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน ข้อมูลด้านล่างเป็นความลับ เจ้าหน้าที่ดูไม่ได้ และจะถูกลบเมื่อคุณปิดโหมดนี้",
   "Friends-only is the default. If you switch this on, you can choose 'open to something more' after events, and you'll only find out if it's mutual. The details below are private, invisible to staff, and deleted when you switch this off.",
 ];
 
@@ -593,7 +593,7 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
   return (
     <>
       <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={props.on ?? !!p?.romanceOn} />
-      <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="—" />
+      <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="-" />
       <Choices
         legend={t("อยากเจอ…", "Open to meeting…")}
         name="romanceOpenTo"
@@ -601,9 +601,9 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
         values={openTo === "everyone" ? ["everyone"] : Array.isArray(openTo) ? openTo : []}
         lang={lang}
       />
-      <Select label={t("รสนิยมทางเพศของคุณ (ไม่บังคับ)", "Your orientation (optional)")} name="orientation" options={ORIENTATIONS} value={p?.orientation} lang={lang} blank="—" />
+      <Select label={t("รสนิยมทางเพศของคุณ (ไม่บังคับ)", "Your orientation (optional)")} name="orientation" options={ORIENTATIONS} value={p?.orientation} lang={lang} blank="-" />
       <Choices
-        legend={t("กรองตามรสนิยมทางเพศ (ไม่บังคับ ไม่เลือก = ทุกแบบ)", "Only match people who are… (optional; none ticked = anyone)")}
+        legend={t("แมตช์เฉพาะคนที่เป็น… (ไม่บังคับ ถ้าไม่เลือกเลย = ทุกคน)", "Only match people who are… (optional; none ticked = anyone)")}
         name="orientationOpenTo"
         options={ORIENTATIONS}
         values={p?.orientationOpenTo ?? []}
@@ -611,7 +611,7 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
       />
       <Toggle
         name="showDatingPrefs"
-        label={t("แสดงสรรพนาม รสนิยม และคนที่อยากเจอ ให้คนที่เปิดใจเรื่องเดทเหมือนกันเห็น", "Show my pronouns, orientation and who I'm open to, to members who are also open to dating")}
+        label={t("แสดงสรรพนาม รสนิยม และคนที่อยากเจอ ให้สมาชิกที่เปิดใจมากกว่าเพื่อนเหมือนกันเห็น", "Show my pronouns, orientation and who I'm open to, to members who are also open to dating")}
         hint={t("ไม่บังคับ คนที่อยู่โหมดเพื่อนจะไม่เห็นเลย", "Optional. Friends-only members never see it.")}
         checked={!!p?.showDatingPrefs}
       />
@@ -626,11 +626,11 @@ export function WomenOnlyFields(props: { v: View }) {
   return (
     <fieldset class="card">
       <legend>🌸 {t("พื้นที่สำหรับผู้หญิงและนอนไบนารี (ไม่บังคับ)", "Women & non-binary spaces (optional)")}</legend>
-      <Select label={t("เพศของคุณ (เป็นความลับ ไม่แสดงต่อใคร)", "Your gender (private, never shown)")} name="gender" options={GENDER_IDENTITIES} value={p?.gender} lang={lang} blank="—" />
+      <Select label={t("เพศของคุณ (เป็นความลับ ไม่แสดงต่อใคร)", "Your gender (private, never shown)")} name="gender" options={GENDER_IDENTITIES} value={p?.gender} lang={lang} blank="-" />
       <Toggle
         name="womenOnly"
         label={t("บัดดี้ การ์ด แมตช์ และแชต เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only: buddies, the deck, matches and chats")}
-        hint={t("ใช้ได้เมื่อเลือกเพศเป็นผู้หญิงหรือนอนไบนารี กิจกรรมที่ติดแท็กนี้ก็ใช้เพศที่เลือกไว้ตรงนี้", "Available when your gender is Woman or Non-binary. Events with this tag use this gender too, whether or not this is on.")}
+        hint={t("ใช้ได้เมื่อเลือกเพศเป็นผู้หญิงหรือนอนไบนารี กิจกรรมที่ติดแท็กนี้ก็ใช้เพศที่เลือกไว้ตรงนี้ ไม่ว่าจะเปิดตัวเลือกนี้หรือไม่", "Available when your gender is Woman or Non-binary. Events with this tag use this gender too, whether or not this is on.")}
         checked={!!p?.womenOnly}
       />
     </fieldset>
@@ -725,7 +725,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
       <FlowStep
         emoji="💘"
         title={t("เปิดใจมากกว่าเพื่อน?", "Open to something more?")}
-        hint={t("ไม่บังคับ เฉพาะคนโสด ค่าเริ่มต้นคือเพื่อน", "Optional, Single only. Friends-only by default.")}
+        hint={t("ไม่บังคับ เฉพาะคนโสด ค่าเริ่มต้นคือโหมดเพื่อน", "Optional, Single only. Friends-only by default.")}
         info={t(ROMANCE_INFO[0], ROMANCE_INFO[1])}
       >
         <RomanceFields v={props.v} openTo={p?.romanceOpenTo} on={props.mode === "dating" || props.mode === "dating_only" ? true : undefined} />

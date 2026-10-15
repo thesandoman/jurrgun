@@ -86,11 +86,11 @@ export async function tooMany(c: Context<AppEnv>, mode: "signup" | "login"): Pro
       <h1>{t("ลองหลายครั้งเกินไป", "Too many attempts")}</h1>
       <Notice kind="error">
         {mode === "login"
-          ? t("ลองหลายครั้งเกินไปแล้ว รออีก 15 นาทีแล้วค่อยลองใหม่นะ", "Too many attempts, try again in 15 minutes.")
-          : t("มีคนสมัครจากเครือข่ายนี้เยอะเกินไป รออีก 1 ชั่วโมงแล้วลองใหม่นะ", "Too many sign-ups from this network, try again in an hour.")}
+          ? t("ลองหลายครั้งเกินไปแล้ว รอ 15 นาทีแล้วลองใหม่", "Too many attempts. Try again in 15 minutes.")
+          : t("มีการสมัครจากเครือข่ายนี้มากเกินไป รอ 1 ชั่วโมงแล้วลองใหม่", "Too many sign-ups from this network. Try again in an hour.")}
       </Notice>
       <p class="muted">
-        {t("หากต้องการความช่วยเหลือเร่งด่วน โทร ", "If you need urgent help, call ")}
+        {t("ถ้าต้องการความช่วยเหลือด่วน โทร ", "If you need urgent help, call ")}
         <a href="tel:191">191</a> / <a href="tel:1669">1669</a>
       </p>
     </>,
@@ -119,7 +119,7 @@ function AuthForm(props: {
           required
           autocomplete="username"
           maxlength={30}
-          hint={mode === "signup" ? t("a–z, 0–9, _ หรือ . (3 ถึง 30 ตัว) ไม่แสดงให้คนอื่นเห็น", "a–z, 0–9, _ or . (3–30) — never shown to other people") : undefined}
+          hint={mode === "signup" ? t("a-z, 0-9, _ หรือ . ยาว 3 ถึง 30 ตัว คนอื่นจะไม่เห็นชื่อนี้", "a-z, 0-9, _ or . (3 to 30). Never shown to other people.") : undefined}
         />
         <Field
           label={t("รหัสผ่าน", "Password")}
@@ -176,7 +176,7 @@ authRoutes.post("/signup", async (c) => {
   if (!USERNAME_RE.test(username)) return fail(t("ชื่อผู้ใช้ไม่ถูกต้อง", "That username isn't valid."));
   if (isPasswordless(username)) return fail(t("ชื่อผู้ใช้ห้ามขึ้นต้นด้วย google_ หรือ line_", "Usernames can't start with google_ or line_."));
   const pwIssue = passwordProblem(password);
-  if (pwIssue) return fail(t("รหัสผ่านต้องยาว 8–200 ตัวอักษร", "Password must be 8–200 characters."));
+  if (pwIssue) return fail(t("รหัสผ่านต้องยาว 8 ถึง 200 ตัวอักษร", "Password must be 8 to 200 characters."));
   if (password !== confirm) return fail(t("รหัสผ่านไม่ตรงกัน", "Passwords don't match."));
 
   const now = new Date();
@@ -254,10 +254,10 @@ authRoutes.post("/login", async (c) => {
   await db.delete(loginAttempts).where(eq(loginAttempts.username, username));
   if (!accountUsable(acct)) {
     if (acct.status === "suspended" && acct.suspendedUntil) {
-      return fail(t(`บัญชีถูกระงับถึง ${fmtDay(acct.suspendedUntil, lang)}`, `This account is suspended until ${fmtDay(acct.suspendedUntil, lang)}.`), 403);
+      return fail(t(`บัญชีนี้ถูกระงับถึง ${fmtDay(acct.suspendedUntil, lang)}`, `This account is suspended until ${fmtDay(acct.suspendedUntil, lang)}.`), 403);
     }
     if (acct.status === "deactivated") return fail(t("บัญชีนี้ถูกปิดแล้ว", "This account was deactivated."), 403);
-    return fail(t("บัญชีนี้ถูกระงับการใช้งาน", "This account has been banned."), 403);
+    return fail(t("บัญชีนี้ถูกแบนแล้ว", "This account has been banned."), 403);
   }
   if (acct.status === "suspended") {
     // Suspension has expired: lift it on the way in.

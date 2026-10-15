@@ -10,8 +10,10 @@ export const BRAND = {
   tagline: { th: "กลุ่มเล็ก สถานที่จริง แล้วเจอกันนะ", en: "Small groups. Real Bangkok places. See you there." },
   /** The endorsement (endorsed-brand model, design/reference/brand-positioning.md). Wording to be confirmed with the BMA. */
   endorsement: { th: "ร่วมกับกรุงเทพมหานคร", en: "Made with the Bangkok Metropolitan Administration" },
-  /** The planned domain (ktm = Krung Thep Maha Nakhon). Not live yet: the app runs at jurrgun.apps.sv-academy.org until it is. */
-  domain: "jurrgun.ktm",
+  /** Where the app lives today; printed on share cards and films. */
+  url: "jurrgun.apps.sv-academy.org",
+  /** The planned domain (ktm = Krung Thep Maha Nakhon). Not bought yet: use `url` until it is. */
+  plannedDomain: "jurrgun.ktm",
   meaning: { th: "เจอกัน = แล้วเจอกันนะ", en: "Jurrgun (เจอกัน, say “jer-gun”) means “see you later” in Thai" },
 };
 

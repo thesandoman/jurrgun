@@ -50,7 +50,7 @@ somewhere **familiar** (F), **seated/slow** (S) and **modern/creative** (N).
 - **Gender neutral.** Never he/she/him/her/his/boyfriend/girlfriend/husband/
   wife/guys/girls/mum/dad. Use "they", "your partner", "your date", "your
   parents", "your sibling", "your grandparent". Thai: no ครับ/ค่ะ, no
-  แฟนหนุ่ม/แฟนสาว/สามี/ภรรยา; use แฟน, คู่เดท, พ่อแม่, พี่น้อง, ตายาย.
+  แฟนหนุ่ม/แฟนสาว/สามี/ภรรยา; use แฟน, คู่เดต, พ่อแม่, พี่น้อง, ตายาย.
 - **Family friendly.** No alcohol (no beer, wine, cocktails, drinks, shots,
   bar crawls framed around drinking), no drugs, smoking, gambling, nothing
   sexual. Nightlife is fine as **music, dancing, food and people**: "dancing at

@@ -195,11 +195,11 @@ export async function runBuddyRound(
   for (const g of round.groups) {
     queries.push(db.insert(buddyPairs).values({ id: newId(), eventId: event.id, members: g, method: round.method }));
     for (const m of g) {
-      queries.push(notify(db, m, "buddy", "เราจับคู่บัดดี้ให้คุณแล้ว ดูได้ในหน้ากิจกรรม", "You've got an event buddy — see the event page", `/events/${event.id}`));
+      queries.push(notify(db, m, "buddy", "เราจับคู่บัดดี้ให้คุณแล้ว ดูได้ในหน้ากิจกรรม", "You've got an event buddy. See the event page", `/events/${event.id}`));
     }
   }
   for (const m of round.unmatched) {
-    queries.push(notify(db, m, "buddy_none", "รอบนี้ยังหาบัดดี้ไม่ได้ แต่โฮสต์จะดูแลคุณที่งาน", "No buddy match this time — your host will look after you", `/events/${event.id}`));
+    queries.push(notify(db, m, "buddy_none", "รอบนี้ยังหาบัดดี้ไม่ได้ แต่โฮสต์จะดูแลคุณที่งาน", "No buddy match this time, but your host will look after you", `/events/${event.id}`));
   }
   queries.push(audit(db, opts.actor ?? "system", "event.buddy_round", { type: "event", id: event.id }, { groups: round.groups.length, method: round.method, unmatched: round.unmatched.length }));
   await batch(env, queries);

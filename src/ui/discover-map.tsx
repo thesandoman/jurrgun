@@ -164,7 +164,7 @@ export function FullDiscover(props: {
       </div>
 
       {/* Ticker */}
-      <div class="fd-ticker" role="region" aria-label={t("ข่าวสารวันนี้", "Today in Bangkok")}>
+      <div class="fd-ticker" role="region" aria-label={t("วันนี้ในกรุงเทพฯ", "Today in Bangkok")}>
         <div class="tk-track">
           {tickerRow(false)}
           {tickerRow(true)}
@@ -228,7 +228,7 @@ export function FullDiscover(props: {
         {props.hasQuests ? (
           <button type="button" class="fd-rail-btn" id="fd-quests" aria-pressed="false">
             <b aria-hidden="true">🧭</b>
-            {t("เส้นทาง", "Quests")}
+            {t("เควสต์", "Quests")}
           </button>
         ) : null}
         <a href="/me/events" class="fd-rail-btn">

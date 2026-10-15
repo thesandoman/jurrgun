@@ -13,21 +13,21 @@ export type Text = { th: string; en: string };
 const t = (th: string, en: string): Text => ({ th, en });
 
 export const REVIEW_NOTE = t(
-  "ข้อมูลนี้เพื่อการเรียนรู้ทั่วไป ไม่ใช่คำแนะนำทางการแพทย์หรือกฎหมาย หากมีข้อสงสัยโปรดปรึกษาแพทย์หรือสายด่วนด้านล่าง (ฉบับร่างต้นแบบ รอการตรวจทานจากผู้เชี่ยวชาญด้านสุขภาพและกฎหมาย)",
+  "ข้อมูลนี้เพื่อการเรียนรู้ทั่วไป ไม่ใช่คำแนะนำทางการแพทย์หรือกฎหมาย ถ้ามีข้อสงสัย ปรึกษาแพทย์หรือโทรสายด่วนด้านล่าง (ฉบับร่างต้นแบบ รอการตรวจทานจากผู้เชี่ยวชาญด้านสุขภาพและกฎหมาย)",
   "This is general education, not medical or legal advice. If in doubt, talk to a doctor or one of the helplines below. (Prototype draft, pending review by health and legal experts.)",
 );
 
 export type Helpline = { number: string; name: Text; when: Text; hours: Text; source: string };
 
-const H24 = t("ตลอด 24 ชม.", "24 hours");
+const H24 = t("ตลอด 24 ชั่วโมง", "24 hours");
 
 export const HELPLINES: Helpline[] = [
   { number: "191", name: t("ตำรวจ", "Police"), when: t("เหตุฉุกเฉิน อันตรายตอนนี้", "Emergency, danger right now"), hours: H24, source: "https://www.pattayamail.com/thailandnews/24-hour-emergency-hotlines-and-services-to-assist-residents-and-visitors-in-thailand-485355" },
   { number: "1669", name: t("เจ็บป่วยฉุกเฉิน", "Medical emergency"), when: t("บาดเจ็บ หมดสติ ต้องการรถพยาบาล", "Injury, unconsciousness, ambulance"), hours: H24, source: "https://www.pattayamail.com/thailandnews/24-hour-emergency-hotlines-and-services-to-assist-residents-and-visitors-in-thailand-485355" },
-  { number: "1300", name: t("ศูนย์ช่วยเหลือสังคม (กระทรวง พม.)", "Social assistance centre (Ministry of Social Development)"), when: t("ความรุนแรง การล่วงละเมิด การคุกคาม", "Violence, abuse, harassment"), hours: t("ตลอด 24 ชม. มีล่ามภาษาอังกฤษ", "24 hours, English interpreters"), source: "https://data.unwomen.org/global-database-on-violence-against-women/country-profile/Thailand/measures/24-Hour%20Hotline%20Service%20at%20the%20Prachabodi%20Centre" },
-  { number: "1663", name: t("สายปรึกษาเอดส์และท้องไม่พร้อม", "AIDS & unplanned pregnancy counselling"), when: t("สุขภาพทางเพศ การตรวจ การป้องกัน ท้องไม่พร้อม", "Sexual health, testing, prevention, unplanned pregnancy"), hours: t("ทุกวัน 09.00–21.00 น. ไม่ต้องบอกชื่อ", "Daily 09:00–21:00, anonymous"), source: "https://rsathai.org/en/contents/25730" },
+  { number: "1300", name: t("ศูนย์ช่วยเหลือสังคม (กระทรวง พม.)", "Social assistance centre (Ministry of Social Development)"), when: t("ความรุนแรง การล่วงละเมิด การคุกคาม", "Violence, abuse, harassment"), hours: t("ตลอด 24 ชั่วโมง มีล่ามภาษาอังกฤษ", "24 hours, English interpreters"), source: "https://data.unwomen.org/global-database-on-violence-against-women/country-profile/Thailand/measures/24-Hour%20Hotline%20Service%20at%20the%20Prachabodi%20Centre" },
+  { number: "1663", name: t("สายปรึกษาเอดส์และท้องไม่พร้อม", "AIDS & unplanned pregnancy counselling"), when: t("สุขภาพทางเพศ การตรวจ การป้องกัน ท้องไม่พร้อม", "Sexual health, testing, prevention, unplanned pregnancy"), hours: t("ทุกวัน 09.00 ถึง 21.00 น. ไม่ต้องบอกชื่อ", "Daily 09:00 to 21:00, anonymous"), source: "https://rsathai.org/en/contents/25730" },
   { number: "1323", name: t("สายด่วนสุขภาพจิต (กรมสุขภาพจิต)", "Mental health hotline (Dept. of Mental Health)"), when: t("เครียด เศร้า ไม่ไหว อยากมีคนคุยด้วย", "Stress, low mood, need someone to talk to"), hours: H24, source: "https://thailand.go.th/event-detail/--3---24-" },
-  { number: "1441", name: t("ศูนย์ต่อต้านการฉ้อโกงออนไลน์ (AOC)", "Anti Online Scam Operation Centre (AOC)"), when: t("ถูกหลอกโอนเงิน หลอกรัก — ขออายัดบัญชีได้", "Money or romance scams — can request an account freeze"), hours: H24, source: "https://www.bangkokpost.com/thailand/general/2924862/govt-hails-use-of-1441-hotline" },
+  { number: "1441", name: t("ศูนย์ต่อต้านการฉ้อโกงออนไลน์ (AOC)", "Anti Online Scam Operation Centre (AOC)"), when: t("ถูกหลอกโอนเงินหรือหลอกรัก ขออายัดบัญชีได้", "Money or romance scams. You can ask for an account freeze"), hours: H24, source: "https://www.bangkokpost.com/thailand/general/2924862/govt-hails-use-of-1441-hotline" },
   { number: "1155", name: t("ตำรวจท่องเที่ยว", "Tourist Police"), when: t("ชาวต่างชาติที่ต้องการความช่วยเหลือ (หลายภาษา)", "Help for foreign residents and visitors (several languages)"), hours: H24, source: "https://www.touristpolice.go.th/post/tpbnews2025110903" },
   { number: "02-113-6789", name: t("สมาริตันส์แห่งประเทศไทย", "Samaritans of Thailand"), when: t("อยากมีคนรับฟัง คุยได้ทั้งภาษาไทยและอังกฤษ", "Someone to listen, in Thai or English"), hours: t("ทุกวัน 12.00 ถึง 22.00 น.", "Daily 12:00 to 22:00"), source: "https://befrienders.org/find-support-now/samaritans-of-thailand-bangkok-centre" },
 ];
@@ -82,7 +82,7 @@ export const TOPICS: Topic[] = [
           list(
             ["Jurrgun เลือกแผนให้สัปดาห์ละ 2 อย่าง ไม่ต้องไล่ดูทั้งหมด", "Jurrgun picks two plans a week, so you don't have to scroll everything."],
             ["ปัดดูบัดดี้ได้วันละ 15 คน แล้วพัก", "The buddy deck stops at 15 a day."],
-            ["ไม่มีสถานะออนไลน์ ไม่มีการอ่านแล้ว ไม่ต้องคอยเช็ก", "No online status or read receipts, so nothing to keep checking."],
+            ["ไม่มีสถานะออนไลน์ ไม่มีขึ้นว่าอ่านแล้ว ไม่ต้องคอยเช็ก", "No online status or read receipts, so nothing to keep checking."],
           ),
         ],
       },
@@ -103,7 +103,7 @@ export const TOPICS: Topic[] = [
             ["ตั้งจำนวนนัดต่อสัปดาห์ในหน้า 'นิสัยดี ๆ' เราจะถามก่อนถ้าเกิน", "Set your plans per week under Healthy habits. We'll check with you if you go over."],
             ["พักแอปได้ 1 ถึง 4 สัปดาห์ วงและแชตยังอยู่", "Take a break for 1 to 4 weeks. Your circle and chats stay."],
             ["เมื่อแลกช่องทางติดต่อและเจอกันบ่อยแล้ว ย้ายไปคุยที่ LINE ได้เลย เราดีใจด้วย", "Once you've swapped contacts and met a few times, move to LINE. We'll be glad you did."],
-            ["ที่งาน วางมือถือ แอปจะเหลือแค่บัตรเข้างานกับคำถามชวนคุย", "At an event, put your phone away. The app shrinks to your pass and a few conversation prompts."],
+            ["ระหว่างกิจกรรม วางมือถือลง แอปจะเหลือแค่บัตรเข้างานกับคำถามชวนคุย", "At an event, put your phone away. The app shrinks to your pass and a few conversation prompts."],
           ),
         ],
       },
@@ -115,7 +115,7 @@ export const TOPICS: Topic[] = [
             ["กิจกรรมที่มีค่าใช้จ่ายบางงานมีที่นั่งส่งต่อน้ำใจ ขอใช้ได้เงียบ ๆ เดือนละครั้ง", "Some paid events offer pay-it-forward seats you can quietly claim once a month."],
             ["ใช้ตัวกรอง 'ไม่เกิน 90 นาที' ถ้าต้องดูแลครอบครัวหรือเลิกงานดึก", "Use the '90 minutes or less' filter if you care for family or work long days."],
             ["เลือกกิจกรรมใกล้บ้านหรือใกล้ BTS/MRT จะได้ไม่เหนื่อยกับการเดินทาง", "Pick meetups near home or near BTS/MRT so getting there doesn't wear you out."],
-            ["มาคนเดียวเป็นเรื่องปกติ หรือพาเพื่อนมาได้ในงานที่รับ +1", "Coming alone is normal, or bring a friend to +1 events."],
+            ["มาคนเดียวเป็นเรื่องปกติ หรือพาเพื่อนมาได้ในกิจกรรมที่รับ +1", "Coming alone is normal, or bring a friend to +1 events."],
           ),
           tip("ถ้ารู้สึกเหงาหรือหมดแรงมานาน โทรสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชั่วโมง", "If you've felt lonely or drained for a while, the mental health line 1323 is open 24 hours."),
         ],
@@ -126,14 +126,14 @@ export const TOPICS: Topic[] = [
   {
     slug: "dating-in-bangkok",
     icon: "🌆",
-    title: t("การเดทในกรุงเทพฯ", "Dating in Bangkok"),
-    summary: t("เมืองใหญ่ คนเยอะ แต่เจอคนที่ใช่ยาก เคล็ดลับจากชีวิตจริงในกรุงเทพฯ", "A huge city that can still feel lonely — practical tips for meeting people here."),
+    title: t("การเดตในกรุงเทพฯ", "Dating in Bangkok"),
+    summary: t("เมืองใหญ่ คนเยอะ แต่เจอคนที่ใช่ยาก เคล็ดลับจากชีวิตจริงในกรุงเทพฯ", "A huge city that can still feel lonely. Practical tips for meeting people here."),
     sections: [
       {
         heading: t("ทำไมเจอคนในกรุงเทพฯ ถึงยาก", "Why meeting people here can be hard"),
         blocks: [
-          p("รถติด ทำงานดึก อากาศร้อน และชีวิตที่วนอยู่ระหว่างบ้าน–ที่ทำงาน ทำให้หลายคนรู้สึกว่าไม่มีโอกาสเจอคนใหม่ คุณไม่ได้เป็นคนเดียวที่รู้สึกแบบนี้", "Traffic, long working hours, heat and a home–office loop make many people feel they never meet anyone new. You're not the only one."),
-          p("การเริ่มจากกิจกรรมที่ชอบ — เดินสำรวจย่านเก่า วิ่งตอนเช้า บอร์ดเกม อาสาสมัคร — ทำให้ได้เจอคนที่สนใจคล้ายกันโดยไม่กดดัน", "Starting from something you enjoy — an old-town walk, a morning run, board games, volunteering — lets you meet like-minded people without pressure."),
+          p("รถติด ทำงานดึก อากาศร้อน และชีวิตที่วนอยู่แค่บ้านกับที่ทำงาน ทำให้หลายคนรู้สึกว่าไม่มีโอกาสเจอคนใหม่ คุณไม่ได้เป็นคนเดียวที่รู้สึกแบบนี้", "Traffic, long working hours, heat and a home-to-office loop make many people feel they never meet anyone new. You're not the only one."),
+          p("การเริ่มจากกิจกรรมที่ชอบ เช่น เดินสำรวจย่านเก่า วิ่งตอนเช้า บอร์ดเกม หรืองานอาสา ทำให้ได้เจอคนที่สนใจคล้ายกันโดยไม่กดดัน", "Starting from something you enjoy, like an old-town walk, a morning run, board games or volunteering, lets you meet like-minded people without pressure."),
         ],
       },
       {
@@ -141,19 +141,19 @@ export const TOPICS: Topic[] = [
         blocks: [
           list(
             ["เลือกที่สาธารณะ มีคนพลุกพล่าน เดินทางง่าย เช่น คาเฟ่ใกล้ BTS/MRT สวนสาธารณะช่วงกลางวัน หรือพิพิธภัณฑ์", "Pick a busy public place that's easy to reach: a café near BTS/MRT, a park in daylight, a museum."],
-            ["นัดช่วงสั้น ๆ ก่อน 1–2 ชั่วโมง ถ้าคุยถูกคอค่อยต่อ", "Keep it short — 1–2 hours. Extend it if it's going well."],
+            ["นัดสั้น ๆ ก่อน สัก 1 ถึง 2 ชั่วโมง ถ้าคุยถูกคอค่อยต่อ", "Keep it short, 1 to 2 hours. Extend it if it's going well."],
             ["เดินทางเอง และวางแผนเส้นทางกลับบ้านไว้ก่อน", "Get there and home on your own, with your route planned."],
             ["บอกเพื่อนว่าไปไหน กับใคร และกลับกี่โมง", "Tell a friend where you're going, who with, and when you'll be back."],
-            ["หารค่าใช้จ่ายหรือคุยกันตรง ๆ ว่าใครจ่าย ไม่มีใครติดค้างใคร", "Split the bill or agree who pays — nobody owes anybody anything."],
+            ["หารค่าใช้จ่ายหรือคุยกันตรง ๆ ว่าใครจ่าย ไม่มีใครติดค้างใคร", "Split the bill or agree who pays. Nobody owes anybody anything."],
           ),
         ],
       },
       {
         heading: t("ความหลากหลายในเมืองของเรา", "A diverse city"),
         blocks: [
-          p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 23 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม คู่รักทุกเพศอายุ 18 ปีขึ้นไปจดทะเบียนสมรสได้ที่สำนักงานเขต ใน Jurrgun ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 23 January 2025 Thailand recognises marriage equality — couples of any gender aged 18+ can register at any district office. On Jurrgun everyone gets the same respect."),
-          p("ถ้าคุณมาจากต่างประเทศ: วัฒนธรรมการเดทอาจต่างกัน — คนไทยหลายคนค่อย ๆ ทำความรู้จัก ให้ความสำคัญกับความสุภาพและครอบครัว ถามและฟังกันมากกว่าเดา", "If you're from abroad: dating culture may differ — many Thais take things slowly and value politeness and family. Ask and listen rather than assume."),
-          tip("ไม่ต้องรีบ เพื่อนที่ดีหลายคนเริ่มจากการเจอกันในกลุ่มเล็ก ๆ", "No rush — many great relationships start as friends in a small group."),
+          p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 23 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม คู่รักทุกเพศที่อายุ 18 ปีขึ้นไปจดทะเบียนสมรสได้ที่สำนักงานเขตใดก็ได้ ใน Jurrgun ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 23 January 2025 Thailand recognises marriage equality: couples of any gender aged 18+ can register at any district office. On Jurrgun everyone gets the same respect."),
+          p("ถ้าคุณมาจากต่างประเทศ: วัฒนธรรมการเดตอาจต่างกัน คนไทยหลายคนค่อย ๆ ทำความรู้จัก ให้ความสำคัญกับความสุภาพและครอบครัว ถามและฟังกันมากกว่าเดาเอา", "If you're from abroad: dating culture may differ. Many Thais take things slowly and value politeness and family. Ask and listen rather than assume."),
+          tip("ไม่ต้องรีบ ความสัมพันธ์ดี ๆ หลายคู่เริ่มจากการเป็นเพื่อนกันในกลุ่มเล็ก ๆ", "No rush. Many great relationships start as friends in a small group."),
         ],
       },
     ],
@@ -172,12 +172,12 @@ export const TOPICS: Topic[] = [
       {
         heading: t("ความยินยอมคืออะไร", "What consent means"),
         blocks: [
-          p("ความยินยอมคือการตกลงอย่างเต็มใจ ชัดเจน และมีสติ ในทุกการสัมผัสหรือกิจกรรมทางเพศ ทุกครั้ง กับทุกคน ไม่ว่าจะเป็นแฟน คู่สมรส หรือคนที่เพิ่งรู้จัก", "Consent is a free, clear and conscious agreement to any touch or sexual activity — every time, with everyone, including partners and spouses."),
+          p("ความยินยอมคือการตกลงอย่างเต็มใจ ชัดเจน และมีสติ ในทุกการสัมผัสหรือกิจกรรมทางเพศ ทุกครั้ง กับทุกคน ไม่ว่าจะเป็นแฟน คู่สมรส หรือคนที่เพิ่งรู้จัก", "Consent is a free, clear and conscious agreement to any touch or sexual activity: every time, with everyone, including partners and spouses."),
           list(
-            ["ให้อย่างเต็มใจ — ไม่ถูกกดดัน ขู่ หรือตื๊อ", "Freely given — no pressure, threats or wearing someone down."],
-            ["เฉพาะเจาะจง — ‘ใช่’ กับเรื่องหนึ่ง ไม่ได้แปลว่า ‘ใช่’ กับทุกเรื่อง", "Specific — yes to one thing isn't yes to everything."],
-            ["เปลี่ยนใจได้ — หยุดได้ทุกเมื่อ แม้จะเริ่มไปแล้ว", "Reversible — anyone can stop at any time, even partway."],
-            ["มีสติ — คนที่เมามาก หลับ หรือหมดสติ ให้ความยินยอมไม่ได้", "Conscious — someone very drunk, asleep or passed out cannot consent."],
+            ["ให้อย่างเต็มใจ: ไม่ถูกกดดัน ขู่ หรือตื๊อ", "Freely given: no pressure, threats or wearing someone down."],
+            ["เฉพาะเจาะจง: ‘ใช่’ กับเรื่องหนึ่ง ไม่ได้แปลว่า ‘ใช่’ กับทุกเรื่อง", "Specific: yes to one thing isn't yes to everything."],
+            ["เปลี่ยนใจได้: ทุกคนหยุดได้ทุกเมื่อ แม้จะเริ่มไปแล้ว", "Reversible: anyone can stop at any time, even partway."],
+            ["มีสติ: คนที่เมามาก หลับ หรือหมดสติ ให้ความยินยอมไม่ได้", "Conscious: someone very drunk, asleep or passed out cannot consent."],
             ["ความเงียบหรือการไม่ขัดขืน ไม่ใช่ความยินยอม", "Silence or not resisting is not consent."],
           ),
         ],
@@ -190,20 +190,20 @@ export const TOPICS: Topic[] = [
             ["“โอเคไหม อยากหยุดพักก่อนไหม?”", "“Is this okay? Want to slow down?”"],
             ["“ไม่เป็นไรเลยถ้ายังไม่พร้อม”", "“It's totally fine if you're not ready.”"],
           ),
-          tip("ถ้าไม่แน่ใจว่าอีกฝ่ายยินยอม ให้ถือว่า ‘ไม่’ และถามใหม่", "If you're not sure the other person is into it, treat it as a no — and ask."),
+          tip("ถ้าไม่แน่ใจว่าอีกฝ่ายยินยอม ให้ถือว่า ‘ไม่’ และถามใหม่", "If you're not sure the other person is into it, treat it as a no, and ask."),
         ],
       },
       {
         heading: t("ความยินยอมใน Jurrgun", "Consent on Jurrgun"),
         blocks: [
           p("แอปของเราออกแบบบนหลักความยินยอม: คุณจะได้รู้จักใครต่อก็ต่อเมื่อเลือกตรงกันทั้งสองฝ่าย ไม่มีใครรู้ว่าคุณไม่ได้เลือกเขา และไม่มีการส่งข้อความหาคนแปลกหน้า", "The app is built on consent: you only connect when both people choose each other, nobody learns that you didn't choose them, and there are no cold messages."),
-          p("การกดดัน ตามตื๊อ หรือสัมผัสโดยไม่ได้รับอนุญาตในกิจกรรม เป็นการละเมิดหลักปฏิบัติ — กด ‘รายงาน’ ได้ทันที หรือโทร 191 หากอยู่ในอันตราย", "Pressure, persistence or unwanted touching at an event breaks our code of conduct — use Report straight away, or call 191 if you're in danger."),
+          p("การกดดัน ตามตื๊อ หรือสัมผัสโดยไม่ได้รับอนุญาตในกิจกรรม เป็นการละเมิดหลักปฏิบัติ กด ‘รายงาน’ ได้ทันที หรือโทร 191 ถ้าคุณอยู่ในอันตราย", "Pressure, persistence or unwanted touching at an event breaks our code of conduct. Use Report straight away, or call 191 if you're in danger."),
         ],
       },
       {
         heading: t("ถ้าเกิดเหตุขึ้นกับคุณ", "If something happened to you"),
         blocks: [
-          p("ไม่ใช่ความผิดของคุณ คุณมีสิทธิ์ได้รับความช่วยเหลือ ไปโรงพยาบาลรัฐได้ทันทีเพื่อรับการตรวจ ยาป้องกันการติดเชื้อ (PEP) และยาคุมฉุกเฉิน ศูนย์พึ่งได้ (OSCC) ในโรงพยาบาลรัฐช่วยเหลือผู้ถูกกระทำความรุนแรง หรือโทร 1300 ได้ตลอด 24 ชั่วโมง", "It's not your fault, and help is available. Go to a public hospital as soon as you can for care, HIV-prevention medicine (PEP) and emergency contraception. One Stop Crisis Centres (OSCC) in public hospitals support survivors of violence, or call 1300, 24 hours."),
+          p("ไม่ใช่ความผิดของคุณ และคุณมีสิทธิ์ได้รับความช่วยเหลือ ไปโรงพยาบาลรัฐโดยเร็วที่สุดเพื่อรับการดูแล ยาป้องกันการติดเชื้อ HIV (PEP) และยาคุมฉุกเฉิน ศูนย์พึ่งได้ (OSCC) ในโรงพยาบาลรัฐช่วยเหลือผู้ถูกกระทำความรุนแรง หรือโทร 1300 ได้ตลอด 24 ชั่วโมง", "It's not your fault, and help is available. Go to a public hospital as soon as you can for care, HIV-prevention medicine (PEP) and emergency contraception. One Stop Crisis Centres (OSCC) in public hospitals support survivors of violence, or call 1300, 24 hours."),
         ],
       },
     ],
@@ -217,7 +217,7 @@ export const TOPICS: Topic[] = [
     slug: "sexual-health",
     icon: "🩺",
     title: t("เพศศึกษาและสุขภาพทางเพศ", "Sex education & sexual health"),
-    summary: t("ข้อมูลพื้นฐานที่ผู้ใหญ่ทุกคนควรรู้ — การป้องกัน การตรวจ และที่พึ่งในกรุงเทพฯ", "The basics every adult should know — protection, testing and where to get help in Bangkok."),
+    summary: t("ข้อมูลพื้นฐานที่ผู้ใหญ่ทุกคนควรรู้ ทั้งการป้องกัน การตรวจ และที่พึ่งในกรุงเทพฯ", "The basics every adult should know: protection, testing and where to get help in Bangkok."),
     sections: [
       {
         heading: t("การป้องกัน", "Protection"),
@@ -225,7 +225,7 @@ export const TOPICS: Topic[] = [
           list(
             ["ถุงยางอนามัยช่วยป้องกันทั้งการตั้งครรภ์และโรคติดต่อทางเพศสัมพันธ์ส่วนใหญ่ ใช้ทุกครั้งตั้งแต่เริ่ม", "Condoms help prevent both pregnancy and most sexually transmitted infections (STIs). Use one every time, from the start."],
             ["มีวิธีคุมกำเนิดหลายแบบ (ยาเม็ด ยาฉีด ยาฝัง ห่วงอนามัย) ปรึกษาแพทย์หรือเภสัชกรเพื่อเลือกวิธีที่เหมาะกับคุณ", "There are many kinds of contraception (pill, injection, implant, IUD). Ask a doctor or pharmacist which suits you."],
-            ["ยาคุมฉุกเฉินซื้อได้ที่ร้านขายยา ยิ่งกินเร็วยิ่งได้ผล และไม่เกิน 72 ชั่วโมงหลังมีเพศสัมพันธ์ที่ไม่ได้ป้องกัน ไม่ควรใช้เป็นวิธีคุมกำเนิดประจำ และไม่ป้องกันโรคติดต่อทางเพศสัมพันธ์", "Emergency contraception is sold at pharmacies. The sooner the better — no later than 72 hours after unprotected sex. It isn't for regular use and doesn't protect against STIs."],
+            ["ยาคุมฉุกเฉินซื้อได้ที่ร้านขายยา ยิ่งกินเร็วยิ่งได้ผล และต้องกินภายใน 72 ชั่วโมงหลังมีเพศสัมพันธ์โดยไม่ได้ป้องกัน ไม่ควรใช้เป็นวิธีคุมกำเนิดประจำ และไม่ป้องกันโรคติดต่อทางเพศสัมพันธ์", "Emergency contraception is sold at pharmacies. The sooner the better, and no later than 72 hours after unprotected sex. It isn't for regular use and doesn't protect against STIs."],
           ),
         ],
       },
@@ -233,31 +233,31 @@ export const TOPICS: Topic[] = [
         heading: t("ป้องกันเอชไอวี: PrEP และ PEP", "HIV prevention: PrEP and PEP"),
         blocks: [
           list(
-            ["PrEP คือยาที่กินก่อนมีความเสี่ยง ช่วยป้องกันเอชไอวีได้สูงมากเมื่อกินสม่ำเสมอ", "PrEP is medicine taken before possible exposure; it's highly effective against HIV when taken consistently."],
-            ["PEP คือยาฉุกเฉินหลังมีความเสี่ยง กินต่อเนื่อง 28 วัน ต้องเริ่มให้เร็วที่สุด ดีที่สุดภายใน 24 ชั่วโมง และไม่เกิน 72 ชั่วโมง", "PEP is a 28-day emergency course after a possible exposure — start as soon as possible, ideally within 24 hours and no later than 72."],
+            ["PrEP คือยาที่กินก่อนมีความเสี่ยง ป้องกันเอชไอวีได้ดีมากเมื่อกินสม่ำเสมอ", "PrEP is medicine taken before possible exposure; it's highly effective against HIV when taken consistently."],
+            ["PEP คือยาฉุกเฉินที่กินหลังมีความเสี่ยง กินต่อเนื่อง 28 วัน ต้องเริ่มให้เร็วที่สุด ดีที่สุดภายใน 24 ชั่วโมง และต้องไม่เกิน 72 ชั่วโมง", "PEP is a 28-day emergency course after a possible exposure. Start as soon as possible, ideally within 24 hours and no later than 72."],
             ["PrEP ฟรีสำหรับคนไทยที่มีสิทธิหลักประกันสุขภาพถ้วนหน้า (บัตรทอง) ทั้งสองอย่างรับได้ที่โรงพยาบาลรัฐ คลินิกนิรนามสภากาชาดไทย และคลินิกชุมชน ผู้ที่ไม่มีสิทธิ รวมถึงชาวต่างชาติ สอบถามค่าใช้จ่ายได้ที่ 1663", "PrEP is free for eligible Thai citizens under Universal Health Coverage. Both are available at public hospitals, the Thai Red Cross Anonymous Clinic and community clinics. If you aren't covered (including foreign residents), ask 1663 about cost."],
-            ["PrEP และ PEP ไม่ป้องกันโรคติดต่อทางเพศสัมพันธ์อื่นหรือการตั้งครรภ์ ใช้ร่วมกับถุงยางอนามัย", "PrEP and PEP don't prevent other STIs or pregnancy — use them with condoms."],
+            ["PrEP และ PEP ไม่ป้องกันโรคติดต่อทางเพศสัมพันธ์อื่นหรือการตั้งครรภ์ ใช้ร่วมกับถุงยางอนามัย", "PrEP and PEP don't prevent other STIs or pregnancy. Use them with condoms."],
           ),
         ],
       },
       {
         heading: t("การตรวจเป็นเรื่องปกติ", "Testing is normal"),
         blocks: [
-          p("ผู้ใหญ่ที่มีเพศสัมพันธ์ควรตรวจเอชไอวีและโรคติดต่อทางเพศสัมพันธ์อย่างสม่ำเสมอ หลายโรคไม่มีอาการ การตรวจเป็นความลับ ทำได้ที่โรงพยาบาลรัฐ คลินิกนิรนามสภากาชาดไทย และศูนย์บริการสาธารณสุขของ กทม.", "Sexually active adults should test for HIV and STIs regularly — many infections have no symptoms. Testing is confidential at public hospitals, the Thai Red Cross Anonymous Clinic and BMA public health centres."),
-          tip("คุยเรื่องการตรวจกับคู่ของคุณได้อย่างเปิดเผย — เป็นการดูแลกันและกัน", "Talking about testing with a partner is a way of caring for each other."),
+          p("ผู้ใหญ่ที่มีเพศสัมพันธ์ควรตรวจเอชไอวีและโรคติดต่อทางเพศสัมพันธ์อย่างสม่ำเสมอ เพราะหลายโรคไม่แสดงอาการ การตรวจเป็นความลับ ทำได้ที่โรงพยาบาลรัฐ คลินิกนิรนามสภากาชาดไทย และศูนย์บริการสาธารณสุขของ กทม.", "Sexually active adults should test for HIV and STIs regularly, because many infections have no symptoms. Testing is confidential at public hospitals, the Thai Red Cross Anonymous Clinic and BMA public health centres."),
+          tip("คุยเรื่องการตรวจกับคู่ของคุณได้อย่างเปิดเผย เพราะเป็นการดูแลกันและกัน", "Talking about testing with a partner is a way of caring for each other."),
         ],
       },
       {
         heading: t("ท้องไม่พร้อม", "Unplanned pregnancy"),
         blocks: [
           p("คุณมีทางเลือกและมีคนพร้อมรับฟังโดยไม่ตัดสิน โทรสายด่วน 1663 (ไม่ต้องบอกชื่อ) เพื่อปรึกษาทางเลือกทั้งหมด", "You have options, and people ready to listen without judgement. Call 1663 (anonymous) to talk them all through."),
-          p("ในประเทศไทย การยุติการตั้งครรภ์ทำได้ถูกกฎหมายเมื่ออายุครรภ์ไม่เกิน 12 สัปดาห์ และ 12–20 สัปดาห์หลังรับคำปรึกษาจากแพทย์ (ตามกฎหมายปี 2565) ที่สถานพยาบาลที่ได้รับอนุญาต", "In Thailand, abortion is legal up to 12 weeks, and from 12 to 20 weeks after counselling with a doctor (2022 rules), at licensed health facilities."),
+          p("ในประเทศไทย การยุติการตั้งครรภ์ที่สถานพยาบาลที่ได้รับอนุญาตทำได้ถูกกฎหมาย เมื่ออายุครรภ์ไม่เกิน 12 สัปดาห์ และเมื่ออายุครรภ์เกิน 12 สัปดาห์แต่ไม่เกิน 20 สัปดาห์ หลังรับคำปรึกษาจากแพทย์ (ตามกฎหมายปี 2565)", "In Thailand, abortion is legal up to 12 weeks, and from 12 to 20 weeks after counselling with a doctor (2022 rules), at licensed health facilities."),
         ],
       },
       {
         heading: t("สำหรับทุกเพศและทุกรสนิยม", "For every gender and orientation"),
         blocks: [
-          p("สุขภาพทางเพศเป็นเรื่องของทุกคน — คู่ชายหญิง คู่เพศเดียวกัน คนข้ามเพศ และนอนไบนารี คลินิกในกรุงเทพฯ หลายแห่งให้บริการที่เป็นมิตรกับ LGBTQ+ รวมถึงบริการสำหรับคนข้ามเพศ", "Sexual health is for everyone — straight, gay, lesbian, bi, trans and non-binary people alike. Many Bangkok clinics are LGBTQ+-friendly, including trans-specific services."),
+          p("สุขภาพทางเพศเป็นเรื่องของทุกคน ไม่ว่าจะเป็นคู่ชายหญิง คู่เพศเดียวกัน คนข้ามเพศ หรือนอนไบนารี คลินิกในกรุงเทพฯ หลายแห่งให้บริการที่เป็นมิตรกับ LGBTQ+ รวมถึงบริการสำหรับคนข้ามเพศ", "Sexual health is for everyone: straight, gay, lesbian, bi, trans and non-binary people alike. Many Bangkok clinics are LGBTQ+-friendly, including trans-specific services."),
         ],
       },
     ],
@@ -273,17 +273,17 @@ export const TOPICS: Topic[] = [
   {
     slug: "date-responsibly",
     icon: "🛡️",
-    title: t("เดทอย่างปลอดภัยและรับผิดชอบ", "How to date responsibly"),
+    title: t("เดตอย่างปลอดภัยและรับผิดชอบ", "How to date responsibly"),
     summary: t("ดูแลตัวเอง เคารพอีกฝ่าย และรู้ทันมิจฉาชีพ", "Look after yourself, respect the other person, and spot scams."),
     sections: [
       {
         heading: t("ดูแลตัวเอง", "Look after yourself"),
         blocks: [
           list(
-            ["นัดเจอที่สาธารณะ โดยเฉพาะครั้งแรก ๆ — กิจกรรม Jurrgun จัดในที่สาธารณะเสมอ", "Meet in public, especially the first few times — Jurrgun events are always in public places."],
+            ["นัดเจอที่สาธารณะ โดยเฉพาะครั้งแรก ๆ กิจกรรม Jurrgun จัดในที่สาธารณะเสมอ", "Meet in public, especially the first few times. Jurrgun events are always in public places."],
             ["ดูแลแก้วเครื่องดื่มของตัวเอง อย่าวางทิ้งไว้ และดื่มแต่พอดี", "Keep your drink with you, never leave it unattended, and drink in moderation."],
             ["เก็บข้อมูลส่วนตัวไว้ก่อน (ที่อยู่ ที่ทำงาน การเงิน) จนกว่าจะไว้ใจกัน", "Keep personal details (address, workplace, finances) to yourself until you trust someone."],
-            ["เชื่อสัญชาตญาณ — ถ้ารู้สึกไม่สบายใจ ขอตัวกลับได้เลย ไม่ต้องขอโทษ", "Trust your gut — if something feels off, leave. You don't owe anyone an explanation."],
+            ["เชื่อสัญชาตญาณ ถ้ารู้สึกไม่สบายใจ ขอตัวกลับได้เลย ไม่ต้องอธิบายใคร", "Trust your gut. If something feels off, leave. You don't owe anyone an explanation."],
             ["แชร์ตำแหน่งกับเพื่อนที่ไว้ใจ และนัดเวลาโทรเช็กกัน", "Share your location with a trusted friend and agree a check-in call."],
           ),
         ],
@@ -293,7 +293,7 @@ export const TOPICS: Topic[] = [
         blocks: [
           list(
             ["ซื่อสัตย์เรื่องสถานะความสัมพันธ์และสิ่งที่คุณมองหา", "Be honest about your relationship status and what you're looking for."],
-            ["‘ไม่’ คือ ‘ไม่’ — รับคำปฏิเสธอย่างสุภาพ ไม่ตามตื๊อ", "No means no — accept it gracefully and don't push."],
+            ["‘ไม่’ คือ ‘ไม่’ รับคำปฏิเสธอย่างสุภาพ และไม่ตามตื๊อ", "No means no. Accept it gracefully and don't push."],
             ["ห้ามเปิดเผยข้อมูลหรืออัตลักษณ์ทางเพศของผู้อื่นโดยไม่ได้รับอนุญาต", "Never share someone's details or gender identity without their consent."],
             ["ถ้าไม่อยากไปต่อ บอกตรง ๆ อย่างสุภาพ ดีกว่าหายไปเฉย ๆ", "If you're not interested, say so kindly rather than disappearing."],
           ),
@@ -305,7 +305,7 @@ export const TOPICS: Topic[] = [
           list(
             ["ไม่โอนเงิน ไม่ให้ยืมเงิน ไม่ลงทุนหรือเทรดคริปโตตามคำชวนของคนที่เพิ่งรู้จัก", "Never send or lend money, or invest/trade crypto because someone you just met suggested it."],
             ["ระวังคนที่รีบบอกรัก มีเรื่องฉุกเฉินทางการเงิน หรือไม่ยอมเจอตัวจริง", "Be wary of someone who declares love fast, has money emergencies, or avoids meeting in person."],
-            ["ห้ามส่งรหัส OTP หรือข้อมูลบัญชีให้ใคร", "Never share OTP codes or bank details with anyone."],
+            ["อย่าบอกรหัส OTP หรือข้อมูลบัญชีธนาคารกับใคร", "Never share OTP codes or bank details with anyone."],
             ["ถูกหลอกแล้ว โทร 1441 ทันที และกด ‘รายงาน’ ในแอป", "If you've been scammed, call 1441 immediately and report the person in the app."],
           ),
         ],
@@ -313,7 +313,7 @@ export const TOPICS: Topic[] = [
       {
         heading: t("ดูแลใจตัวเอง", "Look after your mind"),
         blocks: [
-          p("การเจอคนใหม่อาจทั้งสนุกและเหนื่อย ถ้าผิดหวังหรือรู้สึกเหงา คุณไม่ได้อยู่คนเดียว พักได้ เริ่มใหม่ได้ และโทรคุยกับสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชั่วโมง", "Meeting new people can be fun and tiring. If you feel let down or lonely, you're not alone — take a break, try again, and call the mental health hotline 1323 any time, 24 hours."),
+          p("การเจอคนใหม่อาจทั้งสนุกและเหนื่อย ถ้าผิดหวังหรือรู้สึกเหงา คุณไม่ได้อยู่คนเดียว พักได้ เริ่มใหม่ได้ และโทรคุยกับสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชั่วโมง", "Meeting new people can be fun and tiring. If you feel let down or lonely, you're not alone. Take a break, try again, and call the mental health hotline 1323 any time, 24 hours."),
         ],
       },
     ],
@@ -348,14 +348,14 @@ export const TOPICS: Topic[] = [
             ["ตื่นเต้นเป็นเรื่องปกติ คนอื่นในโต๊ะก็รู้สึกเหมือนกัน", "Feeling nervous is normal. Others at the table feel it too."],
             ["มาตรงเวลา ทักทาย บอกชื่อ และถามคำถามง่าย ๆ สักข้อ", "Arrive on time, say hello, share your name and ask one easy question."],
             ["ลองไปสักสองสามครั้ง ครั้งแรกอาจยังไม่คลิก ไม่เป็นไรเลย", "Give it a few tries. The first meetup might not click, and that's fine."],
-            ["ถ้าไปไม่ได้ ยกเลิกในแอปล่วงหน้าอย่างน้อย 24 ชั่วโมง ที่นั่งจะได้ไปถึงคนอื่น", "If you can't make it, cancel in the app at least 24 hours ahead so someone else can take the seat."],
+            ["ถ้าไปไม่ได้ ยกเลิกในแอปล่วงหน้าอย่างน้อย 24 ชั่วโมง คนอื่นจะได้ที่นั่งแทน", "If you can't make it, cancel in the app at least 24 hours ahead so someone else can take the seat."],
           ),
         ],
       },
       {
         heading: t("นัดกันต่อ", "Follow up"),
         blocks: [
-          p("หลังกิจกรรม คุณมีเวลา 72 ชั่วโมงเลือกคนที่อยากติดต่อต่อแบบเป็นความลับ ถ้าเลือกตรงกันถึงจะได้รู้จักกันต่อ", "After a meetup you have 72 hours to privately choose who you'd like to stay in touch with. You connect only if it's mutual."),
+          p("หลังกิจกรรม คุณมีเวลา 72 ชั่วโมงเลือกแบบลับ ๆ ว่าอยากติดต่อใครต่อ ถ้าเลือกตรงกันถึงจะได้รู้จักกันต่อ", "After a meetup you have 72 hours to privately choose who you'd like to stay in touch with. You connect only if it's mutual."),
           list(
             ["ส่งข้อความสั้น ๆ ภายในวันสองวัน พูดถึงสิ่งที่คุยกัน", "Send a short message within a day or two that mentions something you talked about."],
             ["ชวนแบบเจาะจง เช่น ‘เสาร์นี้ไปตลาดนัดกันไหม’ ง่ายกว่า ‘ว่าง ๆ เจอกันนะ’", "Suggest something specific. “Market on Saturday?” works better than “let's hang out sometime.”"],
@@ -375,7 +375,7 @@ export const TOPICS: Topic[] = [
   {
     slug: "meetup-etiquette",
     icon: "🍽️",
-    title: t("มารยาทและสิ่งควรทำ ไม่ควรทำในการพบปะ", "Meetup dos and don'ts"),
+    title: t("สิ่งที่ควรทำและไม่ควรทำเวลาไปพบปะ", "Meetup dos and don'ts"),
     summary: t("ตรงเวลา หารค่าอาหาร วางมือถือ เคารพขอบเขต และกลับอย่างสุภาพ", "Be on time, split fairly, put the phone down, respect boundaries and leave politely."),
     sections: [
       {
@@ -442,7 +442,7 @@ export const TOPICS: Topic[] = [
           p("คำถามปลายเปิดชวนให้เล่าเรื่องได้มากกว่าคำถามที่ตอบแค่ใช่หรือไม่ใช่", "Open questions invite a story, unlike yes or no questions."),
           list(
             ["“ย่านไหนในกรุงเทพฯ ที่ชอบที่สุด?”", "“What's your favourite part of Bangkok?”"],
-            ["“ร้านอร่อยใกล้บ้านหรือที่ทำงานมีร้านไหนแนะนำบ้าง?”", "“Any good food spots near where you live or work?”"],
+            ["“ใกล้บ้านหรือที่ทำงานมีร้านอร่อยแนะนำไหม?”", "“Any good food spots near where you live or work?”"],
             ["“ช่วงนี้สนใจอะไรอยู่?”", "“What are you into lately?”"],
             ["“ถ้ามีวันว่างหนึ่งวันในกรุงเทพฯ จะทำอะไร?”", "“If you had a free day in Bangkok, what would you do?”"],
           ),
@@ -524,13 +524,13 @@ export const TOPICS: Topic[] = [
         ],
       },
       {
-        heading: t("เมื่อไหร่ควรขอความช่วยเหลือ", "When to reach out for help"),
+        heading: t("เมื่อไรควรขอความช่วยเหลือ", "When to reach out for help"),
         blocks: [
           p("ถ้าความรู้สึกเศร้า เครียด หรือเหงา อยู่นานจนกระทบการนอน การกิน การทำงาน หรือความสัมพันธ์ การคุยกับผู้เชี่ยวชาญช่วยได้ ไม่ต้องรอให้หนักก่อน", "If sadness, stress or loneliness hangs around and starts to affect your sleep, eating, work or relationships, talking to a professional can help. You don't have to wait until it's serious."),
           list(
             ["สายด่วนสุขภาพจิต 1323 ของกรมสุขภาพจิต โทรฟรี ตลอด 24 ชั่วโมง", "Department of Mental Health hotline 1323: free, 24 hours."],
             ["สมาริตันส์แห่งประเทศไทย 02-113-6789 คุยได้ทั้งไทยและอังกฤษ ทุกวัน 12.00 ถึง 22.00 น.", "Samaritans of Thailand 02-113-6789, Thai and English, daily 12:00 to 22:00."],
-            ["ถ้าคิดทำร้ายตัวเองหรือมีอันตรายตอนนี้ โทร 1669 หรือไปห้องฉุกเฉินที่ใกล้ที่สุด", "If you're thinking about hurting yourself or are in danger now, call 1669 or go to the nearest emergency room."],
+            ["ถ้าคุณคิดจะทำร้ายตัวเอง หรือกำลังอยู่ในอันตราย โทร 1669 หรือไปห้องฉุกเฉินที่ใกล้ที่สุด", "If you're thinking about hurting yourself or are in danger now, call 1669 or go to the nearest emergency room."],
           ),
         ],
       },
@@ -580,7 +580,7 @@ export const TOPICS: Topic[] = [
       {
         heading: t("การเข้าถึง", "Accessibility"),
         blocks: [
-          p("องค์การอนามัยโลกประมาณว่า ผู้คนราว 1.3 พันล้านคน หรือประมาณ 1 ใน 6 คนทั่วโลก มีภาวะพิการที่สำคัญ การออกแบบกิจกรรมให้เข้าถึงได้จึงเป็นเรื่องของทุกคน", "WHO estimates that about 1.3 billion people, roughly 1 in 6 worldwide, live with significant disability. Accessible meetups matter to everyone."),
+          p("องค์การอนามัยโลกประมาณว่า ผู้คนราว 1.3 พันล้านคน หรือประมาณ 1 ใน 6 คนทั่วโลก อยู่กับความพิการที่มีนัยสำคัญ การออกแบบกิจกรรมให้เข้าถึงได้จึงเป็นเรื่องของทุกคน", "WHO estimates that about 1.3 billion people, roughly 1 in 6 worldwide, live with significant disability. Accessible meetups matter to everyone."),
           list(
             ["บอกโฮสต์เป็นการส่วนตัวได้ ถ้าต้องการทางลาด ที่นั่งใกล้ทางออก ที่เงียบ หรืออื่น ๆ", "Tell your host privately if you need step-free access, a seat near the exit, a quieter spot or anything else."],
             ["โฮสต์ควรเลือกที่ที่เข้าถึงง่าย ใกล้ระบบขนส่ง และบอกรายละเอียดสถานที่ไว้ล่วงหน้า", "Hosts: choose places that are easy to reach near transit, and describe the venue in advance."],
@@ -676,8 +676,8 @@ export const TOPICS: Topic[] = [
         blocks: [
           list(
             ["BTS (สายสุขุมวิท สายสีลม และสายสีทอง): ซื้อบัตรโดยสารเที่ยวเดียวที่ตู้หรือห้องจำหน่ายตั๋ว จ่ายด้วยเหรียญหรือสแกน QR หรือใช้บัตรแรบบิทแบบเติมเงิน", "BTS (Sukhumvit, Silom and Gold lines): buy a single journey ticket at a machine or ticket office, paying with coins or a QR code, or use a reloadable Rabbit card."],
-            ["MRT สายสีน้ำเงินและสายสีม่วง: แตะบัตรเครดิตแบบ EMV Contactless (Visa, Mastercard, UnionPay) หรือบัตรเดบิตของบางธนาคารที่ประตูได้เลย ใช้บัตรเดียวต่อหนึ่งคน และแตะเข้าออกด้วยบัตรใบเดิม", "MRT Blue and Purple lines: tap a contactless (EMV) Visa, Mastercard or UnionPay credit card, or a debit card from some Thai banks, at the gate. One card per person, and tap in and out with the same card."],
-            ["ตั้งแต่ 1 มิถุนายน 2569 บัตร MRT และ MRT Plus แบบเติมเงินแบบเดิม ใช้เข้าระบบสายสีน้ำเงินและสายสีม่วงไม่ได้แล้ว", "Since 1 June 2026, the old MRT and MRT Plus stored value cards no longer work on the Blue and Purple lines."],
+            ["MRT สายสีน้ำเงินและสายสีม่วง: แตะบัตรเครดิตแบบ EMV Contactless (Visa, Mastercard, UnionPay) หรือบัตรเดบิตของบางธนาคารที่ประตูได้เลย หนึ่งคนใช้หนึ่งบัตร และแตะเข้าออกด้วยบัตรใบเดิม", "MRT Blue and Purple lines: tap a contactless (EMV) Visa, Mastercard or UnionPay credit card, or a debit card from some Thai banks, at the gate. One card per person, and tap in and out with the same card."],
+            ["ตั้งแต่ 1 มิถุนายน 2569 บัตรเติมเงิน MRT และ MRT Plus แบบเดิม ใช้เข้าระบบสายสีน้ำเงินและสายสีม่วงไม่ได้แล้ว", "Since 1 June 2026, the old MRT and MRT Plus stored value cards no longer work on the Blue and Purple lines."],
             ["สายสีเหลืองและสายสีชมพูเป็นโมโนเรลที่มีผู้ให้บริการของตัวเอง เช็กวิธีชำระเงินในเว็บไซต์ของแต่ละสาย", "The Yellow and Pink monorail lines have their own operators. Check each line's site for how to pay."],
             ["แอร์พอร์ต เรล ลิงก์ เชื่อมสนามบินสุวรรณภูมิกับเมือง 8 สถานี เปลี่ยนเป็น MRT ได้ที่มักกะสัน (เพชรบุรี) และเป็น BTS ได้ที่พญาไท", "The Airport Rail Link runs 8 stations from Suvarnabhumi Airport into the city. Change to the MRT at Makkasan (Phetchaburi) and to the BTS at Phaya Thai."],
           ),
@@ -699,7 +699,7 @@ export const TOPICS: Topic[] = [
         blocks: [
           list(
             ["รถเมล์ ขสมก. วิ่งหลายเส้นทางทั่วกรุงเทพฯ ราคาประหยัด", "BMTA buses cover most of Bangkok at low fares."],
-            ["แท็กซี่ ขอให้กดมิเตอร์ก่อนออกรถ ถ้ามีปัญหา จดทะเบียนรถและเวลา แล้วแจ้งสายด่วนกรมการขนส่งทางบก 1584", "Taxis: ask for the meter before you set off. If there's a problem, note the plate number and time and call the Department of Land Transport on 1584."],
+            ["แท็กซี่: ขอให้คนขับกดมิเตอร์ก่อนออกรถ ถ้ามีปัญหา จดเลขทะเบียนรถและเวลาไว้ แล้วแจ้งสายด่วนกรมการขนส่งทางบก 1584", "Taxis: ask for the meter before you set off. If there's a problem, note the plate number and time and call the Department of Land Transport on 1584."],
             ["แอปเรียกรถส่วนใหญ่แสดงราคาก่อนเดินทาง และแชร์เส้นทางให้เพื่อนดูได้", "Most ride hailing apps show the fare before you ride and let you share your trip with a friend."],
           ),
         ],
@@ -728,7 +728,7 @@ export const TOPICS: Topic[] = [
       {
         heading: t("แผนที่สำหรับสำรวจเมือง", "Maps for exploring"),
         blocks: [
-          link("แสนรู้ (Sanroo): อีกหนึ่งแผนที่ของสถานที่ในกรุงเทพฯ แผนที่สดสำหรับการเดินทางทุกวัน ใช้ฟรี มีภาษาไทยและอังกฤษ", "Sanroo (แสนรู้): another map of Bangkok places, a free live map for everyday travel in Thai and English.", SANROO),
+          link("แสนรู้ (Sanroo): อีกหนึ่งแผนที่สถานที่ในกรุงเทพฯ เป็นแผนที่สดสำหรับเดินทางทุกวัน ใช้ฟรี มีทั้งภาษาไทยและอังกฤษ", "Sanroo (แสนรู้): another map of Bangkok places, a free live map for everyday travel in Thai and English.", SANROO),
           link("VisitBangkok: เว็บท่องเที่ยวทางการของ กทม. รวมสถานที่น่าไปในกรุงเทพฯ", "VisitBangkok: the BMA's official city guide to places in Bangkok.", "https://visit.bangkok.go.th/place"),
         ],
       },
@@ -769,27 +769,27 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("นี่คือแอปหาคู่หรือเปล่า?", "Is this a dating app?"),
-    a: t("ไม่ใช่ เราเน้นเพื่อนใหม่เป็นหลัก โหมด ‘เปิดใจมากกว่าเพื่อน’ เป็นทางเลือกสำหรับคนโสดเท่านั้น และจะได้รู้จักกันต่อก็ต่อเมื่อทั้งสองฝ่ายเลือกตรงกัน", "No — it's friends first. 'Open to something more' is optional, only for people who are single, and only connects you when both people choose it."),
+    a: t("ไม่ใช่ เราเน้นเพื่อนใหม่เป็นหลัก โหมด ‘เปิดใจมากกว่าเพื่อน’ เป็นทางเลือกสำหรับคนโสดเท่านั้น และจะได้รู้จักกันต่อก็ต่อเมื่อทั้งสองฝ่ายเลือกตรงกัน", "No, it's friends first. 'Open to something more' is optional, only for people who are single, and only connects you when both people choose it."),
   },
   {
     q: t("ใครใช้ได้บ้าง?", "Who can join?"),
-    a: t("ผู้ที่อายุ 18 ปีขึ้นไปและอาศัยอยู่ในกรุงเทพฯ ทุกสัญชาติ ทุกเพศ ทุกความหลากหลาย ไม่จำเป็นต้องมีทะเบียนบ้านในกรุงเทพฯ", "Adults 18+ who live in Bangkok — any nationality, gender or orientation. Your household registration can be anywhere."),
+    a: t("ผู้ที่อายุ 18 ปีขึ้นไปและอยู่ในหรือรอบ ๆ กรุงเทพฯ ทุกสัญชาติ ทุกเพศ ทุกความหลากหลาย ทะเบียนบ้านอยู่ที่ไหนก็ได้", "Adults 18+ in or around Bangkok: any nationality, gender or orientation. Your household registration can be anywhere."),
   },
   {
     q: t("ต้องเสียเงินไหม?", "Does it cost anything?"),
     a: t("ใช้แอปฟรี กิจกรรมส่วนใหญ่ฟรี ถ้ามีค่าใช้จ่ายจะแจ้งไว้ชัดเจน และชำระที่หน้างาน", "The app is free and most events are free. Any cost is shown upfront and paid at the venue."),
   },
   {
-    q: t("ไม่พูดภาษาไทย ใช้ได้ไหม?", "I don't speak Thai — can I join?"),
+    q: t("ไม่พูดภาษาไทย ใช้ได้ไหม?", "I don't speak Thai. Can I join?"),
     a: t("ได้ เปลี่ยนเป็นภาษาอังกฤษได้ที่มุมขวาบน มองหาป้าย ‘ใช้ภาษาอังกฤษได้’ และเราจะจัดโต๊ะให้มีคนที่พูดภาษาเดียวกับคุณเสมอ", "Yes. Switch to English (top right), look for the 'English-friendly' tag, and we always seat you with someone who shares a language."),
   },
   {
     q: t("หลังกิจกรรมเกิดอะไรขึ้น?", "What happens after an event?"),
-    a: t("ภายใน 72 ชั่วโมง คุณเลือกได้ว่าอยากเป็นเพื่อนกับใครในกลุ่ม ถ้าเลือกตรงกันจะได้เป็นคนรู้จักกันและแลกช่องทางติดต่อได้ ถ้าไม่ตรงกัน จะไม่มีใครรู้", "For 72 hours you can privately choose who in your group you'd like to stay in touch with. If it's mutual you connect and can swap contacts. If not, nobody ever knows."),
+    a: t("ภายใน 72 ชั่วโมง คุณเลือกแบบลับ ๆ ได้ว่าอยากติดต่อกับใครในกลุ่มต่อ ถ้าเลือกตรงกัน จะได้เป็นคนรู้จักกันและแลกช่องทางติดต่อได้ ถ้าไม่ตรงกัน จะไม่มีใครรู้เลย", "For 72 hours you can privately choose who in your group you'd like to stay in touch with. If it's mutual you connect and can swap contacts. If not, nobody ever knows."),
   },
   {
-    q: t("มีแฟนหรือแต่งงานแล้ว ใช้ได้ไหม?", "I'm in a relationship — can I still join?"),
-    a: t("ได้แน่นอน คุณใช้โหมดเพื่อนและเพื่อนทำกิจกรรมได้เต็มที่ สถานะความสัมพันธ์เป็นความลับเสมอ", "Of course. Friends and activity-buddy modes are fully open to you. Your relationship status is always private."),
+    q: t("มีแฟนหรือแต่งงานแล้ว ใช้ได้ไหม?", "I'm in a relationship. Can I still join?"),
+    a: t("ได้แน่นอน คุณใช้โหมดเพื่อนและโหมดหาเพื่อนทำกิจกรรมได้เต็มที่ สถานะความสัมพันธ์เป็นความลับเสมอ", "Of course. Friends and activity-buddy modes are fully open to you. Your relationship status is always private."),
   },
   {
     q: t("พาเพื่อนไปด้วยได้ไหม?", "Can I bring a friend?"),
@@ -797,7 +797,7 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("ถ้าไปไม่ได้ต้องทำอย่างไร?", "What if I can't make it?"),
-    a: t("ยกเลิกในแอปก่อนเริ่มกิจกรรม 24 ชั่วโมงได้ฟรี ถ้ายกเลิกช้าหรือไม่มาโดยไม่แจ้ง จะได้ 1 strike ซึ่งหมดอายุใน 90 วัน", "Cancel in the app at least 24 hours before — free. Late cancellations or no-shows get a strike that expires after 90 days."),
+    a: t("ยกเลิกในแอปล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนกิจกรรมเริ่มได้ฟรี ถ้ายกเลิกช้าหรือไม่มาตามนัด จะได้ 1 strike ซึ่งหมดอายุใน 90 วัน", "Cancel in the app at least 24 hours before, and it's free. Late cancellations or no-shows get a strike that expires after 90 days."),
   },
   {
     q: t("ทีมงานเห็นข้อมูลอะไรของฉันบ้าง?", "What can the team see about me?"),
@@ -805,7 +805,7 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("ถ้ารู้สึกไม่ปลอดภัยทำอย่างไร?", "What if I feel unsafe?"),
-    a: t("แจ้งโฮสต์ทันที กด ‘รายงาน’ หรือ ‘บล็อก’ ในแอป หากอยู่ในอันตรายโทร 191 (ตำรวจ) หรือ 1669 (เจ็บป่วยฉุกเฉิน)", "Tell your host straight away and use Report or Block in the app. If you're in danger, call 191 (police) or 1669 (medical emergency)."),
+    a: t("แจ้งโฮสต์ทันที กด ‘รายงาน’ หรือ ‘บล็อก’ ในแอป ถ้าอยู่ในอันตราย โทร 191 (ตำรวจ) หรือ 1669 (เจ็บป่วยฉุกเฉิน)", "Tell your host straight away and use Report or Block in the app. If you're in danger, call 191 (police) or 1669 (medical emergency)."),
   },
 ];
 

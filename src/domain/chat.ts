@@ -87,7 +87,7 @@ export const REASON_TEXT: Record<Exclude<CheckResult, { ok: true }>["reason"], {
   empty: { th: "พิมพ์ข้อความก่อนนะ", en: "Write a message first." },
   too_long: { th: `ข้อความยาวได้ไม่เกิน ${MAX_CHARS} ตัวอักษร`, en: `Messages can be up to ${MAX_CHARS} characters.` },
   contact_before_meet: {
-    th: "ยังไม่ได้เจอกัน เลยยังส่งลิงก์ เบอร์ หรือไอดีไม่ได้ อยากแลกช่องทางติดต่อ ใช้ปุ่มแชร์ช่องทางติดต่อเมื่อพร้อมทั้งคู่",
+    th: "ยังไม่ได้เจอกัน เลยยังส่งลิงก์ เบอร์ หรือไอดีไม่ได้ อยากแลกช่องทางติดต่อ ใช้ปุ่มแชร์ช่องทางติดต่อเมื่อพร้อมทั้งสองคน",
     en: "You haven't met yet, so links, numbers and handles wait. When you both want to, use Share contact.",
   },
   budget: {

@@ -179,21 +179,21 @@ adminInsights.get("/", async (c) => {
       base: expected,
     },
     {
-      label: t("ผู้เช็กอินที่ได้คนรู้จักแบบตรงกัน ≥ 1 คน", "Checked-in with ≥1 mutual connection"),
+      label: t("คนเช็กอินที่ได้คนรู้จักใหม่ (เลือกตรงกัน) อย่างน้อย 1 คน", "Checked-in with ≥1 mutual connection"),
       value: pct(withConnection, checkedIn),
       unit: "%",
       base: checkedIn,
       target: pctTarget(50),
     },
     {
-      label: t("การเชื่อมต่อต่อผู้เช็กอิน", "Mutual connections per check-in"),
+      label: t("คนรู้จักใหม่ต่อการเช็กอิน 1 ครั้ง", "Mutual connections per check-in"),
       value: safeCount(checkedIn) === null ? null : Math.round((connCount / checkedIn) * 100) / 100,
       unit: "",
       base: checkedIn,
       digits: 2,
     },
     {
-      label: t("เข้าร่วม ≥ 2 กิจกรรม", "Attended ≥2 events"),
+      label: t("เข้าร่วมอย่างน้อย 2 กิจกรรม", "Attended ≥2 events"),
       value: pct(repeaters, activeMembers),
       unit: "%",
       base: activeMembers,
@@ -229,14 +229,14 @@ adminInsights.get("/", async (c) => {
       target: pctTarget(60),
     },
     {
-      label: t("รู้สึกปลอดภัย (4–5 จาก 5)", "Felt safe (4–5 of 5)"),
+      label: t("รู้สึกปลอดภัย (4 หรือ 5 จาก 5)", "Felt safe (4-5 of 5)"),
       value: pct(safeYes, safeN),
       unit: "%",
       base: safeN,
       target: pctTarget(90),
     },
     {
-      label: t("คะแนนกลุ่มเฉลี่ย", "Avg table rating"),
+      label: t("คะแนนโต๊ะเฉลี่ย", "Avg table rating"),
       value: safeCount(ratingN) === null ? null : Math.round(ratingAvg * 10) / 10,
       unit: "",
       base: ratingN,
@@ -343,13 +343,13 @@ adminInsights.get("/", async (c) => {
     { label: t("ข้ามแผนประจำสัปดาห์", "Weekly plan skipped"), value: pct(skippedN, plans), unit: "%", base: plans },
     { label: t("ไอเดียที่สมาชิกเสนอ (คนเข้าร่วม)", "Member pitches (joins)"), value: safeCount(pitchesN), unit: "", base: pitchesN, hint: safeCount(joinsN) !== null ? `${joinsN} ${t("คนร่วม", "joins")}` : undefined },
     { label: t("บัดดี้มาตามนัด", "Buddies showed up"), value: pct(meetShowed, meetN), unit: "%", base: meetN, target: pctTarget(90) },
-    { label: t("รู้สึกปลอดภัยตอนเจอบัดดี้ (4–5)", "Felt safe with buddy (4–5)"), value: pct(meetSafe, meetN), unit: "%", base: meetN, target: pctTarget(90) },
+    { label: t("รู้สึกปลอดภัยตอนเจอบัดดี้ (4 หรือ 5)", "Felt safe with buddy (4-5)"), value: pct(meetSafe, meetN), unit: "%", base: meetN, target: pctTarget(90) },
     { label: t("อยากเจอบัดดี้อีก", "Would meet buddy again"), value: pct(meetAgain, meetN), unit: "%", base: meetN },
-    { label: t("รู้สึกว่ามีคนฟัง: บัดดี้ (1–5)", "Felt heard: buddy (1–5)"), value: avg1(meetHeardAvg, meetHeardN), unit: "", base: meetHeardN, digits: 1 },
-    { label: t("รู้สึกว่ามีคนฟัง: กิจกรรม (1–5)", "Felt heard: events (1–5)"), value: avg1(evHeardAvg, evHeardN), unit: "", base: evHeardN, digits: 1 },
+    { label: t("รู้สึกว่ามีคนฟัง: บัดดี้ (1-5)", "Felt heard: buddy (1-5)"), value: avg1(meetHeardAvg, meetHeardN), unit: "", base: meetHeardN, digits: 1 },
+    { label: t("รู้สึกว่ามีคนฟัง: กิจกรรม (1-5)", "Felt heard: events (1-5)"), value: avg1(evHeardAvg, evHeardN), unit: "", base: evHeardN, digits: 1 },
     { label: t("ขอความช่วยเหลือหลังนัด", "Asked for help after a meet"), value: pct(helpN, answeredN), unit: "%", base: answeredN, hint: safeCount(arrivals) !== null ? `${arrivals} ${t("การตั้งเวลา", "checks set")}` : undefined },
     {
-      label: t("ข้อความที่ถูกรายงานต่อ 1,000", "Chat reports per 1,000 messages"),
+      label: t("ข้อความที่ถูกรายงาน ต่อ 1,000 ข้อความ", "Chat reports per 1,000 messages"),
       value: safeCount(msgs) === null ? null : Math.round((chatReports / msgs) * 10000) / 10,
       unit: "",
       base: msgs,
@@ -420,7 +420,7 @@ adminInsights.get("/", async (c) => {
         </p>
       ) : null}
 
-      <h2>{t("ความเหงา UCLA-3 (3–9, ต่ำ = เหงาน้อย)", "UCLA-3 loneliness (3–9, lower is better)")}</h2>
+      <h2>{t("ความเหงา UCLA-3 (3-9 ยิ่งต่ำยิ่งเหงาน้อย)", "UCLA-3 loneliness (3-9, lower is better)")}</h2>
       <div class="stats">
         <Stat label={t("ค่าเฉลี่ยเริ่มต้น", "Baseline average")} value={baseline.avg === null ? null : baseline.avg.toFixed(2)} hint={safeCount(baseline.n) !== null ? `n = ${baseline.n}` : undefined} />
         <Stat label={t("ค่าเฉลี่ยติดตามผล", "Follow-up average")} value={followup.avg === null ? null : followup.avg.toFixed(2)} hint={safeCount(followup.n) !== null ? `n = ${followup.n}` : undefined} />
@@ -429,7 +429,7 @@ adminInsights.get("/", async (c) => {
           value={baseline.avg !== null && followup.avg !== null ? (followup.avg - baseline.avg).toFixed(2) : null}
         />
       </div>
-      <p class="muted">{t("ข้อมูลทั้งหมดตั้งแต่เริ่มโครงการ เป็นค่าเฉลี่ยของกลุ่ม ไม่ใช่การจับคู่รายบุคคล", "All-time, group averages — not a paired per-person comparison.")}</p>
+      <p class="muted">{t("ข้อมูลทั้งหมดตั้งแต่เริ่มโครงการ เป็นค่าเฉลี่ยของกลุ่ม ไม่ใช่การจับคู่รายบุคคล", "All-time group averages, not a paired per-person comparison.")}</p>
 
       <h2>{t("แยกตามเขต", "By district")}</h2>
       {districtRows.length === 0 ? (
@@ -442,7 +442,7 @@ adminInsights.get("/", async (c) => {
                 <th>{t("เขต", "District")}</th>
                 <th>{t("กิจกรรม", "Events")}</th>
                 <th>{t("เช็กอิน", "Check-ins")}</th>
-                <th>{t("ความรู้สึกปลอดภัยเฉลี่ย (1–5)", "Avg felt safe (1–5)")}</th>
+                <th>{t("ความรู้สึกปลอดภัยเฉลี่ย (1-5)", "Avg felt safe (1-5)")}</th>
               </tr>
             </thead>
             <tbody>

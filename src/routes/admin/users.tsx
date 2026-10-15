@@ -201,7 +201,7 @@ adminUsers.get("/:id", async (c) => {
         </div>
         <p class="muted">
           {t(
-            "ข้อมูลสถานะความสัมพันธ์ การตั้งค่าโรแมนซ์ อัตลักษณ์ทางเพศ ช่วงอายุที่สนใจ และตัวเลือกการเชื่อมต่อ จะไม่แสดงแก่ทีมงานไม่ว่ากรณีใด",
+            "ข้อมูลสถานะความสัมพันธ์ การตั้งค่าเปิดใจมากกว่าเพื่อน อัตลักษณ์ทางเพศ ช่วงอายุที่สนใจ และตัวเลือกการเชื่อมต่อ จะไม่แสดงแก่ทีมงานไม่ว่ากรณีใด",
             "Relationship status, romance settings, gender identity, age preferences and connection choices are never shown to staff.",
           )}
         </p>

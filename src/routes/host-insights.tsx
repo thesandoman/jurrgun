@@ -78,7 +78,7 @@ hostInsightRoutes.get("/host/insights", async (c) => {
       <h1>📈 {t("ผลลัพธ์กิจกรรมของฉัน", "How my events went")}</h1>
       <Notice kind="info">
         {t(
-          `6 เดือนที่ผ่านมา ตัวเลขที่มีคนน้อยกว่า ${HOST_K} คนจะซ่อนไว้ เพื่อไม่ให้ระบุตัวคนได้`,
+          `6 เดือนที่ผ่านมา ตัวเลขที่มีคนน้อยกว่า ${HOST_K} คนจะซ่อนไว้ เพื่อไม่ให้ระบุตัวใครได้`,
           `The last 6 months. Anything based on fewer than ${HOST_K} people is hidden, so nobody can be identified.`,
         )}
       </Notice>
@@ -105,10 +105,10 @@ hostInsightRoutes.get("/host/insights", async (c) => {
                 <strong>{lang === "en" ? (e.titleEn ?? e.title) : e.title}</strong>
                 <p class="muted">{fmtDate(e.startsAt, lang)} · 📍 {label(DISTRICTS, e.district, lang)}</p>
                 <p class="chips2">
-                  <span>🎟️ {t(`มา ${showUpRate(ci, conf, HOST_K) ?? "<5"}%`, `Showed up ${showUpRate(ci, conf, HOST_K) ?? "<5"}%`)}</span>
-                  <span>🛡️ {t("ปลอดภัย", "Safe")} {s.feltSafePct ?? "—"}{s.feltSafePct === null ? "" : "%"}</span>
-                  <span>👂 {t("มีคนฟัง", "Heard")} {s.feltHeardAvg ?? "—"}</span>
-                  <span>📝 {t(`ตอบ ${s.responses}`, `${s.responses} answers`)}</span>
+                  <span>🎟️ {t(`มาตามนัด ${showUpRate(ci, conf, HOST_K) ?? "<5"}%`, `Showed up ${showUpRate(ci, conf, HOST_K) ?? "<5"}%`)}</span>
+                  <span>🛡️ {t("ปลอดภัย", "Safe")} {s.feltSafePct ?? "-"}{s.feltSafePct === null ? "" : "%"}</span>
+                  <span>👂 {t("มีคนฟัง", "Heard")} {s.feltHeardAvg ?? "-"}</span>
+                  <span>📝 {t(`ตอบ ${s.responses} คน`, `${s.responses} answers`)}</span>
                 </p>
               </Card>
             );

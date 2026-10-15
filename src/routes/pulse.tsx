@@ -145,7 +145,7 @@ function FollowupCard(props: { v: View }) {
   return (
     <Card>
       <h2>{t("ช่วงนี้เป็นยังไงบ้าง?", "How are you feeling these days?")}</h2>
-      <p class="muted">{t("3 คำถามเดิมจากตอนสมัคร เพื่อดูว่ากิจกรรมช่วยให้เหงาน้อยลงจริงไหม ไม่บังคับ", "The same 3 questions as when you joined, to see whether events help with loneliness. Optional.")}</p>
+      <p class="muted">{t("3 คำถามเดิมจากตอนสมัคร เพื่อดูว่ากิจกรรมช่วยให้เหงาน้อยลงจริงไหม จะตอบหรือไม่ก็ได้", "The same 3 questions as when you joined, to see whether events help with loneliness. Optional.")}</p>
       <form method="post" action="/pulse/wellbeing">
         {UCLA3.map(([th, en], i) => (
           <Choices legend={t(th, en)} name={`q${i + 1}`} options={UCLA_SCALE} lang={lang} type="radio" required />
@@ -172,7 +172,7 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
         <Card>
           <p>
             {t(
-              "City Pulse คือคำถามสั้น ๆ เกี่ยวกับการใช้ชีวิตในกรุงเทพฯ เช่น ความปลอดภัย การเดินทาง ที่นั่งสาธารณะ คำตอบเก็บด้วยรหัสวิจัยแทนตัวตน ผลลัพธ์แสดงเป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น ภาพรวมนี้ส่งให้กรุงเทพมหานคร (กทม.) เพื่อให้เมืองน่าออกไปพบปะผู้คนมากขึ้น และช่วยให้เราเลือกสถานที่ได้ดีขึ้น",
+              "City Pulse คือคำถามสั้น ๆ เกี่ยวกับการใช้ชีวิตในกรุงเทพฯ เช่น ความปลอดภัย การเดินทาง ที่นั่งสาธารณะ คำตอบจะเก็บไว้ภายใต้รหัสวิจัยแทนตัวตนของคุณ ผลลัพธ์แสดงเป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น ภาพรวมนี้ส่งให้กรุงเทพมหานคร (กทม.) เพื่อให้เมืองน่าออกไปพบปะผู้คนมากขึ้น และช่วยให้เราเลือกสถานที่ได้ดีขึ้น",
               "City Pulse asks quick questions about life in Bangkok: safety, getting around, places to sit. Answers are stored under a research code instead of your identity, results are only ever shown as totals from 10+ people. Those totals go to the Bangkok Metropolitan Administration (BMA) to make the city easier to meet people in, and help us pick better places.",
             )}
           </p>
@@ -188,10 +188,10 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
     { title, tab: "pulse", status: opts.status ?? 200 },
     <>
       <h1>City Pulse</h1>
-      <p class="muted">{t("เสียงของคุณช่วยให้กรุงเทพฯ น่าออกไปพบปะผู้คนมากขึ้น ภาพรวมจากอย่างน้อย 10 คนส่งให้ กทม.", "Your answers help make Bangkok a better place to meet people. Totals from 10+ people go to the BMA.")}</p>
+      <p class="muted">{t("คำตอบของคุณช่วยให้กรุงเทพฯ น่าออกไปเจอผู้คนมากขึ้น เราส่งให้ กทม. เฉพาะภาพรวมจากอย่างน้อย 10 คน", "Your answers help make Bangkok a better place to meet people. Totals from 10+ people go to the BMA.")}</p>
       {opts.error ? <Notice kind="error">{opts.error}</Notice> : null}
       {due ? <FollowupCard v={v} /> : null}
-      {questions.length ? questions.map((q) => <QuestionCard v={v} q={q} />) : <Empty>{t("ตอบครบแล้ว! กลับมาใหม่เร็ว ๆ นี้ 🎉", "All caught up! Check back soon 🎉")}</Empty>}
+      {questions.length ? questions.map((q) => <QuestionCard v={v} q={q} />) : <Empty>{t("ตอบครบแล้ว แวะมาใหม่เร็ว ๆ นี้นะ 🎉", "All caught up! Check back soon 🎉")}</Empty>}
     </>,
   );
 }
@@ -270,7 +270,7 @@ pulseRoutes.post("/pulse/:id", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const answer = parseAnswer(q, body.answer);
   if (answer === null) {
-    return renderPulse(c, { status: 400, error: t("คำตอบไม่ถูกต้อง ลองใหม่อีกครั้ง", "That answer isn't valid — please try again.") });
+    return renderPulse(c, { status: 400, error: t("คำตอบไม่ถูกต้อง ลองใหม่อีกครั้ง", "That answer isn't valid. Please try again.") });
   }
   const inserted = await db
     .insert(pulseResponses)
@@ -278,7 +278,7 @@ pulseRoutes.post("/pulse/:id", async (c) => {
     .onConflictDoNothing()
     .returning({ id: pulseResponses.id });
   if (!inserted.length) {
-    return renderPulse(c, { status: 409, error: t("คุณตอบคำถามนี้ไปแล้ว ขอบคุณ!", "You've already answered this one — thanks!") });
+    return renderPulse(c, { status: 409, error: t("คุณตอบคำถามนี้ไปแล้ว ขอบคุณที่ช่วยตอบ", "You've already answered this one. Thanks!") });
   }
   return c.redirect("/pulse?notice=answered");
 });

@@ -240,11 +240,11 @@ function PeopleClosed(props: { v: View; state: Exclude<PeopleState, { kind: "ope
   const s = props.state;
   return (
     <>
-      <h1>{t("คนที่ได้เจอ", "People I met")}</h1>
+      <h1>{t("คนที่เจอ", "People I met")}</h1>
       <p class="muted">{eventTitle(s.event, lang)}</p>
       <Card>
         {s.kind === "not_attended" ? (
-          <p>{t("เฉพาะคนที่เช็กอินที่งานนี้เท่านั้นที่ดูรายชื่อนี้ได้", "Only people who checked in at this event can see this list.")}</p>
+          <p>{t("ดูรายชื่อนี้ได้เฉพาะคนที่เช็กอินที่งานนี้", "Only people who checked in at this event can see this list.")}</p>
         ) : s.kind === "before" ? (
           <p>
             {t("รายชื่อจะเปิดหลังกิจกรรมจบ และเปิดไว้ 72 ชั่วโมง", "This opens after the event ends, and stays open for 72 hours.")}{" "}
@@ -253,7 +253,7 @@ function PeopleClosed(props: { v: View; state: Exclude<PeopleState, { kind: "ope
         ) : (
           <p>
             {t(
-              "รายชื่อนี้ปิดแล้ว (เปิดให้เลือกแค่ 72 ชั่วโมงหลังจบงาน) ตัวเลือกที่ไม่ตรงกันจะหายไปเงียบ ๆ",
+              "รายชื่อนี้ปิดแล้ว (เปิดให้เลือกแค่ 72 ชั่วโมงหลังจบงาน) ตัวเลือกที่ไม่ได้เลือกกันทั้งสองฝ่ายหายไปเงียบ ๆ แล้ว",
               "This closed 72 hours after the event. Choices that weren't mutual have quietly expired.",
             )}
           </p>
@@ -272,18 +272,18 @@ function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; min
   const options = CHOICE_LABELS.filter((o) => allowed.has(o.value));
   return (
     <>
-      <h1>{t("คนที่ได้เจอ", "People I met")}</h1>
+      <h1>{t("คนที่เจอ", "People I met")}</h1>
       <p class="muted">
         {eventTitle(props.event, lang)} · {fmtDay(props.event.startsAt, lang)}
       </p>
       <Notice kind="info">
         {t(
-          "ตัวเลือกของคุณเป็นความลับ จะได้รู้จักกันต่อก็ต่อเมื่อเลือกกันทั้งสองฝ่าย ไม่มีใครได้รับแจ้งว่าคุณไม่ได้เลือกเขา",
+          "ตัวเลือกของคุณเป็นความลับ จะได้รู้จักกันต่อเมื่อเลือกกันทั้งสองฝ่ายเท่านั้น และจะไม่มีใครรู้ว่าคุณไม่ได้เลือกเขา",
           "Your choices are private. Only mutual choices create a connection. Nobody is ever told you didn't choose them.",
         )}
       </Notice>
       {props.candidates.length === 0 ? (
-        <Empty>{t("ยังไม่มีรายชื่อให้เลือกในกลุ่มของคุณ", "There's nobody to show from your group.")}</Empty>
+        <Empty>{t("ยังไม่มีใครให้เลือกในกลุ่มของคุณ", "There's nobody to show from your group.")}</Empty>
       ) : (
         <form method="post">
           {props.candidates.map((p) => (
@@ -309,7 +309,7 @@ function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; min
           ))}
           <p class="muted">
             {t(
-              "เปลี่ยนใจได้จนกว่ารายชื่อจะปิด 72 ชั่วโมงหลังงานจบ",
+              "เปลี่ยนใจได้จนกว่ารายชื่อจะปิด คือ 72 ชั่วโมงหลังจบงาน",
               "You can change your mind until the list closes, 72 hours after the event.",
             )}
           </p>
@@ -325,7 +325,7 @@ peopleRoutes.get("/events/:id/people", requireMember, async (c) => {
   const state = await loadPeople(c, c.req.param("id"));
   if (state.kind === "missing") return page(c, { title: "Not found", status: 404 }, <Empty>{v.t("ไม่พบกิจกรรม", "Event not found")}</Empty>);
   if (state.kind !== "open") {
-    return page(c, { title: v.t("คนที่ได้เจอ", "People I met"), tab: "mine", status: state.kind === "not_attended" ? 403 : 200 }, <PeopleClosed v={v} state={state} />);
+    return page(c, { title: v.t("คนที่เจอ", "People I met"), tab: "mine", status: state.kind === "not_attended" ? 403 : 200 }, <PeopleClosed v={v} state={state} />);
   }
   const me = c.var.user!;
   const ids = state.candidates.map((x) => x.accountId);
@@ -344,7 +344,7 @@ peopleRoutes.get("/events/:id/people", requireMember, async (c) => {
   const vibeMap = await vibesFor(getDb(c.env), [...ids, me.account.id]);
   return page(
     c,
-    { title: v.t("คนที่ได้เจอ", "People I met"), tab: "mine" },
+    { title: v.t("คนที่เจอ", "People I met"), tab: "mine" },
     <PeopleForm v={v} event={state.event} candidates={state.candidates} mine={mine} romance={romance} vibes={vibeMap} myVibe={vibeMap.get(me.account.id)} />,
   );
 });
@@ -354,7 +354,7 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
   const eventId = c.req.param("id");
   const state = await loadPeople(c, eventId);
   if (state.kind === "missing") return c.text("Not found", 404);
-  if (state.kind !== "open") return page(c, { title: v.t("คนที่ได้เจอ", "People I met"), tab: "mine", status: 403 }, <PeopleClosed v={v} state={state} />);
+  if (state.kind !== "open") return page(c, { title: v.t("คนที่เจอ", "People I met"), tab: "mine", status: 403 }, <PeopleClosed v={v} state={state} />);
 
   const me = c.var.user!;
   const myId = me.account.id;
@@ -667,7 +667,7 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
         {host ? (
           <Tile href="/host/new?visibility=private" tone="brand">
             <span class="ico" aria-hidden="true">＋</span>
-            <h3>{t("ชวนวงไปแฮงเอาต์", "Host a hangout for your circle")}</h3>
+            <h3>{t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your circle")}</h3>
           </Tile>
         ) : (
           <Tile href="/circles/lead" tone="brand">
@@ -696,11 +696,11 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
           ))}
         </div>
       ) : (
-        <p class="muted">{t("ยังไม่มีแฮงเอาต์จากวงของคุณ", "No hangouts from your circle yet.")}</p>
+        <p class="muted">{t("ยังไม่มีแฮงเอาต์จากคนรู้จักของคุณ", "No hangouts from your circle yet.")}</p>
       )}
       {ideas.length ? (
         <>
-          <h3>💡 {t("ไอเดียจากไทป์ในวงของคุณ", "Ideas from the types in your circle")}</h3>
+          <h3>💡 {t("ไอเดียจากไทป์ของคนรู้จักคุณ", "Ideas from the types in your circle")}</h3>
           <div class="rail2">
             {ideas.map((i) => (
               <a href={host ? `/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}` : "/circles/lead"} class="place-card">
@@ -715,7 +715,7 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
         </>
       ) : null}
       <h2 class="people-h">
-        🫂 {t("คนในวงของคุณ", "Your people")}{" "}
+        🫂 {t("คนรู้จักของคุณ", "Your people")}{" "}
         {props.people.length ? <AvatarStack items={props.people.slice(0, 6).map((p) => ({ label: p.name, emoji: p.emoji, seed: p.seed }))} more={Math.max(0, props.people.length - 6)} size={34} /> : null}
       </h2>
     </>
@@ -876,7 +876,7 @@ peopleRoutes.post("/connections/:id/share", requireMember, async (c) => {
     return page(
       c,
       { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections", status: 400 },
-      <Circle v={v} rows={rows} myVibe={myVibe} error={{ id: found.row.id, text: v.t(`วันนี้แชร์ช่องทางติดต่อครบ ${MAX_SHARES_PER_DAY} ครั้งแล้ว พรุ่งนี้ค่อยแชร์ต่อนะ`, `You've shared ${MAX_SHARES_PER_DAY} contacts today. Try again tomorrow.`) }} />,
+      <Circle v={v} rows={rows} myVibe={myVibe} error={{ id: found.row.id, text: v.t(`วันนี้แชร์ช่องทางติดต่อครบ ${MAX_SHARES_PER_DAY} ครั้งแล้ว ลองใหม่พรุ่งนี้`, `You've shared ${MAX_SHARES_PER_DAY} contacts today. Try again tomorrow.`) }} />,
     );
   }
   const nick = c.var.user!.profile!.nickname;
@@ -983,7 +983,7 @@ function Emergency(props: { v: View }) {
   return (
     <Notice kind="warn">
       <strong>
-        {t("หากอยู่ในอันตรายตอนนี้ โทร ", "If you're in danger right now, call ")}
+        {t("ถ้าคุณอยู่ในอันตรายตอนนี้ โทร ", "If you're in danger right now, call ")}
         <a href="tel:191">191</a> {t("(ตำรวจ) หรือ ", "(police) or ")}
         <a href="tel:1669">1669</a> {t("(เจ็บป่วยฉุกเฉิน)", "(medical emergency)")}
       </strong>
@@ -996,7 +996,7 @@ function ReportForm(props: { v: View; target: { accountId: string | null; eventI
   const val = props.values ?? {};
   return (
     <>
-      <h1>{props.target.accountId ? t("รายงานผู้ใช้", "Report a person") : t("รายงานกิจกรรม", "Report an event")}</h1>
+      <h1>{props.target.accountId ? t("รายงานสมาชิก", "Report a person") : t("รายงานกิจกรรม", "Report an event")}</h1>
       <Emergency v={props.v} />
       <p>
         {t("คุณกำลังรายงาน: ", "You're reporting: ")}
@@ -1025,7 +1025,7 @@ const refusal = (c: Ctx, v: View, status: 400 | 403 | 404) =>
       <Card>
         <p>
           {status === 403
-            ? v.t("คุณรายงานได้เฉพาะคนหรือกิจกรรมที่คุณเคยร่วมด้วย", "You can only report people or events you've attended with.")
+            ? v.t("คุณรายงานได้เฉพาะคนที่เคยเจอในกิจกรรม หรือกิจกรรมที่เคยไป", "You can only report people or events you've attended with.")
             : v.t("ไม่พบสิ่งที่ต้องการรายงาน", "We couldn't find what you want to report.")}
         </p>
       </Card>
@@ -1047,7 +1047,7 @@ peopleRoutes.post("/report", requireMember, async (c) => {
   if (!target.ok) return refusal(c, v, target.status);
   const values = { reason: str(body.reason), details: str(body.details), unsafe: str(body.unsafe) };
   const fail = (error: string) => page(c, { title: t("รายงาน", "Report"), status: 400 }, <ReportForm v={v} target={target} error={error} values={values} />);
-  if (!(REPORT_REASONS as readonly string[]).includes(values.reason)) return fail(t("เลือกเหตุผล", "Please choose a reason."));
+  if (!(REPORT_REASONS as readonly string[]).includes(values.reason)) return fail(t("เลือกเหตุผลก่อนส่งรายงาน", "Please choose a reason."));
   if (values.details.length > 1000) return fail(t("รายละเอียดยาวเกิน 1000 ตัวอักษร", "Details must be 1000 characters or fewer."));
   const critical = values.unsafe === "1";
 
@@ -1092,9 +1092,9 @@ peopleRoutes.post("/report", requireMember, async (c) => {
     c,
     { title: t("รายงาน", "Report") },
     <>
-      <Notice kind="ok">{t("ได้รับรายงานแล้ว ทีมงานจะดูรายงานด่วนนี้ก่อน", "Report received — our team will look at this urgent report first.")}</Notice>
+      <Notice kind="ok">{t("ได้รับรายงานแล้ว ทีมงานจะดูรายงานด่วนนี้ก่อน", "Report received. Our team will look at this urgent report first.")}</Notice>
       <Emergency v={v} />
-      <p>{t("ถ้าคุณอยู่ที่งาน ให้ไปหาผู้จัดงานหรือเจ้าหน้าที่ใกล้ตัว", "If you're at the event, go to the host or the nearest staff member.")}</p>
+      <p>{t("ถ้าคุณอยู่ที่งาน ไปหาโฮสต์หรือทีมงานที่อยู่ใกล้ที่สุดได้เลย", "If you're at the event, go to the host or the nearest staff member.")}</p>
       <LinkButton href="/connections" kind="ghost">{t("กลับ", "Back")}</LinkButton>
     </>,
   );
@@ -1264,7 +1264,7 @@ peopleRoutes.get("/connections/:id/still", requireMember, async (c) => {
     { title: t("ยังติดต่อกันอยู่ไหม", "Still in touch?"), tab: "connections" },
     <>
       <h1>🎓 {t("ยังติดต่อกันอยู่ไหม?", "Still in touch?")}</h1>
-      <p class="muted">{t("ตอบครั้งเดียว ช่วยให้เรารู้ว่า Jurrgun ช่วยให้คนได้เพื่อนจริงไหม", "One tap. It tells us whether Jurrgun helps people make real friends.")}</p>
+      <p class="muted">{t("แตะครั้งเดียว ช่วยให้เรารู้ว่า Jurrgun ช่วยให้คนได้เพื่อนจริง ๆ หรือเปล่า", "One tap. It tells us whether Jurrgun helps people make real friends.")}</p>
       <form method="post" class="row">
         <button class="btn primary" name="still" value="yes">{t("ยังคุยกันอยู่", "Yes, we are")}</button>
         <button class="btn ghost" name="still" value="no">{t("ห่าง ๆ กันไป", "Not really")}</button>

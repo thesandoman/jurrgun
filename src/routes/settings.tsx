@@ -180,11 +180,11 @@ settingsRoutes.get("/settings", async (c) => {
     { done: p.interests.length >= 3, label: t("ความสนใจอีกนิด", "A few more interests"), href: "/settings/profile#interests" },
     { done: !!bio.occupation, label: t("บอกว่าทำงานอะไร", "What you do"), href: "/settings/profile#facts" },
     { done: !!bio.story, label: t("เรื่องของคุณกับกรุงเทพฯ", "Your Bangkok story"), href: "/settings/profile#bangkok" },
-    { done: !!bio.comm?.length, label: t("สไตล์การคุย", "How you keep in touch"), href: "/settings/profile#comm" },
+    { done: !!bio.comm?.length, label: t("สไตล์การติดต่อ", "How you keep in touch"), href: "/settings/profile#comm" },
     { done: !!(bio.energy || bio.weekend), label: t("ข้อมูลสั้น ๆ", "Quick facts"), href: "/settings/profile#facts" },
     { done: Object.keys(bio.answers ?? {}).filter((id) => !isDatingPrompt(id)).length >= 2, label: t("ตอบคำถามของคุณ", "Answer your prompts"), href: "/settings/profile#prompts" },
     ...(romanceEligible(p)
-      ? [{ done: Object.keys(bio.answers ?? {}).some(isDatingPrompt), label: t("ตอบคำถามเรื่องเดท", "Answer a dating prompt"), href: "/settings/profile#dating-prompts" }]
+      ? [{ done: Object.keys(bio.answers ?? {}).some(isDatingPrompt), label: t("ตอบคำถามเรื่องเดต", "Answer a dating prompt"), href: "/settings/profile#dating-prompts" }]
       : []),
   ];
   const created = user.account.createdAt;
@@ -234,7 +234,7 @@ settingsRoutes.get("/settings", async (c) => {
   const quick = (
     <section class="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
       <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
-      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ วงและแชตยังอยู่", "No new buddies; circle and chats stay")} />
+      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies; circle and chats stay")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
         <QuickSwitch
@@ -244,8 +244,8 @@ settingsRoutes.get("/settings", async (c) => {
           title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")}
           hint={
             romanceEligible(p)
-              ? t("ตัวเลือกหลังกิจกรรมและบัดดี้ จะรู้ก็ต่อเมื่อตรงกัน แตะเพื่อกลับเป็นโหมดเพื่อน", "Choices after events and with buddies, only shown when mutual. Tap to go back to friends only.")
-              : t("สำหรับคนโสด เป็นความลับเสมอ แตะเพื่อเปิดและยินยอมให้เก็บข้อมูลเรื่องเดท (PDPA)", "For people who are single, always private. Tapping switches it on and agrees to keep your dating details (PDPA).")
+              ? t("เลือกได้หลังกิจกรรมและกับบัดดี้ จะรู้กันก็ต่อเมื่อเลือกตรงกัน แตะเพื่อกลับไปโหมดเพื่อน", "Choices after events and with buddies, only shown when mutual. Tap to go back to friends only.")
+              : t("สำหรับคนโสด และเป็นความลับเสมอ การแตะคือการเปิดและยินยอมให้เราเก็บข้อมูลเรื่องเดตของคุณ (PDPA)", "For people who are single, always private. Tapping switches it on and agrees to keep your dating details (PDPA).")
           }
         />
       )}
@@ -268,8 +268,8 @@ settingsRoutes.get("/settings", async (c) => {
         {
           emoji: "🤝",
           n: Number(circle?.n ?? 0),
-          label: t("คนในวงของฉัน", "In my circle"),
-          sub: crews > 0 ? t(`จาก ${crews} แก๊ง`, `across ${crews} ${crews === 1 ? "crew" : "crews"}`) : undefined,
+          label: t("คนรู้จักของฉัน", "In my circle"),
+          sub: crews > 0 ? t(`จาก ${crews} กิจกรรม`, `across ${crews} ${crews === 1 ? "crew" : "crews"}`) : undefined,
           href: "/connections",
           tint: "teal",
         },
@@ -284,9 +284,9 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
-          : { href: "/circles/lead", emoji: "👑", title: t("นำวงของคุณเอง", "Lead a circle"), hint: t("ขอเป็นหัวหน้าวงเพื่อจัดแฮงเอาต์", "Ask to lead a circle and host hangouts"), tint: "lime" as const, group: gOut },
+          : { href: "/circles/lead", emoji: "👑", title: t("ตั้งวงของคุณเอง", "Lead a circle"), hint: t("ขอเป็นหัวหน้าวงเพื่อจัดแฮงเอาต์", "Ask to lead a circle and host hangouts"), tint: "lime" as const, group: gOut },
         ...(dates
-          ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดทแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
+          ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดตแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),
         { href: "/me/month", emoji: "🌱", title: t("เดือนนี้ของฉัน", "My month in people"), hint: t("คนที่เจอ ที่ที่ไป ไม่นับเวลาบนจอ", "People met, places, never screen time"), tint: "green", group: gOut },
         { href: "/thanks", emoji: "💌", title: t("คำขอบคุณ", "Thank-yous"), hint: t("ข้อความส่วนตัวจากคนที่เจอ", "Private notes from people you met"), tint: "sun", group: gOut },
@@ -451,7 +451,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           <InterestPicker v={props.v} values={vals.interests} />
         </Section>
 
-        <Section id="comm" emoji="💬" title={t("สไตล์การสื่อสาร", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
+        <Section id="comm" emoji="💬" title={t("สไตล์การติดต่อ", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
           <CommPicker v={props.v} values={bio.comm} />
         </Section>
 
@@ -503,14 +503,14 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
             <OptChecks v={props.v} name="times" options={TIME_WINDOWS} values={bio.times} />
           </fieldset>
           <fieldset class="choices">
-            <legend>{t("สิ่งที่ต้องการ", "Access needs")}</legend>
+            <legend>{t("ความต้องการด้านการเข้าถึง", "Access needs")}</legend>
             <OptChecks v={props.v} name="access" options={ACCESS_NEEDS} values={bio.access} />
           </fieldset>
         </Section>
 
         <Section id="out" emoji="🧾" title={t("เวลาออกไปเจอกัน", "Out and about")} hint={t("ไม่บังคับ ช่วยให้นัดแรกง่ายขึ้น", "All optional. Makes a first meet smoother.")}>
           <fieldset class="choices">
-            <legend>{t(`จ่ายเงินแบบไหนสะดวก (สูงสุด ${MAX_PAY})`, `How I like to pay (up to ${MAX_PAY})`)}</legend>
+            <legend>{t(`จ่ายเงินแบบไหนสะดวก (ไม่เกิน ${MAX_PAY} แบบ)`, `How I like to pay (up to ${MAX_PAY})`)}</legend>
             <OptChecks v={props.v} name="pay" options={PAY_METHODS} values={bio.pay} />
           </fieldset>
           <fieldset class="choices">
@@ -518,7 +518,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
             <OptRadios v={props.v} name="bill" options={BILL_STYLE} value={bio.bill} />
           </fieldset>
           <fieldset class="choices">
-            <legend>{t(`เดินทางยังไง (สูงสุด ${MAX_TRAVEL})`, `How I get around (up to ${MAX_TRAVEL})`)}</legend>
+            <legend>{t(`เดินทางยังไง (ไม่เกิน ${MAX_TRAVEL} แบบ)`, `How I get around (up to ${MAX_TRAVEL})`)}</legend>
             <OptChecks v={props.v} name="travel" options={GETTING_AROUND} values={bio.travel} />
           </fieldset>
           <fieldset class="choices">
@@ -530,7 +530,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
             <OptRadios v={props.v} name="spice" options={SPICE} value={bio.spice} />
           </fieldset>
           <fieldset class="choices">
-            <legend>{t("สายสัตว์เลี้ยง", "Pets")}</legend>
+            <legend>{t("สัตว์เลี้ยง", "Pets")}</legend>
             <OptRadios v={props.v} name="pets" options={PETS} value={bio.pets} />
           </fieldset>
           <fieldset class="choices">
@@ -544,7 +544,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           emoji="🃏"
           title={t("คำถามของฉัน", "My prompts")}
           hint={t(
-            "ชุดคำถามนี้สุ่มมาเฉพาะคุณ ตอบข้อไหนก็ได้ ไม่ชอบข้อไหนกด ↻ เพื่อเปลี่ยน",
+            "ชุดคำถามนี้สุ่มมาให้คุณโดยเฉพาะ ตอบข้อไหนก็ได้ ถ้าไม่ชอบข้อไหน กด ↻ เพื่อเปลี่ยน",
             "This set was picked just for you. Answer any you like, and tap ↻ to swap one you don't.",
           )}
         >
@@ -558,9 +558,9 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           <Section
             id="dating-prompts"
             emoji="💘"
-            title={t("คำถามเรื่องเดท", "Dating prompts")}
+            title={t("คำถามเรื่องเดต", "Dating prompts")}
             hint={t(
-              "เห็นเฉพาะคนที่เปิดใจมากกว่าเพื่อนและเข้ากันได้ คนในโหมดเพื่อนไม่เห็นเลย และจะถูกลบเมื่อคุณปิดโหมดนี้ กด ↻ เพื่อเปลี่ยนข้อที่ไม่ชอบ",
+              "เห็นได้เฉพาะสมาชิกที่เปิดใจมากกว่าเพื่อนเหมือนกันและเข้ากับคุณ คนในโหมดเพื่อนจะไม่เห็นเลย และคำตอบจะถูกลบเมื่อคุณกลับไปโหมดเพื่อน กด ↻ เพื่อเปลี่ยนข้อที่ไม่ชอบ",
               "Only members who are also open to something more, and a fit for you, can see these. Friends-only members never do, and they're deleted if you switch it off. Tap ↻ to swap one.",
             )}
           >
@@ -681,12 +681,12 @@ function parseProfileForm(c: C, body: Body): Parsed {
   };
   const fail = (th: string, en: string): Parsed => ({ ok: false, vals, error: t(th, en) });
 
-  if (!vals.nickname) return fail("กรอกชื่อเล่น", "Please add a nickname.");
+  if (!vals.nickname) return fail("ใส่ชื่อเล่นก่อน", "Please add a nickname.");
   if (vals.nickname.length > 30) return fail("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters.");
   if (!values(DISTRICTS).includes(vals.district)) return fail("เลือกเขต", "Please choose a district.");
   if (vals.languages.length === 0 || vals.interests.length === 0) return fail("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.");
   if (vals.interests.length > MAX_INTERESTS) return fail(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`);
-  if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การสื่อสารได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`);
+  if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`);
   if ((bio.learning ?? "").length > LEARNING_MAX) return fail(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`);
   if (!bio.learning) delete bio.learning;
 
@@ -735,7 +735,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
       const positions: Record<string, string> = {};
       for (const o of q.options ?? []) positions[o.value] = str(body[`r_${id}_${o.value}`]);
       const order = rankFromPositions(q, positions);
-      if (order === "partial") return fail(`${title}: เรียงอันดับให้ครบทุกข้อ ห้ามซ้ำกัน`, `${title}: give every item a different place.`);
+      if (order === "partial") return fail(`${title}: เรียงอันดับให้ครบทุกข้อ และไม่ซ้ำกัน`, `${title}: give every item a different place.`);
       raw = order;
     } else {
       raw = list(body[`a_${id}`]);
@@ -876,8 +876,8 @@ function ConnectionsPage(props: { v: View; error?: [string, string] }) {
       <h1>{t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences")}</h1>
       <p class="muted">
         {t(
-          "ข้อมูลในหน้านี้เป็นความลับ ไม่แสดงต่อผู้อื่นและเจ้าหน้าที่ เปลี่ยนจาก 'โสด' จะปิดโหมดเปิดใจทันที เปลี่ยนเป็น 'โสด' ได้ไม่เกิน 1 ครั้งใน 30 วัน",
-          "Everything here is private — never shown to other members or staff. Leaving Single switches romance mode off at once. You can switch to Single at most once every 30 days.",
+          "ข้อมูลในหน้านี้เป็นความลับ ไม่แสดงให้สมาชิกคนอื่นหรือเจ้าหน้าที่เห็น ถ้าเปลี่ยนจาก 'โสด' จะกลับเป็นโหมดเพื่อนทันที เปลี่ยนเป็น 'โสด' ได้ไม่เกิน 1 ครั้งใน 30 วัน",
+          "Everything here is private: it's never shown to other members or staff. Leaving Single switches romance mode off at once. You can switch to Single at most once every 30 days.",
         )}
       </p>
       {props.error ? <Notice kind="error">{t(...props.error)}</Notice> : null}
@@ -1013,9 +1013,9 @@ const CATEGORIES: { key: string; required: boolean; th: string; en: string; hint
   { key: "service", required: true, th: "บัญชีและบริการกิจกรรม", en: "Account and event service", hintTh: "จำเป็นเพื่อให้แอปทำงาน ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Needed for the app to work. Withdrawn only by deactivating your account." },
   { key: "safety", required: true, th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation", hintTh: "ใช้ตรวจสอบรายงานและป้องกันการคุกคาม ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Used to review reports and prevent harassment. Withdrawn only by deactivating your account." },
   { key: "personalization", required: false, th: "จัดกลุ่มและแนะนำกิจกรรมตามความสนใจ", en: "Personalised groups and suggestions", hintTh: "ใช้ความสนใจและภาษาของคุณในการจัดโต๊ะ", hintEn: "Uses your interests and languages to seat you well." },
-  { key: "research", required: false, th: "City Pulse: ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse: anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน และภาพรวมนี้ส่งให้ กทม.", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people. Those totals go to the BMA." },
+  { key: "research", required: false, th: "City Pulse: ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse: anonymous city research", hintTh: "คำตอบเก็บแยกไว้ภายใต้รหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน และภาพรวมนี้ส่งให้ กทม.", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people. Those totals go to the BMA." },
   { key: "notifications", required: false, th: "การแจ้งเตือนกิจกรรม", en: "Event notifications", hintTh: "เตือนก่อนงานและแจ้งเมื่อมีที่ว่าง", hintEn: "Reminders and waitlist updates." },
-  { key: "romance_data", required: false, th: "ข้อมูลโหมดเปิดใจ (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและคนที่อยากเจอ ถ้าถอนความยินยอม จะปิดโหมดและลบข้อมูลทันที", hintEn: "Gender identity and 'open to meeting' — withdrawing switches romance mode off and deletes them at once." },
+  { key: "romance_data", required: false, th: "ข้อมูลเปิดใจมากกว่าเพื่อน (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและคนที่อยากเจอ ถ้าถอนความยินยอม เราจะกลับคุณเป็นโหมดเพื่อนและลบข้อมูลนี้ทันที", hintEn: "Gender identity and 'open to meeting'. Withdrawing switches romance mode off and deletes them at once." },
 ];
 const OPTIONAL = ["personalization", "research", "notifications"];
 
@@ -1025,10 +1025,10 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
     ["👥 ข้อมูลการใช้งาน", "👥 Social store", "ชื่อเล่น รูป ความสนใจ กิจกรรมที่ลงทะเบียน คนรู้จัก และการตั้งค่าส่วนตัว", "Nickname, photo, interests, events, connections and your private preferences."],
-    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse เก็บด้วยรหัสวิจัยแทนตัวตน เมื่อปิดบัญชี เราจะตัดการเชื่อมโยงกับตัวคุณ ข้อมูลจะไม่ระบุตัวตน", "City Pulse answers, stored under a research code instead of your identity. When you deactivate, the link is cut and the rows become anonymous."],
+    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse เก็บด้วยรหัสวิจัยแทนตัวตน เมื่อปิดบัญชี เราจะตัดการเชื่อมโยงกับตัวคุณ ข้อมูลจึงระบุตัวคุณไม่ได้อีก", "City Pulse answers, stored under a research code instead of your identity. When you deactivate, the link is cut and the rows become anonymous."],
   ];
   const retention: [string, string, string, string][] = [
-    ["ข้อมูลโหมดเปิดใจ", "Romance-mode details", "ลบทันทีเมื่อปิดโหมด", "Deleted as soon as you switch it off"],
+    ["ข้อมูลเปิดใจมากกว่าเพื่อน", "Romance-mode details", "ลบทันทีเมื่อกลับเป็นโหมดเพื่อน", "Deleted as soon as you switch it off"],
     ["ตัวเลือกหลังกิจกรรมที่ไม่ตรงกัน", "Non-mutual post-event choices", "ลบเมื่อครบ 72 ชม.", "Deleted when the 72-hour window closes"],
     ["คนรู้จักและช่องทางติดต่อที่แชร์", "Connections and shared contacts", "จนกว่าฝ่ายใดฝ่ายหนึ่งจะลบหรือปิดบัญชี", "Until either person removes it or deletes their account"],
     ["บันทึกการเช็กอินและกลุ่ม", "Check-in and group records", "12 เดือน แล้วเหลือเป็นภาพรวม", "12 months, then aggregated"],
@@ -1041,7 +1041,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</h1>
-      <p class="muted">{t("คุณเลือกเองว่าจะให้ใช้ข้อมูลอะไร ทุกครั้งที่เปลี่ยนจะบันทึกเป็นประวัติไว้", "You decide how your data is used. Every change is kept as a dated record.")}</p>
+      <p class="muted">{t("คุณเลือกเองว่าจะให้ใช้ข้อมูลอะไร ทุกครั้งที่เปลี่ยน เราจะบันทึกไว้พร้อมวันที่", "You decide how your data is used. Every change is kept as a dated record.")}</p>
       <Card>
         <h2>{t("ความยินยอม", "Your consents")}</h2>
         <form method="post">
@@ -1113,7 +1113,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
           )}
         </p>
         <p class="row">
-          <a class="btn ghost" href="/settings/habits">⏸️ {t("พักก่อนแทน (วงและแชตยังอยู่)", "Take a break instead (circle and chats stay)")}</a>
+          <a class="btn ghost" href="/settings/habits">⏸️ {t("พักก่อนแทน (คนรู้จักและแชตยังอยู่)", "Take a break instead (circle and chats stay)")}</a>
         </p>
         <form method="post" action="/settings/deactivate">
           <fieldset class="choices">
@@ -1380,7 +1380,7 @@ settingsRoutes.post("/settings/password", async (c) => {
   if (!(await verifyPassword(current, user.account.passwordHash, user.account.passwordSalt))) {
     return fail(t("รหัสผ่านปัจจุบันไม่ถูกต้อง", "Your current password is incorrect."));
   }
-  if (passwordProblem(password)) return fail(t("รหัสผ่านต้องยาว 8–200 ตัวอักษร", "Password must be 8–200 characters."));
+  if (passwordProblem(password)) return fail(t("รหัสผ่านต้องยาว 8 ถึง 200 ตัวอักษร", "Password must be 8 to 200 characters."));
   if (password !== confirm) return fail(t("รหัสผ่านไม่ตรงกัน", "Passwords don't match."));
   const { hash, salt } = await hashPassword(password);
   const db = getDb(c.env);
@@ -1405,7 +1405,7 @@ settingsRoutes.get("/settings/dating", async (c) => {
   if (!row || row.mode === "friends") return c.redirect("/settings");
   return page(
     c,
-    { title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), bare: true },
+    { title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), bare: true },
     <Flow v={v} action="/settings/dating" submit={t("บันทึก", "Save")} close="/settings">
       <DatingPrefSteps t={t} lang={lang} prefs={cleanPrefs(row.prefs)} />
     </Flow>,
@@ -1441,7 +1441,7 @@ settingsRoutes.get("/settings/habits", async (c) => {
       {c.req.query("notice") === "saved" ? <Notice kind="ok">{t("บันทึกแล้ว", "Saved")}</Notice> : null}
       <Card>
         <h2 style="margin-top:0">🗓️ {t("นัดกี่ครั้งต่อสัปดาห์กำลังดี", "How many plans a week feel right?")}</h2>
-        <p class="muted">{t("ถ้าเกินนี้ เราจะถามก่อนหนึ่งครั้ง ไม่ได้ห้าม", "Past this, we'll check with you once. Never a block.")}</p>
+        <p class="muted">{t("ถ้าเกินนี้ เราจะถามคุณก่อน 1 ครั้ง แต่ไม่ได้ห้าม", "Past this, we'll check with you once. Never a block.")}</p>
         <form method="post" action="/settings/habits">
           <div class="pills">
             {RHYTHMS.map((n) => (
@@ -1458,7 +1458,7 @@ settingsRoutes.get("/settings/habits", async (c) => {
         <h2 style="margin-top:0">⏸️ {t("พัก Jurrgun", "Take a break")}</h2>
         {paused ? (
           <>
-            <p>{t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)} ไม่มีการจับคู่บัดดี้ใหม่ระหว่างนี้ วงและแชตยังอยู่`, `On a break until ${fmtDate(p.pausedUntil!, lang)}. No new buddy matches meanwhile; your circle and chats stay.`)}</p>
+            <p>{t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)} ไม่มีการจับคู่บัดดี้ใหม่ระหว่างนี้ คนรู้จักและแชตยังอยู่`, `On a break until ${fmtDate(p.pausedUntil!, lang)}. No new buddy matches meanwhile; your circle and chats stay.`)}</p>
             <form method="post" action="/settings/habits">
               <input type="hidden" name="pause" value="0" />
               <Button>{t("กลับมาแล้ว", "I'm back")}</Button>
@@ -1466,7 +1466,7 @@ settingsRoutes.get("/settings/habits", async (c) => {
           </>
         ) : (
           <>
-            <p class="muted">{t("หยุดจับคู่บัดดี้และการปัดดูชั่วคราว วงและแชตยังอยู่ จองกิจกรรมเมื่อไหร่ก็กลับมาเอง", "Pauses buddy matching and the deck. Your circle and chats stay. RSVP anytime to come back.")}</p>
+            <p class="muted">{t("หยุดจับคู่บัดดี้และการปัดดูไว้ก่อน คนรู้จักและแชตยังอยู่ ลงทะเบียนกิจกรรมเมื่อไหร่ก็กลับมาใช้ได้ทันที", "Pauses buddy matching and the deck. Your circle and chats stay. RSVP anytime to come back.")}</p>
             <form method="post" action="/settings/habits" class="row">
               {PAUSE_WEEKS.map((w) => (
                 <button class="btn ghost" name="pause" value={String(w)}>

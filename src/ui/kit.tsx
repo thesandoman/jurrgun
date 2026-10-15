@@ -56,13 +56,13 @@ const PARTY = new Set(["rsvp_confirmed", "offer_accepted", "connected", "stamped
 const NOTICES: Record<string, [string, string]> = {
   saved: ["บันทึกแล้ว", "Saved"],
   welcome: ["ยินดีต้อนรับสู่ Jurrgun!", "Welcome to Jurrgun!"],
-  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ใน 'กิจกรรมของฉัน'", "You're in, your pass is in My events"],
-  rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่จะแจ้งทันที", "You're on the waitlist, we'll tell you if a spot opens"],
+  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ในกิจกรรมของฉัน", "You're in, your pass is in My events"],
+  rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่ เราจะบอกทันทีนะ", "You're on the waitlist, we'll tell you if a spot opens"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
-  late_cancel: ["ยกเลิกแล้ว ยกเลิกก่อนงานไม่ถึง 24 ชม. จะนับเป็น 1 strike", "Cancelled, cancelling within 24h counts as 1 strike"],
+  late_cancel: ["ยกเลิกแล้ว แต่ยกเลิกไม่ถึง 24 ชั่วโมงก่อนงาน เลยนับเป็น 1 strike", "Cancelled, cancelling within 24h counts as 1 strike"],
   offer_accepted: ["รับที่นั่งแล้ว!", "Spot accepted!"],
   checked_in: ["เช็กอินสำเร็จ", "Checked in"],
-  choices_saved: ["บันทึกแล้ว จะแจ้งก็ต่อเมื่อเลือกกันทั้งสองฝ่าย", "Saved, you'll only hear if it's mutual"],
+  choices_saved: ["บันทึกแล้ว เราจะบอกก็ต่อเมื่อเลือกกันทั้งสองคน", "Saved, you'll only hear if it's mutual"],
   reported: ["ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ", "Report received, our team will review it"],
   blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked, you won't see each other again"],
   thanks: ["ขอบคุณสำหรับความคิดเห็น", "Thanks for your feedback"],
@@ -71,18 +71,18 @@ const NOTICES: Record<string, [string, string]> = {
   done: ["เรียบร้อย", "Done"],
   connected: ["เป็นคนรู้จักกันแล้ว!", "You're connected!"],
   offered: ["ส่งข้อเสนอที่นั่งให้คิวถัดไปแล้ว", "Offered the spot to the next person"],
-  groups_suggested: ["จัดกลุ่มแนะนำแล้ว, ตรวจสอบแล้วกดเผยแพร่", "Groups suggested, review, then publish"],
-  groups_published: ["เผยแพร่กลุ่มแล้ว", "Groups published"],
+  groups_suggested: ["จัดโต๊ะแนะนำแล้ว ตรวจดูแล้วกดเผยแพร่", "Groups suggested, review, then publish"],
+  groups_published: ["เผยแพร่โต๊ะแล้ว", "Groups published"],
   notice_sent: ["ส่งประกาศแล้ว", "Notice sent"],
-  strikes_recorded: ["บันทึกผู้ไม่มาแล้ว", "No-shows recorded"],
-  answered: ["ขอบคุณ! คำตอบของคุณช่วยให้กรุงเทพฯ ดีขึ้นได้จริง ๆ", "Thanks! Your answer helps the city"],
+  strikes_recorded: ["บันทึกคนที่ไม่มาตามนัดแล้ว", "No-shows recorded"],
+  answered: ["ขอบคุณนะ คำตอบของคุณช่วยให้กรุงเทพฯ ดีขึ้นได้จริง ๆ", "Thanks! Your answer helps the city"],
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
   vibe_saved: ["บันทึกแล้ว", "Saved"],
   stamped: ["ได้แสตมป์เขตใหม่ลงพาสปอร์ตแล้ว!", "New district stamped in your passport!"],
-  romance_on: ["เปิดใจมากกว่าเพื่อนแล้ว เป็นความลับ จะรู้ก็ต่อเมื่อเลือกตรงกัน ลองตอบคำถามเรื่องเดทดูนะ", "You're open to something more. It's private and only mutual choices show. Try a dating prompt."],
-  romance_off: ["กลับเป็นโหมดเพื่อนแล้ว ลบข้อมูลเรื่องเดททั้งหมดเรียบร้อย", "Back to friends only. Your dating details are deleted."],
-  romance_single: ["โหมดเปิดใจมากกว่าเพื่อนสำหรับคนโสดเท่านั้น เปลี่ยนสถานะได้ที่นี่", "Open to something more is for people who are single. You can change your status here."],
+  romance_on: ["เปิดใจมากกว่าเพื่อนแล้ว ไม่มีใครเห็น จะรู้กันก็ต่อเมื่อเลือกตรงกัน ลองตอบคำถามชวนเดตดูนะ", "You're open to something more. It's private and only mutual choices show. Try a dating prompt."],
+  romance_off: ["กลับเป็นโหมดเพื่อนแล้ว ลบข้อมูลเรื่องเดตทั้งหมดแล้ว", "Back to friends only. Your dating details are deleted."],
+  romance_single: ["เปิดใจมากกว่าเพื่อนได้เฉพาะคนโสด เปลี่ยนสถานะได้ที่นี่", "Open to something more is for people who are single. You can change your status here."],
 };
 
 export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
@@ -154,7 +154,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
         ) : (
           <>
         <div class="proto-banner">
-          {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลจริง", "Prototype: please don't use real personal data")}
+          {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data")}
         </div>
         <header class="topbar">
           <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">
@@ -256,7 +256,7 @@ function AdminNav(props: { v: View }) {
     ["/admin/insights", t("ข้อมูลเชิงลึก", "Insights"), all || role === "insight_viewer"],
     ["/admin/partners", t("พาร์ตเนอร์และสิทธิ์", "Partners & roles"), all],
     ["/admin/audit", t("บันทึกการตรวจสอบ", "Audit log"), all],
-    ["/events", t("← แอปผู้ใช้", "← Member app"), true],
+    ["/events", t("← แอปสมาชิก", "← Member app"), true],
   ];
   return (
     <nav class="adminnav" aria-label={t("เมนูทีมงาน", "Staff menu")}>

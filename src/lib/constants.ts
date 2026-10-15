@@ -80,7 +80,7 @@ export const INTERESTS: Opt[] = [
   o("games", "บอร์ดเกม", "Games"),
   o("sports", "กีฬา", "Sports"),
   o("culture", "วัฒนธรรม", "Culture"),
-  o("nightlife", "ไนท์ไลฟ์", "Nightlife"),
+  o("nightlife", "ไนต์ไลฟ์", "Nightlife"),
   o("cafes", "คาเฟ่", "Cafés"),
   o("photography", "ถ่ายรูป", "Photography"),
   o("languages", "แลกเปลี่ยนภาษา", "Language exchange"),
@@ -90,7 +90,7 @@ export const SOCIAL_STYLES: Opt[] = [
   o("small_group", "กลุ่มเล็ก", "Small group"),
   o("big_group", "กลุ่มใหญ่", "Big group"),
   o("activity", "ทำกิจกรรมด้วยกัน", "Doing an activity together"),
-  o("coffee_talk", "นั่งคุยกาแฟ", "Coffee and talk"),
+  o("coffee_talk", "จิบกาแฟคุยกัน", "Coffee and talk"),
   o("bring_friend", "ชวนเพื่อนมาด้วย", "Bring a friend"),
 ];
 
@@ -185,7 +185,7 @@ export const SIGNALS: Opt[] = [
   o("say_hi", "ทักได้เลย", "Say hi"),
   o("new_friends", "มาหาเพื่อนใหม่", "Here for new friends"),
   o("small_group", "ขอกลุ่มเล็ก ๆ", "Small group please"),
-  o("talk_about", "คุยเรื่องนี้กับฉันได้", "Talk to me about…"),
+  o("talk_about", "คุยกับฉันเรื่อง…", "Talk to me about…"),
   o("came_with_friend", "มากับเพื่อน", "I came with a friend"),
   o("open_to_spark", "เปิดใจให้ความรู้สึกดี ๆ", "Open to a spark"),
 ];
@@ -206,7 +206,7 @@ export const REPORT_REASON_LABELS: Opt[] = [
   o("spam_scam", "สแปม / หลอกลวง", "Spam / scam"),
   o("unsafe", "พฤติกรรมไม่ปลอดภัย", "Unsafe behaviour"),
   o("discrimination", "การเลือกปฏิบัติ", "Discrimination"),
-  o("misgendering_outing", "เรียกเพศผิดโดยเจตนา / เปิดเผยตัวตน", "Misgendering / outing"),
+  o("misgendering_outing", "เรียกเพศผิดโดยเจตนา / เปิดเผยเพศวิถีคนอื่นโดยไม่ยินยอม", "Misgendering / outing"),
   o("other", "อื่น ๆ", "Other"),
 ];
 
@@ -217,7 +217,7 @@ export const REPORT_REASON_LABELS: Opt[] = [
 export const VISITBANGKOK_ROUTES: (Opt & { district: string; venue: string; tags: string[] })[] = [
   { ...o("rattanakosin", "เส้นทางสุดคลาสสิก ย่านเกาะรัตนโกสินทร์", "Classic Rattanakosin Island route"), district: "phra_nakhon", venue: "Rattanakosin Island", tags: ["city_quest", "culture", "walk"] },
   { ...o("little_india", "ย่าน Little India พาหุรัด", "Little India (Phahurat)"), district: "phra_nakhon", venue: "Phahurat", tags: ["city_quest", "food", "walk"] },
-  { ...o("charoenkrung", "ย่านเจริญกรุง-ตลาดน้อย สายครีเอทีฟ", "Charoenkrung–Talat Noi creative route"), district: "bang_rak", venue: "Charoenkrung–Talat Noi", tags: ["city_quest", "art", "walk"] },
+  { ...o("charoenkrung", "ย่านเจริญกรุง-ตลาดน้อย สายครีเอทีฟ", "Charoenkrung-Talat Noi creative route"), district: "bang_rak", venue: "Charoenkrung-Talat Noi", tags: ["city_quest", "art", "walk"] },
   { ...o("bang_luang", "บ้านศิลปิน คลองบางหลวง", "Artist's House, Khlong Bang Luang"), district: "phasi_charoen", venue: "Baan Silapin, Khlong Bang Luang", tags: ["city_quest", "art", "culture"] },
   { ...o("yaowarat", "ถนนเยาวราช สายกิน", "Yaowarat food walk"), district: "samphanthawong", venue: "Yaowarat Road", tags: ["city_quest", "food", "walk"] },
   { ...o("talat_phlu", "ตลาดพลู", "Talat Phlu market"), district: "thon_buri", venue: "Talat Phlu", tags: ["city_quest", "food", "culture"] },

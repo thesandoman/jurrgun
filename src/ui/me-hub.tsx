@@ -76,7 +76,7 @@ export function MeHub(props: {
       {pct < 100 ? (
         <section class="me-grow">
           <div class="me-grow-head">
-            <strong>{t(`โปรไฟล์ครบแล้ว ${pct}%`, `Your profile is ${pct}% there`)}</strong>
+            <strong>{t(`กรอกโปรไฟล์แล้ว ${pct}%`, `Your profile is ${pct}% there`)}</strong>
             <span aria-hidden="true">{pct < 50 ? "🌱" : "🌿"}</span>
           </div>
           <div class="me-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>

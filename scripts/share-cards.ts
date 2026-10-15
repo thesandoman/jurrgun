@@ -21,7 +21,7 @@ const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/M
 const ROOT = resolve(import.meta.dirname, "..");
 const OUT = join(ROOT, "design/assets/og");
 const FONTS = join(ROOT, "design/fonts");
-const HOST = BRAND.domain;
+const HOST = BRAND.url;
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const face = (family: string, file: string, weight: number) =>
@@ -85,7 +85,7 @@ p{font-size:30px;line-height:1.45;margin-top:22px;color:#1e2b22}
     <h2>${esc(a.name.en)}</h2>
     <p>${esc(a.tagline.th)}<br>${esc(a.tagline.en)}</p>
   </div>
-  <div class="foot"><span class="brand"><span class="mark">${MARK_SVG}</span><b>${BRAND.name}</b></span><span>คุณเป็นไทป์ไหน? · What's yours? ${HOST}/types</span></div>
+  <div class="foot"><span class="brand"><span class="mark">${MARK_SVG}</span><b>${BRAND.name}</b></span><span>คุณเป็นไทป์ไหน? · What's yours? ${HOST}</span></div>
 </div>`;
 }
 

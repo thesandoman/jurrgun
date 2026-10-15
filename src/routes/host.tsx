@@ -147,7 +147,7 @@ const privateLink = (c: C, e: Event) => `${new URL(c.req.url).origin}/events/${e
 function statusTag(t: View["t"], s: string) {
   switch (s) {
     case "pending":
-      return <Tag tone="warn">{t("รอตรวจ", "Waiting for review")}</Tag>;
+      return <Tag tone="warn">{t("รอทีมงานตรวจ", "Waiting for review")}</Tag>;
     case "rejected":
       return <Tag tone="warn">{t("ส่งกลับให้แก้", "Sent back")}</Tag>;
     case "published":
@@ -192,13 +192,13 @@ hostRoutes.get("/host", async (c) => {
       <p class="muted">
         {direct
           ? t("กิจกรรมของคุณเผยแพร่ได้ทันที", "Your events go live straight away.")
-          : t("เสนอกิจกรรม แล้วทีมงานจะตรวจก่อนเผยแพร่ (ปกติภายใน 1–2 วัน)", "Propose an event and the team checks it before it goes live (usually within a day or two).")}{" "}
-        {t("จะฟรี หรือจ่ายที่สถานที่ก็ได้ Jurrgun ไม่รับชำระเงินแทน", "It can be free or paid at the venue. Jurrgun never takes payment.")}
+          : t("เสนอกิจกรรม แล้วทีมงานจะตรวจก่อนเผยแพร่ (ปกติภายใน 1 ถึง 2 วัน)", "Propose an event and the team checks it before it goes live (usually within a day or two).")}{" "}
+        {t("จัดฟรีหรือให้จ่ายที่สถานที่ก็ได้ Jurrgun ไม่รับเงินแทนผู้จัด", "It can be free or paid at the venue. Jurrgun never takes payment.")}
       </p>
       {c.req.query("notice") === "submitted" ? <Notice kind="ok">{t("ส่งให้ทีมงานตรวจแล้ว เราจะแจ้งเมื่อเผยแพร่", "Sent for review. We'll let you know when it's live.")}</Notice> : null}
       {c.req.query("notice") === "published" ? <Notice kind="ok">{t("เผยแพร่แล้ว!", "It's live!")}</Notice> : null}
       {c.req.query("notice") === "link_reset" ? <Notice kind="ok">{t("สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีก", "New private link made. The old one no longer works.")}</Notice> : null}
-      {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้วงคนรู้จักของคุณแล้ว", "Sent to your circle.")}</Notice> : null}
+      {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้คนรู้จักของคุณแล้ว", "Sent to your circle.")}</Notice> : null}
       <p>
         <LinkButton href="/host/new">＋ {t("เสนอกิจกรรม", "Propose an event")}</LinkButton>
       </p>
@@ -244,7 +244,7 @@ hostRoutes.get("/host", async (c) => {
               {e.visibility === "private" && e.status === "published" ? (
                 <form method="post" action={`/host/${e.id}/circle`}>
                   <Button kind="ghost">
-                    👥 {t("ส่งให้วงคนรู้จัก", "Send to my circle")}
+                    👥 {t("ส่งให้คนรู้จัก", "Send to my circle")}
                     {sharedCount(e.id) ? ` (${sharedCount(e.id)})` : ""}
                   </Button>
                 </form>
@@ -274,8 +274,8 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
   const { t, lang } = v;
   const tags = EVENT_TAGS.filter((x) => x.value !== "city_quest");
   const visOpts = [
-    { value: "public", th: "สาธารณะ: แสดงบนหน้าค้นหา", en: "Public — listed on Discover" },
-    { value: "private", th: "ส่วนตัว: เฉพาะคนที่มีลิงก์", en: "Private — only people with the link" },
+    { value: "public", th: "สาธารณะ: แสดงบนหน้าค้นหา", en: "Public: listed on Discover" },
+    { value: "private", th: "ส่วนตัว: เฉพาะคนที่มีลิงก์", en: "Private: only people with the link" },
   ];
   return (
     <form method="post" action={props.action}>
@@ -289,7 +289,7 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         </Notice>
       ) : null}
       <Card>
-        <h2>{t("กิจกรรมอะไร", "What's the plan?")}</h2>
+        <h2>{t("จะทำอะไรกัน", "What's the plan?")}</h2>
         <Field label={t("ชื่อกิจกรรม", "Title")} name="title" value={d.title} required maxlength={120} />
         <Field label={t("ชื่อภาษาอังกฤษ (ไม่บังคับ)", "English title (optional)")} name="titleEn" value={d.titleEn} maxlength={120} />
         <TextArea label={t("รายละเอียด", "What will you do?")} name="description" value={d.description} rows={5} maxlength={4000} required hint={t("จะทำอะไร เหมาะกับใคร ต้องเตรียมอะไรมา", "What happens, who it suits, what to bring")} />
@@ -304,7 +304,7 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <Field label={t("สถานที่", "Venue")} name="venueName" value={d.venueName} required maxlength={200} />
         <Field label={t("ที่อยู่", "Address")} name="venueAddress" value={d.venueAddress} maxlength={400} />
         <Field label={t("ลิงก์แผนที่ (ไม่บังคับ)", "Map link (optional)")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
-        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
+        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
       </Card>
       <Card>
         <h2>{t("ใครมาได้", "Who it's for")}</h2>
@@ -313,8 +313,8 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
           <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={d.intensity} lang={lang} />
           <Field label={t("อายุต่ำสุด", "Minimum age")} name="ageMin" type="number" min={18} max={99} value={d.ageMin} required />
           <Field label={t("อายุสูงสุด", "Maximum age")} name="ageMax" type="number" min={18} max={99} value={d.ageMax} required />
-          <Field label={t("กลุ่มเล็กสุด", "Smallest table")} name="groupMin" type="number" min={2} max={12} value={d.groupMin} required />
-          <Field label={t("กลุ่มใหญ่สุด", "Largest table")} name="groupMax" type="number" min={2} max={12} value={d.groupMax} required />
+          <Field label={t("คนต่อโต๊ะ (น้อยสุด)", "Smallest table")} name="groupMin" type="number" min={2} max={12} value={d.groupMin} required />
+          <Field label={t("คนต่อโต๊ะ (มากสุด)", "Largest table")} name="groupMax" type="number" min={2} max={12} value={d.groupMax} required />
         </div>
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Guests can bring a friend (+1)")} checked={d.plusOneAllowed} />
@@ -324,23 +324,23 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>
         <Field label={t("ค่าใช้จ่ายต่อคน (บาท, 0 = ฟรี)", "Cost per person (baht, 0 = free)")} name="costThb" type="number" min={0} max={20000} value={d.costThb} />
         <Field
-          label={t("ที่นั่งส่งต่อน้ำใจ (ฟรี 0–5 ที่)", "Pay-it-forward seats (free, 0–5)")}
+          label={t("ที่นั่งส่งต่อน้ำใจ (ฟรี 0 ถึง 5 ที่)", "Pay-it-forward seats (free, 0-5)")}
           name="freeSeats"
           type="number"
           min={0}
           max={5}
           value={d.freeSeats ?? "0"}
-          hint={t("ใครก็ขอได้แบบเงียบ ๆ ไม่ต้องอธิบาย สำหรับกิจกรรมที่มีค่าใช้จ่าย", "Anyone can quietly claim one, no questions asked. For paid events.")}
+          hint={t("สำหรับกิจกรรมที่มีค่าใช้จ่าย ใครก็ขอได้เงียบ ๆ ไม่ต้องให้เหตุผล", "Anyone can quietly claim one, no questions asked. For paid events.")}
         />
-        <Field label={t("วิธีชำระเงิน (เช่น จ่ายที่ร้าน / พร้อมเพย์)", "How to pay (e.g. at the venue, PromptPay)")} name="paymentNote" value={d.paymentNote} maxlength={500} />
+        <Field label={t("วิธีจ่ายเงิน (เช่น จ่ายที่ร้าน หรือพร้อมเพย์)", "How to pay (e.g. at the venue, PromptPay)")} name="paymentNote" value={d.paymentNote} maxlength={500} />
         <Field
-          label={t("ลิงก์ชำระเงินของคุณ (ไม่บังคับ)", "Your payment link (optional)")}
+          label={t("ลิงก์รับเงินของคุณ (ไม่บังคับ)", "Your payment link (optional)")}
           name="paymentUrl"
           type="url"
           value={d.paymentUrl}
           placeholder="https://…"
           maxlength={500}
-          hint={t("Jurrgun ไม่รับชำระเงินแทน ผู้เข้าร่วมจะจ่ายกับคุณโดยตรง", "Jurrgun never takes payment; people pay you directly.")}
+          hint={t("Jurrgun ไม่รับเงินแทน ผู้เข้าร่วมจ่ายให้คุณโดยตรง", "Jurrgun never takes payment; people pay you directly.")}
         />
         <TextArea label={t("การเข้าถึง (ไม่บังคับ)", "Accessibility (optional)")} name="accessibility" value={d.accessibility} maxlength={1000} />
         <TextArea label={t("จุดนัดพบและความปลอดภัย", "Meeting point and safety")} name="safetyInfo" value={d.safetyInfo} maxlength={1000} />
@@ -402,7 +402,7 @@ hostRoutes.post("/host/new", async (c) => {
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   const msgs = errors.map((e) => v.t(e.th, e.en));
   if (!direct && (await pendingCount(c, me.id)) >= MAX_PENDING) {
-    msgs.push(v.t(`มีกิจกรรมรอตรวจได้ครั้งละ ${MAX_PENDING} รายการ`, `You can have up to ${MAX_PENDING} events waiting for review at once.`));
+    msgs.push(v.t(`มีกิจกรรมรอตรวจพร้อมกันได้ไม่เกิน ${MAX_PENDING} งาน`, `You can have up to ${MAX_PENDING} events waiting for review at once.`));
   }
   if (!vals || msgs.length) return formPage(c, { v, d, action: "/host/new", errors: msgs, editing: false, direct }, 400);
   // Late-night and very long events always get a second pair of eyes.

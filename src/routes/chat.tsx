@@ -159,9 +159,9 @@ chatRoutes.get("/chat", async (c) => {
     { title: t("แชต", "Chats"), tab: "connections" },
     <>
       <h1>💬 {t("แชต", "Chats")}</h1>
-      <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์หรือการอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
+      <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์ และไม่บอกว่าอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
       {rows.length === 0 ? (
-        <Empty>{t("ยังไม่มีแชต แชตเปิดเมื่อมีบัดดี้ คนรู้จัก หรือแฮงเอาต์ของวง", "No chats yet. They open with a buddy, a circle connection or a circle hangout.")}</Empty>
+        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, a circle connection or a circle hangout.")}</Empty>
       ) : (
         <ul class="chat-list">
           {rows.map(({ th, last }) => {
@@ -307,7 +307,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       {!th.met ? (
         <Notice kind="info">
           {t(
-            "ยังไม่ได้เจอกัน: ส่งลิงก์ เบอร์ หรือไอดีไม่ได้ และมีคนละ 25 ข้อความ นัดเจอในที่สาธารณะตอนกลางวันก่อนนะ",
+            "ยังไม่ได้เจอกัน: ส่งลิงก์ เบอร์โทร หรือไอดียังไม่ได้ และส่งได้คนละ 25 ข้อความ นัดเจอในที่สาธารณะตอนกลางวันก่อนนะ",
             "You haven't met yet: no links, numbers or handles, and 25 messages each. Meet somewhere public, in daylight, first.",
           )}
         </Notice>
@@ -332,7 +332,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
             ) : null}
             {m.kind === "photo" ? (
               <figure class="chat-photo">
-                <img src={`/chat/${key}/photo/${m.id}`} alt={m.body || t("รูปจากวง", "A photo from the circle")} loading="lazy" />
+                <img src={`/chat/${key}/photo/${m.id}`} alt={m.body || t("รูปจากแฮงเอาต์", "A photo from the circle")} loading="lazy" />
                 {m.body ? <figcaption>{m.body}</figcaption> : null}
               </figure>
             ) : m.kind === "poll" ? (

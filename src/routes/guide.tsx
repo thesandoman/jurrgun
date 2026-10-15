@@ -24,33 +24,33 @@ type Tip = [emoji: string, th: string, en: string];
 
 const HOW: Tip[] = [
   ["🧭", "หากิจกรรมกลุ่มเล็กใกล้คุณ", "Find small-group events near you"],
-  ["🎟️", "ลงชื่อแล้วไปเลย นั่งโต๊ะละ 4 ถึง 6 คน มีโฮสต์ดูแล", "RSVP and go: tables of 4–6, with a host"],
+  ["🎟️", "ลงชื่อแล้วไปเลย นั่งโต๊ะละ 4 ถึง 6 คน มีโฮสต์ดูแล", "RSVP and go: tables of 4 to 6, with a host"],
   ["🫂", "หลังกิจกรรม เลือกคนที่อยากเจออีก ต้องเลือกกันทั้งสองฝ่ายถึงจะได้รู้จักกันต่อ", "Afterwards, choose each other. It only connects if you both do"],
   ["🤝", "บัดดี้กรุงเทพฯ: บัดดี้หนึ่งคน เควสต์ทุกสัปดาห์ สะสมแสตมป์ 50 เขต", "Bangkok Buddy: one buddy, weekly quests, 50 district stamps"],
 ];
 const SAFETY: Tip[] = [
   ["📍", "เจอกันครั้งแรกในที่สาธารณะที่มีโฮสต์", "Meet first in public places with a host"],
-  ["📲", "บอกแผนให้เพื่อนรู้ ใช้หน้า Safety net ได้", "Tell a friend your plan. The Safety net page helps"],
+  ["📲", "บอกแผนให้เพื่อนรู้ไว้ หน้าปลอดภัยไว้ก่อนช่วยได้", "Tell a friend your plan. The Safety net page helps"],
   ["🚪", "ถ้ารู้สึกไม่ปลอดภัย บล็อก รายงาน หรือออกมาได้ทันที", "Feel unsafe? Block, report and leave. Any time"],
   ["🆘", "ฉุกเฉิน: ตำรวจ 191 · รถพยาบาล 1669", "Emergency: police 191 · ambulance 1669"],
 ];
 const TALK: Tip[] = [
   ["👋", "ทักก่อน ถามคำถามปลายเปิด แล้วฟังให้มาก", "Say hi first, ask open questions, listen a lot"],
-  ["✋", "'ไม่' คือ 'ไม่' ฟังครั้งเดียวพอ", "No means no. Hearing it once is enough"],
+  ["✋", "'ไม่' คือ 'ไม่' ได้ยินครั้งเดียวก็พอ", "No means no. Hearing it once is enough"],
   ["⏰", "ไปไม่ได้ บอกล่วงหน้า อย่าหายเงียบ", "Can't make it? Say so early. Don't go quiet"],
-  ["🔐", "แชร์ช่องทางติดต่อเมื่อทั้งคู่อยากแชร์เท่านั้น", "Share contacts only when you both want to"],
+  ["🔐", "แชร์ช่องทางติดต่อเฉพาะเมื่อทั้งสองคนอยากแชร์", "Share contacts only when you both want to"],
 ];
 const RESPONSIBLE: Tip[] = [
-  ["🗓️", "มาตามนัด หรือยกเลิกก่อน 24 ชม. ที่นั่งจะได้ไปถึงคนอื่น", "Show up, or cancel 24h ahead so someone else gets the seat"],
+  ["🗓️", "มาตามนัด หรือยกเลิกล่วงหน้า 24 ชั่วโมง คนอื่นจะได้ที่นั่งแทน", "Show up, or cancel 24h ahead so someone else gets the seat"],
   ["🌈", "เคารพทุกคน ทุกเพศ ทุกอัตลักษณ์ ทุกเชื้อชาติ", "Respect everyone: every gender, identity and background"],
-  ["💬", "บอกสถานะความสัมพันธ์ตามจริงถ้าใช้ฟีเจอร์หาเดท", "Be truthful about your relationship status if you date here"],
+  ["💬", "ถ้าเปิดใจมากกว่าเพื่อน บอกสถานะความสัมพันธ์ตามจริง", "Be truthful about your relationship status if you date here"],
   ["🤫", "ไม่เปิดเผยข้อมูลหรือตัวตนของใครโดยไม่ได้รับอนุญาต", "Never share anyone's details or identity without consent"],
 ];
 const ACCOUNTABLE: Tip[] = [
-  ["🧑‍⚖️", "ทุกรายงานมีทีมงานตรวจจริง แค่ถูกรายงานอย่างเดียวไม่ทำให้ใครโดนเชิญออก", "A person reviews every report. A report alone never removes anyone"],
-  ["🚩", "คำเตือนที่ยืนยันแล้วนับเป็น 1 ธง และมีผล 1 ปี", "An upheld warning is a flag. Flags count for a year"],
+  ["🧑‍⚖️", "ทีมงานตรวจทุกรายงานด้วยตัวเอง แค่ถูกรายงานไม่ทำให้ใครโดนเชิญออก", "A person reviews every report. A report alone never removes anyone"],
+  ["🚩", "คำเตือนที่ยืนยันแล้วนับเป็น 1 ธง ธงนับอยู่ 1 ปี", "An upheld warning is a flag. Flags count for a year"],
   ["⚖️", "จะโดนเชิญออกก็ต่อเมื่อทำผิดกฎชัดเจน หรือครบ 3 ธง", "Removal only for a clear rule break, or 3 flags"],
-  ["🎟️", "เบี้ยวนัดนับเป็น strike จะพักสิทธิ์ลงทะเบียนชั่วคราว แต่ไม่ปิดบัญชี", "No-shows are strikes: they pause RSVPs, never close your account"],
+  ["🎟️", "ไม่มาตามนัดนับเป็น strike จะพักสิทธิ์ลงทะเบียนชั่วคราว แต่ไม่ปิดบัญชี", "No-shows are strikes: they pause RSVPs, never close your account"],
 ];
 
 function Tips(props: { tips: Tip[]; t: (th: string, en: string) => string }) {
@@ -73,13 +73,13 @@ guideRoutes.get("/guide", requireMember, (c) => {
     c,
     { title: t("เริ่มต้นใช้งาน", "Getting started"), bare: true },
     <Flow v={v} submit={t("พร้อมแล้ว ไปกันเลย", "I'm in, let's go")} action="/guide" close="/events">
-      <FlowStep emoji="👋" title={t("Jurrgun ใช้งานยังไง", "How Jurrgun works")} hint={t("เพื่อนใหม่มาก่อน เรื่องเดทจะมีก็ต่อเมื่อเลือกกันทั้งคู่", "Friends first. Dating only if you both choose it.")}>
+      <FlowStep emoji="👋" title={t("Jurrgun ใช้งานยังไง", "How Jurrgun works")} hint={t("เพื่อนใหม่มาก่อน เรื่องเดตมีได้ก็ต่อเมื่อทั้งสองคนเลือกเอง", "Friends first. Dating only if you both choose it.")}>
         <Tips tips={HOW} t={t} />
       </FlowStep>
       <FlowStep emoji="🛡️" title={t("ความปลอดภัย", "Safety")}>
         <Tips tips={SAFETY} t={t} />
         <p class="muted">
-          <a href="/safety">{t("เปิด Safety net", "Open the Safety net")}</a>
+          <a href="/safety">{t("เปิดหน้าปลอดภัยไว้ก่อน", "Open the Safety net")}</a>
         </p>
       </FlowStep>
       <FlowStep emoji="💬" title={t("การสื่อสาร", "Communication")}>

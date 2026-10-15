@@ -138,7 +138,7 @@ export function whenWindow(when: string, now: Date = new Date()): [Date, Date] |
 }
 
 export function ageText(e: Event, t: T): string {
-  return e.ageMin <= 18 && e.ageMax >= 99 ? t("ผู้ใหญ่ทุกวัย", "All adults") : `${e.ageMin}–${e.ageMax} ${t("ปี", "yrs")}`;
+  return e.ageMin <= 18 && e.ageMax >= 99 ? t("ผู้ใหญ่ทุกวัย", "All adults") : `${e.ageMin}-${e.ageMax} ${t("ปี", "yrs")}`;
 }
 
 export function costText(e: Event, t: T): string {
@@ -242,7 +242,7 @@ function SpotsTag(props: { e: Event; taken: number; t: T }) {
   return left > 0 ? (
     <Tag tone="ok">{props.t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`)}</Tag>
   ) : (
-    <Tag tone="warn">{props.t("เต็มแล้ว ต่อคิวสำรองได้", "Full — join the waitlist")}</Tag>
+    <Tag tone="warn">{props.t("เต็มแล้ว ต่อคิวสำรองได้", "Full, join the waitlist")}</Tag>
   );
 }
 
@@ -295,7 +295,7 @@ function statusLabel(status: string, t: T): string {
     case "confirmed":
       return t("ยืนยันแล้ว", "Going");
     case "waitlisted":
-      return t("รายชื่อสำรอง", "Waitlisted");
+      return t("อยู่ในคิวสำรอง", "Waitlisted");
     case "offered":
       return t("มีที่ว่างรอคุณ", "Spot offered");
     case "late_cancelled":
@@ -475,7 +475,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
       <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
       <div class="row">
-        <Button>{t("ค้นหา", "Show events")}</Button>
+        <Button>{t("ดูกิจกรรม", "Show events")}</Button>
         {filtered ? <LinkButton href={mapView ? "/events" : "/events?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
       </div>
     </form>
@@ -572,7 +572,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
         <Card class="hint">
           <strong>{t("เพิ่งย้ายมากรุงเทพฯ ใช่ไหม? 👋", "New to Bangkok? 👋")}</strong>
           <p>
-            {t("ลองกิจกรรม 'มาใหม่ในกรุงเทพฯ' ดูสิ ทุกคนก็มาคนเดียวเหมือนกัน", "Try a 'New to Bangkok' meet-up — everyone arrives on their own.")}{" "}
+            {t("ลองกิจกรรม 'มาใหม่ในกรุงเทพฯ' ดูสิ ทุกคนก็มาคนเดียวเหมือนกัน", "Try a 'New to Bangkok' meet-up. Everyone arrives on their own.")}{" "}
             <a href="/events?tag=newcomers">{t("ดูกิจกรรมสำหรับคนมาใหม่", "See newcomer events")}</a>
           </p>
         </Card>
@@ -581,7 +581,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
         <Card class="hint quiz-hint">
           <div class="spread">
             <a href="/quiz">
-              <strong>{t("🧭 มาหา Bangkok Type ของคุณกัน (2 นาที)", "🧭 Find your Bangkok Type (2 min)")}</strong>
+              <strong>{t("🧭 มาหาไทป์กรุงเทพฯ ของคุณกัน (3 นาที)", "🧭 Find your Bangkok Type (3 min)")}</strong>
             </a>
             <form method="post" action="/events/quiz-hint/dismiss">
               <button type="submit" class="btn ghost" aria-label={t("ซ่อนการ์ดนี้", "Hide this card")}>
@@ -589,7 +589,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
               </button>
             </form>
           </div>
-          <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยจัดโต๊ะให้เข้ากับคุณ ไม่มีเรื่องการเมือง เป็นความลับจนกว่าคุณจะเลือกแสดง", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
+          <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยหาโต๊ะที่เข้ากับคุณ ไม่มีเรื่องการเมือง และเป็นความลับจนกว่าคุณจะเลือกให้คนอื่นเห็น", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
         </Card>
       ) : null}
       <details class="filters" open={filtered}>
@@ -661,7 +661,7 @@ function tickerItems(p: { v: View; list: Event[]; taken: Map<string, number>; we
   const out: TickerItem[] = [];
   const w = p.weather;
   if (w?.rain3h != null) {
-    out.push({ icon: w.rain3h >= 60 ? "🌧️" : "⛅", text: t(`โอกาสฝน 3 ชม. ${w.rain3h}%${w.rain24h != null ? ` · ฝน 24 ชม.ข้างหน้า ${w.rain24h} มม.` : ""}`, `Rain chance next 3h ${w.rain3h}%${w.rain24h != null ? ` · next 24h ${w.rain24h} mm` : ""}`), tone: w.rain3h >= 60 ? "warn" : undefined });
+    out.push({ icon: w.rain3h >= 60 ? "🌧️" : "⛅", text: t(`โอกาสฝนตกใน 3 ชม. ${w.rain3h}%${w.rain24h != null ? ` · ฝนใน 24 ชม. ข้างหน้า ${w.rain24h} มม.` : ""}`, `Rain chance next 3h ${w.rain3h}%${w.rain24h != null ? ` · next 24h ${w.rain24h} mm` : ""}`), tone: w.rain3h >= 60 ? "warn" : undefined });
   }
   if (w?.feelsLike != null) {
     const b = heatBand(w.feelsLike);
@@ -684,8 +684,8 @@ function tickerItems(p: { v: View; list: Event[]; taken: Map<string, number>; we
   const quest = p.list.find((e) => e.tags.includes("city_quest"));
   if (quest) out.push({ icon: "🧭", text: t(`ซิตี้เควสต์: ${title(quest, lang)}`, `City Quest: ${title(quest, lang)}`), href: `/events/${quest.id}` });
   if (p.newcomer) out.push({ icon: "👋", text: t("มาใหม่ในกรุงเทพฯ? ลองกิจกรรมสำหรับคนมาใหม่", "New to Bangkok? Try a newcomers meet-up"), href: "/events?tag=newcomers" });
-  if (!p.hasVibe) out.push({ icon: "🧩", text: t("มาหา Bangkok Type ของคุณกัน (2 นาที)", "Find your Bangkok Type (2 min)"), href: "/quiz" });
-  out.push({ icon: "🤝", text: t("ความยินยอม: ‘ใช่’ ต้องชัดเจน เต็มใจ เปลี่ยนใจได้", "Consent: a real yes is clear, free and can change"), href: "/learn/consent" });
+  if (!p.hasVibe) out.push({ icon: "🧩", text: t("มาหาไทป์กรุงเทพฯ ของคุณกัน (3 นาที)", "Find your Bangkok Type (3 min)"), href: "/quiz" });
+  out.push({ icon: "🤝", text: t("ความยินยอม: “ได้” ที่แท้จริงต้องชัดเจน เต็มใจ และเปลี่ยนใจได้เสมอ", "Consent: a real yes is clear, free and can change"), href: "/learn/consent" });
   out.push({ icon: "🛡️", text: t("ฉุกเฉินโทร 191 · เจ็บป่วย 1669", "Emergency 191 · medical 1669"), href: "/learn/date-responsibly" });
   out.push({ icon: "⚠️", text: t("เวอร์ชันทดลอง: อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data") });
   if (w) out.push({ icon: "ℹ️", text: t("ข้อมูลอากาศจาก Open-Meteo.com", "Weather data by Open-Meteo.com"), href: "https://open-meteo.com/" });
@@ -810,7 +810,7 @@ function BuddyBox(props: { names: string[] | null; event: Event; t: T }) {
       </p>
       <p class="muted">
         {t("นัดเจอกันที่จุดนัดพบก่อนเริ่ม 15 นาที", "Meet at the meeting point 15 minutes early.")}
-        {props.event.safetyInfo ? ` — ${props.event.safetyInfo}` : ""}
+        {props.event.safetyInfo ? ` · ${props.event.safetyInfo}` : ""}
       </p>
     </Card>
   );
@@ -873,11 +873,11 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       {event.status === "cancelled" ? (
         <Notice kind="warn">{t("กิจกรรมนี้ยกเลิกแล้ว ขอโทษที่ทำให้ไม่สะดวกนะ", "This event has been cancelled. Sorry for the change of plans.")}</Notice>
       ) : null}
-      {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง — ผู้ใช้ทั่วไปยังไม่เห็น", "Draft — members can't see this yet")}</Notice> : null}
-      {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ — สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review — members can't see this yet")}</Notice> : null}
+      {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง สมาชิกยังไม่เห็นกิจกรรมนี้", "Draft: members can't see this yet")}</Notice> : null}
+      {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review: members can't see this yet")}</Notice> : null}
       {event.status === "rejected" ? <Notice kind="warn">{t("ทีมงานส่งกลับให้แก้ไข", "Sent back by the team for changes")}{event.reviewNote ? `: ${event.reviewNote}` : ""}</Notice> : null}
       {event.visibility === "private" ? (
-        <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เฉพาะคนที่ได้รับลิงก์เท่านั้นที่เห็น อย่าแชร์ต่อในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
+        <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
       ) : null}
       <Cover e={event} src={cover} class="ev-scene" />
       <Card class="ev-sheet">
@@ -903,8 +903,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           </div>
           <div class="fact">
             <b aria-hidden="true">👥</b>
-            <small>{t("กลุ่ม", "Group")}</small>
-            <span>{t(`โต๊ะละ ${event.groupMin}–${event.groupMax} คน`, `Tables of ${event.groupMin}–${event.groupMax}`)}</span>
+            <small>{t("โต๊ะ", "Group")}</small>
+            <span>{t(`โต๊ะละ ${event.groupMin} ถึง ${event.groupMax} คน`, `Tables of ${event.groupMin}-${event.groupMax}`)}</span>
             <small>{label(INTENSITY, event.intensity, lang)}</small>
           </div>
           <div class="fact">
@@ -948,7 +948,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           <span>🎂 {ageText(event, t)}</span>
           <span>🗣️ {langsText(event, lang)}</span>
           <span>💸 {costText(event, t)}</span>
-          {event.plusOneAllowed ? <span>➕ {t("ชวนเพื่อนได้", "+1 welcome")}</span> : null}
+          {event.plusOneAllowed ? <span>➕ {t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</span> : null}
           {event.accessibility ? <span>♿ {t("มีข้อมูลการเข้าถึง", "Access info")}</span> : null}
           {event.freeSeats > 0 && event.costThb > 0 ? <span>🎁 {t("มีที่นั่งส่งต่อน้ำใจ", "Pay-it-forward seats")}</span> : null}
           {event.endsAt.getTime() - event.startsAt.getTime() <= 90 * 60_000 ? <span>⏱️ {t("สั้น ๆ ไม่เกิน 90 นาที", "Short: 90 min or less")}</span> : null}
@@ -966,7 +966,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           ) : null}
           <dt>{t("จำนวนที่นั่ง", "Capacity")}</dt>
           <dd>
-            {event.capacity} · {left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็มแล้ว มีคิวสำรอง", "Full — waitlist open")}
+            {event.capacity} · {left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็มแล้ว ต่อคิวสำรองได้", "Full, waitlist open")}
           </dd>
           <dt>{t("ช่วงอายุ", "Age range")}</dt>
           <dd>{ageText(event, t)}</dd>
@@ -978,7 +978,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             {event.costThb > 0 ? (
               <small>
                 {" "}
-                {t("ชำระนอกแอป ที่สถานที่หรือกับผู้จัด", "Paid off-platform, at the venue or to the host.")}
+                {t("จ่ายนอกแอป ที่สถานที่หรือกับผู้จัด", "Paid off-platform, at the venue or to the host.")}
                 {event.paymentNote ? ` ${event.paymentNote}` : ""}
               </small>
             ) : null}
@@ -986,7 +986,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
               <>
                 {" "}
                 <a href={event.paymentUrl} target="_blank" rel="noopener noreferrer nofollow">
-                  {t("ชำระเงินกับผู้จัด ↗", "Pay the host ↗")}
+                  {t("จ่ายเงินให้ผู้จัด ↗", "Pay the host ↗")}
                 </a>
               </>
             ) : null}
@@ -994,11 +994,11 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           <dt>{t("ความคึกคัก", "Social intensity")}</dt>
           <dd>{label(INTENSITY, event.intensity, lang)}</dd>
           <dt>{t("ขนาดกลุ่ม", "Group size")}</dt>
-          <dd>{t(`โต๊ะละ ${event.groupMin}–${event.groupMax} คน`, `Tables of ${event.groupMin}–${event.groupMax}`)}</dd>
+          <dd>{t(`โต๊ะละ ${event.groupMin} ถึง ${event.groupMax} คน`, `Tables of ${event.groupMin}-${event.groupMax}`)}</dd>
           <dt>{t("ชวนเพื่อนมาได้ (+1)", "Bring a friend (+1)")}</dt>
           <dd>{event.plusOneAllowed ? t("ได้", "Yes") : t("ไม่ได้", "No")}</dd>
           <dt>{t("การเข้าถึง", "Accessibility")}</dt>
-          <dd>{event.accessibility || t("สอบถามโฮสต์ได้", "Ask the host")}</dd>
+          <dd>{event.accessibility || t("ถามโฮสต์ได้", "Ask the host")}</dd>
           <dt>{t("จุดนัดพบและความปลอดภัย", "Meeting point & safety")}</dt>
           <dd>{event.safetyInfo || t("โฮสต์จะแจ้งก่อนงาน", "Your host will share it before the event")}</dd>
           <dt>{t("ติดต่อฉุกเฉิน", "Emergency contact")}</dt>
@@ -1009,7 +1009,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
               <dd>
                 {event.residentQuota > 0
                   ? t(`กันไว้ ${event.residentQuota} ที่สำหรับผู้มีทะเบียนบ้านในกรุงเทพฯ ที่ยืนยันแล้ว`, `${event.residentQuota} seats held for verified Bangkok-registered residents`)
-                  : t("ผู้มีทะเบียนบ้าน กทม. ได้คิวสำรองก่อน", "Verified residents go first on the waitlist")}
+                  : t("ผู้มีทะเบียนบ้าน กทม. ที่ยืนยันแล้ว ได้ลำดับก่อนในคิวสำรอง", "Verified residents go first on the waitlist")}
               </dd>
             </>
           ) : null}
@@ -1129,7 +1129,7 @@ function RegistrationBox(props: {
             <form method="post" action={`${base}/cancel`}>
               <p class="muted">
                 {isLateCancel(event.startsAt)
-                  ? t("เหลือไม่ถึง 24 ชม. ถ้ายกเลิกตอนนี้จะนับเป็น 1 strike", "Less than 24h to go — cancelling now counts as 1 strike.")
+                  ? t("เหลือไม่ถึง 24 ชม. ถ้ายกเลิกตอนนี้จะนับเป็น 1 strike", "Less than 24h to go, so cancelling now counts as 1 strike.")
                   : t("ยกเลิกได้ฟรีจนถึง 24 ชม. ก่อนเริ่มงาน", "Free to cancel until 24h before the start.")}
               </p>
               <Button kind="danger">{t("ยกเลิกการเข้าร่วม", "Cancel my spot")}</Button>
@@ -1148,11 +1148,11 @@ function RegistrationBox(props: {
       <>
         <p>
           <Tag tone="warn">{statusLabel("waitlisted", t)}</Tag>{" "}
-          {props.waitPos ? t(`ประมาณคิวที่ ${props.waitPos}`, `About #${props.waitPos} in line`) : null}
+          {props.waitPos ? t(`ราวคิวที่ ${props.waitPos}`, `About #${props.waitPos} in line`) : null}
         </p>
         <p class="muted">{t("ถ้ามีที่ว่าง เราจะแจ้งทันที แล้วคุณมีเวลายืนยัน 12 ชม.", "If a spot opens we'll notify you, and you'll have 12 hours to confirm.")}</p>
         <form method="post" action={`${base}/cancel`}>
-          <Button kind="ghost">{t("ออกจากรายชื่อสำรอง", "Leave the waitlist")}</Button>
+          <Button kind="ghost">{t("ออกจากคิวสำรอง", "Leave the waitlist")}</Button>
         </form>
       </>
     );
@@ -1174,15 +1174,15 @@ function RegistrationBox(props: {
   }
 
   if (event.status !== "published" || started) {
-    return <p class="muted">{started ? t("กิจกรรมเริ่มแล้ว ปิดรับลงทะเบียน", "This event has started — registration is closed.") : t("ปิดรับลงทะเบียน", "Registration is closed.")}</p>;
+    return <p class="muted">{started ? t("กิจกรรมเริ่มแล้ว ปิดรับลงทะเบียน", "This event has started, so registration is closed.") : t("ปิดรับลงทะเบียน", "Registration is closed.")}</p>;
   }
 
   return (
     <>
-      {status === "cancelled" || status === "late_cancelled" ? <p class="muted">{t("คุณยกเลิกไปแล้ว ลงทะเบียนใหม่ได้ถ้ายังมีที่", "You cancelled — you can sign up again if there's room.")}</p> : null}
+      {status === "cancelled" || status === "late_cancelled" ? <p class="muted">{t("คุณยกเลิกไปแล้ว ลงทะเบียนใหม่ได้ถ้ายังมีที่", "You cancelled. You can sign up again if there's room.")}</p> : null}
       {props.standing.blockedUntil ? (
         <Notice kind="warn">
-          {t(`คุณมี ${props.standing.active} strike ลงทะเบียนได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `You have ${props.standing.active} strikes — you can RSVP again after ${fmtDate(props.standing.blockedUntil, lang)}`)}
+          {t(`คุณมี ${props.standing.active} strike จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `You have ${props.standing.active} strikes, so you can RSVP again after ${fmtDate(props.standing.blockedUntil, lang)}`)}
         </Notice>
       ) : null}
       <form method="post" action={`${base}/rsvp`}>
@@ -1190,11 +1190,11 @@ function RegistrationBox(props: {
           <Toggle
             name="freeSeat"
             label={t("ขอใช้ที่นั่งส่งต่อน้ำใจ (ฟรี)", "Use a pay-it-forward seat (free)")}
-            hint={t("ไม่ต้องอธิบาย ไม่มีใครรู้ เดือนละ 1 ครั้ง", "No questions asked, nobody else knows. Once a month.")}
+            hint={t("ไม่ต้องให้เหตุผล และไม่มีใครรู้ ใช้ได้เดือนละ 1 ครั้ง", "No questions asked, nobody else knows. Once a month.")}
           />
         ) : null}
         {event.buddyEnabled ? (
-          <Toggle name="wantsBuddy" label={t("หาบัดดี้ให้ฉันในงานนี้", "Find me a buddy for this event")} hint={t("จับคู่ 48 ชม. ก่อนงาน เห็นแค่ชื่อเล่น ไม่ใช่การจับคู่เดท", "Paired 48h before. Nicknames only — never a date.")} />
+          <Toggle name="wantsBuddy" label={t("หาบัดดี้ให้ฉันในงานนี้", "Find me a buddy for this event")} hint={t("จับคู่ให้ 48 ชม. ก่อนงาน เห็นกันแค่ชื่อเล่น และไม่ใช่การจับคู่เดต", "Paired 48h before. Nicknames only, never a date.")} />
         ) : null}
         {event.plusOneAllowed ? (
           <Field
@@ -1247,12 +1247,12 @@ export async function rsvpGate(
 
   const age = ageOn(user.profile.birthDate, now);
   if (!withinRange(age, event.ageMin, event.ageMax)) {
-    return no(`กิจกรรมนี้สำหรับอายุ ${event.ageMin}–${event.ageMax} ปี`, `This event is for ages ${event.ageMin}–${event.ageMax}.`, 403);
+    return no(`กิจกรรมนี้สำหรับอายุ ${event.ageMin} ถึง ${event.ageMax} ปี`, `This event is for ages ${event.ageMin}-${event.ageMax}.`, 403);
   }
   if (!romanceEventOk(event.tags, user.profile)) return no("ไม่พบกิจกรรมนี้", "We can't find this event.", 403);
   if (!womenOnlyEventOk(event.tags, user.profile)) {
     return no(
-      "กิจกรรมนี้สำหรับผู้หญิงและนอนไบนารี ถ้าใช่คุณ ตั้งค่าเพศได้ที่ ฉัน > ตั้งค่าการรู้จักกัน (เป็นความลับ)",
+      "กิจกรรมนี้สำหรับผู้หญิงและคนนอนไบนารี ถ้าตรงกับคุณ ตั้งเพศได้ที่ ฉัน > ตั้งค่าการรู้จักกันหลังกิจกรรม (เป็นความลับ)",
       "This event is for women and non-binary people. If that's you, set your gender in Me > Connection preferences (it stays private).",
       403,
     );
@@ -1264,7 +1264,7 @@ export async function rsvpGate(
   const standing = strikeStanding(await myStrikes(db, user.account.id), now);
   if (standing.blockedUntil) {
     return no(
-      `คุณมี ${standing.active} strikes จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(standing.blockedUntil, "th")}`,
+      `คุณมี ${standing.active} strike จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(standing.blockedUntil, "th")}`,
       `You have ${standing.active} strikes, so you can RSVP again after ${fmtDate(standing.blockedUntil, "en")}.`,
       403,
     );
@@ -1287,8 +1287,8 @@ export async function rsvpGate(
       .limit(standing.maxUpcoming);
     if (held.length >= standing.maxUpcoming) {
       return no(
-        "คุณมี 2 strike จึงจองล่วงหน้าได้ครั้งละ 1 กิจกรรม ยกเลิกอันเดิมหรือรอให้จบก่อนนะ",
-        "With 2 strikes you can hold only 1 upcoming RSVP at a time — cancel it or wait until it's over.",
+        "คุณมี 2 strike จึงจองล่วงหน้าได้ครั้งละ 1 กิจกรรม ยกเลิกอันเดิมหรือรอให้จบก่อน",
+        "With 2 strikes you can hold only 1 upcoming RSVP at a time. Cancel it or wait until it's over.",
         403,
       );
     }
@@ -1302,7 +1302,7 @@ export async function rsvpGate(
     .limit(MAX_UPCOMING);
   if (upcoming.length >= MAX_UPCOMING) {
     return no(
-      `จองล่วงหน้าได้ครั้งละ ${MAX_UPCOMING} กิจกรรม ให้ที่นั่งได้ไปถึงคนอื่นด้วยนะ`,
+      `จองล่วงหน้าได้ครั้งละไม่เกิน ${MAX_UPCOMING} กิจกรรม เพื่อให้คนอื่นได้ที่นั่งด้วย`,
       `You can hold up to ${MAX_UPCOMING} upcoming RSVPs at once, so seats reach others too.`,
       409,
     );
@@ -1397,7 +1397,7 @@ export async function commitRsvp(
     audit(db, user.account.id, `event.rsvp_${status}`, { type: "event", id }, opts.auditDetail),
     status === "confirmed"
       ? notify(db, user.account.id, "rsvp", `ยืนยันแล้ว: ${event.title}`, `You're in: ${event.titleEn ?? event.title}`, `/me/events/${id}/pass`)
-      : notify(db, user.account.id, "waitlist", `อยู่ในรายชื่อสำรอง: ${event.title}`, `Waitlisted: ${event.titleEn ?? event.title}`, `/events/${id}`),
+      : notify(db, user.account.id, "waitlist", `อยู่ในคิวสำรอง: ${event.title}`, `Waitlisted: ${event.titleEn ?? event.title}`, `/events/${id}`),
     ...(opts.extra ? opts.extra(status) : []),
   ];
   await batch(c.env, queries);
@@ -1435,7 +1435,7 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
         <h1>🌿 {t("สัปดาห์นี้มีนัดครบแล้ว", "Your week is already full")}</h1>
         <p>
           {t(
-            `คุณตั้งไว้ว่าสัปดาห์ละ ${rhythm} นัด และมีครบแล้ว ยังอยากไปอันนี้อยู่ไหม? เว้นที่ว่างให้ตัวเองบ้างก็ดีนะ`,
+            `คุณตั้งไว้ว่าสัปดาห์ละ ${rhythm} นัด และมีครบแล้ว ยังอยากไปอันนี้อยู่ไหม? เว้นเวลาพักให้ตัวเองบ้างก็ดีนะ`,
             `You set ${rhythm} plans a week and you already have ${rhythm}. Still want this one? Leaving room to rest is good too.`,
           )}
         </p>
@@ -1459,7 +1459,7 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
       db.select({ id: registrations.id }).from(registrations).where(and(eq(registrations.eventId, id), eq(registrations.freeSeat, true), inArray(registrations.status, [...ACTIVE]))).limit(10),
       db.select({ id: registrations.id }).from(registrations).where(and(eq(registrations.accountId, user.account.id), eq(registrations.freeSeat, true), gt(registrations.createdAt, new Date(now.getTime() - 30 * 86_400_000)))).limit(1),
     ]);
-    if (claimed.length >= event.freeSeats) return fail("ที่นั่งส่งต่อน้ำใจเต็มแล้ว", "The pay-it-forward seats are taken. You can still RSVP.", 409);
+    if (claimed.length >= event.freeSeats) return fail("ที่นั่งส่งต่อน้ำใจเต็มแล้ว แต่ยังลงทะเบียนแบบปกติได้", "The pay-it-forward seats are taken. You can still RSVP.", 409);
     if (mineRecent.length) return fail("เดือนนี้คุณใช้ที่นั่งส่งต่อน้ำใจไปแล้ว", "You've used a pay-it-forward seat this month.", 409);
     freeSeat = true;
   }
@@ -1556,7 +1556,7 @@ eventRoutes.post("/events/:id/cancel", requireMember, async (c) => {
   if (!reg || !(ACTIVE as readonly string[]).includes(reg.status)) return c.redirect(`/events/${id}`);
   if (event.startsAt.getTime() <= now.getTime()) {
     const { t } = view(c);
-    return renderDetail(c, event, { error: t("กิจกรรมเริ่มแล้ว ยกเลิกไม่ได้", "The event has started — it can't be cancelled now."), status: 400 });
+    return renderDetail(c, event, { error: t("กิจกรรมเริ่มแล้ว ยกเลิกไม่ได้", "The event has started, so it can't be cancelled now."), status: 400 });
   }
 
   const late = reg.status === "confirmed" && event.status === "published" && isLateCancel(event.startsAt, now);
@@ -1605,7 +1605,7 @@ eventRoutes.post("/events/:id/offer", requireMember, async (c) => {
   const reg = await myRegistration(db, id, user.account.id);
   if (!reg || reg.status !== "offered" || !reg.offeredUntil || reg.offeredUntil.getTime() <= now.getTime() || event.startsAt.getTime() <= now.getTime()) {
     await refreshWaitlist(c.env, id, now);
-    return renderDetail(c, event, { error: t("ที่นั่งที่เสนอให้หมดเวลาแล้ว", "This offer has expired."), status: 409 });
+    return renderDetail(c, event, { error: t("หมดเวลายืนยันที่นั่งนี้แล้ว", "This offer has expired."), status: 409 });
   }
   if (action === "accept") {
     await batch(c.env, [
@@ -1670,7 +1670,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
           <ul>
             {activeStrikes.map((s) => (
               <li>
-                {s.reason === "late_cancel" ? t("ยกเลิกกระชั้นชิด", "Late cancel") : t("ไม่มาตามนัด", "No-show")} —{" "}
+                {s.reason === "late_cancel" ? t("ยกเลิกกระชั้นชิด", "Late cancel") : t("ไม่มาตามนัด", "No-show")} ·{" "}
                 {t(`หมดอายุ ${fmtDate(s.expiresAt, "th")}`, `expires ${fmtDate(s.expiresAt, "en")}`)}
               </li>
             ))}
@@ -1681,10 +1681,10 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
             </Notice>
           ) : standing.maxUpcoming !== null ? (
             <Notice kind="warn">
-              {t("ตอนนี้จองล่วงหน้าได้ครั้งละ 1 กิจกรรม และไม่ได้สิทธิ์คิวสำรองก่อน", "For now you can hold 1 upcoming RSVP at a time, and you lose waitlist priority.")}
+              {t("ตอนนี้จองล่วงหน้าได้ครั้งละ 1 กิจกรรม และไม่ได้ลำดับก่อนในคิวสำรอง", "For now you can hold 1 upcoming RSVP at a time, and you lose waitlist priority.")}
             </Notice>
           ) : (
-            <p class="muted">{t("ถ้ามี 2 strikes จะจองได้ครั้งละ 1 กิจกรรม และ 3 strikes จะงดลงทะเบียน 30 วัน", "At 2 strikes you can hold 1 RSVP at a time; at 3 you can't RSVP for 30 days.")}</p>
+            <p class="muted">{t("ถ้ามี 2 strike จะจองได้ครั้งละ 1 กิจกรรม ถ้ามี 3 strike จะลงทะเบียนไม่ได้ 30 วัน", "At 2 strikes you can hold 1 RSVP at a time; at 3 you can't RSVP for 30 days.")}</p>
           )}
           <p class="muted">{t("ยกเลิกก่อนงาน 24 ชม. ขึ้นไปไม่นับ strike · strike หมดอายุใน 90 วัน", "Cancelling 24h+ ahead is free · strikes expire after 90 days")}</p>
         </Card>
@@ -1693,7 +1693,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       <h2>{t("กำลังจะมาถึง", "Upcoming")}</h2>
       {upcoming.length === 0 ? (
         <Empty>
-          {t("ยังไม่มีกิจกรรม", "Nothing booked yet.")} <a href="/events">{t("ค้นหากิจกรรม", "Find something to do")}</a>
+          {t("ยังไม่ได้จองกิจกรรมไหน", "Nothing booked yet.")} <a href="/events">{t("ค้นหากิจกรรม", "Find something to do")}</a>
         </Empty>
       ) : (
         upcoming.map(({ event, reg }) => (
@@ -1744,7 +1744,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
               {attended ? (
                 <div class="row">
                   {peopleWindow(event.endsAt, now) === "open" ? (
-                    <LinkButton href={`/events/${event.id}/people`}>{t("คนที่ได้เจอ", "People I met")}</LinkButton>
+                    <LinkButton href={`/events/${event.id}/people`}>{t("คนที่เจอ", "People I met")}</LinkButton>
                   ) : null}
                   <LinkButton href={`/events/${event.id}/feedback`} kind="ghost">
                     {gaveFeedback.has(event.id) ? t("แก้ไขความคิดเห็น", "Edit feedback") : t("ให้ความคิดเห็น", "Give feedback")}
@@ -1843,10 +1843,10 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
         </li>
         <li>
           <span>
-            <b>{t("คนที่ได้เจอ", "People I met")}</b>
+            <b>{t("คนที่เจอ", "People I met")}</b>
             <small>
               {t(
-                `เปิดให้เลือก ${PEOPLE_WINDOW_HOURS} ชม. นับจากจบงาน จะได้รู้จักกันต่อก็ต่อเมื่อเลือกกันทั้งสองฝ่าย`,
+                `เปิดให้เลือก ${PEOPLE_WINDOW_HOURS} ชม. หลังจบงาน และจะได้รู้จักกันต่อเมื่อเลือกกันทั้งสองฝ่ายเท่านั้น`,
                 `Opens for ${PEOPLE_WINDOW_HOURS} hours after the event. You only connect if you both choose to.`,
               )}
             </small>
@@ -1934,10 +1934,10 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
     { title: t("ในงาน", "Live"), tab: "mine" },
     <>
       <h1>{title(event, lang)}</h1>
-      <p class="muted">{t("เช็กอินแล้ว ขอให้สนุก!", "You're checked in — enjoy!")}</p>
+      <p class="muted">{t("เช็กอินแล้ว ขอให้สนุกนะ", "You're checked in. Enjoy!")}</p>
 
       <Card>
-        <h2>{t("โต๊ะ / กลุ่มของฉัน", "My table")}</h2>
+        <h2>{t("โต๊ะของฉัน", "My table")}</h2>
         {event.groupsPublishedAt && reg.groupNo !== null ? (
           <>
             <p>
@@ -1982,7 +1982,7 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
 
       {event.activePrompt ? (
         <Card class="prompt">
-          <h2>💡 {t("คำถามเปิดวงจากโฮสต์", "Icebreaker from your host")}</h2>
+          <h2>💡 {t("คำถามชวนคุยจากโฮสต์", "Icebreaker from your host")}</h2>
           <p>{event.activePrompt}</p>
         </Card>
       ) : null}
@@ -1995,7 +1995,7 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
         <form method="post" action={`/events/${id}/signal`}>
           <Choices legend={t("เลือกสัญญาณ", "Pick a signal")} name="signal" type="radio" options={opts} values={[reg.socialSignal ?? ""]} lang={lang} />
           <Field
-            label={t("คุยเรื่องนี้กับฉันได้ (คั่นด้วยจุลภาค สูงสุด 3)", "Talk to me about (comma-separated, up to 3)")}
+            label={t("คุยกับฉันเรื่อง… (คั่นด้วยจุลภาค ไม่เกิน 3 เรื่อง)", "Talk to me about (comma-separated, up to 3)")}
             name="signalTopics"
             value={(reg.signalTopics ?? []).join(", ")}
             maxlength={100}
@@ -2012,7 +2012,7 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
           <strong>{event.emergencyContact || "1555"}</strong>
         </p>
         <p class="muted">
-          {t("ไม่สบายใจ? บอกโฮสต์ได้ทันที หรือ", "Feeling uncomfortable? Tell your host any time, or")} <a href="/report">{t("แจ้งรายงาน", "make a report")}</a>
+          {t("ไม่สบายใจ? บอกโฮสต์ได้ทันที หรือ", "Feeling uncomfortable? Tell your host any time, or")} <a href="/report">{t("รายงาน", "make a report")}</a>
         </p>
       </Card>
     </>,
@@ -2066,7 +2066,7 @@ const SCALE = ["1", "2", "3", "4", "5"].map((n) => ({ value: n, th: n, en: n }))
 async function feedbackGate(c: Ctx, id: string) {
   const { event, reg } = await checkedInRegistration(c, id);
   if (!event) return { event: null, reg: null, error: notFound(c) };
-  if (!reg) return { event, reg: null, error: forbidden(c, "ให้ความคิดเห็นได้เฉพาะผู้ที่เช็กอินแล้ว", "Only checked-in attendees can give feedback.", `/events/${id}`) };
+  if (!reg) return { event, reg: null, error: forbidden(c, "ให้ความคิดเห็นได้เฉพาะคนที่เช็กอินแล้ว", "Only checked-in attendees can give feedback.", `/events/${id}`) };
   if (event.endsAt.getTime() > Date.now()) {
     return { event, reg, error: forbidden(c, "ให้ความคิดเห็นได้หลังกิจกรรมจบ", "Feedback opens when the event ends.", `/events/${id}`) };
   }
@@ -2083,10 +2083,10 @@ function FeedbackForm(props: { v: View; event: Event; values: Record<string, str
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
       <form method="post">
         <Choices legend={t("ได้รู้จักคนใหม่ไหม?", "Did you meet someone new?")} name="metNewPerson" type="radio" options={YES_NO} values={[val.metNewPerson ?? ""]} lang={lang} required />
-        <Choices legend={t("อยากเจอใครสักคนอีกไหม?", "Would you meet someone from today again?")} name="wouldMeetAgain" type="radio" options={YES_NO} values={[val.wouldMeetAgain ?? ""]} lang={lang} required />
-        <Choices legend={t("รู้สึกปลอดภัยแค่ไหน (1–5)", "How safe did you feel? (1–5)")} name="feltSafe" type="radio" options={SCALE} values={[val.feltSafe ?? ""]} lang={lang} required />
-        <Choices legend={t("รู้สึกว่ามีคนฟังคุณแค่ไหน (1–5)", "Did you feel heard? (1–5)")} name="feltHeard" type="radio" options={SCALE} values={[val.feltHeard ?? ""]} lang={lang} />
-        <Choices legend={t("ให้คะแนนโต๊ะ/กลุ่มของคุณ (1–5)", "Rate your table (1–5)")} name="groupRating" type="radio" options={SCALE} values={[val.groupRating ?? ""]} lang={lang} required />
+        <Choices legend={t("อยากเจอใครจากวันนี้อีกไหม?", "Would you meet someone from today again?")} name="wouldMeetAgain" type="radio" options={YES_NO} values={[val.wouldMeetAgain ?? ""]} lang={lang} required />
+        <Choices legend={t("รู้สึกปลอดภัยแค่ไหน (1-5)", "How safe did you feel? (1-5)")} name="feltSafe" type="radio" options={SCALE} values={[val.feltSafe ?? ""]} lang={lang} required />
+        <Choices legend={t("รู้สึกว่ามีคนฟังคุณแค่ไหน (1-5)", "Did you feel heard? (1-5)")} name="feltHeard" type="radio" options={SCALE} values={[val.feltHeard ?? ""]} lang={lang} />
+        <Choices legend={t("ให้คะแนนโต๊ะของคุณ (1-5)", "Rate your table (1-5)")} name="groupRating" type="radio" options={SCALE} values={[val.groupRating ?? ""]} lang={lang} required />
         <TextArea label={t("อยากบอกอะไรเพิ่มไหม (ไม่บังคับ)", "Anything else? (optional)")} name="comment" value={val.comment} maxlength={500} />
         <Button>{t("ส่งความคิดเห็น", "Send feedback")}</Button>
       </form>

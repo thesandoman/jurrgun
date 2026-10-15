@@ -85,7 +85,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("pilates", "🤸", "พิลาทิส", "Pilates"),
       o("trail_running", "🌄", "เทรลรัน", "Trail running"),
       o("surfskate", "🏄", "เซิร์ฟสเก็ต", "Surfskate"),
-      o("frisbee", "🥏", "อัลติเมทฟริสบี", "Ultimate frisbee"),
+      o("frisbee", "🥏", "อัลติเมตฟริสบี", "Ultimate frisbee"),
       o("jiu_jitsu", "🥋", "จูยิตสู", "Jiu-jitsu"),
       o("race_days", "🏅", "งานวิ่ง", "Race days"),
       o("padel", "🎾", "พาเดล", "Padel"),
@@ -169,7 +169,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("poetry", "🪶", "บทกวี", "Poetry"),
       o("comics", "💥", "การ์ตูนและมังงะ", "Comics & manga"),
       o("theatre", "🎭", "ละครเวที", "Theatre"),
-      o("standup", "😂", "สแตนด์อัพคอมเมดี้", "Stand-up comedy"),
+      o("standup", "😂", "สแตนด์อัปคอมเมดี้", "Stand-up comedy"),
       o("kdramas", "💕", "ซีรีส์เกาหลี", "K-dramas"),
       o("horror", "👻", "หนังผี", "Horror films"),
       o("film_festivals", "🎞️", "เทศกาลหนัง", "Film festivals"),
@@ -194,7 +194,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("video_games", "🎮", "วิดีโอเกม", "Video games"),
       o("puzzles", "🧩", "จิ๊กซอว์และปริศนา", "Puzzles"),
       o("chess", "♟️", "หมากรุก", "Chess"),
-      o("trivia", "🧠", "ควิซไนท์", "Trivia nights"),
+      o("trivia", "🧠", "คืนควิซ", "Trivia nights"),
       o("escape_rooms", "🔐", "ห้องปริศนา", "Escape rooms"),
       o("card_games", "🃏", "เกมไพ่", "Card games"),
       o("tabletop_rpg", "🐉", "เกมเล่นบทบาทบนโต๊ะ", "Tabletop RPGs"),
@@ -266,7 +266,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("sunset_spots", "🌆", "จุดชมพระอาทิตย์ตก", "Sunset spots"),
       o("design_week", "🧭", "เทศกาลงานออกแบบ", "Design festivals"),
       o("photo_walks", "📷", "เดินถ่ายรูป", "Photo walks"),
-      o("pop_ups", "🎪", "อีเวนต์ป๊อปอัป", "Pop-up events"),
+      o("pop_ups", "🎪", "งานป๊อปอัป", "Pop-up events"),
       o("neighbourhood_stories", "📜", "เรื่องเล่าของย่าน", "Neighbourhood stories"),
       o("co_working", "💼", "นั่งทำงานนอกบ้าน", "Co-working spots"),
       o("cafe_hopping", "🧋", "ตระเวนคาเฟ่", "Café hopping"),
@@ -292,7 +292,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("ice_baths", "🧊", "แช่น้ำเย็น", "Ice baths"),
       o("good_sleep", "😴", "นอนให้ดี", "Good sleep"),
       o("eating_well", "🥦", "กินคลีน", "Eating well"),
-      o("spa_days", "🛁", "วันสปา", "Spa days"),
+      o("spa_days", "🛁", "เข้าสปา", "Spa days"),
       o("tai_chi", "🌄", "ไทเก๊ก", "Tai chi"),
       o("digital_detox", "📵", "พักจากหน้าจอ", "Digital detox"),
       o("personal_growth", "🌱", "พัฒนาตัวเอง", "Personal growth"),
@@ -306,7 +306,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
     en: "Tech & ideas",
     items: [
       o("coding", "💻", "เขียนโค้ด", "Coding"),
-      o("startups", "🚀", "สตาร์ทอัพ", "Startups"),
+      o("startups", "🚀", "สตาร์ตอัป", "Startups"),
       o("ai", "🤖", "AI", "AI"),
       o("gadgets", "📱", "แกดเจ็ต", "Gadgets"),
       o("urbanism", "🏗️", "เมืองและผังเมือง", "Cities & urbanism"),
@@ -381,10 +381,10 @@ export const INTEREST_GROUPS: InterestGroup[] = [
   {
     key: "social",
     emoji: "🌃",
-    th: "ไนท์ไลฟ์และสังสรรค์",
+    th: "ไนต์ไลฟ์และสังสรรค์",
     en: "Nightlife & social",
     items: [
-      o("nightlife", "🌃", "ไนท์ไลฟ์", "Nightlife"),
+      o("nightlife", "🌃", "ไนต์ไลฟ์", "Nightlife"),
       o("cocktail_bars", "🍸", "บาร์ค็อกเทล", "Cocktail bars"),
       o("dinner_parties", "🍽️", "ปาร์ตี้มื้อค่ำ", "Dinner parties"),
       o("clubbing", "🪩", "ไปคลับ", "Dancing out"),
@@ -545,7 +545,7 @@ const cs = (value: string, emoji: string, th: string, en: string, bth: string, b
 export const COMM_STYLES: CommStyle[] = [
   cs("texter", "💬", "สายพิมพ์", "Texter", "ตอบไวในแชต", "Quick replies in chat"),
   cs("voice_noter", "🎙️", "สายวอยซ์", "Voice-noter", "เล่าเป็นเสียงสะดวกกว่า", "Easier to say it out loud"),
-  cs("caller", "📞", "สายโทร", "Caller", "โทรคุยห้านาทีจบ", "A five-minute call sorts it"),
+  cs("caller", "📞", "สายโทร", "Caller", "โทรคุย 5 นาทีจบ", "A five-minute call sorts it"),
   cs("meme_sender", "😂", "สายส่งมีม", "Meme sender", "สื่อสารด้วยมีมเป็นหลัก", "Speaks fluent meme"),
   cs("planner", "📅", "สายนัดเจอ", "In-person planner", "ขอวันเวลาสถานที่ชัด ๆ", "Date, time, place, done"),
   cs("slow_replier", "🐢", "ตอบช้าแต่ตอบแน่", "Slow but sure replier", "ไม่ได้เมิน แค่ใช้ชีวิตอยู่", "Not ignoring you, just living"),
@@ -585,7 +585,7 @@ export const PAY_METHODS: Opt[] = [
   o("promptpay", "📱", "พร้อมเพย์ / สแกน QR", "PromptPay / QR"),
   o("cash", "💵", "เงินสด", "Cash"),
   o("card", "💳", "บัตร", "Card"),
-  o("ewallet", "👛", "วอลเล็ต (TrueMoney, Rabbit LINE Pay)", "E-wallet (TrueMoney, Rabbit LINE Pay)"),
+  o("ewallet", "👛", "อีวอลเล็ต (TrueMoney, Rabbit LINE Pay)", "E-wallet (TrueMoney, Rabbit LINE Pay)"),
 ];
 export const MAX_PAY = 3;
 
@@ -611,8 +611,8 @@ export const DIET: Opt[] = [
   o("vegetarian", "🥗", "มังสวิรัติ", "Vegetarian"),
   o("vegan", "🌱", "วีแกน", "Vegan"),
   o("halal", "☪️", "ฮาลาล", "Halal"),
-  o("no_pork", "🐖", "ไม่ทานหมู", "No pork"),
-  o("no_beef", "🐄", "ไม่ทานเนื้อวัว", "No beef"),
+  o("no_pork", "🐖", "ไม่กินหมู", "No pork"),
+  o("no_beef", "🐄", "ไม่กินเนื้อวัว", "No beef"),
   o("seafood_allergy", "🦐", "แพ้อาหารทะเล", "Seafood allergy"),
   o("nut_allergy", "🥜", "แพ้ถั่ว", "Nut allergy"),
 ];
@@ -635,7 +635,7 @@ export const PETS: Opt[] = [
 export const PUNCTUAL: Opt[] = [
   o("early", "⏰", "ไปถึงก่อนเวลา", "Usually early"),
   o("on_time", "🕐", "ตรงเวลาเป๊ะ", "Right on time"),
-  o("bit_late", "🐢", "ช้าไปนิดแต่ทักบอกเสมอ", "A bit late, but I always text"),
+  o("bit_late", "🐢", "สายนิดหน่อย แต่ทักบอกเสมอ", "A bit late, but I always text"),
 ];
 
 // ------------------------------------------------- meetup preferences --
@@ -655,9 +655,9 @@ export const budgetMax = (v?: string) => BUDGETS.find((b) => b.value === v)?.max
 export const ACTIVITIES: Opt[] = [
   o("food", "🍜", "กินด้วยกัน", "Eating together"),
   o("walk", "🚶", "เดินเล่น", "Walks"),
-  o("culture", "🏛️", "ศิลปะ วัฒนธรรม", "Art and culture"),
+  o("culture", "🏛️", "ศิลปะและวัฒนธรรม", "Art and culture"),
   o("board_game", "🎲", "บอร์ดเกม", "Board games"),
-  o("run", "🏃", "วิ่ง ออกกำลังกาย", "Running and sport"),
+  o("run", "🏃", "วิ่งและออกกำลังกาย", "Running and sport"),
   o("workshop", "🛠️", "เวิร์กช็อป", "Workshops"),
   o("volunteer", "🤲", "อาสา", "Volunteering"),
   o("language_exchange", "🗣️", "แลกเปลี่ยนภาษา", "Language exchange"),
@@ -666,11 +666,11 @@ export const MEALS: Opt[] = [
   o("breakfast", "🥐", "มื้อเช้า", "Breakfast"),
   o("lunch", "🍱", "มื้อกลางวัน", "Lunch"),
   o("dinner", "🍲", "มื้อเย็น", "Dinner"),
-  o("dessert", "🍧", "ของหวาน กาแฟ", "Dessert or coffee"),
+  o("dessert", "🍧", "ของหวานหรือกาแฟ", "Dessert or coffee"),
 ];
 export const GROUP_SIZES: Opt[] = [
-  o("small", "👥", "2–3 คน", "2–3 people"),
-  o("table", "🍽️", "4–6 คน", "4–6 people"),
+  o("small", "👥", "2 ถึง 3 คน", "2 to 3 people"),
+  o("table", "🍽️", "4 ถึง 6 คน", "4 to 6 people"),
   o("big", "🎉", "กลุ่มใหญ่ได้", "Bigger groups are fine"),
 ];
 /** When a member is usually free (Bangkok time). */
@@ -854,9 +854,9 @@ export const BKK_STORY: Opt[] = [
 
 export const BKK_TIME: Opt[] = [
   o("lt6m", "🌱", "ไม่ถึง 6 เดือน", "Under 6 months"),
-  o("lt1y", "🌿", "6–12 เดือน", "6 to 12 months"),
-  o("1to3", "🌳", "1–3 ปี", "1 to 3 years"),
-  o("3to10", "🏡", "3–10 ปี", "3 to 10 years"),
+  o("lt1y", "🌿", "6 ถึง 12 เดือน", "6 to 12 months"),
+  o("1to3", "🌳", "1 ถึง 3 ปี", "1 to 3 years"),
+  o("3to10", "🏡", "3 ถึง 10 ปี", "3 to 10 years"),
   o("10plus", "🏯", "มากกว่า 10 ปี", "Over 10 years"),
   o("always", "💚", "ทั้งชีวิต", "All my life"),
 ];
@@ -864,7 +864,7 @@ export const HOMETOWN_MAX = 40;
 
 /** Where someone is with Bangkok right now. Asked at sign-up; anyone in or around the city can join. */
 export const RESIDENCY: Opt[] = [
-  o("lives", "🏠", "อาศัยอยู่ในกรุงเทพฯ", "I live in Bangkok"),
+  o("lives", "🏠", "อยู่กรุงเทพฯ", "I live in Bangkok"),
   o("nearby", "🏘️", "อยู่ใกล้ ๆ (นนทบุรี สมุทรปราการ ปทุมธานี…)", "I live nearby (Nonthaburi, Samut Prakan, Pathum Thani…)"),
   o("moving", "📦", "กำลังจะย้ายมากรุงเทพฯ", "I'm moving to Bangkok soon"),
   o("visiting", "🧳", "มาอยู่กรุงเทพฯ ช่วงหนึ่ง (หลายสัปดาห์หรือหลายเดือน)", "I'm in Bangkok for a while (weeks or months)"),
@@ -956,7 +956,7 @@ export const PROMPT_BANK: Prompt[] = [
   text("comfort_meal", "🍛", "เมนูฮีลใจของฉันคือ", "My comfort meal is"),
   text("best_advice", "💡", "คำแนะนำที่ดีที่สุดที่เคยได้รับ", "The best advice I've been given"),
   text("hidden_gem", "💎", "ร้านลับที่อยากให้คนรู้จักมากกว่านี้", "A hidden gem that deserves more love"),
-  text("never_bored", "🔁", "ทำซ้ำได้ไม่มีเบื่อ", "Something I could do on repeat"),
+  text("never_bored", "🔁", "เรื่องที่ทำซ้ำได้ไม่มีเบื่อ", "Something I could do on repeat"),
   text("grateful_for", "🙏", "ช่วงนี้รู้สึกโชคดีที่มี", "Lately I'm grateful for"),
   text("green_flag", "💚", "สิ่งที่ทำให้ฉันรู้สึกว่าเพื่อนคนนี้ใช่", "A green flag in a new friend"),
   text("perfect_soi", "🛵", "ซอยที่ฉันรักที่สุดในเมือง", "My favourite soi in the city"),
@@ -968,7 +968,7 @@ export const PROMPT_BANK: Prompt[] = [
   text("together_try", "🤝", "อยากหาเพื่อนไปลอง…ด้วยกัน", "Looking for someone to try this with"),
   text("childhood_snack", "🍬", "ขนมวัยเด็กที่ยังคิดถึง", "A childhood snack I still miss"),
   text("happy_place", "🌿", "ที่ที่ทำให้ใจสงบ", "My happy place"),
-  text("five_years", "🔭", "อีก 5 ปี อยากเก่งเรื่องอะไรขึ้น", "In five years I'd love to be better at"),
+  text("five_years", "🔭", "อีก 5 ปี ฉันอยากเก่งเรื่อง…ให้มากขึ้น", "In five years I'd love to be better at"),
   text("city_wish", "🏙️", "ถ้าเปลี่ยนกรุงเทพฯ ได้ 1 อย่าง", "One thing I'd change about Bangkok"),
   text("story_in_six", "📝", "เล่าเรื่องตัวเองใน 6 คำ", "My story in six words"),
   text("kindness_seen", "🫶", "น้ำใจจากคนแปลกหน้าที่ยังจำได้", "A stranger's kindness I still remember"),
@@ -976,24 +976,24 @@ export const PROMPT_BANK: Prompt[] = [
   // --- sliders
   slider("spice", "🌶️", "ระดับความเผ็ดที่ไหว", "Spice tolerance", 0, 10, 1, ends("ไม่เผ็ดเลย", "No chilli", "พริก 10 เม็ด", "Ten chillies")),
   slider("sweetness", "🧋", "ระดับความหวานชานม", "Bubble tea sweetness", 0, 100, 25, ends("ไม่หวาน", "0%", "หวานเต็ม", "100%")),
-  slider("early_late", "⏰", "เช้าหรือดึก", "Morning person or night owl", 0, 10, 1, ends("คนตื่นเช้า", "Sunrise", "นกฮูก", "Night owl")),
+  slider("early_late", "⏰", "สายเช้าหรือสายดึก", "Morning person or night owl", 0, 10, 1, ends("คนตื่นเช้า", "Sunrise", "นกฮูก", "Night owl")),
   slider("plan_spont", "🗓️", "วางแผนหรือแล้วแต่ดวง", "Planner or spontaneous", 0, 10, 1, ends("วางแผนทุกนาที", "Every minute planned", "ไปเลย", "Let's just go")),
   slider("walk_km", "🚶", "เดินได้กี่กิโลก่อนขอนั่งพัก", "How far I'll walk before a sit-down (km)", 0, 15, 1, ends("ขอนั่งเลย", "Seat please", "เดินได้ทั้งวัน", "All day")),
   slider("punctual", "⌚", "มาก่อนนัดหรือมาสายนิดหน่อย", "Early or fashionably late", 0, 10, 1, ends("มาก่อน 10 นาที", "Ten minutes early", "ขอสายนิดนึง", "A little late")),
   slider("aircon", "❄️", "อุณหภูมิแอร์ที่ใช่", "My ideal aircon temperature (°C)", 18, 30, 1, ends("ขั้วโลก", "Arctic", "พัดลมพอ", "Fan is fine")),
   slider("group_size", "👥", "ขนาดกลุ่มที่สบายใจ", "My comfy group size", 2, 12, 1, ends("คุยกันสองคน", "Just two", "ยิ่งเยอะยิ่งสนุก", "The more the merrier")),
-  slider("coffee_cups", "☕", "กาแฟต่อวัน", "Coffees a day", 0, 6, 1, ends("ไม่ดื่มเลย", "None", "เติมไม่หยุด", "Refill please")),
+  slider("coffee_cups", "☕", "กาแฟวันละกี่แก้ว", "Coffees a day", 0, 6, 1, ends("ไม่ดื่มเลย", "None", "เติมไม่หยุด", "Refill please")),
   slider("photo_per_meal", "📸", "ถ่ายรูปอาหารก่อนกินกี่รูป", "Food photos before the first bite", 0, 10, 1, ends("กินเลย", "Dig in", "ขออีกมุม", "One more angle")),
   slider("bkk_years", "🏙️", "อยู่กรุงเทพฯ มากี่ปี", "Years I've called Bangkok home", 0, 40, 1, ends("เพิ่งมา", "Just arrived", "ตั้งแต่เกิด", "Since forever")),
 
   // --- scales (1 to 5)
-  scale("chatty_scale", "🗣️", "เจอวงใหม่ ฉันพูดเยอะแค่ไหน", "In a new group I talk", ends("ฟังมากกว่า", "Mostly listen", "เปิดประเด็นเอง", "Start the topic")),
+  scale("chatty_scale", "🗣️", "เจอคนกลุ่มใหม่ ฉันพูดเยอะแค่ไหน", "In a new group I talk", ends("ฟังมากกว่า", "Mostly listen", "เปิดประเด็นเอง", "Start the topic")),
   scale("adventure_food", "🦗", "กล้าลองอาหารแปลกใหม่แค่ไหน", "How adventurous I am with food", ends("ของเดิมดีแล้ว", "My usual, thanks", "ลองหมด", "Try everything")),
   scale("tidy", "🧺", "ห้องของฉันเรียบร้อยแค่ไหน", "How tidy my room is", ends("รกแบบมีระบบ", "Organised chaos", "เป๊ะมาก", "Showroom")),
   scale("karaoke_brave", "🎤", "ความกล้าร้องคาราโอเกะ", "Karaoke courage", ends("ขอเป็นผู้ฟัง", "Audience only", "ขอไมค์", "Hand me the mic")),
   scale("outdoorsy", "🌳", "สายในร่มหรือกลางแจ้ง", "Indoors or outdoors", ends("ห้องแอร์", "Aircon life", "ข้างนอกตลอด", "Always outside")),
   scale("trying_new", "🧭", "ชอบลองอะไรใหม่ ๆ แค่ไหน", "How much I love trying new things", ends("ของเดิมสบายใจ", "Comfort zone", "ไม่เคยลองต้องลอง", "Never tried? Yes")),
-  scale("reply_speed", "📲", "ความเร็วในการตอบแชต", "How fast I reply", ends("วันถัดไป", "Next day", "ทันที", "Instantly")),
+  scale("reply_speed", "📲", "ตอบแชตเร็วแค่ไหน", "How fast I reply", ends("วันถัดไป", "Next day", "ทันที", "Instantly")),
   scale("dance_floor", "🪩", "บนฟลอร์เต้น ฉัน…", "On a dance floor I'm", ends("ยืนโยกเบา ๆ", "Gentle sway", "จัดเต็ม", "All in")),
   scale("deep_talk", "🌌", "ชอบคุยเรื่องลึก ๆ แค่ไหน", "How much I like deep talks", ends("เรื่องเบา ๆ ดีกว่า", "Keep it light", "คุยถึงตีสอง", "Until 2am")),
   scale("competitive", "🏆", "เวลาเล่นเกม ฉันจริงจังแค่ไหน", "How competitive I get at games", ends("สนุกพอ", "Just for fun", "ต้องชนะ", "Here to win")),
@@ -1010,7 +1010,7 @@ export const PROMPT_BANK: Prompt[] = [
   choice("plan_role", "🗺️", "ในทริปกับเพื่อน ฉันเป็น…", "On a group trip I'm the", [o("planner", "📋", "คนวางแผน", "Planner"), o("navigator", "🧭", "คนนำทาง", "Navigator"), o("snacks", "🍪", "ฝ่ายเสบียง", "Snack keeper"), o("photographer", "📸", "ช่างภาพ", "Photographer")]),
   choice("noodle_type", "🍜", "เส้นที่ใช่", "My noodle of choice", [o("sen_lek", "🍜", "เส้นเล็ก", "Sen lek"), o("ba_mee", "🍝", "บะหมี่", "Egg noodles"), o("woon_sen", "🥢", "วุ้นเส้น", "Glass noodles"), o("sen_yai", "🍲", "เส้นใหญ่", "Wide noodles")]),
   choice("rain_plan", "☔", "ฝนตกหนักตอนนัด", "Heavy rain before plans", [o("go_anyway", "☔", "ไปต่อ เปียกก็ช่าง", "Go anyway"), o("move_inside", "🏠", "ย้ายเข้าร่ม", "Move it indoors"), o("reschedule", "📅", "เลื่อนนัด", "Reschedule")]),
-  choice("coffee_order", "☕", "กาแฟแก้วโปรด", "My coffee order", [o("black", "☕", "อเมริกาโน่", "Americano"), o("thai_iced", "🧋", "โอเลี้ยง/กาแฟเย็น", "Thai iced coffee"), o("latte", "🥛", "ลาเต้", "Latte"), o("no_coffee", "🍵", "ไม่ดื่มกาแฟ", "No coffee, thanks")]),
+  choice("coffee_order", "☕", "กาแฟแก้วโปรด", "My coffee order", [o("black", "☕", "อเมริกาโน่", "Americano"), o("thai_iced", "🧋", "โอเลี้ยงหรือกาแฟเย็น", "Thai iced coffee"), o("latte", "🥛", "ลาเต้", "Latte"), o("no_coffee", "🍵", "ไม่ดื่มกาแฟ", "No coffee, thanks")]),
   choice("meet_where", "📍", "เจอกันครั้งแรกที่ไหนดี", "Best first hangout spot", [o("cafe", "☕", "คาเฟ่", "A café"), o("park", "🌳", "สวน", "A park"), o("activity", "🎳", "ทำกิจกรรม", "An activity"), o("food_walk", "🍢", "เดินกิน", "A food walk")]),
   choice("songkran", "💦", "สงกรานต์ ฉัน…", "At Songkran I", [o("splash", "🔫", "ลุยเต็มที่", "Splash all day"), o("temple", "🏮", "รดน้ำดำหัว", "Visit family and temples"), o("escape", "🏝️", "หนีไปพัก", "Escape the city")]),
   choice("night_in_out", "🌙", "คืนวันศุกร์", "This Friday night", [o("out", "🌃", "ออกไปข้างนอก", "Out and about"), o("in", "🛋️", "อยู่บ้านสบาย ๆ", "Cosy night in"), o("both", "🍜", "กินข้าวแล้วกลับ", "Dinner, then home")]),
@@ -1091,7 +1091,7 @@ export const PROMPT_BANK: Prompt[] = [
 
   // --- one emoji (or a few)
   emoji("emoji_mood", "🙂", "อีโมจิที่บอกความเป็นฉัน", "The emoji that sums me up", "😄 😌 🤓 🥳 😎 🤗 🫠 🙃 🌞 🐢"),
-  emoji("emoji_sunday", "☀️", "วันอาทิตย์ในฝันใน 3 อีโมจิ", "Ideal Sunday in 3 emojis", "☕ 🥞 📚 🧘 🚲 🌳 🛍️ 🍜 😴 🎮 🎨 🏊 🎬 🐶", 3),
+  emoji("emoji_sunday", "☀️", "วันอาทิตย์ในฝันเป็นอีโมจิ 3 ตัว", "Ideal Sunday in 3 emojis", "☕ 🥞 📚 🧘 🚲 🌳 🛍️ 🍜 😴 🎮 🎨 🏊 🎬 🐶", 3),
   emoji("emoji_bkk", "🏙️", "กรุงเทพฯ ในหนึ่งอีโมจิ", "Bangkok in one emoji", "🛺 🌶️ 🔥 🌧️ 🏮 🚝 🍢 🐈 🛕 🌇"),
   emoji("emoji_week", "📆", "สัปดาห์นี้ในหนึ่งอีโมจิ", "This week in one emoji", "🚀 🐢 🌈 🌧️ 🎢 😴 🔥 🌱 🧃 🫡"),
   emoji("emoji_food", "🍽️", "อาหารที่เป็นตัวฉัน", "The food that is basically me", "🍜 🍕 🥭 🍣 🌮 🍩 🥟 🍙 🥗 🍲"),
@@ -1146,7 +1146,7 @@ export const PROMPT_BANK: Prompt[] = [
  * something more and compatible, and deleted when romance mode is off.
  */
 export const DATING_PROMPT_BANK: Prompt[] = [
-  text("date_first", "🌇", "เดทแรกในฝันที่กรุงเทพฯ คือ…", "My ideal first date in Bangkok is…"),
+  text("date_first", "🌇", "เดตแรกในฝันที่กรุงเทพฯ คือ…", "My ideal first date in Bangkok is…"),
   text("date_secret_spot", "🗝️", "ร้านลับที่อยากพาคนพิเศษไปคือ…", "The hidden spot I'd take someone special is…"),
   text("date_quest", "🗺️", "เควสต์กรุงเทพฯ ที่อยากทำกับใครสักคนคือ…", "A Bangkok quest I'd love to do with someone is…"),
   text("date_green_flag", "💚", "สัญญาณดีที่ทำให้ฉันใจเต้นคือ…", "A green flag that wins me over is…"),
@@ -1160,16 +1160,16 @@ export const DATING_PROMPT_BANK: Prompt[] = [
     o("market", "🏮", "ตลาดกลางคืน", "Night market"),
     o("cafe", "☕", "คาเฟ่เงียบ ๆ", "Quiet café"),
   ]),
-  choice("date_bill", "🧾", "บิลเดทแรก", "The first-date bill", [
+  choice("date_bill", "🧾", "บิลเดตแรก", "The first-date bill", [
     o("split", "➗", "หารกัน", "We split it"),
     o("asker", "🙋", "คนชวนจ่าย", "Whoever asked pays"),
     o("turns", "🔁", "ผลัดกันเลี้ยง", "We take turns"),
   ]),
-  choice("date_getting_there", "🚆", "ไปเดทด้วยอะไร", "How I get to a date", [
+  choice("date_getting_there", "🚆", "ไปเดตด้วยอะไร", "How I get to a date", [
     o("train", "🚆", "BTS หรือ MRT", "BTS or MRT"),
     o("boat", "⛴️", "เรือ", "By boat"),
     o("motorbike", "🛵", "วินมอเตอร์ไซค์", "Motorbike taxi"),
-    o("walk", "🚶", "เดิน ถ้าไม่ร้อนเกิน", "Walk, if it isn't too hot"),
+    o("walk", "🚶", "เดิน ถ้าไม่ร้อนเกินไป", "Walk, if it isn't too hot"),
   ]),
   choice("date_festival", "🪷", "เทศกาลที่อยากไปด้วยกัน", "The festival I'd go to together", [
     o("loy_krathong", "🪷", "ลอยกระทง", "Loy Krathong"),
@@ -1177,7 +1177,7 @@ export const DATING_PROMPT_BANK: Prompt[] = [
     o("lunar_new_year", "🧧", "ตรุษจีนที่เยาวราช", "Lunar New Year in Yaowarat"),
     o("design_week", "🎨", "Bangkok Design Week", "Bangkok Design Week"),
   ]),
-  multi("date_districts", "📍", "ย่านที่อยากไปเดท", "Neighbourhoods I'd date in", [
+  multi("date_districts", "📍", "ย่านที่อยากไปเดต", "Neighbourhoods I'd date in", [
     o("ari", "☕", "อารีย์", "Ari"),
     o("thonglor", "🍸", "ทองหล่อ", "Thong Lo"),
     o("charoenkrung", "🎨", "เจริญกรุง", "Charoen Krung"),
@@ -1187,13 +1187,13 @@ export const DATING_PROMPT_BANK: Prompt[] = [
     o("thonburi", "🛶", "ฝั่งธนฯ ริมคลอง", "Thonburi canals"),
   ]),
   scale("date_pace", "🐢", "จังหวะที่ชอบ", "My pace", ends("ค่อยเป็นค่อยไป", "Slow and steady", "รู้ใจเร็ว", "I know quickly")),
-  scale("date_plans", "🗓️", "แผนเดท", "Date plans", ends("ไปแบบไม่วางแผน", "Spontaneous", "วางแผนทุกนาที", "Planned to the minute")),
+  scale("date_plans", "🗓️", "แผนเดต", "Date plans", ends("ไปแบบไม่วางแผน", "Spontaneous", "วางแผนทุกนาที", "Planned to the minute")),
   scale("date_reply", "💬", "ตอบแชตเร็วแค่ไหน", "How fast I reply", ends("ช้า แต่ตอบเสมอ", "Slow, but I always reply", "ตอบทันที", "Right away")),
-  emoji("date_vibe", "✨", "เดทในฝันเป็นอีโมจิ", "My date vibe in emoji", "🌇 🍜 🎨 🎶 🌳 🛶 ☕ 🏸 📚 🛕", 3),
-  rank("date_ideas", "🥇", "เรียงไอเดียเดท", "Rank these date ideas", [
+  emoji("date_vibe", "✨", "เดตในฝันเป็นอีโมจิ", "My date vibe in emoji", "🌇 🍜 🎨 🎶 🌳 🛶 ☕ 🏸 📚 🛕", 3),
+  rank("date_ideas", "🥇", "เรียงไอเดียเดต", "Rank these date ideas", [
     o("temple_dawn", "🛕", "เดินวัดตอนเช้า", "A temple walk at dawn"),
     o("cooking", "🍳", "คลาสทำอาหารไทย", "A Thai cooking class"),
-    o("chatuchak", "🛍️", "เดินจตุจักร", "Chatuchak on a Saturday"),
+    o("chatuchak", "🛍️", "เดินจตุจักรวันเสาร์", "Chatuchak on a Saturday"),
     o("canal_boat", "🛶", "นั่งเรือคลองฝั่งธนฯ", "A canal boat in Thonburi"),
   ]),
 ];
@@ -1381,23 +1381,23 @@ export function validateAnswer(p: Prompt, raw: string | string[] | undefined): C
       const max = p.max ?? 5;
       const step = p.step ?? 1;
       if (!Number.isFinite(n) || n < min || n > max || Math.abs((n - min) / step - Math.round((n - min) / step)) > 1e-9) {
-        return bad("ค่าที่เลือกไม่ถูกต้อง", "That value isn't on the scale.");
+        return bad("ค่านี้ไม่อยู่บนสเกล ลองเลือกใหม่อีกครั้ง", "That value isn't on the scale.");
       }
       return { ok: true, value: n };
     }
     case "choice":
-      if (vals.length !== 1 || !optValues.includes(vals[0])) return bad("ตัวเลือกไม่ถูกต้อง", "Please pick one of the options.");
+      if (vals.length !== 1 || !optValues.includes(vals[0])) return bad("เลือกจากตัวเลือกที่มีให้ 1 ข้อ", "Please pick one of the options.");
       return { ok: true, value: vals[0] };
     case "emoji":
     case "multi": {
       const pick = p.pick ?? (p.kind === "multi" ? 3 : 1);
-      if (vals.some((v) => !optValues.includes(v))) return bad("ตัวเลือกไม่ถูกต้อง", "Please pick from the options.");
+      if (vals.some((v) => !optValues.includes(v))) return bad("เลือกจากตัวเลือกที่มีให้เท่านั้น", "Please pick from the options.");
       const uniq = [...new Set(vals)];
-      if (uniq.length > pick) return bad(`เลือกได้ไม่เกิน ${pick}`, `Pick at most ${pick}.`);
+      if (uniq.length > pick) return bad(`เลือกได้ไม่เกิน ${pick} ข้อ`, `Pick at most ${pick}.`);
       return { ok: true, value: p.kind === "emoji" && pick === 1 ? uniq[0] : uniq };
     }
   }
-  return bad("ตัวเลือกไม่ถูกต้อง", "Invalid answer.");
+  return bad("คำตอบนี้ใช้ไม่ได้ ลองตอบใหม่อีกครั้ง", "That answer doesn't work. Try again.");
 }
 
 /** Rank: `vals` are the item values in order (1st, 2nd, ...). All or nothing. */
@@ -1406,7 +1406,7 @@ function validateRank(p: Prompt, vals: string[]): Check<string[] | null> {
   const optValues = (p.options ?? []).map((x) => x.value);
   const uniq = new Set(vals);
   if (vals.length !== optValues.length || uniq.size !== vals.length || vals.some((v) => !optValues.includes(v))) {
-    return bad("เรียงอันดับให้ครบทุกข้อ ห้ามซ้ำกัน", "Give every item a different place.");
+    return bad("เรียงอันดับให้ครบทุกข้อ และอย่าให้อันดับซ้ำกัน", "Give every item a different place.");
   }
   return { ok: true, value: vals };
 }

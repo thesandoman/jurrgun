@@ -159,13 +159,13 @@ export function QuizFlow(props: {
       <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS }} />
       <FlowStep
         emoji="🧭"
-        title={t("คุณเป็นคนกรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
+        title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
         hint={t("สถานการณ์จริงในกรุงเทพฯ ไม่มีถูกผิด เป็นความลับ", "Real Bangkok moments. No wrong answers. Private.")}
         cta={t("เริ่มเลย", "Start")}
       >
         <div class="tiles" aria-hidden="true">
           <span class="tile"><b>👆</b>{t(`${n} ข้อ แตะเลือก`, `${n} questions, tap to pick`)}</span>
-          <span class="tile"><b>⏱️</b>{t("ราว 5 นาที", "About 5 min")}</span>
+          <span class="tile"><b>⏱️</b>{t("ราว 3 นาที", "About 3 min")}</span>
           <span class="tile"><b>🔒</b>{t("เป็นความลับ", "Private")}</span>
         </div>
       </FlowStep>
@@ -269,7 +269,7 @@ function Certainty(props: { v: View; res: TypeResult & { range: ArchetypeKey[] }
       </p>
       {consistency !== null ? (
         <p class="muted">
-          🔁 {t(`คำถามคู่ที่ถามซ้ำด้วยคำต่างกัน: ตอบตรงกัน ${Math.round(consistency * 100)}%`, `Questions asked twice in different words: ${Math.round(consistency * 100)}% consistent`)}
+          🔁 {t(`คำถามที่ถามซ้ำด้วยคำต่างกัน: ตอบตรงกัน ${Math.round(consistency * 100)}%`, `Questions asked twice in different words: ${Math.round(consistency * 100)}% consistent`)}
         </p>
       ) : null}
     </>
@@ -499,7 +499,7 @@ function ShareType(props: { v: View; archetype: ArchetypeKey }) {
   const { t, lang } = props.v;
   const a = ARCHETYPES[props.archetype];
   const path = `/types/${typeSlug(props.archetype)}`;
-  const text = t(`ฉันคือ ${a.name.th} ${a.emoji} แล้วคุณเป็นไทป์กรุงเทพฯ แบบไหน?`, `I'm ${a.name.en} ${a.emoji}. What's your Bangkok Type?`);
+  const text = t(`ฉันเป็น ${a.name.th} ${a.emoji} แล้วคุณล่ะ เป็นไทป์กรุงเทพฯ แบบไหน?`, `I'm ${a.name.en} ${a.emoji}. What's your Bangkok Type?`);
   return (
     <section class="card share-type" aria-label={t("แชร์ไทป์ของคุณ", "Share your type")}>
       <h2>📣 {t("แชร์ไทป์ของคุณ", "Share your type")}</h2>
@@ -573,7 +573,7 @@ quizRoutes.post("/quiz", async (c) => {
     const error =
       bad !== undefined
         ? v.t(
-            `ข้อ ${bad + 1} ลองดูอีกที เลือกหนึ่งในคำตอบที่มีให้`,
+            `ข้อ ${bad + 1} ต้องเลือกจากคำตอบที่มีให้ ลองดูอีกครั้ง`,
             `Question ${bad + 1} needs another look: please pick one of the answers.`,
           )
         : v.t(`ตอบอย่างน้อย ${MIN_ANSWERED} ข้อ`, `Please answer at least ${MIN_ANSWERED} questions.`);

@@ -39,7 +39,7 @@ publicRoutes.get("/", (c) => {
           <small>{t("1 คน · เควสต์ทุกสัปดาห์", "1 person · weekly quests")}</small>
         </Tile>
         <Tile href="/events">
-          <Big n="4–6" label={t("คนต่อโต๊ะ", "per table")} />
+          <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />
         </Tile>
         <Tile tone="gold" href="/buddy/passport">
           <Big n="50" label={t("เขตให้สะสม", "districts to collect")} />
@@ -97,7 +97,7 @@ publicRoutes.get("/intro", (c) => {
       art: "🗺️",
       tone: "s2",
       title: t("สถานที่จริง กลุ่มเล็ก", "Real places, small groups"),
-      body: t("เดินเล่นย่านเก่า บอร์ดเกม แลกเปลี่ยนภาษา โต๊ะละ 4 ถึง 6 คน จัดให้อย่างยุติธรรม", "Old-town walks, board games, language tables. Tables of 4 to 6, seated fairly."),
+      body: t("เดินเล่นย่านเก่า บอร์ดเกม แลกเปลี่ยนภาษา โต๊ะละ 4 ถึง 6 คน จัดที่นั่งอย่างยุติธรรม", "Old-town walks, board games, language tables. Tables of 4 to 6, seated fairly."),
     },
     {
       art: "💚",
@@ -109,13 +109,13 @@ publicRoutes.get("/intro", (c) => {
       art: "🧩",
       tone: "s4",
       title: t("คุณเป็นไทป์ไหน?", "What's your Bangkok Type?"),
-      body: t("แบบทดสอบสั้น ๆ 2 นาที ตัวละคร 16 แบบ ไม่มีเรื่องการเมือง ช่วยจัดโต๊ะให้เข้ากับคุณ", "A 2-minute quiz, 16 characters, nothing political. It helps seat you at the right table."),
+      body: t("แบบทดสอบสั้น ๆ 3 นาที ตัวละคร 16 แบบ ไม่มีเรื่องการเมือง ช่วยหาโต๊ะที่เข้ากับคุณ", "A 3-minute quiz, 16 characters, nothing political. It helps seat you at the right table."),
     },
     {
       art: "🌈",
       tone: "s5",
       title: t("สำหรับทุกคน", "For everyone"),
-      body: t("ทุกเพศ ทุกความหลากหลาย คนไทยและชาวต่างชาติ โหมดเพื่อนเป็นค่าเริ่มต้น ฟรี", "Any gender or orientation, Thai or expat. Friends-first by default. Free."),
+      body: t("ทุกเพศ ทุกความหลากหลาย ทั้งคนไทยและชาวต่างชาติ เริ่มต้นที่โหมดเพื่อนเสมอ และใช้ฟรี", "Any gender or orientation, Thai or expat. Friends-first by default. Free."),
     },
   ];
   return page(
@@ -181,15 +181,15 @@ publicRoutes.get("/privacy", (c) => {
     { title: t("ความเป็นส่วนตัว", "Privacy") },
     <>
       <h1>{t("นโยบายความเป็นส่วนตัว (ฉบับร่างต้นแบบ)", "Privacy notice (prototype draft)")}</h1>
-      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ ดำเนินการโดยทีม Jurrgun ซึ่งเป็นผู้ควบคุมข้อมูลส่วนบุคคล ร่วมกับกรุงเทพมหานคร (กทม.) เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok, run by the Jurrgun team (the data controller) and made with the Bangkok Metropolitan Administration (BMA). We collect only what's needed and keep it in three separate stores:")}</p>
+      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ ทำร่วมกับกรุงเทพมหานคร (กทม.) และดำเนินการโดยทีม Jurrgun ซึ่งเป็นผู้ควบคุมข้อมูลส่วนบุคคล เราเก็บข้อมูลเท่าที่จำเป็น และแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok, run by the Jurrgun team (the data controller) and made with the Bangkok Metropolitan Administration (BMA). We collect only what's needed and keep it in three separate stores:")}</p>
       <ul>
-        <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัส) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
+        <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เก็บแบบแฮช ไม่เก็บรหัสจริง) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
         <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม คนรู้จัก", "Social: nickname, interests, events attended, connections.")}</li>
         <li>{t("ข้อมูลวิจัยเมือง (City Pulse): ใช้รหัสแฝง แสดงผลเฉพาะภาพรวมที่มีอย่างน้อย 10 คน ภาพรวมนี้ส่งให้ กทม. เพื่อให้เมืองน่าออกไปพบปะผู้คนมากขึ้น", "City research (City Pulse): pseudonymous id only, and results are only ever shown as totals of 10 or more people. Those totals are shared with the BMA to make the city easier to meet people in.")}</li>
       </ul>
-      <p>{t("สถานะความสัมพันธ์ อัตลักษณ์ทางเพศ และ 'เปิดใจให้ใคร' เป็นข้อมูลส่วนตัว ไม่แสดงต่อสาธารณะ และเจ้าหน้าที่ไม่สามารถดูได้", "Relationship status, gender identity and 'open to meeting' are private, never public, and not visible to any staff member.")}</p>
-      <p>{t("คุณดู ดาวน์โหลด เปลี่ยนความยินยอม หรือปิดบัญชีได้ที่ ตั้งค่า → ศูนย์ความเป็นส่วนตัว", "You can view, download, change consents or deactivate in Settings → Privacy Center.")}</p>
-      <p class="muted">{t("กทม. ไม่ได้รับข้อมูลส่วนตัวของคุณ เห็นเฉพาะภาพรวม City Pulse เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): จะประกาศก่อนเปิดใช้งานจริง", "The BMA never receives your personal data, only City Pulse totals. Data Protection Officer: to be named before public launch.")}</p>
+      <p>{t("สถานะความสัมพันธ์ อัตลักษณ์ทางเพศ และ 'เปิดใจให้ใคร' เป็นข้อมูลส่วนตัว ไม่แสดงต่อสาธารณะ และเจ้าหน้าที่คนใดก็ดูไม่ได้", "Relationship status, gender identity and 'open to meeting' are private, never public, and not visible to any staff member.")}</p>
+      <p>{t("คุณดูหรือดาวน์โหลดข้อมูลของคุณ เปลี่ยนความยินยอม หรือปิดบัญชีได้ที่ ตั้งค่า → ศูนย์ความเป็นส่วนตัว", "You can view, download, change consents or deactivate in Settings → Privacy Center.")}</p>
+      <p class="muted">{t("กทม. ไม่ได้รับข้อมูลส่วนตัวของคุณ ได้รับเฉพาะภาพรวม City Pulse เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): จะประกาศก่อนเปิดใช้งานจริง", "The BMA never receives your personal data, only City Pulse totals. Data Protection Officer: to be named before public launch.")}</p>
     </>,
   );
 });
@@ -197,9 +197,9 @@ publicRoutes.get("/privacy", (c) => {
 publicRoutes.get("/code-of-conduct", (c) => {
   const { t } = view(c);
   const rules: [string, string][] = [
-    ["เคารพทุกคน ไม่ว่าเพศ อัตลักษณ์ เชื้อชาติ ศาสนา อายุ หรือความพิการ", "Respect everyone, whatever their gender, identity, nationality, religion, age or disability."],
-    ["ไม่คุกคาม ไม่กดดัน ไม่ตามตื๊อ 'ไม่' คือ 'ไม่'", "No harassment, pressure or persistence — no means no."],
-    ["บอกสถานะความสัมพันธ์ตามจริงถ้าใช้ฟีเจอร์หาเดท", "Be truthful about your relationship status if you use romance features."],
+    ["เคารพทุกคน ไม่ว่าเพศ อัตลักษณ์ สัญชาติ ศาสนา อายุ หรือความพิการ", "Respect everyone, whatever their gender, identity, nationality, religion, age or disability."],
+    ["ไม่คุกคาม ไม่กดดัน ไม่ตามตื๊อ 'ไม่' คือ 'ไม่'", "No harassment, pressure or persistence. No means no."],
+    ["ถ้าเปิดใจมากกว่าเพื่อน ต้องบอกสถานะความสัมพันธ์ตามจริง", "Be truthful about your relationship status if you use romance features."],
     ["ห้ามเปิดเผยตัวตนหรือข้อมูลของผู้อื่น (รวมถึงอัตลักษณ์ทางเพศ) โดยไม่ได้รับอนุญาต", "Never out anyone or share someone's details (including gender identity) without consent."],
     ["ห้ามขายของ หลอกลวง หรือชักชวนเข้าธุรกิจ", "No selling, scams or recruiting."],
     ["ทำตามคำแนะนำของโฮสต์และแจ้งเหตุไม่ปลอดภัยทันที", "Follow your host and report anything unsafe right away."],
@@ -207,7 +207,7 @@ publicRoutes.get("/code-of-conduct", (c) => {
   ];
   const ghosting: [string, string][] = [
     ["เมื่อจับคู่กันแล้ว (บัดดี้กรุงเทพฯ หรือเลือกกันและกันหลังกิจกรรม) อย่าหายไปเฉย ๆ", "Once you're matched (a Bangkok Buddy, or a mutual connection after an event), don't just disappear."],
-    ["ปิดบัดดี้ได้เมื่อ (1) ตกลงกันทั้งคู่ในแอป หรือ (2) แชร์ช่องทางติดต่อกันแล้วและย้ายไปคุยนอกแอป เช่น LINE หรือ Instagram หรือ (3) ส่งข้อความปิดท้ายอย่างสุภาพในแอป ซึ่งอีกฝ่ายจะได้รับ และจะปิดเองใน 7 วันหากไม่มีคำตอบ", "A buddy pairing ends when (1) you both agree in the app, or (2) you've both shared a contact and moved off the app, for example to LINE or Instagram, or (3) you send a kind wrap-up note in the app, which your buddy receives and which closes on its own after 7 days if they don't reply."],
+    ["บัดดี้จะปิดเมื่อ (1) ทั้งสองคนตกลงกันในแอป หรือ (2) ทั้งสองคนแชร์ช่องทางติดต่อกันแล้วและย้ายไปคุยนอกแอป เช่น LINE หรือ Instagram หรือ (3) คุณส่งข้อความปิดท้ายอย่างสุภาพในแอป ซึ่งบัดดี้จะได้รับ และจะปิดเองใน 7 วันถ้าบัดดี้ไม่ตอบ", "A buddy pairing ends when (1) you both agree in the app, or (2) you've both shared a contact and moved off the app, for example to LINE or Instagram, or (3) you send a kind wrap-up note in the app, which your buddy receives and which closes on its own after 7 days if they don't reply."],
     ["ถ้าไปไม่ได้ ให้บอกล่วงหน้าเสมอ ยกเลิกกิจกรรมในแอปก่อน 24 ชั่วโมง และบอกบัดดี้ก่อนนัด", "If you can't make it, say so in advance: cancel events in the app 24 hours before, and tell your buddy before a meetup."],
     ["ความปลอดภัยมาก่อนเสมอ ถ้ารู้สึกไม่ปลอดภัย บล็อกหรือรายงานแล้วออกได้ทันที ไม่นับว่าหายเงียบ", "Safety always comes first. If you feel unsafe, block or report and leave at once. That is never ghosting."],
   ];
@@ -219,7 +219,7 @@ publicRoutes.get("/code-of-conduct", (c) => {
       <ol>{rules.map(([th, en]) => <li>{t(th, en)}</li>)}</ol>
       <h2 id="no-ghosting">{t("ไม่หายเงียบ", "No ghosting")}</h2>
       <ul>{ghosting.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
-      <h2 id="fair-process">{t("ยุติธรรมและรับผิดชอบ", "Fair and accountable")}</h2>
+      <h2 id="fair-process">{t("ยุติธรรมและตรวจสอบได้", "Fair and accountable")}</h2>
       <ul>{FAIR_PROCESS.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
     </>,
   );
@@ -232,8 +232,8 @@ publicRoutes.get("/terms", (c) => {
     { title: t("ข้อกำหนด", "Terms") },
     <>
       <h1>{t("ข้อกำหนดการใช้งาน (ฉบับร่างต้นแบบ)", "Terms of use (prototype draft)")}</h1>
-      <p>{t("บริการนี้เป็นต้นแบบเพื่อทดสอบ สำหรับผู้มีอายุ 18 ปีขึ้นไปที่อยู่ในหรือรอบ ๆ กรุงเทพฯ รวมถึงคนที่มาอยู่ช่วงหนึ่ง ห้ามใช้ข้อมูลส่วนตัวจริงในระยะทดสอบ", "This is a test prototype for adults (18+) in and around Bangkok, including people staying for a while. Please don't use real personal data during testing.")}</p>
-      <p>{t("กิจกรรมแบบมีค่าใช้จ่ายชำระนอกแอป ณ สถานที่จัดงาน", "Paid events are paid off-platform, at the venue.")}</p>
+      <p>{t("บริการนี้เป็นต้นแบบเพื่อการทดสอบ สำหรับผู้ที่อายุ 18 ปีขึ้นไปและอยู่ในหรือรอบ ๆ กรุงเทพฯ รวมถึงคนที่มาพักอยู่ช่วงหนึ่ง อย่าใช้ข้อมูลส่วนตัวจริงระหว่างการทดสอบ", "This is a test prototype for adults (18+) in and around Bangkok, including people staying for a while. Please don't use real personal data during testing.")}</p>
+      <p>{t("กิจกรรมที่มีค่าใช้จ่าย ให้ชำระเงินนอกแอปที่สถานที่จัดกิจกรรม", "Paid events are paid off-platform, at the venue.")}</p>
     </>,
   );
 });

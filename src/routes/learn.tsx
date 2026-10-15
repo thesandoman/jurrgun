@@ -112,7 +112,7 @@ learnRoutes.get("/faq", (c) => {
       <h1>{t("คำถามที่พบบ่อย", "Frequently asked questions")}</h1>
       <FaqList lang={lang} />
       <p style="margin-top:16px">
-        <a href="/learn">{t("อ่านเพิ่มเติม: เรียนรู้เรื่องการเดทและความปลอดภัย →", "Read more: learn about dating and safety →")}</a>
+        <a href="/learn">{t("อ่านเพิ่มเติม: เรียนรู้เรื่องการเดตและความปลอดภัย →", "Read more: learn about dating and safety →")}</a>
       </p>
     </>,
   );
@@ -137,7 +137,7 @@ learnRoutes.get("/learn", (c) => {
       </a>
       <a href="/safety" class="feature" style="margin:10px 0">
         <b aria-hidden="true">🛡️</b>
-        <strong>{t("ตัวช่วยความปลอดภัย: สายด่วนและแชร์แผนนัด", "Safety net: helplines and share your plans")}</strong>
+        <strong>{t("ปลอดภัยไว้ก่อน: สายด่วนและแชร์แผนนัด", "Safety net: helplines and share your plans")}</strong>
       </a>
       {LEARN_GROUPS.map((g) => (
         <section id={g.key}>
@@ -174,7 +174,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
       </h1>
       <p class="muted">
         {t(
-          "แบบทดสอบ Bangkok Vibe ดูว่าคุณชอบใช้เวลาในเมืองแบบไหน 6 ด้าน ไม่มีเรื่องการเมือง ตัวอักษร 4 ตัวคือไทป์ของคุณ อีก 2 ด้านเป็นสัญลักษณ์เพิ่มเติม ทั้ง 6 ด้านช่วยจัดโต๊ะให้เข้ากับคุณ",
+          "แบบทดสอบ Bangkok Vibe ดูว่าคุณชอบใช้เวลาในเมืองแบบไหน จาก 6 ด้าน ไม่มีเรื่องการเมือง 4 ด้านรวมกันเป็นไทป์ตัวอักษร 4 ตัวของคุณ อีก 2 ด้านเป็นสัญลักษณ์เพิ่มสีสัน ทั้ง 6 ด้านช่วยหาโต๊ะที่เข้ากับคุณ",
           "The Bangkok Vibe quiz looks at six sides of how you like to spend time in the city, nothing political. Four of them make your 4-letter type; the other two add a flavour badge. All six help seat you at the right table.",
         )}
       </p>
@@ -190,7 +190,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
           </a>
         ))}
       </div>
-      <h2>{t("คู่ที่เข้ากัน", "How types meet")}</h2>
+      <h2>{t("ไทป์ไหนเข้ากับไทป์ไหน", "How types meet")}</h2>
       <ul>
         {(["natural", "complementary", "interesting"] as const).map((m) => (
           <li>
@@ -201,7 +201,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
       <Notice kind="info">
         💡{" "}
         {t(
-          "ไทป์เป็นเรื่องสนุกไว้ชวนคุย ไม่มีไทป์ไหนดีกว่ากัน และไม่ใช้ซ่อนหรือคัดใครออก ไทป์ของคุณเป็นความลับจนกว่าคุณจะเลือกแสดง",
+          "ไทป์เป็นเรื่องสนุกไว้ชวนคุย ไม่มีไทป์ไหนดีกว่ากัน และเราไม่เคยใช้ไทป์เพื่อซ่อนหรือคัดใครออก ไทป์ของคุณเป็นความลับจนกว่าคุณจะเลือกแสดง",
           "Types are for fun and conversation. No type is better, and they're never used to hide or exclude anyone. Yours stays private unless you choose to show it.",
         )}
       </Notice>

@@ -55,7 +55,7 @@ export function A11yMenu(props: { t: T; class?: string }) {
     ["motion", t("ลดการเคลื่อนไหว", "Reduce motion"), t("หยุดแอนิเมชันและข่าววิ่ง", "Stops animations and the scrolling ticker")],
     ["readable", t("ฟอนต์อ่านง่าย", "Easy-read font"), t("ฟอนต์ชัดขึ้น ระยะห่างกว้างขึ้น", "Clearer letters and wider spacing")],
     ["links", t("ขีดเส้นใต้ลิงก์", "Underline links"), t("เห็นลิงก์ได้โดยไม่ต้องดูสี", "Spot links without relying on colour")],
-    ["touch", t("ปุ่มใหญ่ขึ้น", "Bigger buttons"), t("กดง่ายขึ้นสำหรับนิ้วและมือที่สั่น", "Easier to tap, for any hands")],
+    ["touch", t("ปุ่มใหญ่ขึ้น", "Bigger buttons"), t("กดง่ายขึ้น ทุกมือใช้สะดวก", "Easier to tap, for any hands")],
     ["spacing", t("ระยะบรรทัดกว้าง", "More line spacing"), t("อ่านสบายตาขึ้น", "Easier to follow lines of text")],
     ["wide", t("หน้ากว้างบนจอใหญ่", "Wider pages on big screens"), t("ใช้พื้นที่จอแล็ปท็อปเต็มขึ้น", "Use more of a laptop screen")],
   ];

@@ -69,13 +69,13 @@ safetyRoutes.get("/safety", (c) => {
         </Card>
       ) : null}
       <Card>
-        <h2>📲 {t("แชร์แผนเดทให้คนที่ไว้ใจ", "Share your date plan")}</h2>
+        <h2>📲 {t("แชร์แผนเดตให้คนที่ไว้ใจ", "Share your date plan")}</h2>
         <form
           id="plan"
           class="plan"
           onsubmit="return false"
           data-tpl={t(
-            "แชร์แผนนะ: เจอ {who} ที่ {where} เวลา {when} จะทักกลับก่อน {back} ถ้าเงียบไป ช่วยโทรหาด้วย 🙏",
+            "บอกแผนไว้ก่อนนะ: ไปเจอ {who} ที่ {where} ตอน {when} จะทักกลับก่อน {back} ถ้าเงียบไป ช่วยโทรหาหน่อย 🙏",
             "My plan: meeting {who} at {where}, {when}. I'll message you by {back}. If you don't hear from me, please call. 🙏",
           )}
         >
@@ -173,7 +173,7 @@ safetyRoutes.get("/safety/arrival/:id", requireMember, async (c) => {
       <h1>🏠 {t("ถึงบ้านปลอดภัยไหม?", "Home safe?")}</h1>
       {c.req.query("set") ? <Notice kind="ok">{t(`ตั้งไว้แล้ว เราจะถามตอน ${fmtDate(row.backBy, lang)}`, `Set. We'll ask at ${fmtDate(row.backBy, lang)}.`)}</Notice> : null}
       {row.answer === "safe" ? (
-        <Notice kind="ok">{t("ดีใจด้วย! ขอบคุณที่บอกนะ", "Glad you're home. Thanks for letting us know.")}</Notice>
+        <Notice kind="ok">{t("ดีใจที่ถึงบ้านแล้ว ขอบคุณที่บอกเรานะ", "Glad you're home. Thanks for letting us know.")}</Notice>
       ) : row.answer === "help" ? (
         <HelpNow v={view(c)} />
       ) : (

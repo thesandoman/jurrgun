@@ -109,7 +109,7 @@ adminModeration.get("/", async (c) => {
       <h1>{t("คิวรายงาน", "Moderation queue")}</h1>
       <p class="muted">
         {t(
-          "รายงานด่วน (critical) แสดงก่อน แล้วเรียงจากเก่าสุด เป้าหมายการตอบสนอง: ด่วน 1 ชม. ทั่วไป 24 ชม.",
+          "รายงานด่วนขึ้นก่อน ที่เหลือเรียงจากเก่าสุด ควรตอบรายงานด่วนภายใน 1 ชม. และรายงานทั่วไปภายใน 24 ชม.",
           "Critical reports first, then oldest first. Response targets: 1h critical, 24h standard.",
         )}
       </p>
@@ -411,7 +411,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
       <Card>
         <h2 style="margin-top:0">{t("ดำเนินการ", "Take action")}</h2>
         {protectedTarget ? (
-          <Notice kind="warn">{t("ผู้ดูแลไม่สามารถดำเนินการกับบัญชีแอดมินได้", "Moderators can't act on an admin account.")}</Notice>
+          <Notice kind="warn">{t("ผู้ดูแลจัดการบัญชีแอดมินไม่ได้", "Moderators can't act on an admin account.")}</Notice>
         ) : null}
         <form method="post" action={`/admin/moderation/${encodeURIComponent(r.id)}/action`}>
           <div class="field">
@@ -443,7 +443,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
               </small>
             </div>
           ) : null}
-          {target ? <Field label={t("จำนวนวันที่ระงับ (1–90)", "Suspension days (1–90)")} name="days" type="number" min={1} max={90} value={7} /> : null}
+          {target ? <Field label={t("จำนวนวันที่ระงับ (1 ถึง 90)", "Suspension days (1-90)")} name="days" type="number" min={1} max={90} value={7} /> : null}
           <TextArea
             label={t("บันทึกของผู้ดูแล", "Moderator note")}
             name="note"
@@ -478,7 +478,7 @@ adminModeration.post("/:id/action", async (c) => {
 
   if (!(ACTIONS as readonly string[]).includes(action)) return bad(t("การดำเนินการไม่ถูกต้อง", "Unknown action"));
   if ((action === "warning" || action === "suspend" || action === "ban") && !rawNote) {
-    return bad(t("กรุณาใส่บันทึกสำหรับการดำเนินการนี้", "A note is required for this action"));
+    return bad(t("ใส่บันทึกสำหรับการดำเนินการนี้ด้วย", "A note is required for this action"));
   }
 
   const targetId = r.targetAccount;
@@ -498,7 +498,7 @@ adminModeration.post("/:id/action", async (c) => {
   }
   if (target && action !== "dismiss" && action !== "note") {
     if (target.role === "bma_admin" && me.role !== "bma_admin") return c.text("Forbidden", 403);
-    if (target.id === me.id) return bad(t("ไม่สามารถดำเนินการกับบัญชีของตัวเองได้", "You can't act on your own account"));
+    if (target.id === me.id) return bad(t("ดำเนินการกับบัญชีของตัวเองไม่ได้", "You can't act on your own account"));
   }
 
   // Fair process: removal needs a named rule, or 3 flags already.
@@ -519,7 +519,7 @@ adminModeration.post("/:id/action", async (c) => {
   if (autoSuspend) until = new Date(Date.now() + FLAG_SUSPEND_DAYS * 86_400_000);
   if (action === "suspend") {
     const days = int(body.days, 0);
-    if (days < 1 || days > 90) return bad(t("จำนวนวันต้องอยู่ระหว่าง 1–90", "Days must be between 1 and 90"));
+    if (days < 1 || days > 90) return bad(t("จำนวนวันต้องอยู่ระหว่าง 1 ถึง 90", "Days must be between 1 and 90"));
     until = new Date(Date.now() + days * 86_400_000);
   }
 
@@ -567,7 +567,7 @@ adminModeration.post("/:id/action", async (c) => {
           db,
           target.id,
           "moderation",
-          `คุณได้รับธงครบ ${FLAGS_TO_REMOVE} ครั้ง บัญชีจึงถูกระงับถึง ${fmtDay(until!, "th")}`,
+          `คุณได้รับคำเตือนครบ ${FLAGS_TO_REMOVE} ครั้ง บัญชีจึงถูกระงับถึง ${fmtDay(until!, "th")}`,
           `You've reached ${FLAGS_TO_REMOVE} flags, so your account is suspended until ${fmtDay(until!, "en")}`,
           "/code-of-conduct",
         ),
@@ -578,7 +578,7 @@ adminModeration.post("/:id/action", async (c) => {
           db,
           target.id,
           "moderation",
-          "คุณได้รับคำเตือนจากทีมงาน กรุณาทบทวนหลักปฏิบัติของชุมชน",
+          "คุณได้รับคำเตือนจากทีมงาน โปรดอ่านหลักปฏิบัติของชุมชนอีกครั้ง",
           "You've received a warning from our team. Please review the code of conduct",
           "/code-of-conduct",
         ),

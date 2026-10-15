@@ -40,7 +40,7 @@ partnerRoutes.get("/partner-events/kaipa/:id", requireMember, async (c) => {
         <h1>{t("ไม่พบกิจกรรมนี้", "We can't find this event")}</h1>
         <Empty>{t("อาจจบไปแล้วหรือถูกนำออกจาก Kaipa", "It may have ended or been taken down on Kaipa.")}</Empty>
         <p>
-          <a href="/events">{t("กลับไปค้นหา", "Back to Discover")}</a>
+          <a href="/events">{t("กลับไปค้นหากิจกรรม", "Back to Discover")}</a>
         </p>
       </>,
     );

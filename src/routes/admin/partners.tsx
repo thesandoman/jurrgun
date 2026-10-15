@@ -20,7 +20,7 @@ export const adminPartners = new Hono<AppEnv>();
 adminPartners.use("*", requireRole("bma_admin"));
 
 export const ROLE_LABELS: Record<Role, [string, string]> = {
-  user: ["ผู้ใช้ทั่วไป", "Member"],
+  user: ["สมาชิกทั่วไป", "Member"],
   circle_head: ["หัวหน้าวง", "Circle head"],
   host: ["ผู้จัดที่ยืนยันแล้ว (พาร์ตเนอร์)", "Verified partner host"],
   partner_admin: ["แอดมินองค์กรพาร์ตเนอร์", "Partner org admin"],
@@ -76,7 +76,7 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
             <div class="field">
               <label for="f-org">{t("องค์กรพาร์ตเนอร์", "Partner organisation")}</label>
               <select id="f-org" name="partnerOrgId">
-                <option value="">{t("— ไม่มี —", "— none —")}</option>
+                <option value="">{t("ไม่มี", "None")}</option>
                 {orgs.map((o) => (
                   <option value={o.id}>{o.name}</option>
                 ))}
@@ -163,7 +163,7 @@ adminPartners.post("/orgs", async (c) => {
   const body = await c.req.parseBody();
   const name = str(body.name);
   if (!name || name.length > 100) {
-    return render(c, t("ชื่อองค์กรต้องมี 1–100 ตัวอักษร", "Organisation name must be 1–100 characters"), 400);
+    return render(c, t("ชื่อองค์กรต้องยาว 1 ถึง 100 ตัวอักษร", "Organisation name must be 1 to 100 characters"), 400);
   }
   const db = getDb(c.env);
   const me = c.var.user!.account.id;
@@ -184,7 +184,7 @@ adminPartners.post("/roles", async (c) => {
   const me = c.var.user!.account;
 
   if (!username || !(ROLES as readonly string[]).includes(role)) {
-    return render(c, t("กรุณากรอกชื่อผู้ใช้และเลือกบทบาท", "Enter a username and choose a role"), 400);
+    return render(c, t("กรอกชื่อผู้ใช้และเลือกบทบาท", "Enter a username and choose a role"), 400);
   }
   if (role === "partner_admin" && !orgId) {
     return render(c, t("แอดมินองค์กรพาร์ตเนอร์ต้องมีองค์กร", "A partner org admin needs an organisation"), 400);
@@ -197,7 +197,7 @@ adminPartners.post("/roles", async (c) => {
     .limit(1);
   if (!target) return render(c, t("ไม่พบชื่อผู้ใช้นี้", "No account with that username"), 400);
   if (target.id === me.id && role !== "bma_admin") {
-    return render(c, t("คุณไม่สามารถลดสิทธิ์ของตัวเองได้", "You can't demote yourself"), 400);
+    return render(c, t("ลดสิทธิ์ของตัวเองไม่ได้", "You can't demote yourself"), 400);
   }
   if (orgId) {
     const [org] = await db.select({ id: partnerOrgs.id }).from(partnerOrgs).where(eq(partnerOrgs.id, orgId)).limit(1);

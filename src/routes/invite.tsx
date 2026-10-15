@@ -155,7 +155,7 @@ inviteRoutes.get("/invite/:token", async (c) => {
         </p>
         <p class="muted">
           {t(
-            "ลิงก์นี้ใช้ได้ครั้งเดียว คุณต้องผ่านเงื่อนไขของกิจกรรมเหมือนทุกคน (อายุ ที่นั่ง) ถ้าที่นั่งเต็ม จะได้อยู่ในคิวสำรอง",
+            "ลิงก์นี้ใช้ได้ครั้งเดียว เงื่อนไขของกิจกรรม (อายุ ที่นั่ง) ใช้กับคุณเหมือนทุกคน ถ้าที่นั่งเต็ม คุณจะได้อยู่ในคิวสำรอง",
             "This link works once. The event's usual rules still apply (age, seats). If it's full, you'll join the waitlist.",
           )}
         </p>
@@ -232,7 +232,7 @@ inviteRoutes.post("/invite/:token/accept", requireMember, async (c) => {
   if (gate.refusal) return refuse(gate.refusal.th, gate.refusal.en, gate.refusal.status);
   if (gate.active) {
     return refuse(
-      "คุณลงทะเบียนกิจกรรมนี้อยู่แล้ว ลิงก์นี้ยังใช้ได้สำหรับเพื่อนคนอื่น",
+      "คุณลงทะเบียนกิจกรรมนี้อยู่แล้ว ลิงก์นี้ยังเปิดไว้ให้คนอื่นใช้ได้",
       "You're already registered for this event. The link stays open for someone else.",
       409,
     );

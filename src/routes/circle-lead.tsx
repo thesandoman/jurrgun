@@ -34,9 +34,9 @@ circleLeadRoutes.get("/circles/lead", requireMember, async (c) => {
   const host = canHost(user.account, true);
   return page(
     c,
-    { title: t("นำวง", "Lead a circle"), tab: "connections" },
+    { title: t("เป็นหัวหน้าวง", "Lead a circle"), tab: "connections" },
     <>
-      <h1>👥 {t("นำวงของคุณเอง", "Lead your own circle")}</h1>
+      <h1>👥 {t("ตั้งวงของคุณเอง", "Lead your own circle")}</h1>
       <p class="muted">
         {t(
           "หัวหน้าวงจัดแฮงเอาต์ให้คนในวงได้ ทีมงานจะตรวจคำขอก่อน เพื่อให้ทุกวงปลอดภัยและน่าไป",
@@ -50,7 +50,7 @@ circleLeadRoutes.get("/circles/lead", requireMember, async (c) => {
         </Card>
       ) : last?.status === "pending" ? (
         <Notice kind="info">
-          {t(`ส่งคำขอนำวง "${last.circleName}" แล้ว รอทีมงานตรวจ`, `Your request to lead "${last.circleName}" is with our team.`)}
+          {t(`ส่งคำขอเป็นหัวหน้าวง "${last.circleName}" แล้ว ตอนนี้รอทีมงานตรวจ`, `Your request to lead "${last.circleName}" is with our team.`)}
         </Notice>
       ) : (
         <>

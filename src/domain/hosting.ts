@@ -185,7 +185,7 @@ export function checkProposal(
   const need = (ok: boolean, th: string, en: string) => {
     if (!ok) errors.push({ th, en });
   };
-  need(d.title.length >= 3 && d.title.length <= 120, "ชื่อกิจกรรม 3–120 ตัวอักษร", "The title must be 3 to 120 characters.");
+  need(d.title.length >= 3 && d.title.length <= 120, "ชื่อกิจกรรมต้องยาว 3 ถึง 120 ตัวอักษร", "The title must be 3 to 120 characters.");
   need(d.titleEn.length <= 120, "ชื่อภาษาอังกฤษไม่เกิน 120 ตัวอักษร", "The English title is at most 120 characters.");
   need(d.description.length >= 20 && d.description.length <= 4000, "เล่ารายละเอียดอย่างน้อย 20 ตัวอักษร (ไม่เกิน 4,000)", "Describe the event in at least 20 characters (at most 4,000).");
 
@@ -202,26 +202,26 @@ export function checkProposal(
   need(allowed.districts.includes(d.district), "เลือกเขต", "Choose a district.");
 
   const capacity = intIn(d.capacity, 2, MEMBER_MAX_CAPACITY);
-  need(capacity !== null, `จำนวนที่นั่ง 2–${MEMBER_MAX_CAPACITY}`, `Capacity must be 2 to ${MEMBER_MAX_CAPACITY}.`);
+  need(capacity !== null, `จำนวนที่นั่งต้องอยู่ระหว่าง 2 ถึง ${MEMBER_MAX_CAPACITY}`, `Capacity must be 2 to ${MEMBER_MAX_CAPACITY}.`);
   const ageMin = intIn(d.ageMin, 18, 99);
   const ageMax = intIn(d.ageMax, 18, 99);
-  need(ageMin !== null && ageMax !== null && ageMin <= ageMax, "ช่วงอายุ 18–99", "The age range must be 18 to 99.");
+  need(ageMin !== null && ageMax !== null && ageMin <= ageMax, "ช่วงอายุต้องอยู่ระหว่าง 18 ถึง 99", "The age range must be 18 to 99.");
   need(d.languages.length > 0 && d.languages.every((l) => allowed.languages.includes(l)), "เลือกภาษาอย่างน้อย 1 ภาษา", "Choose at least one language.");
 
   const costThb = intIn(d.costThb || "0", 0, 20_000);
-  need(costThb !== null, "ค่าใช้จ่าย 0–20,000 บาท", "The cost must be 0 to 20,000 baht.");
+  need(costThb !== null, "ค่าใช้จ่ายต้องอยู่ระหว่าง 0 ถึง 20,000 บาท", "The cost must be 0 to 20,000 baht.");
   need(d.paymentNote.length <= 500, "รายละเอียดการชำระเงินไม่เกิน 500 ตัวอักษร", "Payment details are at most 500 characters.");
   const paymentUrl = d.paymentUrl ? httpsUrl(d.paymentUrl) : null;
   need(!d.paymentUrl || !!paymentUrl, "ลิงก์ชำระเงินต้องขึ้นต้นด้วย https://", "The payment link must start with https://");
   need(!(costThb === 0 && (paymentUrl || d.paymentNote)), "กิจกรรมฟรีไม่ต้องใส่ข้อมูลการชำระเงิน", "A free event doesn't need payment details.");
   const freeSeats = intIn(d.freeSeats || "0", 0, 5);
-  need(freeSeats !== null && (capacity === null || freeSeats <= capacity), "ที่นั่งส่งต่อน้ำใจ 0–5 ที่", "Pay-it-forward seats must be 0 to 5.");
+  need(freeSeats !== null && (capacity === null || freeSeats <= capacity), "ที่นั่งส่งต่อน้ำใจได้ 0 ถึง 5 ที่", "Pay-it-forward seats must be 0 to 5.");
 
   need(allowed.intensity.includes(d.intensity), "เลือกระดับความคึกคัก", "Choose a social intensity.");
   const groupMin = intIn(d.groupMin, 2, 12);
   const groupMax = intIn(d.groupMax, 2, 12);
-  need(groupMin !== null && groupMax !== null && groupMin <= groupMax, "ขนาดกลุ่ม 2–12", "Group size must be 2 to 12.");
-  need(d.tags.length <= 6 && d.tags.every((x) => allowed.tags.includes(x)), "เลือกหมวดได้ไม่เกิน 6", "Pick up to 6 categories.");
+  need(groupMin !== null && groupMax !== null && groupMin <= groupMax, "โต๊ะละ 2 ถึง 12 คน", "Group size must be 2 to 12.");
+  need(d.tags.length <= 6 && d.tags.every((x) => allowed.tags.includes(x)), "เลือกหมวดได้ไม่เกิน 6 หมวด", "Pick up to 6 categories.");
   need(d.visibility === "public" || d.visibility === "private", "เลือกว่าใครเห็นกิจกรรมนี้", "Choose who can see this event.");
   need(d.accessibility.length <= 1000 && d.safetyInfo.length <= 1000, "ข้อมูลการเข้าถึง/ความปลอดภัยไม่เกิน 1,000 ตัวอักษร", "Accessibility and safety notes are at most 1,000 characters.");
 

@@ -82,7 +82,7 @@ export function InterestPicker(props: { v: View; values?: string[]; name?: strin
         );
       })}
       <p class="ip-none muted" hidden>
-        {t("ไม่พบ ลองคำอื่นดู", "Nothing found. Try another word.")}
+        {t("ไม่เจอ ลองคำอื่นดู", "Nothing found. Try another word.")}
       </p>
     </div>
   );
@@ -217,7 +217,7 @@ export function EducationPicker(props: { v: View; bio: Bio }) {
         />
         <input type="hidden" name="university" value={b.university ?? ""} />
         <ul id="uni-list" class="uni-list" role="listbox" hidden />
-        <small>{t("กว่า 10,000 แห่งทั่วโลก หาไม่เจอ? พิมพ์ชื่อเต็มได้เลย", "Over 10,000 worldwide. Can't find yours? Just type the full name.")}</small>
+        <small>{t("มีกว่า 10,000 แห่งทั่วโลก หาไม่เจอก็พิมพ์ชื่อเต็มได้เลย", "Over 10,000 worldwide. Can't find yours? Just type the full name.")}</small>
       </div>
       <div class="edu-row">
         <div class="field">
@@ -232,7 +232,7 @@ export function EducationPicker(props: { v: View; bio: Bio }) {
           </select>
         </div>
         <div class="field">
-          <label for="f-educationDetail">{t("สาขา (ไม่บังคับ)", "Field of study (optional)")}</label>
+          <label for="f-educationDetail">{t("สาขาที่เรียน (ไม่บังคับ)", "Field of study (optional)")}</label>
           <input id="f-educationDetail" name="educationDetail" type="text" value={b.educationDetail ?? ""} maxlength={EDUCATION_DETAIL_MAX} placeholder={t("เช่น วิศวกรรมคอมพิวเตอร์", "e.g. Computer engineering")} />
         </div>
       </div>
@@ -279,7 +279,7 @@ export function BangkokStory(props: { v: View; story?: string; time?: string; ho
           <input type="checkbox" name="guide" value="1" checked={!!props.guide} />
           <span>
             🧭 {t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ", "Happy to help people who are new to Bangkok")}
-            <small>{t("แสดงบนโปรไฟล์ เพื่อให้คนมาใหม่รู้ว่าถามคุณได้", "Shown on your profile, so newcomers know they can ask you")}</small>
+            <small>{t("ขึ้นบนโปรไฟล์ คนที่เพิ่งมาจะได้รู้ว่าถามคุณได้", "Shown on your profile, so newcomers know they can ask you")}</small>
           </span>
         </label>
       )}
@@ -369,7 +369,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
           ))}
           {pick > 1 ? (
             <p class="pf-limit" role="status" hidden>
-              {t(`เลือกได้ ${pick}`, `Pick ${pick}`)}
+              {t(`เลือกได้ ${pick} ตัว`, `Pick ${pick}`)}
             </p>
           ) : null}
         </div>
@@ -384,7 +384,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
             <EmojiPill name={name} o={o} lang={lang} checked={has(o.value)} />
           ))}
           <p class="pf-limit" role="status" hidden>
-            {t(`เลือกได้ไม่เกิน ${pick}`, `Pick up to ${pick}`)}
+            {t(`เลือกได้ไม่เกิน ${pick} ข้อ`, `Pick up to ${pick}`)}
           </p>
         </div>
       );

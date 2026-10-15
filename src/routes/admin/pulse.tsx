@@ -37,7 +37,7 @@ const AGE_OPTS: Opt[] = AGE_BANDS.map((b) => ({ value: b, th: b, en: b }));
 const KINDS: Opt[] = [
   { value: "single", th: "เลือกได้ 1 ข้อ", en: "Single choice" },
   { value: "multi", th: "เลือกได้หลายข้อ", en: "Multiple choice" },
-  { value: "scale", th: "มาตรวัด 1–5", en: "Scale 1–5" },
+  { value: "scale", th: "ให้คะแนน 1 ถึง 5", en: "Scale 1-5" },
   { value: "text", th: "ข้อความสั้น", en: "Short text" },
   { value: "area", th: "เลือกพื้นที่ (เขต)", en: "Area (district)" },
 ];
@@ -158,7 +158,7 @@ function validate(body: Record<string, unknown>): { values: FormValues; data?: P
     status: str(body.status) || "draft",
   };
   const fail = (th: string, en: string) => ({ values, error: [th, en] as [string, string] });
-  if (!values.promptTh || !values.promptEn) return fail("กรุณากรอกคำถามทั้งภาษาไทยและอังกฤษ", "Enter the question in Thai and English");
+  if (!values.promptTh || !values.promptEn) return fail("กรอกคำถามทั้งภาษาไทยและอังกฤษ", "Enter the question in Thai and English");
   if (values.promptTh.length > 300 || values.promptEn.length > 300) return fail("คำถามยาวได้ไม่เกิน 300 ตัวอักษร", "Questions are limited to 300 characters");
   if (!KINDS.some((k) => k.value === values.kind)) return fail("เลือกประเภทคำตอบ", "Choose an answer type");
   if (!STATUSES.some((s) => s.value === values.status)) return fail("สถานะไม่ถูกต้อง", "Unknown status");
@@ -579,7 +579,7 @@ adminPulse.get("/:id/results", async (c) => {
   if (!q) return c.text("Not found", 404);
   const r = await aggregate(c, q);
   const n = safeCount(r.overall.n);
-  const otherLabel = t("อื่น ๆ (กลุ่มละไม่ถึง 10 คน รวมกัน)", "Other (groups under 10, combined)");
+  const otherLabel = t("อื่น ๆ (รวมกลุ่มที่มีไม่ถึง 10 คน)", "Other (groups under 10, combined)");
   const dRows = segmentRows(r.byDistrict, districtLabel(lang), otherLabel);
   const aRows = segmentRows(r.byAge, (k) => (k === "unknown" ? t("ไม่ระบุ", "Unknown") : k), otherLabel);
   const columns = segmentColumns(r);
@@ -639,7 +639,7 @@ adminPulse.get("/:id/results", async (c) => {
       </p>
       <Notice kind="info">
         {t(
-          "แสดงเฉพาะผลรวม ทุกช่องที่มีน้อยกว่า 10 คนแสดงเป็น \"<10\" กลุ่มย่อยที่มีไม่ถึง 10 คนจะถูกรวมไว้ใน \"อื่น ๆ\"",
+          "แสดงเฉพาะผลรวม ช่องที่มีน้อยกว่า 10 คนจะแสดงเป็น \"<10\" และกลุ่มที่มีไม่ถึง 10 คนจะรวมไว้ใน \"อื่น ๆ\"",
           "Aggregates only. Any cell under 10 shows as \"<10\"; segments under 10 are merged into \"Other\".",
         )}
       </Notice>
@@ -648,8 +648,8 @@ adminPulse.get("/:id/results", async (c) => {
         <Card>
           <p>
             {t(
-              "คำตอบแบบข้อความจะไม่แสดงแบบคำต่อคำในแดชบอร์ด แสดงเพียงจำนวนคำตอบ",
-              "Free-text answers are never shown verbatim in the dashboard — only the number of answers.",
+              "แดชบอร์ดไม่แสดงคำตอบแบบข้อความคำต่อคำ แสดงแค่จำนวนคำตอบ",
+              "Free-text answers are never shown verbatim in the dashboard, only the number of answers.",
             )}
           </p>
           <div class="stats">

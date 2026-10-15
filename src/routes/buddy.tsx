@@ -77,8 +77,8 @@ type Write = { toSQL(): { sql: string; params: unknown[] } };
 const INTENT_OPTS = [
   { value: "friends", th: "เพื่อนใหม่", en: "New friends" },
   { value: "activity", th: "เพื่อนทำกิจกรรม", en: "An activity buddy" },
-  { value: "open", th: "เปิดใจมากกว่าเพื่อน ถ้าทั้งคู่รู้สึกตรงกัน", en: "Open to more, only if it's mutual" },
-  { value: "dating", th: "หาเดทอย่างเดียว", en: "Dating only" },
+  { value: "open", th: "เปิดใจมากกว่าเพื่อน ถ้ารู้สึกตรงกันทั้งสองคน", en: "Open to more, only if it's mutual" },
+  { value: "dating", th: "หาเดตอย่างเดียว", en: "Dating only" },
 ] satisfies { value: (typeof BUDDY_INTENTS)[number]; th: string; en: string }[];
 
 const districtName = (lang: Lang, key: string) => {
@@ -154,7 +154,7 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
         .set({ state: "ended", endReason: "notice", endedAt: now })
         .where(inArray(buddyMatches.id, lapsed.map((m) => m.id))),
       ...lapsed.flatMap((m) =>
-        [m.aAccount, m.bAccount].map((x) => notify(db, x, "buddy_ended", "ปิดบัดดี้รอบนี้แบบดี ๆ แล้ว เดี๋ยวจับคู่รอบใหม่ให้เร็ว ๆ นี้", "Your buddy pairing has wrapped up kindly. A new match is coming soon.", "/buddy")),
+        [m.aAccount, m.bAccount].map((x) => notify(db, x, "buddy_ended", "บัดดี้รอบนี้ปิดลงแบบดี ๆ แล้ว เราจะหาบัดดี้ใหม่ให้เร็ว ๆ นี้", "Your buddy pairing has wrapped up kindly. A new match is coming soon.", "/buddy")),
       ),
     ]);
   }
@@ -351,7 +351,7 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
           </Tile>
           <Tile tone="gold">
             <span class="ico" aria-hidden="true">🏅</span>
-            <Big n="12" label={t("เทศกาลต่อปี", "festival quests")} />
+            <Big n="12" label={t("เควสต์เทศกาลต่อปี", "festival quests")} />
           </Tile>
         </Bento>
       )}
@@ -365,7 +365,7 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
           <form method="post" action="/buddy/optin">
             <Choices
               legend={t("มองหาอะไรอยู่ 🔒", "What you're open to 🔒")}
-              hint={t("ความลับ บัดดี้ไม่เห็น", "Private: your buddy never sees this")}
+              hint={t("เป็นความลับ บัดดี้ไม่เห็น", "Private: your buddy never sees this")}
               name="intent"
               type="radio"
               required
@@ -377,7 +377,7 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
               <summary>{t("ใช้งานยังไง", "How it works")}</summary>
               <ul>
                 <li>👀 {t("บัดดี้เห็นชื่อเล่นและไทป์ของคุณ", "Your buddy sees your nickname and type.")}</li>
-                <li>💘 {t("เรื่องหัวใจจะขึ้นก็ต่อเมื่อเลือกตรงกันทั้งคู่ และทำเควสต์ด้วยกันครบสองครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
+                <li>💘 {t("เรื่องหัวใจจะขึ้นก็ต่อเมื่อคุณทั้งสองคนเลือกไว้ตรงกัน และทำเควสต์ด้วยกันครบ 2 ครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
                 <li>🤝 {t("ไม่หายเงียบ: ปิดได้เมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
                 <li>🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัย", "Safety net")}</a></li>
               </ul>
@@ -433,7 +433,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
     artFor(props.q.district + "b", tb?.emoji ?? "🙂"),
   ];
   const shareText = t(
-    `ฉันนัดเจอบัดดี้จาก Jurrgun (${props.buddyName}) ที่${place} จะทักหาเมื่อถึงบ้าน`,
+    `ฉันนัดเจอบัดดี้จาก Jurrgun (${props.buddyName}) ที่${place} ถึงบ้านแล้วจะทักไปบอกนะ`,
     `I'm meeting my Jurrgun buddy (${props.buddyName}) in ${place}. I'll message you when I'm home.`,
   );
   const hostHref = `/host/new?district=${encodeURIComponent(props.q.district)}&title=${encodeURIComponent(text ? (lang === "en" ? text.en : text.th) : "")}`;
@@ -516,7 +516,7 @@ function Passport(props: { v: View; stamped: Set<string>; compact?: boolean; bad
               ))}
             </p>
           ) : (
-            <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือน เพื่อสะสมเหรียญ", "Finish monthly big quests to collect season badges.")}</p>
+            <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนให้ครบ เพื่อสะสมเหรียญประจำฤดู", "Finish monthly big quests to collect season badges.")}</p>
           )}
           <Stamps items={items} />
           <p class="chips2">
@@ -542,7 +542,7 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
         <p>
           🌙{" "}
           {t(
-            `คุณขอปิดบัดดี้รอบนี้แล้ว บัดดี้ได้รับข้อความแล้ว ถ้าบัดดี้ยังไม่ตอบตกลง จะปิดเองวันที่ ${fmtDay(closes, lang)}`,
+            `คุณขอปิดบัดดี้รอบนี้แล้ว และบัดดี้ได้รับข้อความของคุณแล้ว ถ้าบัดดี้ไม่ตกลงก่อน รอบนี้จะปิดเองวันที่ ${fmtDay(closes, lang)}`,
             `You asked to wrap up. Your buddy has your note. It closes on ${fmtDay(closes, lang)} unless they agree sooner.`,
           )}
         </p>
@@ -560,7 +560,7 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
         {note ? <p>💬 “{L(lang, note)}”</p> : null}
         <p class="muted">
           {t(
-            "กดตกลงเพื่อปิดแบบดี ๆ หรือถ้าอยากคุยกันต่อ แชร์ช่องทางติดต่อในหน้าคนรู้จักได้เลย ถ้าไม่ตอบ จะปิดเองใน 7 วัน",
+            "กดตกลงเพื่อปิดแบบดี ๆ ถ้าอยากคุยกันต่อ แชร์ช่องทางติดต่อได้ในหน้าคนรู้จัก ถ้าไม่ตอบ รอบนี้จะปิดเองใน 7 วัน",
             "Agree to close it kindly. Want to keep in touch? Share a contact in your circle. If you don't reply, it closes on its own in 7 days.",
           )}
         </p>
@@ -573,12 +573,12 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
   }
   return (
     <details class="buddy-wrap">
-      <summary>{t("ปิดบัดดี้รอบนี้อย่างสุภาพ", "Wrap up kindly")}</summary>
+      <summary>{t("ปิดบัดดี้รอบนี้แบบดี ๆ", "Wrap up kindly")}</summary>
       <p class="muted">
         {props.offApp
-          ? t("คุณทั้งคู่แชร์ช่องทางติดต่อกันแล้ว จึงปิดในแอปได้ทันที แล้วคุยกันต่อนอกแอป", "You've both shared a contact, so you can close here right away and carry on off the app.")
+          ? t("คุณทั้งสองคนแชร์ช่องทางติดต่อกันแล้ว จึงปิดในแอปได้ทันที แล้วไปคุยกันต่อนอกแอปได้", "You've both shared a contact, so you can close here right away and carry on off the app.")
           : t(
-              "ไม่หายเงียบ: บัดดี้จะได้รับข้อความของคุณ แล้วจะปิดเมื่อบัดดี้ตกลง หรือปิดเองใน 7 วัน ถ้ารู้สึกไม่ปลอดภัย บล็อกได้ทันทีด้านล่าง",
+              "ไม่หายเงียบ: บัดดี้จะได้รับข้อความของคุณ รอบนี้จะปิดเมื่อบัดดี้ตกลง หรือปิดเองใน 7 วัน ถ้ารู้สึกไม่ปลอดภัย บล็อกได้ทันทีด้านล่าง",
               "No ghosting: your buddy gets your note, and it closes when they agree, or on its own after 7 days. If you feel unsafe, block below at once.",
             )}
       </p>
@@ -647,7 +647,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       ) : match.state === "proposed" ? (
         <Card>
           <BuddyCard v={v} eyebrow={t("บัดดี้คนใหม่", "New buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
-          <p class="muted">{t("กด 'นัดเจอ' ทั้งคู่ถึงจะเริ่มได้", "You both tap 'Meet' to start.")}</p>
+          <p class="muted">{t("ต้องกด 'นัดเจอ' ทั้งสองคนถึงจะเริ่มได้", "You both tap 'Meet' to start.")}</p>
           {iSaidMeet ? (
             <Notice kind="info">{t("คุณกดนัดเจอแล้ว รออีกฝ่าย", "You said meet. Waiting for your buddy.")}</Notice>
           ) : (
@@ -910,8 +910,8 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
     if (conn && conn.level !== "romance") {
       writes.push(
         db.update(connections).set({ level: "romance" }).where(eq(connections.id, m.connectionId)),
-        notify(db, m.aAccount, "buddy_mutual", "คุณทั้งคู่บอกว่าเปิดใจมากกว่าเพื่อน", "You both said you're open to more", "/connections"),
-        notify(db, m.bAccount, "buddy_mutual", "คุณทั้งคู่บอกว่าเปิดใจมากกว่าเพื่อน", "You both said you're open to more", "/connections"),
+        notify(db, m.aAccount, "buddy_mutual", "คุณทั้งสองคนเปิดใจมากกว่าเพื่อนตรงกัน", "You both said you're open to more", "/connections"),
+        notify(db, m.bAccount, "buddy_mutual", "คุณทั้งสองคนเปิดใจมากกว่าเพื่อนตรงกัน", "You both said you're open to more", "/connections"),
       );
     }
   }
@@ -1015,7 +1015,7 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
       <h1>🃏 {t("ปัดดูคนที่อาจเป็นบัดดี้", "Flick through people")}</h1>
       <p class="muted">
         {t(
-          "สนใจ = ช่วยให้รอบจับคู่ถัดไปเลือกคนนี้ก่อน ไม่ใช่การจับคู่ทันที และอีกฝ่ายจะไม่รู้ ไม่มีรูป เลือกจากตัวตน",
+          "กด สนใจ แล้วรอบจับคู่ถัดไปจะให้คนนี้มาก่อน แต่ยังไม่ใช่การจับคู่ และอีกฝ่ายจะไม่รู้ ไม่มีรูป เลือกกันจากตัวตน",
           "Keen helps the next daily round put this person first. It isn't a match, and they never see it. No photos: pick on vibe.",
         )}
       </p>

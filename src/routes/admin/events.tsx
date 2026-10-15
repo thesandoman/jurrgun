@@ -252,7 +252,7 @@ adminEvents.get("/", async (c) => {
                 <th>{t("วันเวลา", "When")}</th>
                 <th>{t("เขต", "District")}</th>
                 <th>{t("ยืนยัน / ที่นั่ง", "Confirmed / capacity")}</th>
-                <th>{t("สำรอง", "Waitlist")}</th>
+                <th>{t("คิวสำรอง", "Waitlist")}</th>
                 <th>{t("เช็กอิน", "Checked in")}</th>
                 <th>{t("สถานะ", "Status")}</th>
               </tr>
@@ -542,7 +542,7 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
     if (!ok) errors.push(t(th, en));
   };
 
-  need(d.title.length >= 3 && d.title.length <= 120, "ชื่อกิจกรรม 3–120 ตัวอักษร", "Title must be 3–120 characters");
+  need(d.title.length >= 3 && d.title.length <= 120, "ชื่อกิจกรรมต้องยาว 3 ถึง 120 ตัวอักษร", "Title must be 3 to 120 characters");
   need(d.titleEn.length <= 120, "ชื่อภาษาอังกฤษไม่เกิน 120 ตัวอักษร", "English title is at most 120 characters");
   need(d.description.length <= 4000 && d.descriptionEn.length <= 4000, "รายละเอียดไม่เกิน 4,000 ตัวอักษร", "Descriptions are at most 4,000 characters");
 
@@ -573,13 +573,13 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   need(values(DISTRICTS).includes(d.district), "เลือกเขต", "Choose a district");
 
   const capacity = intIn(d.capacity, 1, 500);
-  need(capacity !== null, "จำนวนที่นั่ง 1–500", "Capacity must be 1–500");
+  need(capacity !== null, "จำนวนที่นั่งต้องอยู่ระหว่าง 1 ถึง 500", "Capacity must be 1 to 500");
   const ageMin = intIn(d.ageMin, 18, 99);
   const ageMax = intIn(d.ageMax, 18, 99);
-  need(ageMin !== null && ageMax !== null && ageMin <= ageMax, "ช่วงอายุ 18–99 และอายุต่ำสุดไม่เกินสูงสุด", "Age range must be 18–99 with min ≤ max");
+  need(ageMin !== null && ageMax !== null && ageMin <= ageMax, "ช่วงอายุต้องอยู่ระหว่าง 18 ถึง 99 และอายุต่ำสุดต้องไม่เกินอายุสูงสุด", "Age range must be 18 to 99 with min ≤ max");
   need(d.languages.length > 0 && d.languages.every((l) => values(LANGUAGES).includes(l)), "เลือกภาษาอย่างน้อย 1 ภาษา", "Choose at least one language");
   const costThb = intIn(d.costThb || "0", 0, 100_000);
-  need(costThb !== null, "ค่าใช้จ่าย 0–100,000 บาท", "Cost must be 0–100,000 THB");
+  need(costThb !== null, "ค่าใช้จ่ายต้องอยู่ระหว่าง 0 ถึง 100,000 บาท", "Cost must be 0 to 100,000 THB");
   need(d.paymentNote.length <= 500, "วิธีชำระเงินไม่เกิน 500 ตัวอักษร", "Payment note is at most 500 characters");
   let paymentUrl: string | null = null;
   if (d.paymentUrl) {
@@ -595,7 +595,7 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   need(values(INTENSITY).includes(d.intensity), "เลือกระดับความโซเชียล", "Choose a social intensity");
   const groupMin = intIn(d.groupMin, 2, 12);
   const groupMax = intIn(d.groupMax, 2, 12);
-  need(groupMin !== null && groupMax !== null && groupMin <= groupMax, "ขนาดกลุ่ม 2–12 และต่ำสุดไม่เกินสูงสุด", "Group size must be 2–12 with min ≤ max");
+  need(groupMin !== null && groupMax !== null && groupMin <= groupMax, "โต๊ะละ 2 ถึง 12 คน และค่าน้อยสุดต้องไม่เกินค่ามากสุด", "Group size must be 2 to 12 with min ≤ max");
   need(d.accessibility.length <= 1000 && d.safetyInfo.length <= 1000, "ข้อมูลการเข้าถึง/ความปลอดภัยไม่เกิน 1,000 ตัวอักษร", "Accessibility and safety info are at most 1,000 characters");
   need(d.emergencyContact.length <= 200, "ช่องทางฉุกเฉินไม่เกิน 200 ตัวอักษร", "Emergency contact is at most 200 characters");
   need(d.tags.every((x) => values(EVENT_TAGS).includes(x)), "แท็กไม่ถูกต้อง", "Unknown tag");
@@ -684,8 +684,8 @@ function EventForm(props: {
     ...(d.status === "rejected" ? [{ value: "rejected", th: "ส่งกลับให้แก้", en: "Sent back to the host" }] : []),
   ];
   const visOpts = [
-    { value: "public", th: "สาธารณะ — แสดงบนหน้าค้นหา", en: "Public — listed on Discover" },
-    { value: "private", th: "ส่วนตัว — เฉพาะคนที่มีลิงก์", en: "Private — only people with the link" },
+    { value: "public", th: "สาธารณะ: แสดงในหน้าค้นหา", en: "Public: listed on Discover" },
+    { value: "private", th: "ส่วนตัว: เฉพาะคนที่มีลิงก์", en: "Private: only people with the link" },
   ];
   return (
     <form method="post" action={props.action} enctype="multipart/form-data">
@@ -745,7 +745,7 @@ function EventForm(props: {
             "Paste a full Google Maps link (with @lat,lng) to pin the exact place on the Discover map; without one it shows at district level",
           )}
         />
-        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
+        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
       </Card>
       <Card>
         <h2>{t("ผู้เข้าร่วม", "Who it's for")}</h2>
@@ -754,8 +754,8 @@ function EventForm(props: {
           <Field label={t("อายุต่ำสุด", "Minimum age")} name="ageMin" type="number" min={18} max={99} value={d.ageMin} required />
           <Field label={t("อายุสูงสุด", "Maximum age")} name="ageMax" type="number" min={18} max={99} value={d.ageMax} required />
           <Select label={t("ระดับความโซเชียล", "Social intensity")} name="intensity" options={INTENSITY} value={d.intensity} lang={lang} />
-          <Field label={t("กลุ่มเล็กสุด", "Smallest group")} name="groupMin" type="number" min={2} max={12} value={d.groupMin} required />
-          <Field label={t("กลุ่มใหญ่สุด", "Largest group")} name="groupMax" type="number" min={2} max={12} value={d.groupMax} required />
+          <Field label={t("คนต่อโต๊ะ (น้อยสุด)", "Smallest group")} name="groupMin" type="number" min={2} max={12} value={d.groupMin} required />
+          <Field label={t("คนต่อโต๊ะ (มากสุด)", "Largest group")} name="groupMax" type="number" min={2} max={12} value={d.groupMax} required />
         </div>
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Bring-a-friend (+1) allowed")} checked={d.plusOneAllowed} />
@@ -774,9 +774,9 @@ function EventForm(props: {
       </Card>
       <Card>
         <h2>{t("ผู้ดูแลและสถานะ", "Host and status")}</h2>
-        <Select label={t("โฮสต์", "Host")} name="hostAccountId" options={hostOpts} value={d.hostAccountId} lang={lang} blank={t("— ยังไม่กำหนด —", "— Not assigned —")} />
+        <Select label={t("โฮสต์", "Host")} name="hostAccountId" options={hostOpts} value={d.hostAccountId} lang={lang} blank={t("ยังไม่กำหนด", "Not assigned")} />
         {props.a.role === "bma_admin" ? (
-          <Select label={t("องค์กรพาร์ตเนอร์", "Partner organisation")} name="partnerOrgId" options={orgOpts} value={d.partnerOrgId} lang={lang} blank={t("— Jurrgun (ไม่มีพาร์ตเนอร์) —", "— Jurrgun (no partner) —")} />
+          <Select label={t("องค์กรพาร์ตเนอร์", "Partner organisation")} name="partnerOrgId" options={orgOpts} value={d.partnerOrgId} lang={lang} blank={t("Jurrgun (ไม่มีพาร์ตเนอร์)", "Jurrgun (no partner)")} />
         ) : null}
         {d.status === "cancelled" ? (
           <p>
@@ -954,7 +954,7 @@ adminEvents.post(
         .limit(MAX_REGS);
       for (const r of regs) {
         queries.push(
-          notify(db, r.accountId, "event_changed", `มีการเปลี่ยนเวลาหรือสถานที่: ${data.title}`, `Time or venue changed: ${data.titleEn ?? data.title}`, `/events/${e.id}`),
+          notify(db, r.accountId, "event_changed", `เวลาหรือสถานที่เปลี่ยน: ${data.title}`, `Time or venue changed: ${data.titleEn ?? data.title}`, `/events/${e.id}`),
         );
       }
     }
@@ -1012,7 +1012,7 @@ adminEvents.post(
     await batch(c.env, [
       db.update(events).set({ status: "cancelled" }).where(eq(events.id, e.id)),
       ...regs.map((r) =>
-        notify(db, r.accountId, "event_cancelled", `ขออภัย กิจกรรมถูกยกเลิก: ${e.title}`, `Sorry — this event was cancelled: ${e.titleEn ?? e.title}`, `/events/${e.id}`),
+        notify(db, r.accountId, "event_cancelled", `ขออภัย กิจกรรมถูกยกเลิก: ${e.title}`, `Sorry, this event was cancelled: ${e.titleEn ?? e.title}`, `/events/${e.id}`),
       ),
       audit(db, me(c).id, "event.cancel", { type: "event", id: e.id }, { notified: regs.length }),
     ]);
@@ -1025,7 +1025,7 @@ adminEvents.post(
 /** Icebreakers (PRD §9.3): activity- and city-based, never romantic. */
 const PROMPTS: { key: string; th: string; en: string }[] = [
   { key: "river", th: "หาคนที่อยู่อีกฝั่งแม่น้ำ", en: "Find someone who lives across the river from you" },
-  { key: "revisit", th: "เลือกที่ในกรุงเทพฯ ที่ทุกคนในกลุ่มอยากกลับไปอีก", en: "Pick one place in Bangkok everyone in your group would revisit" },
+  { key: "revisit", th: "เลือกที่หนึ่งในกรุงเทพฯ ที่ทุกคนในโต๊ะอยากกลับไปอีก", en: "Pick one place in Bangkok everyone in your group would revisit" },
   { key: "fix", th: "เลือกปัญหาเมือง 1 อย่างที่โต๊ะคุณจะแก้ก่อน", en: "Choose one city problem your table would fix first" },
   { key: "food", th: "แชร์ร้านอาหารลับ ๆ ในย่านของคุณ 1 ร้าน", en: "Share one hidden food spot from your neighbourhood" },
   { key: "route", th: "วางแผนเส้นทางเดินเล่น 1 ชั่วโมงที่โต๊ะคุณอยากไปด้วยกัน", en: "Plan a one-hour walk your table would do together" },
@@ -1041,9 +1041,9 @@ function registrationStatusLabel(v: View, s: string): string {
     case "offered":
       return t("เสนอที่นั่งแล้ว", "Offered");
     case "waitlisted":
-      return t("รายชื่อสำรอง", "Waitlisted");
+      return t("อยู่ในคิวสำรอง", "Waitlisted");
     case "late_cancelled":
-      return t("ยกเลิกช้า", "Late cancel");
+      return t("ยกเลิกกระชั้นชิด", "Late cancel");
     case "cancelled":
       return t("ยกเลิก", "Cancelled");
     default:
@@ -1146,7 +1146,7 @@ adminEvents.get(
           <StatusTag v={v} status={e.status} />
         </div>
         <div class="meta">
-          <span>🗓 {fmtDate(e.startsAt, lang)} – {fmtDate(e.endsAt, lang)}</span>
+          <span>🗓 {fmtDate(e.startsAt, lang)} {t("ถึง", "to")} {fmtDate(e.endsAt, lang)}</span>
           <span>📍 {e.venueName} · {label(DISTRICTS, e.district, lang)}</span>
           <span>👤 {t("โฮสต์", "Host")}: {hostRow[0]?.nickname ?? t("ยังไม่กำหนด", "not assigned")}</span>
           {e.visitBangkokRoute ? <span>🧭 {label(VISITBANGKOK_ROUTES, e.visitBangkokRoute, lang)}</span> : null}
@@ -1181,8 +1181,8 @@ adminEvents.get(
           <Stat label={t("ยืนยัน / ที่นั่ง", "Confirmed / capacity")} value={`${confirmed.length} / ${e.capacity}`} />
           <Stat label={t("คาดว่าจะมา", "Expected")} value={confirmed.length} />
           <Stat label={t("เช็กอินแล้ว", "Checked in")} value={checked.length} />
-          <Stat label={t("ไม่มา", "No-shows")} value={ended ? noShows : "–"} hint={ended ? undefined : t("นับหลังจบงาน", "Counted after the end")} />
-          <Stat label={t("รายชื่อสำรอง", "Waitlist")} value={waitlist.filter((r) => r.status === "waitlisted").length} />
+          <Stat label={t("ไม่มาตามนัด", "No-shows")} value={ended ? noShows : "–"} hint={ended ? undefined : t("นับหลังจบงาน", "Counted after the end")} />
+          <Stat label={t("คิวสำรอง", "Waitlist")} value={waitlist.filter((r) => r.status === "waitlisted").length} />
         </div>
 
         <h2>{t("ผู้เข้าร่วม", "Attendees")}</h2>
@@ -1199,8 +1199,8 @@ adminEvents.get(
                   <th>{t("มากับ (+1)", "+1 with")}</th>
                   <th>{t("ขอบัดดี้", "Wants buddy")}</th>
                   <th>{t("เช็กอิน", "Checked in")}</th>
-                  <th>{t("กลุ่ม", "Group")}</th>
-                  <th>{t("ไม่มา", "No-show")}</th>
+                  <th>{t("โต๊ะ", "Group")}</th>
+                  <th>{t("ไม่มาตามนัด", "No-show")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1233,7 +1233,7 @@ adminEvents.get(
                           ) : s?.waivedBy ? (
                             <Tag tone="ok">{t("ยกเว้นแล้ว", "Waived")}</Tag>
                           ) : (
-                            <Tag tone="warn">{t("ไม่มา", "No-show")}</Tag>
+                            <Tag tone="warn">{t("ไม่มาตามนัด", "No-show")}</Tag>
                           )
                         ) : (
                           "—"
@@ -1247,9 +1247,9 @@ adminEvents.get(
           </div>
         )}
 
-        <h2>{t("รายชื่อสำรอง", "Waitlist")}</h2>
+        <h2>{t("คิวสำรอง", "Waitlist")}</h2>
         {waitlist.length === 0 ? (
-          <Empty>{t("ไม่มีรายชื่อสำรอง", "Nobody on the waitlist")}</Empty>
+          <Empty>{t("ไม่มีใครในคิวสำรอง", "Nobody on the waitlist")}</Empty>
         ) : (
           <>
             <ol>
@@ -1258,14 +1258,14 @@ adminEvents.get(
                   {nick.get(r.accountId)}{" "}
                   {r.status === "offered" ? (
                     <Tag tone="accent">
-                      {t("เสนอที่นั่งแล้ว ถึง ", "Offered until ")}
+                      {t("เสนอที่นั่งแล้ว ยืนยันได้ถึง ", "Offered until ")}
                       {r.offeredUntil ? fmtDate(r.offeredUntil, lang) : ""}
                     </Tag>
                   ) : null}
                 </li>
               ))}
             </ol>
-            <small>{t("ลำดับจริงใช้สิทธิ์ผู้อยู่อาศัยและกฎ strike ตอนเสนอที่นั่ง", "Offers apply resident priority and strike rules on top of this order")}</small>
+            <small>{t("ตอนเสนอที่นั่ง ระบบจะใช้สิทธิ์ผู้อยู่อาศัยและกฎ strike มาจัดลำดับด้วย", "Offers apply resident priority and strike rules on top of this order")}</small>
           </>
         )}
         {e.status === "published" && !ended ? (
@@ -1274,34 +1274,34 @@ adminEvents.get(
           </form>
         ) : null}
 
-        <h2 id="groups">{t("กลุ่มย่อย", "Small groups")}</h2>
+        <h2 id="groups">{t("โต๊ะ", "Small groups")}</h2>
         <p>
           <small>
             {t(
-              "จัดจากผู้ที่เช็กอินแล้วเท่านั้น คู่ +1 อยู่ด้วยกัน คนที่บล็อกกันไม่อยู่กลุ่มเดียวกัน",
+              "จัดเฉพาะคนที่เช็กอินแล้ว คู่ +1 ได้นั่งด้วยกัน และคนที่บล็อกกันจะไม่อยู่โต๊ะเดียวกัน",
               "Built from checked-in attendees only. +1 pairs stay together; blocked pairs are never seated together.",
             )}{" "}
-            {t(`ขนาดกลุ่ม ${e.groupMin}–${e.groupMax} คน`, `Group size ${e.groupMin}–${e.groupMax}.`)}
+            {t(`โต๊ะละ ${e.groupMin} ถึง ${e.groupMax} คน`, `Group size ${e.groupMin} to ${e.groupMax}.`)}
           </small>
         </p>
         {swaps !== undefined ? (
           <Notice kind={blockedQ && blockedQ !== "0" ? "warn" : "info"}>
-            {t("ผลการจัดกลุ่ม: ", "Suggestion quality: ")}
-            {t(`การสลับที่ยังอยากทำ ${swaps}`, `${swaps} blocking swaps`)} · {t(`คนที่ไม่มีภาษาร่วม ${isolated ?? 0}`, `${isolated ?? 0} without a shared language`)}
-            {blockedQ && blockedQ !== "0" ? ` · ${t(`คู่ที่บล็อกกันอยู่กลุ่มเดียวกัน ${blockedQ} — โปรดย้าย`, `${blockedQ} blocked pairs share a group — please move them`)}` : null}
+            {t("ผลการจัดโต๊ะ: ", "Suggestion quality: ")}
+            {t(`คู่ที่ยังอยากสลับโต๊ะ ${swaps}`, `${swaps} blocking swaps`)} · {t(`คนที่ไม่มีภาษาร่วม ${isolated ?? 0}`, `${isolated ?? 0} without a shared language`)}
+            {blockedQ && blockedQ !== "0" ? ` · ${t(`คู่ที่บล็อกกันแต่อยู่โต๊ะเดียวกัน ${blockedQ} คู่ ย้ายออกด้วย`, `${blockedQ} blocked pairs share a group. Please move them`)}` : null}
           </Notice>
         ) : null}
         {e.groupsPublishedAt ? (
           <Notice kind="ok">
-            {t("เผยแพร่กลุ่มแล้วเมื่อ ", "Groups published ")}
-            {fmtDate(e.groupsPublishedAt, lang)} — {t("คนที่มาสายจะเข้ากลุ่มที่เล็กที่สุดอัตโนมัติ", "late arrivals join the smallest group automatically")}
+            {t("เผยแพร่โต๊ะแล้วเมื่อ ", "Groups published ")}
+            {fmtDate(e.groupsPublishedAt, lang)} · {t("คนที่มาสายจะได้นั่งโต๊ะที่คนน้อยที่สุดโดยอัตโนมัติ", "late arrivals join the smallest group automatically")}
           </Notice>
         ) : null}
         <div class="grid2">
           {groupNos.map((g) => (
             <Card>
               <h3>
-                {t("กลุ่ม", "Group")} {g} <small>({groups.get(g)!.length})</small>
+                {t("โต๊ะ", "Group")} {g} <small>({groups.get(g)!.length})</small>
               </h3>
               <ul>
                 {groups.get(g)!.map((r) => (
@@ -1312,7 +1312,7 @@ adminEvents.get(
           ))}
           {ungrouped.length ? (
             <Card>
-              <h3>{t("ยังไม่มีกลุ่ม", "Not in a group")}</h3>
+              <h3>{t("ยังไม่มีโต๊ะ", "Not in a group")}</h3>
               <ul>
                 {ungrouped.map((r) => (
                   <li>{nick.get(r.accountId)}</li>
@@ -1323,17 +1323,17 @@ adminEvents.get(
         </div>
         <div class="row">
           <form method="post" action={`${BASE}/${e.id}/groups/suggest`}>
-            <Button kind={groupNos.length ? "ghost" : "primary"}>{t("แนะนำกลุ่ม", "Suggest groups")}</Button>
+            <Button kind={groupNos.length ? "ghost" : "primary"}>{t("แนะนำโต๊ะ", "Suggest groups")}</Button>
           </form>
           {groupNos.length ? (
             <form method="post" action={`${BASE}/${e.id}/groups/publish`}>
-              <Button>{e.groupsPublishedAt ? t("เผยแพร่อีกครั้ง", "Publish again") : t("เผยแพร่กลุ่ม", "Publish groups")}</Button>
+              <Button>{e.groupsPublishedAt ? t("เผยแพร่อีกครั้ง", "Publish again") : t("เผยแพร่โต๊ะ", "Publish groups")}</Button>
             </form>
           ) : null}
         </div>
         {checked.length ? (
           <details>
-            <summary>{t("ย้ายคนไปกลุ่มอื่น", "Move someone to another group")}</summary>
+            <summary>{t("ย้ายคนไปโต๊ะอื่น", "Move someone to another group")}</summary>
             <form method="post" action={`${BASE}/${e.id}/groups/move`}>
               <Select
                 label={t("ผู้เข้าร่วม", "Attendee")}
@@ -1341,13 +1341,13 @@ adminEvents.get(
                 lang={lang}
                 options={checked.map((r) => ({ value: r.id, th: nick.get(r.accountId)!, en: nick.get(r.accountId)! }))}
               />
-              <Field label={t("หมายเลขกลุ่ม (เว้นว่าง = ไม่มีกลุ่ม)", "Group number (blank = none)")} name="groupNo" type="number" min={1} max={99} />
+              <Field label={t("เลขโต๊ะ (เว้นว่าง = ไม่มีโต๊ะ)", "Group number (blank = none)")} name="groupNo" type="number" min={1} max={99} />
               <Button kind="ghost">{t("ย้าย", "Move")}</Button>
             </form>
           </details>
         ) : null}
 
-        <h2>{t("กิจกรรมละลายพฤติกรรม", "Icebreaker prompt")}</h2>
+        <h2>{t("คำถามละลายพฤติกรรม", "Icebreaker prompt")}</h2>
         {e.activePrompt ? (
           <Notice kind="info">
             {t("กำลังแสดง: ", "Showing now: ")}
@@ -1384,7 +1384,7 @@ adminEvents.get(
         <form method="post" action={`${BASE}/${e.id}/notice`}>
           <Field label={t("ข้อความ (ไทย)", "Message (Thai)")} name="th" required maxlength={200} />
           <Field label={t("ข้อความ (อังกฤษ)", "Message (English)")} name="en" required maxlength={200} />
-          <small>{t("ส่งถึงผู้ที่ยืนยัน ได้รับข้อเสนอ และรายชื่อสำรอง", "Goes to confirmed, offered and waitlisted registrants")}</small>
+          <small>{t("ส่งถึงคนที่ยืนยันแล้ว คนที่ได้รับข้อเสนอที่นั่ง และคนในคิวสำรอง", "Goes to confirmed, offered and waitlisted registrants")}</small>
           <div class="row">
             <Button>{t("ส่ง", "Send")}</Button>
           </div>
@@ -1427,18 +1427,18 @@ adminEvents.get(
           </details>
         ) : null}
 
-        <h2>{t("ผู้ไม่มาร่วมงาน", "No-shows")}</h2>
+        <h2>{t("คนที่ไม่มาตามนัด", "No-shows")}</h2>
         {ended ? (
           <form method="post" action={`${BASE}/${e.id}/noshows`}>
             <p>
               <small>
                 {t(
-                  "ผู้ที่ยืนยันแต่ไม่ได้เช็กอินจะได้ 1 strike (หมดอายุใน 90 วัน) และได้รับแจ้งเป็นการส่วนตัว ยกเว้นได้ในตารางด้านบน",
+                  "คนที่ยืนยันแล้วแต่ไม่ได้เช็กอินจะได้ 1 strike (หมดอายุใน 90 วัน) และได้รับแจ้งเป็นการส่วนตัว ยกเว้นให้ได้ในตารางด้านบน",
                   "Confirmed attendees who never checked in get 1 strike (expires in 90 days) and a private notice. You can waive one in the table above.",
                 )}
               </small>
             </p>
-            <Button kind="danger">{t("บันทึกผู้ไม่มา", "Record no-shows")}</Button>
+            <Button kind="danger">{t("บันทึกคนที่ไม่มาตามนัด", "Record no-shows")}</Button>
           </form>
         ) : (
           <p class="muted">{t("บันทึกได้หลังกิจกรรมจบ", "Available after the event ends")}</p>
@@ -1510,12 +1510,12 @@ adminEvents.get(
     const open = checkInOpen(e.startsAt);
     const msgs = {
       unsupported: t(
-        "เบราว์เซอร์นี้สแกน QR ไม่ได้ — ใช้รหัส 6 ตัวด้านล่างแทน (Chrome บน Android รองรับ)",
-        "This browser can't scan QR codes — use the 6-character code below (Chrome on Android works)",
+        "เบราว์เซอร์นี้สแกน QR ไม่ได้ ใช้รหัส 6 ตัวด้านล่างแทน (Chrome บน Android ใช้ได้)",
+        "This browser can't scan QR codes. Use the 6-character code below (Chrome on Android works)",
       ),
       ready: t("เล็งกล้องไปที่ QR บนบัตรเข้างาน", "Point the camera at the attendee's pass"),
-      denied: t("เปิดกล้องไม่ได้ — อนุญาตการใช้กล้องหรือใช้รหัสด้านล่าง", "Couldn't open the camera — allow access or use the code below"),
-      network: t("เชื่อมต่อไม่ได้ ลองอีกครั้ง", "Network error — try again"),
+      denied: t("เปิดกล้องไม่ได้ อนุญาตให้ใช้กล้อง หรือใช้รหัสด้านล่างแทน", "Couldn't open the camera. Allow access or use the code below"),
+      network: t("เชื่อมต่อไม่ได้ ลองอีกครั้ง", "Network error. Try again"),
     };
     return page(c, { title: t("จุดเช็กอิน", "Check-in station"), admin: true }, (
       <>
@@ -1530,8 +1530,8 @@ adminEvents.get(
         {open ? null : (
           <Notice kind="warn">
             {t(
-              "นอกช่วงเช็กอิน (30 นาทีก่อนเริ่ม ถึง 60 นาทีหลังเริ่ม) — ติ๊ก 'ข้ามช่วงเวลา' หากจำเป็น ระบบจะบันทึกไว้",
-              "Outside the check-in window (30 min before to 60 min after the start) — tick 'override' if you must; it is logged",
+              "ตอนนี้อยู่นอกช่วงเช็กอิน (30 นาทีก่อนเริ่ม ถึง 60 นาทีหลังเริ่ม) ถ้าจำเป็นให้ติ๊ก 'ข้ามช่วงเวลา' ระบบจะบันทึกไว้",
+              "Outside the check-in window (30 min before to 60 min after the start). Tick 'override' if you must; it is logged",
             )}
           </Notice>
         )}
@@ -1625,7 +1625,7 @@ adminEvents.post(
         )
         .limit(2);
       if (found.length === 0) return fail(404, t("ไม่พบรหัสนี้ในกิจกรรมนี้", "No confirmed attendee has this code"));
-      if (found.length > 1) return fail(409, t("รหัสนี้ตรงกับมากกว่า 1 คน — โปรดสแกน QR แทน", "This code matches more than one person — please scan the QR instead"));
+      if (found.length > 1) return fail(409, t("รหัสนี้ตรงกับมากกว่า 1 คน สแกน QR แทนนะ", "This code matches more than one person. Please scan the QR instead"));
       reg = found[0];
     } else {
       return fail(400, t("ใส่รหัส 6 ตัวหรือสแกน QR", "Enter the 6-character code or scan the QR"));
@@ -1686,11 +1686,11 @@ adminEvents.post(
       audit(db, a.id, "event.checkin", { type: "registration", id: reg.id }, { eventId: e.id, method, override: override && !checkInOpen(e.startsAt, now), groupNo }),
     ];
     if (groupNo !== null) {
-      queries.push(notify(db, reg.accountId, "group", `คุณอยู่กลุ่ม ${groupNo}`, `You're in group ${groupNo}`, `/events/${e.id}`));
+      queries.push(notify(db, reg.accountId, "group", `คุณนั่งโต๊ะ ${groupNo}`, `You're in group ${groupNo}`, `/events/${e.id}`));
     }
     await batch(c.env, queries);
 
-    const msg = t(`เช็กอิน ${nickname} แล้ว`, `${nickname} checked in`) + (groupNo !== null ? t(` · กลุ่ม ${groupNo}`, ` · group ${groupNo}`) : "");
+    const msg = t(`เช็กอิน ${nickname} แล้ว`, `${nickname} checked in`) + (groupNo !== null ? t(` · โต๊ะ ${groupNo}`, ` · group ${groupNo}`) : "");
     if (json) return c.json({ ok: true, already: false, message: msg, nickname, groupNo, checkedIn: await checkedInCount(db, e.id) });
     return c.redirect(`${BASE}/${e.id}/checkin?notice=checked_in`);
   }),
@@ -1805,7 +1805,7 @@ adminEvents.post(
     const regId = str(body.registrationId);
     const rawGroup = str(body.groupNo);
     const groupNo = rawGroup === "" ? null : intIn(rawGroup, 1, 99);
-    if (rawGroup !== "" && groupNo === null) return refuse(c, e, t("หมายเลขกลุ่ม 1–99", "Group number must be 1–99"));
+    if (rawGroup !== "" && groupNo === null) return refuse(c, e, t("เลขโต๊ะต้องอยู่ระหว่าง 1 ถึง 99", "Group number must be 1 to 99"));
     const [reg] = await db
       .select({ id: registrations.id, groupNo: registrations.groupNo, status: registrations.status, checkedInAt: registrations.checkedInAt })
       .from(registrations)
@@ -1829,10 +1829,10 @@ adminEvents.post(
       .from(registrations)
       .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.checkedInAt), isNotNull(registrations.groupNo)))
       .limit(MAX_REGS);
-    if (grouped.length === 0) return refuse(c, e, t("ยังไม่มีกลุ่ม — กด 'แนะนำกลุ่ม' ก่อน", "No groups yet — suggest groups first"), 409);
+    if (grouped.length === 0) return refuse(c, e, t("ยังไม่มีโต๊ะ กด 'แนะนำโต๊ะ' ก่อน", "No groups yet. Suggest groups first"), 409);
     await batch(c.env, [
       db.update(events).set({ groupsPublishedAt: new Date() }).where(eq(events.id, e.id)),
-      ...grouped.map((r) => notify(db, r.accountId, "group", `กลุ่มของคุณ: กลุ่ม ${r.groupNo}`, `Your group: group ${r.groupNo}`, `/events/${e.id}`)),
+      ...grouped.map((r) => notify(db, r.accountId, "group", `โต๊ะของคุณ: โต๊ะ ${r.groupNo}`, `Your group: group ${r.groupNo}`, `/events/${e.id}`)),
       audit(db, me(c).id, "event.groups_publish", { type: "event", id: e.id }, { notified: grouped.length }),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=groups_published#groups`);
@@ -1947,7 +1947,7 @@ adminEvents.post(
   withEvent(async (c, e, db) => {
     const { t } = view(c);
     const now = new Date();
-    if (now.getTime() < e.endsAt.getTime()) return refuse(c, e, t("บันทึกผู้ไม่มาได้หลังกิจกรรมจบ", "No-shows can only be recorded after the event ends"), 409);
+    if (now.getTime() < e.endsAt.getTime()) return refuse(c, e, t("บันทึกคนที่ไม่มาตามนัดได้หลังกิจกรรมจบ", "No-shows can only be recorded after the event ends"), 409);
     if (e.status !== "published") return refuse(c, e, t("กิจกรรมนี้ไม่ได้จัดขึ้น", "This event didn't run"), 409);
     const missing = await db
       .select({ id: registrations.id, accountId: registrations.accountId })
@@ -1974,7 +1974,7 @@ adminEvents.post(
             db,
             r.accountId,
             "strike",
-            `คุณไม่ได้เช็กอินที่ "${e.title}" จึงได้รับ 1 strike (หมดอายุใน 90 วัน) หากมีเหตุจำเป็นติดต่อโฮสต์ได้`,
+            `คุณไม่ได้เช็กอินที่ "${e.title}" เลยได้ 1 strike (หมดอายุใน 90 วัน) ถ้ามีเหตุจำเป็น ติดต่อโฮสต์ได้`,
             `You didn't check in at "${e.titleEn ?? e.title}", so you got 1 strike (expires in 90 days). If something came up, contact the host.`,
             "/me/events",
           ),
@@ -2005,7 +2005,7 @@ adminEvents.post(
     await batch(c.env, [
       db.update(strikes).set({ waivedBy: me(c).id, waivedReason: reason }).where(eq(strikes.id, s.id)),
       audit(db, me(c).id, "strike.waive", { type: "strike", id: s.id }, { eventId: e.id, accountId, reason }),
-      notify(db, accountId, "strike_waived", `strike จาก "${e.title}" ถูกยกเว้นแล้ว`, `Your strike from "${e.titleEn ?? e.title}" was waived`, "/me/events"),
+      notify(db, accountId, "strike_waived", `ยกเว้น strike จาก "${e.title}" ให้แล้ว`, `Your strike from "${e.titleEn ?? e.title}" was waived`, "/me/events"),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=done`);
   }),

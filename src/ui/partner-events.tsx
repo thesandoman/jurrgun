@@ -104,7 +104,7 @@ export function PartnerDetail(props: { e: PartnerEvent; t: T; lang: Lang }) {
         <dt>{t("เมื่อไหร่", "When")}</dt>
         <dd>
           {partnerWhen(e, lang)}
-          {end ? ` – ${end}` : ""}
+          {end ? ` ${t("ถึง", "to")} ${end}` : ""}
         </dd>
         <dt>{t("ที่ไหน", "Where")}</dt>
         <dd>{[e.venue, e.address, e.city, e.country].filter(Boolean).join(", ")}</dd>

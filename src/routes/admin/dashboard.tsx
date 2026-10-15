@@ -41,7 +41,7 @@ function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: st
       <Card>
         <p class="muted">
           {t(
-            "ลบข้อมูลตามตารางระยะเวลาเก็บรักษา: สัญญาณทางสังคมหลัง 7 วัน, ตัวเลือกที่ไม่ตรงกันเมื่อหน้าต่าง 72 ชม. ปิด, เซสชันที่หมดอายุ, บันทึกการเข้าสู่ระบบหลัง 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้อัตโนมัติวันละไม่เกิน 1 ครั้งเมื่อผู้ดูแลเปิดหน้านี้",
+            "ลบข้อมูลตามระยะเวลาเก็บรักษา ได้แก่ สัญญาณทางสังคมที่เกิน 7 วัน ตัวเลือกที่ไม่ตรงกันเมื่อครบ 72 ชม. เซสชันที่หมดอายุ บันทึกการเข้าสู่ระบบที่เกิน 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้เองวันละไม่เกิน 1 ครั้งเมื่อผู้ดูแลเปิดหน้านี้",
             "Deletes data on the retention schedule: social signals after 7 days, pending choices when the 72h window closes, expired sessions, sign-in attempts after 24h and accounts deactivated over 30 days ago. It also runs by itself at most once a day when an admin opens this page.",
           )}
         </p>
@@ -61,7 +61,7 @@ function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: st
               <Stat
                 label={t("บัญชีที่ลบถาวร", "Accounts deleted")}
                 value={n("accountsDeleted")}
-                hint={run.counts.accountsRemaining ? t("ยังมีอีก รันอีกครั้ง", "More waiting, run again") : undefined}
+                hint={run.counts.accountsRemaining ? t("ยังเหลืออีก กดรันอีกครั้ง", "More waiting, run again") : undefined}
               />
             </div>
           </>
@@ -169,7 +169,7 @@ adminDashboard.get("/", async (c) => {
             <Stat label={t("การลงทะเบียน 7 วันล่าสุด", "Registrations, last 7 days")} value={regs?.recent ?? 0} />
             <Stat label={t("รายงานที่ค้างอยู่", "Open reports")} value={openReports} hint={critical ? t(`ด่วน ${critical}`, `${critical} critical`) : undefined} />
             <Stat label={t("อัตราเช็กอิน 30 วัน", "Check-in rate, 30 days")} value={rate} />
-            <Stat label={t("สมาชิกที่ใช้งาน 30 วัน", "Active members, 30 days")} value={regs?.active ?? 0} hint={t("ลงทะเบียนกิจกรรมอย่างน้อย 1 ครั้ง", "registered for ≥1 event")} />
+            <Stat label={t("สมาชิกที่ใช้งาน 30 วัน", "Active members, 30 days")} value={regs?.active ?? 0} hint={t("ลงทะเบียนกิจกรรมอย่างน้อย 1 ครั้ง", "registered for 1+ events")} />
           </div>
           <div class="row" style="margin-top:12px">
             <LinkButton href="/admin/events">{t("จัดการกิจกรรม", "Manage events")}</LinkButton>
@@ -186,7 +186,7 @@ adminDashboard.get("/", async (c) => {
           <div class="spread">
             <div>
               <h2 style="margin:0">{t("รายงานที่รอตรวจสอบ", "Reports waiting")}</h2>
-              <p class="muted">{t("ด่วนตอบภายใน 1 ชม. ทั่วไป 24 ชม.", "Critical within 1h, standard within 24h")}</p>
+              <p class="muted">{t("รายงานด่วนตอบภายใน 1 ชม. ทั่วไปภายใน 24 ชม.", "Critical within 1h, standard within 24h")}</p>
             </div>
             <div class="stat-v">{openReports}</div>
           </div>
