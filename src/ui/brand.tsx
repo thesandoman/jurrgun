@@ -8,8 +8,13 @@ export const BRAND = {
   th: "เจอกัน",
   /** The one line, used everywhere the brand introduces itself (hero, meta, manifest). */
   tagline: { th: "กลุ่มเล็ก สถานที่จริง แล้วเจอกันนะ", en: "Small groups. Real Bangkok places. See you there." },
-  /** The endorsement (endorsed-brand model, design/reference/brand-positioning.md). Wording to be confirmed with the BMA. */
-  endorsement: { th: "ร่วมกับกรุงเทพมหานคร", en: "Made with the Bangkok Metropolitan Administration" },
+  /**
+   * The BMA's role (owner, 2026-10-15): Jurrgun is independent; the BMA is its
+   * main host, moderator and oversight admin. `bma` is the full line, `bmaShort`
+   * fits a card or pill.
+   */
+  bma: { th: "แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล", en: "An independent app, hosted and overseen by the Bangkok Metropolitan Administration" },
+  bmaShort: { th: "กทม. เป็นเจ้าภาพและกำกับดูแล", en: "Hosted and overseen by the BMA" },
   /** Where the app lives today; printed on share cards and films. */
   url: "jurrgun.apps.sv-academy.org",
   /** The planned domain (ktm = Krung Thep Maha Nakhon). Not bought yet: use `url` until it is. */

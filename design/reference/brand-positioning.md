@@ -2,15 +2,15 @@
 
 *2026-10-15. Settles the BMA question from the brand audit (`.agents/brand-audit.md`). Built from the owner's answers and `.agents/brand-context.md`.*
 
-## The decision
+## The decision (updated 2026-10-15 18:30)
 
-**Jurrgun is an independent brand, run by its founder, made with BMA as its main client and endorser.**
+**Jurrgun is an independent app, run by its founder. The BMA is its main host, moderator and oversight admin.**
 
-- **Owner and operator:** the founder runs Jurrgun, in coordination with BMA and with other vendors, hosts and partners (dating and friend apps such as CMB and Tinder, event organisers, the private sector).
-- **BMA:** the main client and the endorser. It is not the owner. BMA supplied the type system, so Sao Chingcha is used with permission.
-- **Ambition:** to be both an official city service and an independent company. The endorsed-brand model allows both: BMA's backing gives legitimacy in Bangkok, and the independent brand can grow and partner beyond it.
+- **Owner and operator:** the founder runs Jurrgun (the Jurrgun team is the data controller), working with the BMA and with other vendors, hosts and partners: dating and friend apps such as CMB and Tinder, event organisers, the private sector.
+- **The BMA:** the main host (city places, the official calendar, district reach), a moderator and the oversight admin. BMA staff moderate like Jurrgun's own team. They see what safety needs and never romance data or private choices. The BMA is **not** presented as maker or endorser: there is no "Made with the BMA". The line everywhere is **"แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล / An independent app, hosted and overseen by the Bangkok Metropolitan Administration"** (short form: "กทม. เป็นเจ้าภาพและกำกับดูแล / Hosted and overseen by the BMA"). The BMA supplied the type system, so Sao Chingcha is used with permission.
+- **Ambition:** both an official city service and an independent company. Independence lets Jurrgun grow and partner beyond the BMA, and the BMA's role as host and overseer gives it legitimacy and safety in Bangkok.
 
-In brand-architecture terms, this is an **endorsed brand**. Jurrgun is the name people know, and BMA appears as the endorser, the way a product says "by" or "with" a trusted parent. Jurrgun is never presented as BMA itself.
+*Earlier the same day this was an "endorsed brand" ("Made with the BMA"). The owner replaced that with the model above, so read "made with the BMA" further down as "hosted and overseen by the BMA".*
 
 ---
 
@@ -71,7 +71,7 @@ Two axes:
 
 ## 07 In one sentence
 
-**Jurrgun is Bangkok's human-first way to meet people: small groups at real city places, made with the BMA, so it's safe, fair and never about swiping.**
+**Jurrgun is Bangkok's human-first way to meet people: small groups at real city places, independent and hosted with the BMA, so it's safe, fair and never about swiping.**
 
 ---
 

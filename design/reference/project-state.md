@@ -1,6 +1,6 @@
 # Jurrgun project state: one source of truth for every chat
 
-*Kept by the Branding chat. Last reconciled 2026-10-15 18:30 (Bangkok), at main `31ecc25`. Every chat working in this repo reads this file first. Decisions that need the owner's approval go to the Branding chat, which collects them here, so no chat acts on an older or conflicting direction.*
+*Kept by the Branding chat. Last reconciled 2026-10-15 18:40 (Bangkok). Every chat working in this repo reads this file first. Decisions that need the owner's approval go to the Branding chat, which collects them here, so no chat acts on an older or conflicting direction.*
 
 ## How chats coordinate
 
@@ -13,6 +13,7 @@
 
 | # | Decision | Given in | Date |
 |---|---|---|---|
+| D0 | **BMA role:** independent app; the BMA is main host, moderator and oversight admin (see O1) | Branding | 10-15 18:30 |
 | D1 | Name: **Jurrgun** (เจอกัน, "jer-gun"). Live URL `jurrgun.apps.sv-academy.org`. `jurrgun.ktm` is planned but not bought, so don't print it yet | Branding, film-review | 10-15 |
 | D2 | Tagline: **กลุ่มเล็ก สถานที่จริง แล้วเจอกันนะ / Small groups. Real Bangkok places. See you there.** "More fun, one fan" is retired | Branding, film-review | 10-15 |
 | D3 | One green `#137f45`, cream `#fff9f0`, mango `#ffb443`, coral `#ff7a5c`. Fonts: **Sao Chingcha** (headings), **Anuphan** (everything else). No Inter, IBM Plex or TH Sarabun New | Branding | 10-15 |
@@ -27,23 +28,27 @@
 | D12 | Detecting Thai or English and tailoring the question bank for everyone is **Task 10**. The owner will send skills and subtasks; don't start it | Branding | 10-15 |
 | D13 | Task 6 (brand kit in Blender) is **postponed until the owner says go** | Branding | 10-15 |
 
-## Open: needs the owner (ask in Branding)
+## Resolved by the owner (2026-10-15 18:30, in Branding)
 
-| # | Conflict | Option A | Option B |
-|---|---|---|---|
-| O1 | **The BMA's role.** The live site and brand docs say "Made with the BMA" (endorsed brand, Branding chat). Later, in quiz-fork, the owner said "no endorsement. Assume the app is independent, and BMA is the host" | Keep "Made with the BMA" on the site, drop it from films | Remove the endorsement everywhere. Jurrgun is independent; describe the BMA as host (venues, city), e.g. "จัดที่สถานที่ของกรุงเทพมหานคร / Hosted at BMA places" |
-| O2 | **People in films.** film-review: a fictional illustrated cast (Fern). quiz-fork: "real users please", meaning real app screens of demo profiles | Illustrated cast labelled fictional | Real app screens with demo profiles (and later real members with consent) |
-| O3 | **Which chat finishes the films.** "Re-render the five Jurrgun films" is mid-way; quiz-fork paused to avoid overwriting | The re-render chat finishes, using O1 and O2 once decided (quiz-fork recommends this) | quiz-fork finishes; stop the re-render chat |
-| O4 | **Production database.** The live app has the chat photos, polls and host badge code, but not the database fields it needs. Circle chat errors the first time anyone opens it (no one has yet). Needs approval for an additive migration: 3 fields on `social_chat_messages` plus a votes table | Approve; the Quiz chat runs it | You add the fields on the SV Cloud dashboard |
+| # | Decision |
+|---|---|
+| O1 | **The BMA's role:** Jurrgun is independent, and the BMA is the main host, moderator and oversight admin. "Made with the BMA" is removed everywhere. The line is "แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล / An independent app, hosted and overseen by the BMA" (`BRAND.bma`, `BRAND.bmaShort`). The privacy notice says BMA staff moderate and see only what safety needs |
+| O2 | **People in films:** real app screens with demo profiles, led by one person, Fern, as a real profile in the real UI. No illustrated cast. Labelled "ข้อมูลตัวอย่าง · Demo profiles" |
+| O3 | **Films:** the re-render chat finishes all five. quiz-fork stays paused; its screens are in `~/jurgun-films/screens2/` |
+| O4 | **Live database:** migration `0016_wild_nekra` was applied 18:28 by Branding through the guarded setup route. The key is removed and the site is green |
+
+## Open: needs the owner
+
+None right now. New questions go to the Branding chat.
 
 ## Who is doing what
 
 | Chat | Doing | State | Notes |
 |---|---|---|---|
 | **Branding** (this) | Brand, copy, positioning, personalisation, coordination | active | collects approvals |
-| **Quiz** | Quiz, circle and chat features | idle, waiting for O4 | its schema change went live without the migration |
+| **Quiz** | Quiz, Regular Table and chat features | idle | migration 0016 now live |
 | **quiz-fork** | Film edits | paused | handing over to the re-render chat; captured 27 Thai screens in `~/jurgun-films/screens2/` |
-| **Re-render the five films** | Films G1 to G12 per `design/reference/film-revisions.md` | running | told about D5. Must also get O1 and O2 once decided, and the new screens in `screens2/` |
+| **Re-render the five films** | Films G1 to G12 per `design/reference/film-revisions.md` | running | has D5 and O1 to O3 (sent 18:30); uses `screens2/` |
 | **film-review** | Film review and brief | done | |
 | **UI/UX** | Accessibility and UX audit (light, dark, 320 px, large text) in worktree `.claude/worktrees/a11y` (branch `a11y-pass`) | running | branched at `ae24ac6`, so it must rebase on `31ecc25` (new names, segments, women-only, /international) before fixing |
 | **2.0** | Admins (sandosit, pjj, aey) | idle | |

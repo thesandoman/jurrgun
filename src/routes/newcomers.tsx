@@ -125,7 +125,7 @@ async function landing(c: Ctx, audience: Audience) {
               : L2(k.hero)}
           </h1>
           <small>{L2(k.sub)}</small>
-          <small class="endorse">🏛️ {L(lang, BRAND.endorsement)}</small>
+          <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
         </Tile>
         <Tile>
           <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />

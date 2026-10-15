@@ -40,6 +40,7 @@ body{font-family:'Anuphan',system-ui,sans-serif;color:#1e2b22;background:#fff9f0
 .brand b{font-family:'Sao Chingcha';font-weight:700;font-size:46px;letter-spacing:.01em}
 .brand small{font-weight:600;font-size:28px;color:#137f45}
 .foot{position:absolute;left:72px;right:72px;bottom:36px;display:flex;justify-content:space-between;align-items:center;font-size:24px;font-weight:600;color:#46564b}
+.foot span{white-space:nowrap}
 .pill{display:inline-flex;align-items:center;gap:10px;padding:10px 20px;border-radius:999px;background:#fff;border:2px solid #f0e2cc}
 `;
 
@@ -60,7 +61,7 @@ h2{font-weight:600;font-size:38px;margin-top:12px;color:#1e2b22}
   <h2>${esc(BRAND.tagline.en)}</h2>
   <div class="chips"><span class="chip">4–6 คนต่อโต๊ะ · per table</span><span class="chip">50 เขต · districts</span><span class="chip">16 ไทป์ · Bangkok Types</span></div>
 </div>
-<div class="foot"><span class="pill">🏛️ ${esc(BRAND.endorsement.th)} · Made with the BMA</span><span>${HOST}</span></div>`;
+<div class="foot"><span class="pill">🏛️ ${esc(BRAND.bmaShort.th)}</span><span>${HOST}</span></div>`;
 }
 
 function typeCard(key: (typeof ARCHETYPE_KEYS)[number]): string {

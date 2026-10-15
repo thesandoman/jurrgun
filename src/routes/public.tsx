@@ -30,7 +30,7 @@ publicRoutes.get("/", (c) => {
           {/* Each phrase stays whole: Thai line breaking would otherwise split "แล้ว|เจอกันนะ". */}
           <h2>{L(lang, BRAND.tagline).split(" ").map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}</h2>
           <small>{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</small>
-          <small class="endorse">🏛️ {L(lang, BRAND.endorsement)}</small>
+          <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
         </Tile>
         <Tile href="/buddy" tone="deep" size="tall">
           <span class="go" aria-hidden="true">↗</span>
@@ -95,7 +95,7 @@ publicRoutes.get("/intro", (c) => {
       tone: "s1",
       title: t("เจอกัน 👋", "Jurrgun 👋"),
       body: t("ที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ แล้วเจอกันนะ!", "“Jurrgun” (เจอกัน, say “jer-gun”) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
-      foot: t(BRAND.endorsement.th, BRAND.endorsement.en),
+      foot: t(BRAND.bma.th, BRAND.bma.en),
     },
     {
       art: "🗺️",
@@ -185,7 +185,7 @@ publicRoutes.get("/privacy", (c) => {
     { title: t("ความเป็นส่วนตัว", "Privacy") },
     <>
       <h1>{t("นโยบายความเป็นส่วนตัว (ฉบับร่างต้นแบบ)", "Privacy notice (prototype draft)")}</h1>
-      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ ทำร่วมกับกรุงเทพมหานคร (กทม.) และดำเนินการโดยทีม Jurrgun ซึ่งเป็นผู้ควบคุมข้อมูลส่วนบุคคล เราเก็บข้อมูลเท่าที่จำเป็น และแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok, run by the Jurrgun team (the data controller) and made with the Bangkok Metropolitan Administration (BMA). We collect only what's needed and keep it in three separate stores:")}</p>
+      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ เป็นแอปอิสระที่ดำเนินการโดยทีม Jurrgun ซึ่งเป็นผู้ควบคุมข้อมูลส่วนบุคคล มีกรุงเทพมหานคร (กทม.) เป็นเจ้าภาพหลักและผู้กำกับดูแล เราเก็บข้อมูลเท่าที่จำเป็น และแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok, an independent app run by the Jurrgun team (the data controller), with the Bangkok Metropolitan Administration (BMA) as its main host and oversight body. We collect only what's needed and keep it in three separate stores:")}</p>
       <ul>
         <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เก็บแบบแฮช ไม่เก็บรหัสจริง) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
         <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม คนรู้จัก", "Social: nickname, interests, events attended, connections.")}</li>
@@ -193,7 +193,7 @@ publicRoutes.get("/privacy", (c) => {
       </ul>
       <p>{t("สถานะความสัมพันธ์ อัตลักษณ์ทางเพศ และ 'เปิดใจให้ใคร' เป็นข้อมูลส่วนตัว ไม่แสดงต่อสาธารณะ และเจ้าหน้าที่คนใดก็ดูไม่ได้", "Relationship status, gender identity and 'open to meeting' are private, never public, and not visible to any staff member.")}</p>
       <p>{t("คุณดูหรือดาวน์โหลดข้อมูลของคุณ เปลี่ยนความยินยอม หรือปิดบัญชีได้ที่ ตั้งค่า → ศูนย์ความเป็นส่วนตัว", "You can view, download, change consents or deactivate in Settings → Privacy Center.")}</p>
-      <p class="muted">{t("กทม. ไม่ได้รับข้อมูลส่วนตัวของคุณ ได้รับเฉพาะภาพรวม City Pulse เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): จะประกาศก่อนเปิดใช้งานจริง", "The BMA never receives your personal data, only City Pulse totals. Data Protection Officer: to be named before public launch.")}</p>
+      <p class="muted">{t("เจ้าหน้าที่ กทม. ช่วยดูแลและกำกับความปลอดภัยของชุมชน เหมือนทีมงานของเรา เขาเห็นเฉพาะข้อมูลที่จำเป็นต่อความปลอดภัย เช่น สถานะบัญชีและรายงาน ไม่เห็นสถานะความสัมพันธ์ อัตลักษณ์ทางเพศ การตั้งค่าเปิดใจมากกว่าเพื่อน หรือตัวเลือกส่วนตัวของคุณ ผล City Pulse ส่งให้ กทม. เฉพาะภาพรวมจากอย่างน้อย 10 คน เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): จะประกาศก่อนเปิดใช้งานจริง", "BMA staff help moderate and oversee the community, like our own team. They see only what safety needs, such as account status and reports, never your relationship status, gender identity, Open to something more settings or private choices. City Pulse results reach the BMA only as totals from 10 or more people. Data Protection Officer: to be named before public launch.")}</p>
     </>,
   );
 });

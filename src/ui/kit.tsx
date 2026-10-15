@@ -107,7 +107,7 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
 function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; children: Child }) {
   const { v, opts } = props;
   const shareTitle = opts.share?.title ?? `Jurrgun (เจอกัน): ${BRAND.tagline.en}`;
-  const shareText = opts.share?.description ?? `${BRAND.tagline.th} · Make friends in Bangkok, no endless swiping. ${BRAND.endorsement.en}.`;
+  const shareText = opts.share?.description ?? `${BRAND.tagline.th} · Make friends in Bangkok, no endless swiping. ${BRAND.bma.en}.`;
   const shareImage = props.origin + asset(opts.share?.image ?? "og/site.jpg");
   const { t, user } = v;
   const member = !!user?.profile?.onboardedAt;
@@ -181,7 +181,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
           <span>{t("แอปนัดเจอเพื่อนใหม่ในกรุงเทพฯ", "Social meetups for Bangkok")}</span>
-          <span class="foot-endorse">🏛️ {t(BRAND.endorsement.th, BRAND.endorsement.en)}</span>
+          <span class="foot-endorse">🏛️ {t(BRAND.bma.th, BRAND.bma.en)}</span>
         </footer>
           </>
         )}
