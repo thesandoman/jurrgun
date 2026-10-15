@@ -172,8 +172,11 @@ function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | und
     const t = s.twin ? core.find((x) => x.id === s.twin) : undefined;
     if (t && s.id < t.id) twinPairs.push([s, t]);
   }
-  const pairSeen = (p: [Scenario, Scenario]) => (seen.has(p[0].id) ? 1 : 0) + (seen.has(p[1].id) ? 1 : 0);
-  const pairs = shuffle(rng, twinPairs).sort((a, b) => pairSeen(a) - pairSeen(b)).slice(0, TWIN_PAIRS);
+  // Out-of-season pairs go last too: twins are picked first, so without this a seasonal twin
+  // would show up just as often out of season once the bank is big.
+  const pairRank = (p: [Scenario, Scenario]) =>
+    (p.some((s) => outOfSeason(s, month)) ? 4 : 0) + (seen.has(p[0].id) ? 1 : 0) + (seen.has(p[1].id) ? 1 : 0);
+  const pairs = shuffle(rng, twinPairs).sort((a, b) => pairRank(a) - pairRank(b)).slice(0, TWIN_PAIRS);
   const chosen: Scenario[] = pairs.flat();
   // From the other twin pairs, at most one half may appear, so exactly two pairs are checked.
   const blocked = new Set<string>();

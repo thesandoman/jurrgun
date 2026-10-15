@@ -46,8 +46,10 @@ describe("Bangkok Type quiz balance (5,000 simulated sessions)", () => {
   });
 
   it('"None of these are me" casts no vote and still finds people', () => {
-    // Real people pass only when nothing fits; that costs no accuracy (checked above with it on).
-    expect(r.persona.meanPasses).toBeGreaterThan(0);
+    // Real people pass only when nothing fits (the best answer shares fewer than 2 letters). Every
+    // plain question shows opposite pairs, so its best answer always shares at least 2: they never
+    // need to (only the sliders, now removed, could leave nothing fitting).
+    expect(r.persona.meanPasses).toBe(0);
     // Someone who passes whenever their own type isn't there passes on most questions, and still mostly gets their type.
     expect(r.picky.meanPasses).toBeGreaterThan(8);
     expect(r.picky.overall).toBeGreaterThan(0.78);
