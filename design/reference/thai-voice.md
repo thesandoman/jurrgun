@@ -22,6 +22,10 @@ Like a friendly friend who knows Bangkok well and invites you along. Warm, short
 9. **Numbers and time.** Use Arabic numerals: 4 ถึง 6 คน, 24 ชั่วโมง, 3 ทุ่ม. Write "น." after 24-hour times (19:00 น.) only on formal pages.
 10. **Brand words stay as they are** (see the glossary), so members learn one word per thing.
 
+## The owner's copy rule (all languages, all channels)
+
+Grammatical, no run-on sentences, simple and concise, not corporate, and it should make people feel something.
+
 ## Glossary (canonical spellings)
 
 The spellings follow the Royal Institute's transliteration where one exists, matching the BMA's own usage.

@@ -1,5 +1,13 @@
 # Jurrgun films: revision brief
 
+> **Superseded in part (owner, 2026-10-15 18:30; see `design/reference/project-state.md`):**
+> - **BMA line:** "Made with the BMA" (G2) is out. Use "แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล / An independent app, hosted and overseen by the BMA" on every film, 02 included.
+> - **People:** the illustrated cast (G12) is out. Use real app screens with demo profiles, led by Fern as a real profile, labelled "ข้อมูลตัวอย่าง · Demo profiles".
+> - **Film 02:** goes on BMA channels.
+> - **Names:** Circle → Regular Table (โต๊ะประจำ), leader → Table Host (เจ้าภาพโต๊ะ).
+> - **Copy:** grammatical, no run-on sentences, simple, not corporate, emotional.
+> - **Who:** the re-render chat finishes all five films.
+
 *2026-10-15. The changes to make to the five films, ready to hand to whoever re-renders them (sources in `~/jurgun-films`, one `tools/build.py` per film, shared parts in `lib/kit.py`). The reasoning is in `design/reference/film-review.md`; this file is just the to-do. **Status: waiting for the owner's approval.***
 
 ## Owner decisions (2026-10-15)
