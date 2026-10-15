@@ -15,7 +15,7 @@
  * Match labels (Natural / Complementary / Interesting) are conversation
  * starters between TYPES. They never hide, rank or exclude anyone.
  */
-import { CATEGORIES, type Category, type Text } from "./content";
+import { CATEGORIES, MOTIVE_PLACES, MOTIVES, type Category, type Motive, type Text } from "./content";
 import { strengthOf } from "./generator";
 import { codePoles, TYPE_CODES, type TypeCode } from "./scenarios";
 
@@ -576,6 +576,8 @@ export type TypeResult = {
   unsure: Category[];
   consistency: number | null;
   margin?: Partial<Record<Category, number>>;
+  /** What moves you (D32): shown as one sentence with a place to try, never part of the type. */
+  moves?: { motive: Motive; place: string };
 };
 
 /**
@@ -626,7 +628,9 @@ export function resultOf(row: { archetype: ArchetypeKey; vector: Record<string, 
   const open = CODE_AXES.map((a, i) => i).filter((i) => unsure.includes(CODE_AXES[i].category));
   const range = open.length === 0 ? [row.archetype] : open.length === 1 ? [row.archetype, flip(row.archetype, open[0])] : blend.map((b) => b.key);
   const margin = !Array.isArray(raw) ? raw?.margin : undefined;
-  return { types: blend, unsure, consistency, ...(margin ? { margin } : {}), range };
+  const mv = !Array.isArray(raw) ? raw?.moves : undefined;
+  const moves = mv && (MOTIVES as readonly string[]).includes(mv.motive) && MOTIVE_PLACES[mv.motive].some((p) => p.id === mv.place) ? mv : undefined;
+  return { types: blend, unsure, consistency, ...(margin ? { margin } : {}), ...(moves ? { moves } : {}), range };
 }
 
 /** The flavour badges for a modifier string, e.g. ["🌙 Night owl", "🗓️ Planner"]. */

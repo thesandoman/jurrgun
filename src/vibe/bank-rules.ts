@@ -3,6 +3,7 @@
  * test/bank.test.ts and by scripts/check-bank.ts while writing new scenarios.
  */
 import { DISTRICTS } from "../lib/constants";
+import { MOTIVES } from "./content";
 import type { Scenario } from "./scenarios";
 
 const CODES = [
@@ -16,6 +17,11 @@ const CONTEXTS = new Set(["friends", "family", "date", "solo", "coworkers", "par
 const KINDS = new Set(["core", "rhythm", "plan"]);
 const TONES = new Set(["dawn", "morning", "afternoon", "evening", "night", "rain"]);
 const MOODS = new Set(["everyday", "landmark", "seasonal", "funny", "personality"]);
+const MOTIVE_KEYS = new Set<string>(MOTIVES);
+/** A personality scenario with motives: each motive on at least this many of the 16 answers. */
+export const MOTIVE_MIN_PER_SCENARIO = 2;
+/** Names of other personality systems: our quiz is inspired by them, never named after them. */
+export const BORROWED_NAMES = /MBTI|Myers|Briggs|Enneagram|เอ็นเนียแกรม/i;
 const AUDIENCES = new Set(["local", "newcomer", "international"]);
 const SETS = new Set(["open-to-more", "table-host"]);
 export const DISTRICT_KEYS = new Set(DISTRICTS.map((d) => d.value));
@@ -138,6 +144,7 @@ export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {
       [GENDERED_EN, "gendered word"],
       [ADULT_EN, "not family friendly"],
       [RETIRED_EN, "retired name"],
+      [BORROWED_NAMES, "another personality system's name"],
     ] as const) {
       const m = re.exec(en ?? "");
       if (m) errors.push(`${where}: ${what} "${m[0]}" in EN: ${en}`);
@@ -150,6 +157,7 @@ export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {
       [RETIRED_TH, "retired name"],
       [SPELLING_TH, "glossary spelling"],
       [POLITE_TH, "polite particle"],
+      [BORROWED_NAMES, "another personality system's name"],
     ] as const) {
       const m = re.exec(th ?? "");
       if (m) errors.push(`${where}: ${what} "${m[0]}" in TH: ${th}`);
@@ -194,6 +202,11 @@ export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {
     }
     if (sc.friend && sc.context !== "date") errors.push(`${w}: only date scenarios have a friend wording`);
     text(`${w} prompt`, sc.prompt?.en, sc.prompt?.th);
+    // Motives: personality scenarios only, and then on all 16 answers, every motive on at least two.
+    const motives = new Map<string, number>();
+    const withMotive = CODES.filter((c) => sc.answers?.[c as keyof typeof sc.answers]?.motive !== undefined).length;
+    if (withMotive > 0 && sc.mood !== "personality") errors.push(`${w}: only personality scenarios carry motives`);
+    if (withMotive > 0 && withMotive < 16) errors.push(`${w}: a motive on ${withMotive} answers, needs all 16 or none`);
     for (const [lang, p] of [["EN", sc.prompt?.en], ["TH", sc.prompt?.th]] as const) if (p && !/[?:…]$/.test(p.trim())) errors.push(`${w}: ${lang} prompt must end with "?", ":" or "…"`);
     const keys = Object.keys(sc.answers ?? {});
     if (keys.length !== 16 || !CODES.every((c) => keys.includes(c))) errors.push(`${w}: needs exactly the 16 type codes, has ${keys.join(",")}`);
@@ -209,6 +222,10 @@ export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {
       if (seenEn.has(key)) errors.push(`${aw}: duplicate answer text`);
       seenEn.add(key);
       errors.push(...answerSense(aw, code, sc.kind, a.en, a.th, LEGACY_IDS.has(sc.id)));
+      if (a.motive !== undefined) {
+        if (!MOTIVE_KEYS.has(a.motive)) errors.push(`${aw}: bad motive ${a.motive}`);
+        motives.set(a.motive, (motives.get(a.motive) ?? 0) + 1);
+      }
       // Alone or as a pair is the whole point of a solo or date scenario, so C needs no word there.
       for (const L of code) if (HINT_EN[L] && !(L === "C" && (sc.context === "solo" || sc.context === "date")) && !HINT_EN[L].test(a.en ?? "")) warnings.push(`${aw}: nothing in the English shows ${L}: ${a.en}`);
       if (sc.kind === "core" && a.flavour !== undefined) errors.push(`${aw}: core answers have no flavour`);
@@ -217,6 +234,16 @@ export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {
         const opp = sc.answers?.[opposite(code) as keyof typeof sc.answers];
         if (opp && a.flavour !== undefined && opp.flavour === a.flavour) errors.push(`${aw}: flavour must be the opposite of ${opposite(code)}'s`);
       }
+    }
+    if (withMotive === 16) for (const m of MOTIVES) if ((motives.get(m) ?? 0) < MOTIVE_MIN_PER_SCENARIO) errors.push(`${w}: motive "${m}" is on ${motives.get(m) ?? 0} answers, needs at least ${MOTIVE_MIN_PER_SCENARIO}`);
+  }
+  // A motive must not be the type in disguise: across the scenarios with
+  // motives, each type's answers point at at least four different ones.
+  const withMotives = list.filter((sc) => CODES.some((c) => sc.answers?.[c as keyof typeof sc.answers]?.motive));
+  if (withMotives.length >= 6) {
+    for (const code of CODES) {
+      const used = new Set(withMotives.map((sc) => sc.answers?.[code as keyof typeof sc.answers]?.motive).filter(Boolean));
+      if (used.size < 4) errors.push(`type ${code}: answers with a motive use only ${used.size} motives, needs at least 4`);
     }
   }
   for (const sc of list) {

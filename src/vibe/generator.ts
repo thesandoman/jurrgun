@@ -47,7 +47,7 @@
  * only counts as clear when it is clear beyond the margin (see scoreSession).
  */
 
-import { CATEGORIES, POLES, type Category, type Pole, type Text } from "./content";
+import { CATEGORIES, MOTIVES, motivePlace, POLES, type Category, type Motive, type Pole, type Text } from "./content";
 import type { Segment } from "../domain/segment";
 import { SEGMENT_PROMPTS } from "./bank/segment-prompts";
 import { EXPAT_PROMPTS, explainLocal } from "./bank/plain-english";
@@ -69,7 +69,7 @@ const TWIN_GAP = 8;
 /** The least of each context in one session's 16 core questions. */
 export const CONTEXT_MIN: Record<Context, number> = { friends: 2, family: 3, date: 3, solo: 1, coworkers: 1, party: 2, meetup: 2 };
 
-export type Option = { label: Text; icon: string; type: TypeCode; district: string; flavour?: Pole };
+export type Option = { label: Text; icon: string; type: TypeCode; district: string; flavour?: Pole; motive?: Motive };
 
 export type Question = {
   id: string;
@@ -279,7 +279,7 @@ function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], p?
   const options: Option[] = codes.map((code) => {
     const a = sc.answers[code];
     const label = words.answer(code);
-    return { label: { en: en(label.en), th: label.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}) };
+    return { label: { en: en(label.en), th: label.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}), ...(a.motive ? { motive: a.motive } : {}) };
   });
   return {
     id: `${sc.id}.${hashString(codes.join("")).toString(36)}`,
@@ -410,6 +410,13 @@ export type VibeResult = {
   highlights: { category: Category; pole: Pole }[];
   /** 0..1 per type: how often the person picked that type's answer when it was offered. */
   affinity: Partial<Record<TypeCode, number>>;
+  /**
+   * What moves you (D32): the motive picked most often in the personality
+   * answers, and a place to try chosen from the districts the member picked.
+   * It becomes one sentence on the result (content.ts motiveSentence); it
+   * never changes the type. Null when no answer with a motive was picked.
+   */
+  moves: { motive: Motive; place: string } | null;
 };
 
 const isInt = (x: unknown): x is number => typeof x === "number" && Number.isInteger(x);
@@ -451,6 +458,8 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
   const offered: Partial<Record<TypeCode, number>> = {};
   const picked: Partial<Record<TypeCode, number>> = {};
   const pickByScenario = new Map<string, TypeCode>();
+  const motiveCount = new Map<Motive, number>();
+  const pickedDistricts: string[] = [];
   let answered = 0;
   for (const q of questions) {
     const o = pickedOption(q, answers[q.id]);
@@ -459,6 +468,8 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
     pickByScenario.set(q.scenario, o.type);
     for (const opt of q.options) offered[opt.type] = (offered[opt.type] ?? 0) + 1;
     picked[o.type] = (picked[o.type] ?? 0) + 1;
+    if (o.motive) motiveCount.set(o.motive, (motiveCount.get(o.motive) ?? 0) + 1);
+    pickedDistricts.push(o.district);
     for (const { category, pole } of codePoles(o.type)) {
       n[category] += 1;
       if (pole === 1) plus[category] += 1;
@@ -512,7 +523,16 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
     name: vibeName(highlights),
     highlights,
     affinity,
+    moves: movesOf(motiveCount, pickedDistricts, questions),
   };
+}
+
+/** The most picked motive (MOTIVES order on a tie) and its place, from the member's own picks. */
+function movesOf(count: Map<Motive, number>, districts: string[], questions: Question[]): VibeResult["moves"] {
+  const top = Math.max(0, ...count.values());
+  if (top === 0) return null;
+  const motive = MOTIVES.find((m) => count.get(m) === top)!;
+  return { motive, place: motivePlace(motive, districts, hashString(questions.map((q) => q.id).join())).id };
 }
 
 function poleInfo(category: Category, pole: Pole) {

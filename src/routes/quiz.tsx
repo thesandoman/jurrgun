@@ -27,7 +27,7 @@ import { segmentOf } from "../domain/segment";
 import { styleLines } from "../vibe/styles";
 import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
 import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
-import { CATEGORIES, POLES } from "../vibe/content";
+import { CATEGORIES, motiveSentence, POLES } from "../vibe/content";
 import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
 import { REFLECTION_CSS, ReflectionSteps } from "../ui/reflections";
 import { reflectionsFromForm, type Reflections } from "../content/reflections";
@@ -574,6 +574,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         </Tile>
       </div>
       <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
+      {res.moves ? <p class="type-moves">{L(lang, motiveSentence(res.moves.motive, res.moves.place))}</p> : null}
       <TypeFacts v={props.v} a={a} />
       <details class="how">
         <summary>{t("เกี่ยวกับไทป์นี้", "About this type")}</summary>
@@ -723,7 +724,7 @@ quizRoutes.post("/quiz", async (c) => {
     );
   }
   const { archetype, modifier, blend: types } = typeOf(result.vector, result.affinity, result.unsure);
-  const blend: TypeResult = { types, unsure: result.unsure, consistency: result.consistency, margin: result.margin };
+  const blend: TypeResult = { types, unsure: result.unsure, consistency: result.consistency, margin: result.margin, ...(result.moves ? { moves: result.moves } : {}) };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);
   const values = { vector: result.vector, archetype, modifier, blend, seen, takenAt: new Date() };
   const db = getDb(c.env);

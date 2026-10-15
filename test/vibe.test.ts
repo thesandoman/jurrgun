@@ -3,7 +3,7 @@
  * and the margin of error.
  */
 import { describe, expect, it } from "vitest";
-import { CATEGORIES } from "../src/vibe/content";
+import { CATEGORIES, MOTIVE_PLACES, motivePlace, motiveSentence } from "../src/vibe/content";
 import {
   CONTEXT_MIN,
   OPTIONS_PER_QUESTION,
@@ -74,6 +74,36 @@ describe("generateSession", () => {
     }
   });
 
+  it("personality picks give one 'what moves you' sentence with a real place, never changing the type", () => {
+    for (const code of ARCHETYPE_KEYS) {
+      // Q5's curated set will always include one; here, take the first random session that has one.
+      let k = 0;
+      while (!session(`motive-${code}-${k}`).some((q) => q.options.some((o) => o.motive))) k += 1;
+      const qs = session(`motive-${code}-${k}`);
+      const answers = answersAs(qs, code);
+      const r = scoreSession(qs, answers);
+      const all = (v: Answers[string]) => (Array.isArray(v) ? v : [v]);
+      const picked = qs.flatMap((q) => all(answers[q.id]).map((i) => q.options[i]?.motive)).filter((m) => m !== undefined);
+      expect(picked.length).toBeGreaterThan(0);
+      expect(r.moves).not.toBeNull();
+      expect(picked).toContain(r.moves!.motive);
+      expect(MOTIVE_PLACES[r.moves!.motive].map((p) => p.id)).toContain(r.moves!.place);
+      const line = motiveSentence(r.moves!.motive, r.moves!.place);
+      expect(line.th && line.en).toBeTruthy();
+      // Same answers with the personality questions skipped: no sentence, same letters.
+      const without = Object.fromEntries(Object.entries(answers).filter(([id]) => !qs.find((q) => q.id === id)!.options.some((o) => o.motive)));
+      const r2 = scoreSession(qs, without);
+      expect(r2.moves).toBeNull();
+      expect(typeOf(r2.vector, r2.affinity, r2.unsure).archetype).toBe(code);
+    }
+  });
+
+  it("the place in the sentence comes from the member's own picks when it can", () => {
+    expect(motivePlace("discovery", ["phasi_charoen", "phasi_charoen", "pathum_wan"], 0).id).toBe("khlong-bang-luang");
+    expect(motivePlace("calm", ["bang_rak"], 0).id).toBe("neilson-hays");
+    for (const seed of [0, 1, 2, 7]) expect(MOTIVE_PLACES.calm.map((p) => p.id)).toContain(motivePlace("calm", ["nong_chok"], seed).id);
+  });
+
   it("includes two twin pairs, at least 8 questions apart", () => {
     for (let i = 0; i < 300; i++) {
       const qs = session(`twin${i}`);
@@ -105,7 +135,7 @@ describe("generateSession", () => {
     for (let i = 0; i < 30; i++) {
       for (const q of session(`pub${i}`)) {
         const json = JSON.stringify(toPublic(q));
-        expect(json).not.toMatch(/"type"|"district"|"flavour"|"kind"|"context"|"twin"/);
+        expect(json).not.toMatch(/"type"|"district"|"flavour"|"kind"|"context"|"twin"|"motive"|"mood"/);
         for (const code of TYPE_CODES) expect(json).not.toContain(`"${code}"`);
       }
     }

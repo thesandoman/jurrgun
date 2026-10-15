@@ -20,7 +20,7 @@
  *   N New-scene (art, design, indie, new openings) / H Heritage (temples, old markets, old shops)
  * Nothing political or religious practice, and no em or en dashes.
  */
-import type { Category, Pole, Text } from "./content";
+import type { Category, Motive, Pole, Text } from "./content";
 import type { Tone } from "./visuals";
 import { CLASSIC } from "./bank/classic";
 import { DATES } from "./bank/dates";
@@ -32,7 +32,9 @@ import { FRIENDS_SOLO } from "./bank/friends-solo";
 import { JURRGUN } from "./bank/jurrgun";
 import { LANDMARKS_CITY } from "./bank/landmarks-city";
 import { LANDMARKS_EDGE } from "./bank/landmarks-edge";
+import { FUNNY } from "./bank/funny";
 import { PARTY_MEETUP_WORK } from "./bank/party-meetup-work";
+import { PERSONALITY } from "./bank/personality";
 import { PLAN } from "./bank/plan";
 import { RHYTHM } from "./bank/rhythm";
 import { SEASONAL } from "./bank/seasonal";
@@ -97,6 +99,12 @@ export type Answer = Text & {
   flavour?: Pole;
   /** A place written from memory that the owner should double-check (still open, right district). Never shown to members. */
   verify?: true;
+  /**
+   * Personality scenarios may carry a motive on every answer: what that answer
+   * says moves you (content.ts MOTIVES). It feeds the "what moves you" sentence
+   * and never the type.
+   */
+  motive?: Motive;
 };
 
 export type Scenario = {
@@ -129,4 +137,6 @@ export const SCENARIOS: Scenario[] = [
   ...CLASSIC, ...FAMILY, ...DATES, ...PARTY_MEETUP_WORK, ...FRIENDS_SOLO, ...RHYTHM, ...PLAN,
   // Task Q2: everyday Bangkok, landmarks and districts, seasons, and Jurrgun's own offerings.
   ...EVERYDAY_COMMUTE, ...EVERYDAY_HOME, ...EVERYDAY_RUT, ...LANDMARKS_CITY, ...LANDMARKS_EDGE, ...SEASONAL, ...JURRGUN,
+  // Task Q3: funny Bangkok moments and personality questions with motives.
+  ...FUNNY, ...PERSONALITY,
 ];

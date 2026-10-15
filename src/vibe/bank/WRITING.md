@@ -34,7 +34,11 @@ somewhere **familiar** (F), **seated/slow** (S) and **modern/creative** (N).
 `design/reference/quiz-review.md`). "Tai chi at Lumphini at 6am. The aunties
 already know your name", not "same spot, same small group". At most 3 of the
 16 answers may use "usual", "regular", "never" or "new" (the checker counts).
-A D answer must not read as a habit, nor an F answer as a first. Riding a boat,
+Every D and F answer still shows its letter to a reader (owner, D24), and a
+detail counts: "finally", "everyone keeps posting", "a friend swears by", "on
+a hunch" for D; "already knows your name", "your stool", "by name", "without
+asking", "still" for F (the full lists are DISCOVER_EN and FAMILIAR_EN in
+bank-rules.ts). A D answer must not read as a habit, nor an F answer as a first. Riding a boat,
 watching a show or floating a krathong is not M; a mall food court is not H.
 **Sense first:** if one type has no believable answer, change the scenario.
 
@@ -89,6 +93,35 @@ watching a show or floating a krathong is not M; a mall food court is not H.
 - Thai uses the glossary spellings in `design/reference/thai-voice.md` (เดต, แชต, เช็กอิน) and no polite particles.
 - Name the same place in both languages, with the same numbers.
 - Do not repeat an answer's wording from another scenario.
+
+## Funny and personality scenarios
+
+Q5's fixed, curated set (D26, D32) places 1 funny and 1 or 2 personality
+questions, including one whose answers carry motives.
+
+**Funny** (`mood: "funny"`, bank/funny-a.ts and funny-b.ts): a moment every
+Bangkokian has lived, like the BTS at Siam at 6 pm, the motorbike taxi
+"shortcut" or the rain that starts the second you leave the office. Warm,
+wholesome and funny (D32): the moment should make people smile, with no
+meme or punchline humour. It is the situation and how each type copes,
+never a person: no mocking a
+group, a job, a nationality, an accent, a body or an age. Riders, vendors and
+neighbours are kind and good at what they do. Each answer is still a
+believable choice that fits all four letters and names a real place.
+
+**Personality with motives** (`mood: "personality"`, bank/personality.ts):
+what drives you. Every answer also carries a `motive`, one of the six in
+`MOTIVES` (content.ts): useful, known, freedom, calm, discovery, belonging.
+The words must show it ("show the new person where everything is" is
+useful; "the owner already knows your order" is known). The result turns
+the most picked motive into one personal sentence, Thai first, with a real
+place to try chosen from the member's own picks (D32; `MOTIVE_LINES` and
+`MOTIVE_PLACES` in content.ts): no icon, no name to collect, never compared,
+and it never changes the four letters.
+Checked: a motive goes on all 16 answers or none, each motive on at least 2
+of them, and across the file every type uses at least 4 motives (a Chill
+answer can be belonging, a Buzz answer can be calm). Inspired by personality
+frameworks, in our own words: never write MBTI, Myers-Briggs or Enneagram.
 
 ## rhythm and plan scenarios
 

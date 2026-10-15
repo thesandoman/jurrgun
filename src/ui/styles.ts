@@ -170,6 +170,7 @@ dl.facts dd{margin:0}
 .code-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0 2px}
 .code-chips span{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:var(--surface-2);font-weight:700;letter-spacing:.06em;font-size:.86rem}
 .code-chips span.flavour{font-weight:600;letter-spacing:0;background:var(--gold-soft);color:var(--warn)}
+.type-moves{text-align:center;max-width:34ch;margin:10px auto 4px;line-height:1.55;font-size:1.02rem;text-wrap:pretty}
 .type-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;letter-spacing:.12em;color:var(--brand)}
 .type-grid .code-chips{justify-content:flex-start;margin:4px 0}
 .type-grid .code-chips span{padding:2px 7px;font-size:.78rem;gap:2px}

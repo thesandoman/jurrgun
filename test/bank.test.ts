@@ -14,9 +14,9 @@ describe("quiz bank", () => {
     expect(errors).toEqual([]);
   });
 
-  it("has 148 scenarios: 122 core, 14 rhythm, 12 plan", () => {
-    expect(SCENARIOS).toHaveLength(148);
-    expect(SCENARIOS.filter((s) => s.kind === "core")).toHaveLength(122);
+  it("has 198 scenarios: 172 core, 14 rhythm, 12 plan", () => {
+    expect(SCENARIOS).toHaveLength(198);
+    expect(SCENARIOS.filter((s) => s.kind === "core")).toHaveLength(172);
     expect(SCENARIOS.filter((s) => s.kind === "rhythm")).toHaveLength(14);
     expect(SCENARIOS.filter((s) => s.kind === "plan")).toHaveLength(12);
   });
@@ -41,6 +41,37 @@ describe("quiz bank", () => {
     for (const d of DISTRICT_KEYS) {
       expect(counts.get(d) ?? 0, d).toBeGreaterThanOrEqual(6);
       expect(counts.get(d) ?? 0, d).toBeLessThanOrEqual(total * 0.08);
+    }
+  });
+
+  it("has 30 funny core scenarios and 20 personality ones with a motive on every answer", async () => {
+    const { MOTIVES } = await import("../src/vibe/content");
+    const core = SCENARIOS.filter((s) => s.kind === "core");
+    expect(core.filter((s) => s.mood === "funny").length).toBeGreaterThanOrEqual(30);
+    const motivated = SCENARIOS.filter((s) => Object.values(s.answers).some((a) => a.motive));
+    expect(motivated.length).toBeGreaterThanOrEqual(20);
+    for (const s of motivated) {
+      expect(s.mood, s.id).toBe("personality");
+      expect(s.set, s.id).toBeUndefined();
+      for (const a of Object.values(s.answers)) expect(MOTIVES, s.id).toContain(a.motive);
+    }
+    // Every motive is reachable from most types, so the badge is not the type in disguise.
+    for (const m of MOTIVES) {
+      const types = new Set(motivated.flatMap((s) => Object.entries(s.answers).filter(([, a]) => a.motive === m).map(([k]) => k)));
+      expect(types.size, m).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it("the 'what moves you' sentences follow the same rules, at real places in real districts", async () => {
+    const { MOTIVES, MOTIVE_LINES, MOTIVE_PLACES } = await import("../src/vibe/content");
+    const { ADULT_EN, ADULT_TH, BANNED_EN, BANNED_TH, BORROWED_NAMES, GENDERED_EN, GENDERED_TH, POLITE_TH } = await import("../src/vibe/bank-rules");
+    for (const m of MOTIVES) {
+      expect(MOTIVE_PLACES[m].length, m).toBeGreaterThanOrEqual(3);
+      for (const x of [MOTIVE_LINES[m], ...MOTIVE_PLACES[m]]) {
+        for (const re of [BANNED_EN, GENDERED_EN, ADULT_EN, BORROWED_NAMES, /[–—]/]) expect(x.en, x.en).not.toMatch(re);
+        for (const re of [BANNED_TH, GENDERED_TH, ADULT_TH, BORROWED_NAMES, POLITE_TH, /[–—]/]) expect(x.th, x.th).not.toMatch(re);
+      }
+      for (const p of MOTIVE_PLACES[m]) expect(DISTRICT_KEYS.has(p.district), p.id).toBe(true);
     }
   });
 
