@@ -79,6 +79,7 @@ import {
   TextArea,
   Toggle,
   view,
+  ViewSwitch,
   type View,
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
@@ -550,13 +551,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
             );
           })}
         </nav>
-        <nav class="seg views" aria-label={t("มุมมอง", "View")}>
-          <a href={mapHref}>{t("แผนที่", "Map")}</a>
-          <a href={listHref} class="on" aria-current="page">
-            {t("รายการ", "List")}
-          </a>
-        </nav>
       </div>
+      <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
       {user.profile.newcomer ? (
         <Card class="hint">
           <strong>{t("เพิ่งย้ายมากรุงเทพฯ ใช่ไหม? 👋", "New to Bangkok? 👋")}</strong>
@@ -581,7 +577,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
           <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยจัดโต๊ะให้เข้ากับคุณ ไม่มีเรื่องการเมือง เป็นความลับจนกว่าคุณจะเลือกแสดง", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
         </Card>
       ) : null}
-      <details open={filtered}>
+      <details class="filters" open={filtered}>
         <summary>{t("ตัวกรอง", "Filters")}</summary>
         {filtersForm}
       </details>

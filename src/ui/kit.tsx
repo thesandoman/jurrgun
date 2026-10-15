@@ -12,10 +12,11 @@ import { STYLES } from "./styles";
 import { VISUAL_CSS } from "./visual";
 import { QUESTION_ART_CSS } from "./question-art";
 import { LAYOUT_CSS } from "./layout";
+import { NATIVE_CSS } from "./native";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + LAYOUT_CSS;
+const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + LAYOUT_CSS;
 import { BrandMark } from "./brand";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
@@ -459,4 +460,19 @@ export function list(v: unknown): string[] {
 export function int(v: unknown, fallback: number): number {
   const n = Number(str(v));
   return Number.isFinite(n) && Number.isInteger(n) ? n : fallback;
+}
+
+/** Discover's floating Map ⇄ Cards switch: one tap between the two views. */
+export function ViewSwitch(props: { t: T; on: "map" | "cards"; mapHref: string; cardsHref: string }) {
+  const { t } = props;
+  return (
+    <nav class="view-switch" aria-label={t("มุมมอง", "View")}>
+      <a href={props.mapHref} class={props.on === "map" ? "on" : undefined} aria-current={props.on === "map" ? "page" : undefined}>
+        🗺️ {t("แผนที่", "Map")}
+      </a>
+      <a href={props.cardsHref} class={props.on === "cards" ? "on" : undefined} aria-current={props.on === "cards" ? "page" : undefined}>
+        🃏 {t("การ์ด", "Cards")}
+      </a>
+    </nav>
+  );
 }

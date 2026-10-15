@@ -24,6 +24,7 @@
 import type { Child } from "hono/jsx";
 import { BrandMark } from "./brand";
 import { A11yMenu } from "./a11y";
+import { ViewSwitch } from "./kit";
 import type { Lang, T } from "../lib/i18n";
 import type { Precision } from "../lib/places";
 import { BKK_CENTER, BKK_PAN_LIMIT } from "../lib/places";
@@ -250,15 +251,14 @@ export function FullDiscover(props: {
           </span>
         </summary>
         <section id="discover-list" class="discover-list fd-sheet-body" aria-label={t("รายการกิจกรรม", "Event list")}>
-          <p class="fd-sheet-links">
-            <a href={props.listHref}>{t("เปิดเป็นหน้ารายการ →", "Open as a full list →")}</a>
-          </p>
+
           <p class="muted fd-nomatch" id="fd-nomatch" hidden>
             {cfg.words.noMatch}
           </p>
           {props.list}
         </section>
       </details>
+      <ViewSwitch t={t} on="map" mapHref="#" cardsHref={props.listHref} />
 
       <script type="application/json" id="dmap-data" dangerouslySetInnerHTML={{ __html: scriptJson(cfg) }} />
       <script type="module" dangerouslySetInnerHTML={{ __html: FULLMAP_JS.replace("__V__", SV_MAP_VERSION) }} />
