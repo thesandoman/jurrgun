@@ -22,6 +22,7 @@ import { themed } from "./styles";
 const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS;
 import { BRAND, BrandMark } from "./brand";
 import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
+import { asset, type AssetPath } from "../assets";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
 
@@ -44,6 +45,8 @@ export type PageOpts = {
   bare?: boolean;
   /** Full-screen map screens (Discover): the page draws its own floating header. */
   fullscreen?: boolean;
+  /** How a shared link to this page looks on LINE, Facebook, X (Open Graph). Defaults to the site card. */
+  share?: { image?: AssetPath; title?: string; description?: string };
 };
 
 /** Notices worth a little confetti. */
@@ -88,7 +91,7 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   const notice = noticeKey && NOTICES[noticeKey];
   const errorText = c.req.query("error");
   return c.html(
-    <Layout v={v} opts={opts}>
+    <Layout v={v} opts={opts} origin={new URL(c.req.url).origin} url={new URL(c.req.url).origin + new URL(c.req.url).pathname}>
       {notice ? (
         <Notice kind="ok" class={PARTY.has(noticeKey) ? "toast party" : "toast"}>
           {v.t(notice[0], notice[1])}
@@ -101,8 +104,11 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   );
 }
 
-function Layout(props: { v: View; opts: PageOpts; children: Child }) {
+function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; children: Child }) {
   const { v, opts } = props;
+  const shareTitle = opts.share?.title ?? `Jurrgun (เจอกัน): ${BRAND.tagline.en}`;
+  const shareText = opts.share?.description ?? `${BRAND.tagline.th} · Make friends in Bangkok, no endless swiping. ${BRAND.endorsement.en}.`;
+  const shareImage = props.origin + asset(opts.share?.image ?? "og/site.jpg");
   const { t, user } = v;
   const member = !!user?.profile?.onboardedAt;
   // Circle heads are members who host; they reach their check-in tools from Host.
@@ -117,6 +123,16 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         <meta name="description" content={`Jurrgun (เจอกัน): ${BRAND.tagline.th} · ${BRAND.tagline.en} Make friends in Bangkok, no endless swiping.`} />
         <meta name="theme-color" content="#fff9f0" media="(prefers-color-scheme: light)" data-media="(prefers-color-scheme: light)" data-scheme="light" />
         <meta name="theme-color" content="#06301c" media="(prefers-color-scheme: dark)" data-media="(prefers-color-scheme: dark)" data-scheme="dark" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Jurrgun" />
+        <meta property="og:title" content={shareTitle} />
+        <meta property="og:description" content={shareText} />
+        <meta property="og:url" content={props.url} />
+        <meta property="og:image" content={shareImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content={v.lang === "en" ? "en_GB" : "th_TH"} />
+        <meta name="twitter:card" content="summary_large_image" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         {PRELOAD_FONTS.map((f) => <link rel="preload" href={fontUrl(f)} as="font" type="font/woff2" crossorigin="" />)}

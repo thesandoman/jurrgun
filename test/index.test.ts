@@ -160,3 +160,18 @@ describe("GET /assets/*", () => {
     expect(res.headers.get("content-type")).toBe("application/octet-stream");
   });
 });
+
+describe("share cards (Open Graph)", () => {
+  it("gives every page the site card and every type page its own card", async () => {
+    const home = await (await app.request("http://localhost/privacy")).text();
+    expect(home).toMatch(/<meta property="og:image" content="http:\/\/localhost\/assets\/[0-9a-f]+\/og\/site\.jpg"/);
+    expect(home).toContain('name="twitter:card" content="summary_large_image"');
+    const { ARCHETYPE_KEYS, ARCHETYPES } = await import("../src/vibe/archetypes");
+    const { typeSlug } = await import("../src/routes/quiz");
+    const { assets } = await import("../src/assets");
+    for (const k of ARCHETYPE_KEYS) expect(Object.keys(assets), k).toContain(`og/types/${typeSlug(k)}.jpg`);
+    const html = await (await app.request("http://localhost/types/food-hunter")).text();
+    expect(html).toContain("/og/types/food-hunter.jpg");
+    expect(html).toContain(ARCHETYPES.BDSH.name.th);
+  });
+});

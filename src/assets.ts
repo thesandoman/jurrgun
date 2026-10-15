@@ -9,7 +9,25 @@
 //
 // Add a file to design/assets/, run `npm run assets`, and commit both.
 
-export const assets = {} as const;
+export const assets = {
+  "og/site.jpg": "/assets/cf811aaf5990/og/site.jpg",
+  "og/types/caf-curator.jpg": "/assets/d4be4ff3173c/og/types/caf-curator.jpg",
+  "og/types/cosy-creative.jpg": "/assets/b5133678e93f/og/types/cosy-creative.jpg",
+  "og/types/festival-regular.jpg": "/assets/9a45d8b03987/og/types/festival-regular.jpg",
+  "og/types/food-hunter.jpg": "/assets/c97e05f5b538/og/types/food-hunter.jpg",
+  "og/types/neighbourhood-keeper.jpg": "/assets/910469e08bbb/og/types/neighbourhood-keeper.jpg",
+  "og/types/night-market-regular.jpg": "/assets/e26c4a9fa3a8/og/types/night-market-regular.jpg",
+  "og/types/old-town-adventurer.jpg": "/assets/f4a8acb285f3/og/types/old-town-adventurer.jpg",
+  "og/types/park-regular.jpg": "/assets/9e88192a909d/og/types/park-regular.jpg",
+  "og/types/party-host.jpg": "/assets/e93e421d32e8/og/types/party-host.jpg",
+  "og/types/quiet-wanderer.jpg": "/assets/525b185a446a/og/types/quiet-wanderer.jpg",
+  "og/types/scene-seeker.jpg": "/assets/d8e102fcde6c/og/types/scene-seeker.jpg",
+  "og/types/steady-mover.jpg": "/assets/65dda78f32f5/og/types/steady-mover.jpg",
+  "og/types/story-collector.jpg": "/assets/bcaaaf67a37c/og/types/story-collector.jpg",
+  "og/types/street-explorer.jpg": "/assets/2d844147236e/og/types/street-explorer.jpg",
+  "og/types/team-player.jpg": "/assets/72d1db786cdf/og/types/team-player.jpg",
+  "og/types/temple-walker.jpg": "/assets/706e9fb0d0e2/og/types/temple-walker.jpg",
+} as const;
 
 /** Every asset path available to this app, e.g. `"logo.svg"` or `"icons/cart.svg"`. */
 export type AssetPath = keyof typeof assets;

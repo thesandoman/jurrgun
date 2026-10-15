@@ -12,6 +12,7 @@
  * it has already seen, so the client can never choose its questions. The
  * hidden seed field only proves the form is the current one.
  */
+import type { AssetPath } from "../assets";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
@@ -475,6 +476,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? res.unsure : undefined} />
       </details>
       <Matches v={props.v} archetype={key} />
+      <ShareType v={props.v} archetype={key} />
       <VisibilityToggle v={props.v} visible={props.row.visible} next={props.visibilityNext} />
       <div class="flow-bar">
         <LinkButton href={props.continueHref}>{props.continueLabel}</LinkButton>
@@ -485,6 +487,45 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * Share my type: the public type page, whose link preview is that type's card
+ * (design/assets/og/types). Uses the phone's share sheet when there is one,
+ * else LINE and copy. Shares the type only, never anything about me.
+ */
+function ShareType(props: { v: View; archetype: ArchetypeKey }) {
+  const { t, lang } = props.v;
+  const a = ARCHETYPES[props.archetype];
+  const path = `/types/${typeSlug(props.archetype)}`;
+  const text = t(`ฉันคือ ${a.name.th} ${a.emoji} แล้วคุณเป็นไทป์กรุงเทพฯ แบบไหน?`, `I'm ${a.name.en} ${a.emoji}. What's your Bangkok Type?`);
+  return (
+    <section class="card share-type" aria-label={t("แชร์ไทป์ของคุณ", "Share your type")}>
+      <h2>📣 {t("แชร์ไทป์ของคุณ", "Share your type")}</h2>
+      <p class="muted">{t("ชวนเพื่อนมาลองทำ แชร์แค่ไทป์ ไม่มีข้อมูลส่วนตัว", "Get friends to try it. Only your type is shared, nothing personal.")}</p>
+      <div class="row">
+        <button type="button" class="btn primary" data-share={path} data-text={text}>
+          {t("แชร์", "Share")}
+        </button>
+        <a class="btn ghost" data-line={path} href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(path)}`} target="_blank" rel="noopener noreferrer">
+          LINE
+        </a>
+        <button type="button" class="btn ghost" data-copy={path}>
+          {t("คัดลอกลิงก์", "Copy link")}
+        </button>
+      </div>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var s=document.currentScript.parentNode,abs=function(p){return location.origin+p};
+var sh=s.querySelector("[data-share]"),ln=s.querySelector("[data-line]"),cp=s.querySelector("[data-copy]");
+ln.href="https://social-plugins.line.me/lineit/share?url="+encodeURIComponent(abs(ln.dataset.line));
+if(!navigator.share)sh.hidden=true;
+sh.addEventListener("click",function(){navigator.share({title:"Jurrgun",text:sh.dataset.text,url:abs(sh.dataset.share)}).catch(function(){})});
+cp.addEventListener("click",function(){navigator.clipboard&&navigator.clipboard.writeText(abs(cp.dataset.copy)).then(function(){cp.textContent=${JSON.stringify(lang === "en" ? "Copied ✓" : "คัดลอกแล้ว ✓")}})})})();`,
+        }}
+      />
+    </section>
   );
 }
 
@@ -693,7 +734,15 @@ quizRoutes.get("/types/:slug", async (c) => {
   const mine = user ? (await loadVibe(c.env, user.account.id))?.archetype : undefined;
   return page(
     c,
-    { title: L(lang, a.name), tab: "me" },
+    {
+      title: L(lang, a.name),
+      tab: "me",
+      share: {
+        image: `og/types/${typeSlug(key)}.jpg` as AssetPath,
+        title: `${a.emoji} ${a.name.th} · ${a.name.en} | Jurrgun`,
+        description: `${a.tagline.th} · ${a.tagline.en} คุณเป็นไทป์ไหน? What's your Bangkok Type?`,
+      },
+    },
     <>
       <p>
         <a href="/types">← {t("ทุกไทป์", "All types")}</a>
