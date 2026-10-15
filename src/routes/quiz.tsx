@@ -86,9 +86,21 @@ export async function loadVibe(env: AppEnv["Bindings"], accountId: string): Prom
   return row ? { ...row, ...normalizeType(row) } : null;
 }
 
-/** Server-derived: never read from the client. */
-export function quizSeed(accountId: string, row: Pick<VibeRow, "seen"> | null): string {
-  return `${accountId}:${row ? row.seen.length : 0}`;
+/**
+ * Server-derived: never read from the client. It carries the month in Bangkok
+ * (seasonal scenarios are preferred in season), so a form sent after the month
+ * turns is "expired" rather than scored against a different session.
+ */
+export function quizSeed(accountId: string, row: Pick<VibeRow, "seen"> | null, now = new Date()): string {
+  const bkk = new Date(now.getTime() + 7 * 3_600_000);
+  const month = `${bkk.getUTCFullYear()}-${String(bkk.getUTCMonth() + 1).padStart(2, "0")}`;
+  return `${accountId}:${row ? row.seen.length : 0}:${month}`;
+}
+
+/** The month (1 to 12) a seed was made in, or undefined for a seed without one. */
+export function seedMonth(seed: string): number | undefined {
+  const m = /:\d{4}-(\d{2})$/.exec(seed);
+  return m ? Number(m[1]) : undefined;
 }
 
 /**
@@ -98,7 +110,7 @@ export function quizSeed(accountId: string, row: Pick<VibeRow, "seen"> | null): 
  * The POST rebuilds it from the same seed and profile inputs to score it.
  */
 export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal): AnyQuestion[] {
-  const options = { seed, seen: new Set(row?.seen ?? []), personal };
+  const options = { seed, seen: new Set(row?.seen ?? []), personal, month: seedMonth(seed) };
   return [...generateSession(options), ...generateStyleQuestions(options)];
 }
 

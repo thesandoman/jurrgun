@@ -61,8 +61,16 @@ export const PLAN: Scenario[] = [
     id: "date-plan",
     kind: "plan",
     context: "date",
-    set: "open-to-more",
     prompt: { en: "A second date is happening this week. How does it get planned?", th: "สัปดาห์นี้มีนัดเดตครั้งที่สอง จะวางแผนแบบไหน?" },
+    friend: {
+      icon: "🗓️",
+      prompt: { en: "You're meeting your buddy for the second time this week. How does it get planned?", th: "สัปดาห์นี้นัดเจอบัดดี้เป็นครั้งที่สอง จะวางแผนแบบไหน?" },
+      answers: {
+        BDMH: { en: "Map out the day a week ahead: paddle Khlong Lat Mayom, then the busy floating market, a first for both", th: "วางแผนล่วงหน้า 1 อาทิตย์ พายเรือคลองลัดมะยม ต่อด้วยตลาดน้ำที่คึกคัก ครั้งแรกของทั้งสองคน" },
+        BFMN: { en: "Book lanes days ahead for the usual Friday bowling crew at Major Cineplex Ratchayothin, your buddy included", th: "จองเลนล่วงหน้าหลายวัน โบว์ลิ่งคืนวันศุกร์กับแก๊งประจำที่เมเจอร์ รัชโยธิน ชวนบัดดี้มาด้วย" },
+        BFSH: { en: "Book the regular round table at a Charoen Nakhon Road seafood place, friends and your buddy invited a week ahead", th: "จองโต๊ะกลมประจำที่ร้านอาหารทะเลถนนเจริญนคร ชวนเพื่อน ๆ กับบัดดี้ล่วงหน้า 1 อาทิตย์" },
+      },
+    },
     icon: "💞",
     tone: "evening",
     mood: "everyday",

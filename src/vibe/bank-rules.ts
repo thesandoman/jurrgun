@@ -36,6 +36,15 @@ export const RETIRED_EN = /\bcircles?\b|dating mode|made with the bma/i;
 export const RETIRED_TH = /โหมดเดต|หาคู่|ตั้งวง|วงคุย|วงเพื่อน|ร่วมกับกรุงเทพมหานคร/;
 /** Spellings the Thai glossary (design/reference/thai-voice.md) replaces. */
 export const SPELLING_TH = /เดท|แชท|เช็คอิน|ลิ้?งค์|อีเว้?นท์|อีเวนต์|แมทช์|บล็อค|สแตมป์|เควส(?!ต์)|ไทพ์|บัดดี(?!้)|โฮส(?!ต์)|พาสปอต/;
+/**
+ * Romance words (owner, Q-D1): a date moment's friend wording, which members
+ * who aren't open to something more read, must never say any of these.
+ */
+export const ROMANCE_EN = /\b(dates?|dating|double date|partner|boyfriend|girlfriend|romantic|romance|crush|couples?(?! of)|anniversary|valentine'?s?|in love|lovers?|kiss)\b/i;
+/** Thai has no spaces between words: กาแฟ (coffee) holds แฟน and ขนมจีบ (dumplings) holds จีบ. */
+export const ROMANCE_TH = /เดต|(?<!กา)แฟน|คู่รัก|คู่เดต|โรแมนติก|วาเลนไทน์|(?<!ขนม)จีบ|ความรัก|หวานใจ/;
+export const ROMANCE_ICONS = /💘|💞|💕|💖|💗|💓|❤️|❤|💍|🌹|💋|😍|🥰/u;
+
 /** Polite particles: the app has no gender, so none at all (ครับ and ค่ะ are in GENDERED_TH). */
 export const POLITE_TH = /คะ(?=\s|$|[?!…])|จ้ะ|จ้า(?=\s|$)/;
 
@@ -158,8 +167,29 @@ export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {
     }
     for (const x of sc.audience ?? []) if (!AUDIENCES.has(x)) errors.push(`${w}: bad audience ${x}`);
     if (sc.set !== undefined && !SETS.has(sc.set)) errors.push(`${w}: bad set ${sc.set}`);
-    // Romance never reaches the core quiz (D4, quiz-blueprint 2.3b): every date moment is in the open-to-more set.
-    if (sc.context === "date" && sc.set !== "open-to-more") errors.push(`${w}: date scenarios belong in set "open-to-more"`);
+    // Date moments are in everyone's quiz (owner, Q-D1): members who aren't open to
+    // something more read the friend wording, which must have no romance in it.
+    if (sc.context === "date" && sc.set !== "open-to-more") {
+      const f = sc.friend;
+      if (!f?.prompt) errors.push(`${w}: a date scenario needs a friend wording (friend.prompt) unless it is in set "open-to-more"`);
+      else {
+        text(`${w} friend prompt`, f.prompt.en, f.prompt.th);
+        for (const [lang, p] of [["EN", f.prompt.en], ["TH", f.prompt.th]] as const) if (p && !/[?:…]$/.test(p.trim())) errors.push(`${w}: ${lang} friend prompt must end with "?", ":" or "…"`);
+        for (const k of Object.keys(f.answers ?? {})) if (!CODES.includes(k)) errors.push(`${w}: friend answer for unknown type ${k}`);
+        const read: [string, string, string, string][] = [["prompt", f.prompt.en, f.prompt.th, f.icon ?? sc.icon]];
+        for (const code of CODES) {
+          const a = sc.answers?.[code as keyof typeof sc.answers];
+          const o = f.answers?.[code as keyof typeof f.answers];
+          if (o) text(`${w} friend ${code}`, o.en, o.th);
+          if (a || o) read.push([code, (o ?? a)!.en, (o ?? a)!.th, a?.icon ?? ""]);
+        }
+        for (const [where, en, th, icon] of read) {
+          const m = ROMANCE_EN.exec(en ?? "") ?? ROMANCE_TH.exec(th ?? "") ?? ROMANCE_ICONS.exec(icon);
+          if (m) errors.push(`${w} friend ${where}: romance "${m[0]}" in the friend wording`);
+        }
+      }
+    }
+    if (sc.friend && sc.context !== "date") errors.push(`${w}: only date scenarios have a friend wording`);
     text(`${w} prompt`, sc.prompt?.en, sc.prompt?.th);
     for (const [lang, p] of [["EN", sc.prompt?.en], ["TH", sc.prompt?.th]] as const) if (p && !/[?:…]$/.test(p.trim())) errors.push(`${w}: ${lang} prompt must end with "?", ":" or "…"`);
     const keys = Object.keys(sc.answers ?? {});

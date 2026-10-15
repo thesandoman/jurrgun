@@ -52,7 +52,7 @@ describe("who sees which set", () => {
       expect(styles).toHaveLength(HOST_STYLE_ITEMS);
       expect(styles.every((q) => q.set === "table-host")).toBe(true);
       expect(new Set(styles.map((q) => q.dimension)).size).toBe(HOST_STYLE_ITEMS);
-      expect(typed.some((q) => q.context === "date")).toBe(false);
+      expect(typed.filter((q) => q.context === "date").every((q) => !/\bdates?\b/i.test(q.prompt.en))).toBe(true);
     }
   });
 
@@ -120,14 +120,15 @@ describe("segment flavour", () => {
         const told = generateSession({ seed: `s${i}`, personal: { district: "bang_rak", segment } });
         told.forEach((q) => {
           const variant = SEGMENT_PROMPTS[q.scenario]?.[segment];
-          const base = SCENARIOS.find((s) => s.id === q.scenario)!.prompt;
+          const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
+          const base = sc.friend?.prompt ?? sc.prompt;
           expect(q.prompt).toEqual(variant ?? base);
           if (variant) flavoured += 1;
         });
         // A different seed key, but the same kind of session: answers still come from the scenario.
         for (const q of told) {
           const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
-          for (const o of q.options) expect(o.label.en).toBe(sc.answers[o.type].en);
+          for (const o of q.options) expect(o.label.en).toBe((sc.friend?.answers?.[o.type] ?? sc.answers[o.type]).en);
         }
         expect(plain).toHaveLength(told.length);
       }
@@ -252,14 +253,48 @@ describe("language flavour (Task 10)", () => {
 });
 
 describe("blueprint sets and audiences (quiz-blueprint 2.3, 2.3b)", () => {
-  it("every date moment is in the open-to-more set, and only opted-in members are offered it", () => {
-    for (const s of SCENARIOS.filter((x) => x.context === "date")) expect(s.set, s.id).toBe("open-to-more");
-    const date = { context: "date" as const, set: "open-to-more" as const };
-    expect(offered(date, undefined)).toBe(false);
-    expect(offered(date, { tableHost: true })).toBe(false);
-    expect(offered(date, { openToMore: true })).toBe(true);
-    // A date moment that forgot its set still never reaches the core quiz.
+  it("date moments with a friend wording are for everyone; open-to-more scenarios and bare date moments only for opted-in members", () => {
+    for (const s of SCENARIOS.filter((x) => x.context === "date")) expect(!!s.friend || s.set === "open-to-more", s.id).toBe(true);
+    const friendly = { context: "date" as const, friend: { prompt: { en: "x?", th: "x?" } } };
+    expect(offered(friendly, undefined)).toBe(true);
+    expect(offered(friendly, { openToMore: true })).toBe(true);
+    const only = { context: "date" as const, set: "open-to-more" as const };
+    expect(offered(only, undefined)).toBe(false);
+    expect(offered(only, { tableHost: true })).toBe(false);
+    expect(offered(only, { openToMore: true })).toBe(true);
+    // A date moment with neither still never reaches someone who isn't open to something more.
     expect(offered({ context: "date" }, {})).toBe(false);
+  });
+
+  it("the friend wording gives the same type for the same answers", () => {
+    for (let i = 0; i < 30; i++) {
+      const friends = generateSession({ seed: `q${i}`, personal: { district: "bang_rak" } });
+      for (const code of ["BDSH", "CFMN"] as const) {
+        const answers = answersAs(friends, code);
+        expect(scoreSession(friends, answers).answered).toBe(friends.length);
+      }
+      for (const q of friends.filter((x) => x.context === "date")) {
+        const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
+        expect(q.options.map((o) => o.type).every((t) => !!sc.answers[t])).toBe(true);
+      }
+    }
+  });
+
+  it("in-season scenarios are preferred in their months", () => {
+    const seasonal = SCENARIOS.filter((s) => s.months?.length);
+    expect(seasonal.length).toBeGreaterThan(0);
+    for (const s of seasonal) {
+      const inMonth = s.months![0];
+      const outMonth = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].find((m) => !s.months!.includes(m))!;
+      const p: Personal = s.context === "date" && !s.friend ? { openToMore: true } : {};
+      let inCount = 0;
+      let outCount = 0;
+      for (let i = 0; i < 200; i++) {
+        if (generateSession({ seed: `m${i}`, personal: p, month: inMonth }).some((q) => q.scenario === s.id)) inCount += 1;
+        if (generateSession({ seed: `m${i}`, personal: p, month: outMonth }).some((q) => q.scenario === s.id)) outCount += 1;
+      }
+      expect(inCount, s.id).toBeGreaterThan(outCount);
+    }
   });
 
   it("table-host scenarios only for Table Hosts; audience scenarios only for that Bangkok story", () => {

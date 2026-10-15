@@ -106,6 +106,13 @@ export type Scenario = {
   audience?: Audience[];
   /** Offered only to members in this set (see ScenarioSet); absent means the core quiz. */
   set?: ScenarioSet;
+  /**
+   * Date moments only (owner, Q-D1): the same moment as a one-to-one friend
+   * meetup, shown to every member who isn't open to something more. Answers
+   * listed here replace the date wording; the rest read the same either way.
+   * Same answers and types, so scoring is identical.
+   */
+  friend?: { prompt: Text; icon?: string; answers?: Partial<Record<TypeCode, Text>> };
   answers: Record<TypeCode, Answer>;
 };
 

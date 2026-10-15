@@ -46,7 +46,7 @@ describe("generateSession", () => {
       for (const q of session(`split${i}`)) {
         // Every answer is the hand-written one for that type.
         const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
-        for (const o of q.options) expect(o.label.en).toBe(sc.answers[o.type].en);
+        for (const o of q.options) expect(o.label.en).toBe((sc.friend?.answers?.[o.type] ?? sc.answers[o.type]).en);
         if (q.options.length !== 6) continue;
         const codes = q.options.map((o) => o.type);
         expect(new Set(codes).size).toBe(6);
@@ -67,12 +67,11 @@ describe("generateSession", () => {
     }
   });
 
-  it("mixes who you're with: the context minimums hold in every session (date only for opted-in members)", () => {
+  it("mixes who you're with: the context minimums hold in every session, opted in or not", () => {
     for (let i = 0; i < 300; i++) {
       const openToMore = i % 2 === 0;
       const core = session(`ctx${i}`, { personal: { openToMore } }).filter((q) => q.kind === "core");
       for (const [ctx, min] of Object.entries(CONTEXT_MIN)) {
-        if (ctx === "date" && !openToMore) continue;
         expect(core.filter((q) => q.context === ctx).length, ctx).toBeGreaterThanOrEqual(min);
       }
     }
@@ -225,21 +224,25 @@ describe("scoring and the margin of error", () => {
   });
 });
 
-describe("romance in the core quiz", () => {
-  it("never shows a date scenario unless the member opted into Open to something more, and still asks 20 questions", async () => {
+describe("romance in the core quiz (owner, Q-D1)", () => {
+  it("date moments read as friend meetups unless the member opted into Open to something more; same answers and types", async () => {
     const { generateSession, QUIZ_LENGTH } = await import("../src/vibe/generator");
-    const { SCENARIOS } = await import("../src/vibe/scenarios");
-    const ctxOf = new Map(SCENARIOS.map((s) => [s.id, s.context]));
+    const { ROMANCE_EN, ROMANCE_TH, ROMANCE_ICONS } = await import("../src/vibe/bank-rules");
+    // Date moments carry the wording switch; other scenarios may mention someone else's partner (a sibling's), which is fine.
+    const words = (qs: ReturnType<typeof generateSession>) => qs.filter((q) => q.context === "date").flatMap((q) => [q.prompt, ...q.options.map((o) => o.label)]);
     for (let i = 0; i < 40; i++) {
       for (const qs of [generateSession({ seed: `f${i}` }), generateSession({ seed: `f${i}`, personal: { district: "bang_rak", segment: "newcomer", tableHost: true } })]) {
         expect(qs).toHaveLength(QUIZ_LENGTH);
-        expect(qs.some((q) => ctxOf.get(q.id.split(".")[0]) === "date")).toBe(false);
+        expect(qs.filter((q) => q.context === "date").length).toBeGreaterThanOrEqual(3);
+        for (const x of words(qs)) {
+          expect(ROMANCE_EN.test(x.en), x.en).toBe(false);
+          expect(ROMANCE_TH.test(x.th), x.th).toBe(false);
+        }
+        for (const q of qs.filter((x) => x.context === "date")) expect(ROMANCE_ICONS.test(q.art.icons.join("")), q.scenario).toBe(false);
       }
-    }
-    // Opted-in members still get some, at least the context minimum.
-    for (let i = 0; i < 10; i++) {
-      const qs = generateSession({ seed: `f${i}`, personal: { openToMore: true } });
-      expect(qs.filter((q) => q.context === "date").length).toBeGreaterThanOrEqual(3);
+      // Opted in: the date wording.
+      const dated = generateSession({ seed: `f${i}`, personal: { openToMore: true } });
+      expect(words(dated).some((x) => ROMANCE_EN.test(x.en))).toBe(true);
     }
   });
 });

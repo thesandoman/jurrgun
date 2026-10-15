@@ -39,9 +39,14 @@
  *
  * Who the member is (Personal) shapes the session without changing how types
  * are scored:
- *   - sets (quiz-blueprint 2.3b): scenarios in the "open-to-more" set (every
- *     date moment) only for members who opted into 💘 Open to something more,
- *     "table-host" only for Table Hosts; the core quiz has no romance;
+ *   - romance wording (owner, Q-D1): date moments are in everyone's quiz, but
+ *     only members who opted into 💘 Open to something more read them as
+ *     dates; everyone else reads the same moment as a one-to-one friend
+ *     meetup (Scenario.friend), with the same answers and types;
+ *   - sets (quiz-blueprint 2.3b): "open-to-more" scenarios only for opted-in
+ *     members, "table-host" only for Table Hosts;
+ *   - season: scenarios with `months` are preferred in those months and kept
+ *     for when nothing else fits outside them;
  *   - audience: scenarios written for one Bangkok story (local, newcomer,
  *     international) only for those members;
  *   - style sets (styles.ts, generateStyleQuestions): 4 "how you date"
@@ -197,6 +202,8 @@ export type SessionOptions = {
   /** Question ids this user has already answered; their scenarios are avoided where possible. */
   seen?: ReadonlySet<string>;
   personal?: Personal;
+  /** 1 to 12, the month in Bangkok: seasonal scenarios are preferred in season. Part of the seed key. */
+  month?: number;
 };
 
 /** The 8 opposite pairs, e.g. [BDSH, CFMN], keyed by their B-side code. */
@@ -207,8 +214,12 @@ const scenarioOfId = (id: string) => id.split(".")[0];
 // ------------------------------------------------------------ picking --
 
 /** Unseen first, then (if `prefer` is given) the preferred ones, then random. */
-function preferUnseen(rng: Rng, list: Scenario[], seen: ReadonlySet<string>, prefer?: (s: Scenario) => boolean): Scenario[] {
-  const rank = (s: Scenario) => (seen.has(s.id) ? 2 : 0) + (prefer && !prefer(s) ? 1 : 0);
+/** A seasonal scenario outside its months (with no month given, everything is in season). */
+const outOfSeason = (s: Scenario, month?: number) => !!month && !!s.months && !s.months.includes(month);
+
+/** In season first, then unseen, then (if `prefer` is given) the preferred ones, then random. */
+function preferUnseen(rng: Rng, list: Scenario[], seen: ReadonlySet<string>, prefer?: (s: Scenario) => boolean, month?: number): Scenario[] {
+  const rank = (s: Scenario) => (outOfSeason(s, month) ? 4 : 0) + (seen.has(s.id) ? 2 : 0) + (prefer && !prefer(s) ? 1 : 0);
   return shuffle(rng, list).sort((a, b) => rank(a) - rank(b));
 }
 
@@ -217,16 +228,15 @@ const nearHome = (home: string | null | undefined) => (s: Scenario) => !!home &&
 
 /** 16 core scenarios: two twin pairs, the context minimums, then anything. */
 /** Whether this member is offered the scenario: its set (if any) is one of theirs, and so is its audience. */
-export function offered(s: Pick<Scenario, "set" | "audience" | "context">, p: Personal | undefined): boolean {
+export function offered(s: Pick<Scenario, "set" | "audience" | "context" | "friend">, p: Personal | undefined): boolean {
   const sets: ScenarioSet[] = [...(p?.openToMore ? (["open-to-more"] as const) : []), ...(p?.tableHost ? (["table-host"] as const) : [])];
   if (s.set && !sets.includes(s.set)) return false;
-  // Belt and braces: a date moment is romance even if a scenario forgot its set (bank-rules also checks).
-  if (s.context === "date" && !p?.openToMore) return false;
+  // A date moment reaches someone not open to something more only through its friend wording (bank-rules also checks).
+  if (s.context === "date" && !p?.openToMore && !s.friend) return false;
   return !s.audience || (!!p?.segment && s.audience.includes(p.segment));
 }
 
-function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | undefined, p: Personal | undefined): Scenario[] {
-  const romance = !!p?.openToMore;
+function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | undefined, p: Personal | undefined, month?: number): Scenario[] {
   const core = SCENARIOS.filter((s) => s.kind === "core" && offered(s, p));
   const twinPairs: [Scenario, Scenario][] = [];
   for (const s of core) {
@@ -248,11 +258,10 @@ function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | und
     }
   };
   for (const ctx of shuffle(rng, Object.keys(CONTEXT_MIN) as Context[])) {
-    if (!romance && ctx === "date") continue;
     const need = CONTEXT_MIN[ctx] - chosen.filter((s) => s.context === ctx).length;
-    for (let k = 0; k < need; k++) take(preferUnseen(rng, core.filter((s) => s.context === ctx && !has(s)), seen, prefer).slice(0, 1));
+    for (let k = 0; k < need; k++) take(preferUnseen(rng, core.filter((s) => s.context === ctx && !has(s)), seen, prefer, month).slice(0, 1));
   }
-  while (chosen.length < CORE_ITEMS) take(preferUnseen(rng, core.filter((s) => !has(s)), seen, prefer).slice(0, 1));
+  while (chosen.length < CORE_ITEMS) take(preferUnseen(rng, core.filter((s) => !has(s)), seen, prefer, month).slice(0, 1));
   return chosen;
 }
 
@@ -398,13 +407,25 @@ function arrange(rng: Rng, list: Scenario[]): Scenario[] {
   return best;
 }
 
+/** The words a member reads for a scenario: a date moment reads as a friend meetup unless they're open to something more. */
+function wordingFor(sc: Scenario, p?: Personal): { prompt: Text; icon: string; answer: (code: TypeCode) => Text } {
+  const friend = sc.friend && !p?.openToMore ? sc.friend : undefined;
+  return {
+    prompt: friend?.prompt ?? ((p?.segment && SEGMENT_PROMPTS[sc.id]?.[p.segment]) || sc.prompt),
+    icon: friend?.icon ?? sc.icon,
+    answer: (code) => friend?.answers?.[code] ?? sc.answers[code],
+  };
+}
+
 function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], format: Format, p?: Personal): Question {
   const codes = shuffle(rng, pairs.flat());
   const en = (x: string) => (p?.explainLocal ? explainLocal(x) : x);
-  const told = (p?.segment && SEGMENT_PROMPTS[sc.id]?.[p.segment]) || sc.prompt;
+  const words = wordingFor(sc, p);
+  const told = words.prompt;
   const options: Option[] = codes.map((code) => {
     const a = sc.answers[code];
-    return { label: { en: en(a.en), th: a.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}) };
+    const label = words.answer(code);
+    return { label: { en: en(label.en), th: label.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}) };
   });
   // Pick-one questions keep the ids they always had; other formats get their own.
   const key = format === "choice" ? codes.join("") : `${format}:${codes.join("")}`;
@@ -421,7 +442,7 @@ function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], fo
     ...(sc.twin ? { twin: sc.twin } : {}),
     prompt: { en: (p?.explainLocal && EXPAT_PROMPTS[sc.id]) || en(told.en), th: told.th },
     options,
-    art: { tone: sc.tone, icons: [sc.icon], seed: hashString(sc.id + codes.join("")) },
+    art: { tone: sc.tone, icons: [words.icon], seed: hashString(sc.id + codes.join("")) },
     ...extra,
   };
 }
@@ -460,11 +481,11 @@ function personalKey(p: Personal | undefined): string {
 
 export function generateSession(options: SessionOptions): Question[] {
   const p = options.personal;
-  const rng = createRng(`bkk-type:${options.seed}${personalKey(p)}`);
+  const rng = createRng(`bkk-type:${options.seed}${personalKey(p)}${options.month ? `|m=${options.month}` : ""}`);
   const seenScenarios = new Set([...(options.seen ?? [])].map(scenarioOfId));
   const flavour = (kind: Kind) =>
-    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && offered(s, p)), seenScenarios).slice(0, FLAVOUR_ITEMS);
-  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, p), ...flavour("rhythm"), ...flavour("plan")]);
+    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && offered(s, p)), seenScenarios, undefined, options.month).slice(0, FLAVOUR_ITEMS);
+  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, p, options.month), ...flavour("rhythm"), ...flavour("plan")]);
   const formats = assignFormats(rng, scenarios, p?.district);
   const pairs = pairsPerQuestion(rng, scenarios, formats);
   // Home district: in up to two questions, bring in the pair whose answer is set near home.

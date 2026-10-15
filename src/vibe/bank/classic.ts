@@ -199,8 +199,10 @@ export const CLASSIC: Scenario[] = [
     id: "newfriend",
     kind: "core",
     context: "date",
-    set: "open-to-more",
     prompt: { en: "You've just met someone you'd like to see again. What do you suggest?", th: "เพิ่งเจอคนที่อยากเจออีก คุณจะชวนไปไหน?" },
+    friend: {
+      prompt: { en: "You've just met someone you'd like to be friends with. What do you suggest?", th: "เพิ่งเจอคนที่อยากเป็นเพื่อนด้วย คุณจะชวนไปไหน?" },
+    },
     icon: "💬",
     tone: "afternoon",
     mood: "everyday",

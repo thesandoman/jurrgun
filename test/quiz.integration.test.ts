@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
 import { accounts, profiles, vibes } from "../src/schema";
 import { cleanBio } from "../src/content/profile";
+import { ROMANCE_EN } from "../src/vibe/bank-rules";
 import { randomToken } from "../src/lib/crypto";
 import { parseAnswers, personalOf, quizQuestions, quizSeed, typeSlug } from "../src/routes/quiz";
 import { scoreSession, typeQuestions, type AnyQuestion } from "../src/vibe/generator";
@@ -65,7 +66,8 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const plainHtml = await (await req("/quiz?lang=en", { cookie: plain.cookie })).text();
     expect(answerNames(plainHtml).size).toBe(20);
     expect(plainHtml).not.toContain("Open to something more");
-    expect(quizQuestions(quizSeed(plain.id, null), null, MEMBER).some((q) => q.kind !== "style" && q.context === "date")).toBe(false);
+    // Date moments read as friend meetups (owner, Q-D1): no romance words on the page's questions.
+    for (const q of quizQuestions(seedIn(plainHtml), null, MEMBER)) for (const x of [q.prompt, ...q.options.map((o) => o.label)]) if (q.kind !== "style" && q.context === "date") expect(ROMANCE_EN.test(x.en), x.en).toBe(false);
 
     // Open to something more: 20 + 4 "how you date", saved to the dating profile.
     const dater = await createMember({ romanceOn: true, relationship: "single", romanceOpenTo: "everyone" });
@@ -112,7 +114,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const m = await createMember();
     const seed = quizSeed(m.id, null);
     const qs = quizQuestions(seed, null, MEMBER);
-    const tampered = await req("/quiz", { cookie: m.cookie, form: form(`${m.id}:999`, qs) });
+    const tampered = await req("/quiz", { cookie: m.cookie, form: form(`${m.id}:999:2026-01`, qs) });
     expect(tampered.status).toBe(400);
     const few = await req("/quiz", { cookie: m.cookie, form: form(seed, qs, 13) });
     expect(few.status).toBe(400);
@@ -176,14 +178,15 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
 
     // Retake: a new server-side seed, and (mostly) unseen questions.
     const again = await (await req("/quiz", { cookie: m.cookie })).text();
-    expect(seedIn(again)).toBe(`${m.id}:20`);
-    const next = quizQuestions(`${m.id}:20`, row, MEMBER);
+    expect(seedIn(again)).toBe(quizSeed(m.id, row));
+    expect(seedIn(again)).toMatch(new RegExp(`^${m.id}:20:\\d{4}-\\d{2}$`));
+    const next = quizQuestions(seedIn(again), row, MEMBER);
     const seenScenarios = new Set(row.seen.map((id) => id.split(".")[0]));
     expect(next.filter((q) => seenScenarios.has(q.scenario)).length).toBeLessThanOrEqual(6);
 
     // Retaking keeps `visible` and grows `seen`.
     await req("/quiz/visibility", { cookie: m.cookie, form: { visible: "1", next: "/quiz/result" } });
-    const r2 = await req("/quiz", { cookie: m.cookie, form: form(`${m.id}:20`, next) });
+    const r2 = await req("/quiz", { cookie: m.cookie, form: form(seedIn(again), next) });
     expect(r2.status).toBe(302);
     const [row2] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
     expect(row2.visible).toBe(true);
