@@ -22,7 +22,7 @@
 | D6 | Launch audience: **the Rebuilder**, aged 23 to 32 and new to Bangkok within two years, Thai or foreign. North star: **Weekly Reconnected Members** | Branding | 10-15 |
 | D7 | Personalised by the member's own Bangkok story: local, newcomer or international (`src/domain/segment.ts`). Front doors `/new` and `/international`. Women-only options and events only for women and non-binary members | Branding | 10-15 |
 | D8 | Thai copy follows `design/reference/thai-voice.md`: spellings เดต, แชต, เช็กอิน; no dashes; no polite particles | Branding | 10-15 |
-| D9 | Film 02 is re-cut as the feature film for Open to something more: a green-coral romantic palette, a Thai/English chat, real app profiles, graduating to another app. It goes **on BMA channels** | quiz-fork | 10-15 10:56 |
+| D9 | Film 02 is re-cut as the feature film for Open to something more: **love red `#e23744`** (text `#c0222f`, tint `#fde3e5`), used only on the opt-in moments beside green on cream. Coral was dropped (owner, in the re-render chat after 18:00: "orange doesn't make sense"). Also: a Thai/English chat, real app profiles, graduating to another app. It goes **on BMA channels** | quiz-fork | 10-15 10:56 |
 | D10 | Romance appears in the public films, but within the brand rules: never the lead | quiz-fork | 10-15 10:56 |
 | D11 | Show a person in the films (a single lead) even before real users exist | film-review | 10-15 |
 | D12 | Detecting Thai or English and tailoring the question bank for everyone is **Task 10**. The owner will send skills and subtasks; don't start it | Branding | 10-15 |
