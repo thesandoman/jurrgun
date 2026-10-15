@@ -110,7 +110,7 @@ export const LANDMARKS: Landmark[] = [
   l("lak_si", "Wat Lak Si and its old neighbourhood", "วัดหลักสี่และย่านเก่ารอบวัด"),
   l("lak_si", "IT Square Lak Si", "ไอทีสแควร์ หลักสี่"),
   l("sai_mai", "the Khlong Lat Phrao canal side in Sai Mai", "ริมคลองลาดพร้าว ย่านสายไหม"),
-  l("bang_khen", "Saphan Mai Market", "ตลาดสะพานใหม่"),
+  l("bang_khen", "Saphan Mai Market", "ตลาดสะพานใหม่", true),
   l("sai_mai", "Wongsakorn Market", "ตลาดวงศกร"),
   l("khan_na_yao", "Siam Amazing Park", "สวนสยาม"),
   l("khan_na_yao", "Fashion Island", "แฟชั่นไอส์แลนด์"),
