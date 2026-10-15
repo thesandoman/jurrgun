@@ -638,6 +638,55 @@ export const PUNCTUAL: Opt[] = [
   o("bit_late", "🐢", "ช้าไปนิดแต่ทักบอกเสมอ", "A bit late, but I always text"),
 ];
 
+// ------------------------------------------------- meetup preferences --
+// Objective inputs for the weekly plan (src/domain/plan.ts). All optional.
+
+/** Most a member wants to spend on one meetup, in baht (Infinity = any). */
+export const BUDGETS: (Opt & { max: number })[] = [
+  { ...o("free", "🆓", "ฟรีเท่านั้น", "Free only"), max: 0 },
+  { ...o("150", "🪙", "ไม่เกิน ฿150", "Up to ฿150"), max: 150 },
+  { ...o("300", "💵", "ไม่เกิน ฿300", "Up to ฿300"), max: 300 },
+  { ...o("600", "💳", "ไม่เกิน ฿600", "Up to ฿600"), max: 600 },
+  { ...o("any", "🙂", "ได้หมด", "Any"), max: Infinity },
+];
+export const budgetMax = (v?: string) => BUDGETS.find((b) => b.value === v)?.max ?? Infinity;
+
+/** Kinds of meetup, matching event tags. */
+export const ACTIVITIES: Opt[] = [
+  o("food", "🍜", "กินด้วยกัน", "Eating together"),
+  o("walk", "🚶", "เดินเล่น", "Walks"),
+  o("culture", "🏛️", "ศิลปะ วัฒนธรรม", "Art and culture"),
+  o("board_game", "🎲", "บอร์ดเกม", "Board games"),
+  o("run", "🏃", "วิ่ง ออกกำลังกาย", "Running and sport"),
+  o("workshop", "🛠️", "เวิร์กช็อป", "Workshops"),
+  o("volunteer", "🤲", "อาสา", "Volunteering"),
+  o("language_exchange", "🗣️", "แลกเปลี่ยนภาษา", "Language exchange"),
+];
+export const MEALS: Opt[] = [
+  o("breakfast", "🥐", "มื้อเช้า", "Breakfast"),
+  o("lunch", "🍱", "มื้อกลางวัน", "Lunch"),
+  o("dinner", "🍲", "มื้อเย็น", "Dinner"),
+  o("dessert", "🍧", "ของหวาน กาแฟ", "Dessert or coffee"),
+];
+export const GROUP_SIZES: Opt[] = [
+  o("small", "👥", "2–3 คน", "2–3 people"),
+  o("table", "🍽️", "4–6 คน", "4–6 people"),
+  o("big", "🎉", "กลุ่มใหญ่ได้", "Bigger groups are fine"),
+];
+/** When a member is usually free (Bangkok time). */
+export const TIME_WINDOWS: Opt[] = [
+  o("weekday_morning", "🌅", "เช้าวันธรรมดา", "Weekday mornings"),
+  o("weekday_evening", "🌆", "เย็นวันธรรมดา", "Weekday evenings"),
+  o("weekend_morning", "☀️", "เช้าเสาร์อาทิตย์", "Weekend mornings"),
+  o("weekend_afternoon", "🌤️", "บ่ายเสาร์อาทิตย์", "Weekend afternoons"),
+  o("weekend_evening", "🌙", "เย็นเสาร์อาทิตย์", "Weekend evenings"),
+];
+export const ACCESS_NEEDS: Opt[] = [
+  o("step_free", "♿", "ไม่มีขั้นบันได", "Step-free"),
+  o("quiet", "🤫", "ที่เงียบ ๆ", "Quiet places"),
+  o("short", "⏱️", "ไม่เกิน 90 นาที", "90 minutes or less"),
+];
+
 /** Occupation: one pick from this list, or "other" plus the member's own words. */
 export const OCCUPATIONS: Opt[] = [
   o("student", "🎓", "นักเรียน นักศึกษา", "Student"),
@@ -1198,6 +1247,15 @@ export type Bio = {
   punctual?: string;
   /** Social plans a week the member is happy with (1 to 4). */
   rhythm?: number;
+  /** Meetup preferences, objective inputs for the weekly plan (BUDGETS, ACTIVITIES, MEALS, GROUP_SIZES, TIME_WINDOWS, ACCESS_NEEDS). */
+  budget?: string;
+  activities?: string[];
+  meals?: string[];
+  groupSize?: string;
+  times?: string[];
+  access?: string[];
+  /** Monthly social-energy check-in, self only: low | okay | full. */
+  socialEnergy?: string;
   deck?: string[];
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
@@ -1307,6 +1365,13 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.pets)) out.pets = s(b.pets);
   if (s(b.punctual)) out.punctual = s(b.punctual);
   if (typeof b.rhythm === "number" && [1, 2, 3, 4].includes(b.rhythm)) out.rhythm = b.rhythm;
+  if (s(b.budget)) out.budget = s(b.budget);
+  if (strs(b.activities)) out.activities = strs(b.activities);
+  if (strs(b.meals)) out.meals = strs(b.meals);
+  if (s(b.groupSize)) out.groupSize = s(b.groupSize);
+  if (strs(b.times)) out.times = strs(b.times);
+  if (strs(b.access)) out.access = strs(b.access);
+  if (s(b.socialEnergy)) out.socialEnergy = s(b.socialEnergy);
   if (strs(b.deck)) out.deck = strs(b.deck);
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;

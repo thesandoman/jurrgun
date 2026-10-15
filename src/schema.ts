@@ -437,6 +437,8 @@ export const feedback = pgTable(
     metNewPerson: boolean("met_new_person"),
     wouldMeetAgain: boolean("would_meet_again"),
     feltSafe: integer("felt_safe"),
+    /** "Did you feel heard?" 1 to 5. Null for answers given before it was asked. */
+    feltHeard: integer("felt_heard"),
     groupRating: integer("group_rating"),
     comment: text("comment").notNull().default(""),
     createdAt: created(),
@@ -736,6 +738,86 @@ export const safeArrivals = pgTable(
     createdAt: created(),
   },
   (t) => [index("social_safe_arrivals_account_idx").on(t.accountId, t.backBy)],
+);
+
+// ---------------------------------------------------- feedback and plans --
+
+/**
+ * Mutual, private feedback after a one-to-one meet (a buddy quest). Never
+ * shown to the other person; only used in aggregate (k-anonymous) and for
+ * safety (felt safe 1 or 2 offers a report).
+ */
+export const meetFeedback = pgTable(
+  "social_meet_feedback",
+  {
+    id: text("id").primaryKey(),
+    /** quest (buddy quest) */
+    kind: text("kind").notNull(),
+    /** The quest id. */
+    ref: text("ref").notNull(),
+    accountId: text("account_id").notNull(),
+    /** The other person, for safety follow-up only. */
+    aboutAccount: text("about_account"),
+    showedUp: boolean("showed_up"),
+    onTime: boolean("on_time"),
+    feltSafe: integer("felt_safe"),
+    feltHeard: integer("felt_heard"),
+    wouldMeetAgain: boolean("would_meet_again"),
+    comment: text("comment").notNull().default(""),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_meet_feedback_idx").on(t.kind, t.ref, t.accountId)],
+);
+
+/**
+ * The weekly plan ("hands-free"): two picks made from the member's profile,
+ * preferences and their buddy and circle, plus room to pitch their own.
+ */
+export const weeklyPlans = pgTable(
+  "social_weekly_plans",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    week: text("week").notNull(),
+    /** [{ kind: "event" | "quest", ref, reasons: string[] (keys) }] */
+    picks: jsonb("picks").$type<{ kind: string; ref: string; reasons: string[] }[]>().notNull().default([]),
+    /** open | accepted | skipped | rest */
+    status: text("status").notNull().default("open"),
+    /** time | money | distance | mood | other */
+    skipReason: text("skip_reason"),
+    acceptedRef: text("accepted_ref"),
+    decidedAt: ts("decided_at"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_weekly_plans_idx").on(t.accountId, t.week)],
+);
+
+/** "Pitch my own": a plan a member proposes to their buddy or circle. */
+export const planPitches = pgTable(
+  "social_plan_pitches",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    week: text("week").notNull(),
+    what: text("what").notNull(),
+    district: text("district").notNull(),
+    /** Free text: "Sat morning". */
+    whenText: text("when_text").notNull(),
+    /** buddy | circle */
+    audience: text("audience").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("social_plan_pitches_week_idx").on(t.week, t.accountId)],
+);
+
+export const pitchJoins = pgTable(
+  "social_pitch_joins",
+  {
+    pitchId: text("pitch_id").notNull(),
+    accountId: text("account_id").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_pitch_joins_idx").on(t.pitchId, t.accountId)],
 );
 
 /** A member asking to lead a circle (and so host its hangouts). Reviewed in /admin/review. */

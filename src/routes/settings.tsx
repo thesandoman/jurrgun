@@ -50,6 +50,12 @@ import {
   SPICE,
   PETS,
   PUNCTUAL,
+  BUDGETS,
+  ACTIVITIES,
+  MEALS,
+  GROUP_SIZES,
+  TIME_WINDOWS,
+  ACCESS_NEEDS,
   type Answer,
   type Bio,
   isResidency,
@@ -400,6 +406,33 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
           </fieldset>
         </Section>
 
+        <Section id="prefs" emoji="🎯" title={t("ชอบเจอกันแบบไหน", "Meetup preferences")} hint={t("ใช้เลือกแผนประจำสัปดาห์ให้คุณ ไม่บังคับ", "Used to pick your weekly plan. All optional.")}>
+          <fieldset class="choices">
+            <legend>{t("งบต่อหนึ่งนัด", "Budget per meetup")}</legend>
+            <OptRadios v={props.v} name="budget" options={BUDGETS} value={bio.budget} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("ชอบทำอะไร", "Favourite kinds of meetup")}</legend>
+            <OptChecks v={props.v} name="activities" options={ACTIVITIES} values={bio.activities} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("มื้อที่ชอบนัด", "Meals I like to meet over")}</legend>
+            <OptChecks v={props.v} name="meals" options={MEALS} values={bio.meals} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("ขนาดกลุ่มที่สบายใจ", "Group size I'm comfortable with")}</legend>
+            <OptRadios v={props.v} name="groupSize" options={GROUP_SIZES} value={bio.groupSize} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("ช่วงเวลาที่มักว่าง", "When I'm usually free")}</legend>
+            <OptChecks v={props.v} name="times" options={TIME_WINDOWS} values={bio.times} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("สิ่งที่ต้องการ", "Access needs")}</legend>
+            <OptChecks v={props.v} name="access" options={ACCESS_NEEDS} values={bio.access} />
+          </fieldset>
+        </Section>
+
         <Section id="out" emoji="🧾" title={t("เวลาออกไปเจอกัน", "Out and about")} hint={t("ไม่บังคับ ช่วยให้นัดแรกง่ายขึ้น", "All optional. Makes a first meet smoother.")}>
           <fieldset class="choices">
             <legend>{t(`จ่ายเงินแบบไหนสะดวก (สูงสุด ${MAX_PAY})`, `How I like to pay (up to ${MAX_PAY})`)}</legend>
@@ -530,6 +563,12 @@ function parseProfileForm(c: C, body: Body): Parsed {
     spice: oneOf(str(body.spice), SPICE),
     pets: oneOf(str(body.pets), PETS),
     punctual: oneOf(str(body.punctual), PUNCTUAL),
+    budget: oneOf(str(body.budget), BUDGETS),
+    activities: pickAll("activities", ACTIVITIES.map((x) => x.value)),
+    meals: pickAll("meals", MEALS.map((x) => x.value)),
+    groupSize: oneOf(str(body.groupSize), GROUP_SIZES),
+    times: pickAll("times", TIME_WINDOWS.map((x) => x.value)),
+    access: pickAll("access", ACCESS_NEEDS.map((x) => x.value)),
   };
   const vals: ProfileVals = {
     nickname: str(body.nickname),

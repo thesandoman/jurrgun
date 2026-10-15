@@ -541,6 +541,11 @@ eventRoutes.get("/events", requireMember, async (c) => {
     <>
       <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
+      <a href="/plan" class="feature plan-teaser">
+        <b aria-hidden="true">🗓️</b>
+        <strong>{t("แผนสัปดาห์นี้: เราเลือกให้ 2 อย่าง", "This week's plan: 2 picks made for you")}</strong>
+        <small>{t("ไม่ต้องไล่ดูทั้งหมด", "No need to scroll everything")}</small>
+      </a>
       <div class="seg-row">
         <nav class="seg" aria-label={t("เมื่อไหร่", "When")}>
           {WHEN_OPTS.map((o) => {

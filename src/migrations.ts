@@ -165,5 +165,19 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_chat_reads_idx\" ON \"social_chat_reads\" (\"thread\",\"account_id\");",
       "CREATE INDEX \"social_safe_arrivals_account_idx\" ON \"social_safe_arrivals\" (\"account_id\",\"back_by\");"
     ]
+  },
+  {
+    "id": "0012_magical_kronos",
+    "statements": [
+      "CREATE TABLE \"social_meet_feedback\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"kind\" text NOT NULL,\n\t\"ref\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"about_account\" text,\n\t\"showed_up\" boolean,\n\t\"on_time\" boolean,\n\t\"felt_safe\" integer,\n\t\"felt_heard\" integer,\n\t\"would_meet_again\" boolean,\n\t\"comment\" text DEFAULT '' NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_pitch_joins\" (\n\t\"pitch_id\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_plan_pitches\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"week\" text NOT NULL,\n\t\"what\" text NOT NULL,\n\t\"district\" text NOT NULL,\n\t\"when_text\" text NOT NULL,\n\t\"audience\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_weekly_plans\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"week\" text NOT NULL,\n\t\"picks\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"status\" text DEFAULT 'open' NOT NULL,\n\t\"skip_reason\" text,\n\t\"accepted_ref\" text,\n\t\"decided_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_feedback\" ADD COLUMN \"felt_heard\" integer;",
+      "CREATE UNIQUE INDEX \"social_meet_feedback_idx\" ON \"social_meet_feedback\" (\"kind\",\"ref\",\"account_id\");",
+      "CREATE UNIQUE INDEX \"social_pitch_joins_idx\" ON \"social_pitch_joins\" (\"pitch_id\",\"account_id\");",
+      "CREATE INDEX \"social_plan_pitches_week_idx\" ON \"social_plan_pitches\" (\"week\",\"account_id\");",
+      "CREATE UNIQUE INDEX \"social_weekly_plans_idx\" ON \"social_weekly_plans\" (\"account_id\",\"week\");"
+    ]
   }
 ];
