@@ -59,6 +59,25 @@ describe("GET /intro", () => {
   });
 });
 
+describe("GET /fonts/:file", () => {
+  it("serves the brand fonts the page preloads, cached hard", async () => {
+    const html = await (await app.request("/", seen)).text();
+    const urls = [...html.matchAll(/href="(\/fonts\/[^"]+\.woff2)"/g)].map((m) => m[1]);
+    expect(urls.some((u) => u.includes("saochingcha-700"))).toBe(true);
+    expect(html).toContain("font-family:'TH Sarabun New'");
+    const res = await app.request(urls[0]);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("font/woff2");
+    expect(res.headers.get("cache-control")).toContain("immutable");
+    expect(new TextDecoder().decode((await res.arrayBuffer()).slice(0, 4))).toBe("wOF2");
+  });
+
+  it("404s an unknown font or a stale hash", async () => {
+    expect((await app.request("/fonts/nope.0123456789.woff2")).status).toBe(404);
+    expect((await app.request("/fonts/anuphan-400.0000000000.woff2")).status).toBe(404);
+  });
+});
+
 describe("GET /api/health", () => {
   it("reports ok", async () => {
     const res = await app.request("/api/health");

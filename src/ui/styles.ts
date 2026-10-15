@@ -19,8 +19,10 @@ html[data-theme="dark"]{color-scheme:dark}
   --ok:#15803d;--ok-soft:#dcfce7;--warn:#a35a00;--warn-soft:#fff1cc;--err:#c2261d;--err-soft:#fde8e6;
   --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(19,127,69,.08);
   --hero:linear-gradient(135deg,#137f45 0%,#22c55e 55%,#a3e635 120%);
-  /* Inter for Latin; Thai has no Inter glyphs, so it falls back to IBM Plex Sans Thai. */
-  --font:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  /* The BMA type system (ui/fonts.ts): Sarabun New for body, Anuphan for
+     subheadings and UI labels, Sao Chingcha for headings. Each covers Thai and Latin. */
+  --font:'TH Sarabun New','Anuphan',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --sub:'Anuphan',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#0b1610;--surface:#122019;--surface-2:#192b21;--ink:#eaf7ef;--ink-2:#b5cfbe;--ink-3:#84a190;
@@ -378,13 +380,14 @@ details.how ul{margin:8px 0 0;padding-left:0;list-style:none;display:grid;gap:6p
 .inline-toggle{display:flex;align-items:center;gap:10px;justify-content:space-between}
 /* ==== Bangkok livery ====================================================
  * The signature layer. Bangkok's city colour is green, so the app is dressed
- * in deep BMA green with fresh-green and lime accents, set in Inter.
+ * in deep BMA green with fresh-green and lime accents, set in the BMA type
+ * system (ui/fonts.ts).
  * Clean and flat: no stripes or patterns. Everything
  * here overrides the plain base above, so pages need no new classes.
  * ===================================================================== */
 :root{
   --deep:#06492a;--deep-2:#0a5e37;--on-deep:#ffffff;--on-deep-2:#c9f7d9;--lime:#b4f03a;
-  --display:var(--font);
+  --display:'Sao Chingcha','Anuphan',system-ui,sans-serif;
   --radius:22px;
 }
 @media (prefers-color-scheme:dark){:root{--deep:#06301c;--deep-2:#0b4329;--on-deep-2:#a7e9bf;--lime:#c6f45a}}
@@ -397,7 +400,7 @@ h2{font-weight:700}
 /* Top bar */
 .topbar{background:var(--deep);color:var(--on-deep);border-bottom:none;backdrop-filter:none;padding:12px 16px 14px}
 .topbar .brand{color:var(--on-deep);font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
-.topbar .brand small{color:var(--lime);font-family:var(--font);font-weight:600;letter-spacing:0}
+.topbar .brand small{color:var(--lime);font-weight:600;letter-spacing:0}
 .topbar .brand-mark svg rect:first-child{fill:var(--fresh)}
 .topbar .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:var(--on-deep)}
 .topbar .icon-link{color:var(--on-deep)}
@@ -474,7 +477,7 @@ body:has(.tabbar) .notif-panel{max-height:calc(100dvh - 200px - env(safe-area-in
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 /* ==== Open City ==========================================================
  * Layered on the livery: same deep BMA green and lime, plus river teal and
- * a little sun from the Chao Phraya and the parks, still set in Inter.
+ * a little sun from the Chao Phraya and the parks.
  * Scene covers, segmented controls, bottom-sheet event pages and a
  * boarding-pass ticket.
  * ===================================================================== */
@@ -621,8 +624,8 @@ html.a11y-contrast .kv div,html.a11y-contrast .safe-line{border:1.5px solid var(
 html.a11y-contrast :focus-visible{outline:4px solid var(--sun)!important;outline-offset:2px}
 html.a11y-motion *,html.a11y-motion *::before,html.a11y-motion *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 html.a11y-motion .fd-ticker{overflow-x:auto}
-html.a11y-readable body{font-family:'Atkinson Hyperlegible','IBM Plex Sans Thai',system-ui,sans-serif;line-height:1.8;letter-spacing:.015em;word-spacing:.1em}
-html.a11y-readable h1,html.a11y-readable h2,html.a11y-readable h3,html.a11y-readable .flow-title{font-family:'Atkinson Hyperlegible','IBM Plex Sans Thai',system-ui,sans-serif;letter-spacing:0;line-height:1.3}
+html.a11y-readable body{font-family:'Atkinson Hyperlegible','Anuphan',system-ui,sans-serif;line-height:1.8;letter-spacing:.015em;word-spacing:.1em}
+html.a11y-readable h1,html.a11y-readable h2,html.a11y-readable h3,html.a11y-readable .flow-title{font-family:'Atkinson Hyperlegible','Anuphan',system-ui,sans-serif;letter-spacing:0;line-height:1.3}
 html.a11y-readable p,html.a11y-readable li{max-width:65ch}
 html.a11y-links main a:not(.btn):not(.card):not(.seg a):not(.tile):not(.teaser),html.a11y-links .foot a,html.a11y-links .fd-sheet a:not(.card){text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 `);

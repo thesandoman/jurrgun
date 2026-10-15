@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../lib/env";
 import { SV_MAP_CSS_B64, SV_MAP_JS_B64 } from "../vendor/sv-map.generated";
+import { fontBytes } from "../ui/fonts";
 
 export const vendorRoutes = new Hono<AppEnv>();
 
@@ -25,3 +26,10 @@ vendorRoutes.get("/vendor/sv-map.js", (c) =>
 vendorRoutes.get("/vendor/sv-map.css", (c) =>
   c.body(svMapCss(), 200, { "content-type": "text/css; charset=utf-8", "cache-control": LONG }),
 );
+
+// Brand fonts (ui/fonts.ts). The hash is in the URL, so a year is safe.
+vendorRoutes.get("/fonts/:file", (c) => {
+  const bytes = fontBytes(c.req.param("file"));
+  if (!bytes) return c.notFound();
+  return c.body(bytes, 200, { "content-type": "font/woff2", "cache-control": "public, max-age=31536000, immutable" });
+});

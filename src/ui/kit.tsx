@@ -19,8 +19,9 @@ import { WARM_CSS } from "./warm";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS;
+const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS;
 import { BRAND, BrandMark } from "./brand";
+import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
 import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
 
@@ -115,12 +116,11 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         <meta name="theme-color" content="#06301c" media="(prefers-color-scheme: dark)" data-media="(prefers-color-scheme: dark)" data-scheme="dark" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        {PRELOAD_FONTS.map((f) => <link rel="preload" href={fontUrl(f)} as="font" type="font/woff2" crossorigin="" />)}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
+        {/* Only the accessibility "easier to read" font comes from Google; the brand fonts are ours (ui/fonts.ts). */}
+        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
         <style dangerouslySetInnerHTML={{ __html: ALL_CSS }} />
         <script
           dangerouslySetInnerHTML={{
