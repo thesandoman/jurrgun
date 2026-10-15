@@ -83,7 +83,7 @@ adminReview.get("/", async (c) => {
           </Card>
         ))
       )}
-      <h1>{t("กิจกรรมที่รอตรวจ", "Events waiting for review")}</h1>
+      <h2>{t("กิจกรรมที่รอตรวจ", "Events waiting for review")}</h2>
       <p class="muted">{t("ตรวจความปลอดภัย ความถูกต้อง และหลักปฏิบัติ ก่อนเผยแพร่", "Check safety, accuracy and the code of conduct before anything goes live.")}</p>
       {notice === "approved" ? <Notice kind="ok">{t("เผยแพร่แล้ว และแจ้งผู้จัดแล้ว", "Published, and the host has been told.")}</Notice> : null}
       {notice === "rejected" ? <Notice kind="ok">{t("ส่งกลับให้ผู้จัดแก้ไขแล้ว", "Sent back to the host with your note.")}</Notice> : null}

@@ -10,7 +10,7 @@ export const A11Y_CSS = themed(`
   /* Field and switch edges: 3:1 or more against the card and the page (1.4.11). */
   --field-line:#8c7a66;--switch-off:#5f6d63;
 }
-@media (prefers-color-scheme:dark){:root{--field-line:#6b8a77;--switch-off:#84a190}}
+@media (prefers-color-scheme:dark){:root{--field-line:#6b8a77;--switch-off:#8aa896}}
 
 /* Skip to content (2.4.1): hidden until it gets keyboard focus. */
 .skip-link{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:12px;background:var(--surface);color:var(--ink);font-weight:700;text-decoration:none;box-shadow:0 8px 24px rgba(0,0,0,.2);outline:3px solid var(--brand)}
@@ -47,6 +47,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .kv small,.fact small,.stats.month small{font-size:.78rem}
 /* The map writes its own styles later in the page, so these need the extra .fullmap. */
 .fullmap .fd-rail-btn{font-size:.75rem}
+.fullmap .svm-k.highlight{font-size:.75rem}
+/* Staff overview: an odd number tile out spans the row on phones. */
+@media (max-width:520px){body.admin .stats>:last-child:nth-child(odd){grid-column:1/-1}}
 .fullmap .fd-logo small{font-size:.66rem;letter-spacing:-.01em}
 
 /* Tap targets at least 24px tall (2.5.8, WCAG 2.2 AA). */

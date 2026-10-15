@@ -27,7 +27,7 @@ html[data-theme="dark"]{color-scheme:dark}
   --sub:'Anuphan',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#0b1610;--surface:#122019;--surface-2:#192b21;--ink:#eaf7ef;--ink-2:#b5cfbe;--ink-3:#84a190;
+  --bg:#0b1610;--surface:#122019;--surface-2:#192b21;--ink:#eaf7ef;--ink-2:#b5cfbe;--ink-3:#8aa896;
   --line:#24392c;--brand:#3ddc84;--brand-ink:#04210f;--brand-soft:#163a25;--fresh:#4ade80;--lime:#bef264;
   --gold:#f5c04a;--gold-soft:#3a2f12;
   --love:#ff6b78;--love-ink:#ffb3ba;--love-soft:#3a1a1e;

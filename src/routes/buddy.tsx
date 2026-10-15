@@ -486,9 +486,15 @@ const shortName = (en: string) => {
   return words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 3) : en.slice(0, 3);
 };
 
-function Passport(props: { v: View; stamped: Set<string>; compact?: boolean; badges?: { key: string; icon: string; theme: { en: string; th: string } }[] }) {
+/** Stamps earned in the last three days land with a stamp animation. */
+const FRESH_STAMP_MS = 3 * 86_400_000;
+function freshStamps(rows: { district: string; createdAt: Date }[], now = new Date()): Set<string> {
+  return new Set(rows.filter((r) => now.getTime() - r.createdAt.getTime() < FRESH_STAMP_MS).map((r) => r.district));
+}
+
+function Passport(props: { v: View; stamped: Set<string>; fresh?: Set<string>; compact?: boolean; badges?: { key: string; icon: string; theme: { en: string; th: string } }[] }) {
   const { t, lang } = props.v;
-  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value) }));
+  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value), fresh: props.fresh?.has(d.value) }));
   // Stamped first in the compact view, so progress is visible at a glance.
   const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on)].slice(0, 12);
   return (
@@ -614,9 +620,10 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
   const [types, buddyRows, stamps] = await Promise.all([
     typeOfAccount(db, otherId ? [me, otherId] : [me]),
     otherId ? db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, otherId)).limit(1) : Promise.resolve([]),
-    db.select({ district: passportStamps.district }).from(passportStamps).where(eq(passportStamps.accountId, me)).limit(60),
+    db.select({ district: passportStamps.district, createdAt: passportStamps.createdAt }).from(passportStamps).where(eq(passportStamps.accountId, me)).limit(60),
   ]);
   const stamped = new Set(stamps.map((s) => s.district));
+  const fresh = freshStamps(stamps, now);
   const buddyName = buddyRows[0]?.nickname ?? "";
   const [quest, bigQuest, offApp] = match?.state === "active" ? await Promise.all([weekQuest(db, match, types, now), monthQuest(db, match, now), movedOffApp(db, match)]) : [null, null, false];
   const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, me)).limit(1);
@@ -687,7 +694,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
           </div>
         </>
       )}
-      <Passport v={v} stamped={stamped} compact />
+      <Passport v={v} stamped={stamped} fresh={fresh} compact />
       {optin?.active ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
@@ -706,7 +713,7 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
   const db = getDb(c.env);
   const me = c.var.user!.account.id;
   const [stamps, badges] = await Promise.all([
-    db.select({ district: passportStamps.district }).from(passportStamps).where(eq(passportStamps.accountId, me)).limit(60),
+    db.select({ district: passportStamps.district, createdAt: passportStamps.createdAt }).from(passportStamps).where(eq(passportStamps.accountId, me)).limit(60),
     seasonBadges(db, me),
   ]);
   return page(
@@ -716,7 +723,7 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
       <p>
         <a href="/buddy">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
       </p>
-      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} badges={badges} />
+      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} fresh={freshStamps(stamps)} badges={badges} />
     </>,
   );
 });

@@ -116,11 +116,11 @@ export function Ring(props: { value: number; max: number; label: string }) {
 }
 
 /** A grid of round stamps; stamped ones are filled, with a short label. */
-export function Stamps(props: { items: { key: string; short: string; name: string; on: boolean }[] }) {
+export function Stamps(props: { items: { key: string; short: string; name: string; on: boolean; fresh?: boolean }[] }) {
   return (
     <ul class="stamps">
-      {props.items.map((x) => (
-        <li class={x.on ? "on" : ""} title={x.name} aria-label={`${x.name}${x.on ? " ✓" : ""}`}>
+      {props.items.map((x, i) => (
+        <li class={x.on ? (x.fresh ? "on fresh" : "on") : ""} style={x.on && x.fresh ? `--d:${(i % 6) * 0.12}s` : undefined} title={x.name} aria-label={`${x.name}${x.on ? " ✓" : ""}`}>
           <span>{x.short}</span>
         </li>
       ))}

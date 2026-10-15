@@ -41,6 +41,7 @@ import {
   withinRange,
   peopleWindow,
   PEOPLE_WINDOW_HOURS,
+  checkInOpen,
   type StrikeStanding,
 } from "../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../lib/constants";
@@ -214,6 +215,58 @@ function DateBlock(props: { d: Date; lang: Lang }) {
   );
 }
 
+/**
+ * A Google Maps directions link to the meeting point: exact coordinates when
+ * the event has them (its map link or a VisitBangkok route start), otherwise
+ * the venue's name and address. Opens the Maps app on phones.
+ */
+export function directionsUrl(e: Pick<Event, "mapUrl" | "district" | "visitBangkokRoute" | "venueName" | "venueAddress">): string {
+  const place = eventPlace(e);
+  const dest =
+    place && place.precision !== "area"
+      ? `${place.lat},${place.lng}`
+      : [e.venueName, e.venueAddress, label(DISTRICTS, e.district, "en"), "Bangkok"].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+}
+
+/** iCalendar text escaping (RFC 5545 §3.3.11). */
+function icsText(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+}
+
+function icsTime(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+/** One event as an .ics file: start, end, place, a link back, and a reminder an hour before. */
+export function eventIcs(e: Event, lang: Lang, url: string, now = new Date()): string {
+  const where = [e.venueName, e.venueAddress, label(DISTRICTS, e.district, lang)].filter(Boolean).join(", ");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Jurrgun//Event pass//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${e.id}@jurrgun`,
+    `DTSTAMP:${icsTime(now)}`,
+    `DTSTART:${icsTime(e.startsAt)}`,
+    `DTEND:${icsTime(e.endsAt)}`,
+    `SUMMARY:${icsText(title(e, lang))}`,
+    `LOCATION:${icsText(where)}`,
+    `DESCRIPTION:${icsText(`${lang === "en" ? "Your pass" : "บัตรเข้างาน"}: ${url}`)}`,
+    `URL:${url}`,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    "TRIGGER:-PT1H",
+    `DESCRIPTION:${icsText(title(e, lang))}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+    "",
+  ].join("\r\n");
+}
+
 function Cover(props: { e: Event; src?: string | null; lang?: Lang; class?: string }) {
   return (
     <div class={`event-cover scene-${sceneOf(props.e)} ${props.class ?? ""}`.trim()} aria-hidden="true">
@@ -222,6 +275,16 @@ function Cover(props: { e: Event; src?: string | null; lang?: Lang; class?: stri
     </div>
   );
 }
+
+/**
+ * Discover remembers its view (map or list) and time filter on this device:
+ * a visit that chose them saves them, and a bare /events (the tab bar) goes
+ * back to them. The Map link always says view=map, so it never bounces.
+ */
+const DISCOVER_MEMORY_JS = `(function(){try{var k="bkk-discover",p=new URLSearchParams(location.search);
+if(!location.search){var s=localStorage.getItem(k);if(s&&s!=="view=map")location.replace("/events?"+s);return}
+if(!p.has("view")&&!p.has("when"))return;var o=new URLSearchParams();o.set("view",p.get("view")==="list"?"list":"map");var w=p.get("when");if(w&&w!=="all")o.set("when",w);
+localStorage.setItem(k,o.toString())}catch(e){}})()`;
 
 /** "Free" / "฿250", and the first category, for the line above a title. */
 function eyebrow(e: Event, t: T, lang: Lang): string {
@@ -457,7 +520,9 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const params = new URLSearchParams(c.req.query());
   params.delete("view");
   params.delete("notice");
-  const mapHref = `/events${params.size ? `?${params}` : ""}`;
+  // Explicit view=map, so a bare /events can restore the last choice (DISCOVER_MEMORY_JS).
+  params.set("view", "map");
+  const mapHref = `/events?${params}`;
   params.set("view", "list");
   const listHref = `/events?${params}`;
   const placed = mapView ? list.map((e) => ({ e, place: eventPlace(e) })) : [];
@@ -521,6 +586,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
     return page(
       c,
       { title: t("ค้นหากิจกรรม", "Discover"), tab: "events", fullscreen: true },
+      <>
+      <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <FullDiscover
         t={t}
         lang={lang}
@@ -541,7 +608,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
         listHref={listHref}
         langHref={`/lang/${lang === "th" ? "en" : "th"}?back=${encodeURIComponent(mapHref)}`}
         hasQuests={list.some((e) => e.tags.includes("city_quest"))}
-      />,
+      />
+      </>,
     );
   }
 
@@ -549,6 +617,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     c,
     { title: t("ค้นหากิจกรรม", "Discover"), tab: "events" },
     <>
+      <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
       <a href="/plan" class="feature plan-teaser">
@@ -968,6 +1037,11 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             ) : null}
           </p>
         ) : null}
+        <p class="ev-actions">
+          <a class="chip-btn" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
+            <span aria-hidden="true">🧭</span> {t("เส้นทาง", "Directions")}
+          </a>
+        </p>
         <div class="tags">
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
           <SpotsTag e={event} taken={state.taken} t={t} />
@@ -1274,7 +1348,9 @@ function RegistrationBox(props: {
             hint={t("เพื่อนต้องลงทะเบียนเองและใส่ชื่อผู้ใช้ของคุณด้วย", "Your friend RSVPs too and enters your username.")}
           />
         ) : null}
-        <Button>{t("ลงทะเบียนเข้าร่วม", "RSVP")}</Button>
+        <button type="submit" class="btn primary btn-ticket">
+          <span>{t("ลงทะเบียนเข้าร่วม", "RSVP")}</span>
+        </button>
       </form>
     </>
   );
@@ -1869,11 +1945,13 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
       </section>,
     );
   }
+  const live = !reg.checkedInAt && checkInOpen(event.startsAt, now);
+  const code = shortCode(reg.passToken);
   return page(
     c,
     { title: t("บัตรเข้างาน", "Event pass"), tab: "mine" },
     <>
-      <section class="ticket" aria-label={t("บัตรเข้างาน", "Event pass")}>
+      <section class={live ? "ticket is-live" : "ticket"} aria-label={t("บัตรเข้างาน", "Event pass")}>
         <div class="ticket-top">
           <p class="eyebrow">{t("บัตรเข้างาน", "Event pass")} · {user.profile.nickname}</p>
           <h1>{title(event, lang)}</h1>
@@ -1884,16 +1962,39 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
         </div>
         <div class="ticket-perf" aria-hidden="true" />
         <div class="ticket-body">
-          <div
-            role="img"
-            aria-label={t("คิวอาร์โค้ดบัตรเข้างาน ให้โฮสต์สแกน", "Event pass QR code for the host to scan")}
-            dangerouslySetInnerHTML={{ __html: qrSvg(`bkksocial:pass:${reg.passToken}`) }}
-          />
-          <p class="code">{shortCode(reg.passToken)}</p>
+          {live ? (
+            <p class="live-pill" role="status">
+              <i aria-hidden="true" /> {t("เปิดเช็กอินแล้ว แสดงบัตรนี้ที่จุดนัดพบ", "Check-in is open. Show this at the meeting point")}
+            </p>
+          ) : null}
+          {/* Tap the code to flip it to the short code, big, for a host typing it in. */}
+          <button type="button" class="qr-flip" aria-pressed="false" onclick="var p=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',String(p))">
+            <span class="qr-face qr-front" role="img" aria-label={t("คิวอาร์โค้ดบัตรเข้างาน ให้โฮสต์สแกน แตะเพื่อดูรหัสแบบตัวใหญ่", "Event pass QR code for the host to scan. Tap to show the short code large")} dangerouslySetInnerHTML={{ __html: qrSvg(`bkksocial:pass:${reg.passToken}`) }} />
+            <span class="qr-face qr-back" aria-hidden="true">
+              <small>{t("รหัสบัตร", "Pass code")}</small>
+              <b>{code}</b>
+              <small>{t("แตะเพื่อกลับไปที่คิวอาร์", "Tap to go back to the QR")}</small>
+            </span>
+          </button>
+          <p class="code">{code}</p>
           <p class="muted">{t("ถ้าสแกนไม่ได้ ให้โฮสต์ใส่รหัสนี้ · อย่าแชร์บัตรนี้", "If the scan fails, the host can type this code · don't share this pass")}</p>
           {reg.checkedInAt ? <Tag tone="ok">{t("เช็กอินแล้ว", "Checked in")}</Tag> : null}
         </div>
       </section>
+      {now < event.startsAt ? (
+        <p class="countdown" data-start={event.startsAt.toISOString()}  data-lang={lang}>
+          {t("เริ่ม", "Starts")} {fmtDate(event.startsAt, lang)}
+        </p>
+      ) : null}
+      <div class="pass-actions">
+        <a class="chip-btn" href={`/me/events/${event.id}/calendar.ics`} download={`jurrgun-${event.id}.ics`}>
+          <span aria-hidden="true">🗓️</span> {t("เพิ่มในปฏิทิน", "Add to calendar")}
+        </a>
+        <a class="chip-btn" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
+          <span aria-hidden="true">🧭</span> {t("เส้นทาง", "Directions")}
+        </a>
+      </div>
+      <script dangerouslySetInnerHTML={{ __html: COUNTDOWN_JS }} />
       <ol class="next-steps" aria-label={t("ขั้นตอนต่อไป", "What happens next")}>
         <li class="done">
           <span>
@@ -1927,6 +2028,36 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
     </>,
   );
 });
+
+/** The pass as a calendar file: only for the member holding a confirmed seat. */
+eventRoutes.get("/me/events/:id/calendar.ics", requireMember, async (c) => {
+  const { lang } = view(c);
+  const user = me(c);
+  const id = c.req.param("id");
+  const [row] = await getDb(c.env)
+    .select({ event: events })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(and(eq(registrations.eventId, id), eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed")))
+    .limit(1);
+  if (!row || row.event.status !== "published") return notFound(c);
+  const url = `${new URL(c.req.url).origin}/me/events/${id}/pass`;
+  return c.body(eventIcs(row.event, lang, url), 200, {
+    "content-type": "text/calendar; charset=utf-8",
+    "content-disposition": `attachment; filename="jurrgun-${id}.ics"`,
+    "cache-control": "private, no-store",
+  });
+});
+
+/**
+ * "Starts in 2 h 15 m · check-in opens in 1 h 45 m", ticking each minute.
+ * Check-in opens 30 minutes before the start (rules.checkInOpen).
+ */
+const COUNTDOWN_JS = `(function(){var el=document.querySelector(".countdown[data-start]");if(!el)return;var start=new Date(el.dataset.start).getTime(),th=el.dataset.lang!=="en";
+function span(ms){var m=Math.max(0,Math.round(ms/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;if(th)return d?d+" วัน "+h+" ชม.":h?h+" ชม. "+mm+" นาที":mm+" นาที";return d?d+" d "+h+" h":h?h+" h "+mm+" m":mm+" m"}
+function tick(){var now=Date.now(),left=start-now,open=left-30*60000;if(left<=0){el.textContent=th?"เริ่มแล้ว":"It's started";return}
+var s=(th?"เริ่มในอีก ":"Starts in ")+span(left);s+=open>0?(th?" · เปิดเช็กอินในอีก ":" · check-in opens in ")+span(open):(th?" · เปิดเช็กอินแล้ว":" · check-in is open");el.textContent=s}
+tick();setInterval(tick,60000)})()`;
 
 // ---------------------------------------------------------------- live --
 

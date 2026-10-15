@@ -1,0 +1,77 @@
+/**
+ * Feature moments: a button or animation that belongs to one feature, so
+ * the big steps feel different from ordinary taps.
+ *
+ *  - RSVP is a ticket: notched ends, and it gets punched when you press it.
+ *  - The pass arrives torn along its perforation; while check-in is open it
+ *    glows and says so, and the code flips over to the short code.
+ *  - A new district stamp lands like a rubber stamp, with an ink ring.
+ *  - A new mutual connection: two circles slide together and a spark pops.
+ *
+ * All of it stops for reduced motion (the OS setting or the Accessibility
+ * menu); anything that would otherwise stay on screen is hidden instead.
+ */
+import { themed } from "./styles";
+
+export const MOMENTS_CSS = themed(`
+/* RSVP ticket */
+.btn-ticket{position:relative;padding-inline:28px 40px;-webkit-mask:radial-gradient(circle 7px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(circle 7px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(circle 7px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(circle 7px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;box-shadow:none}
+.btn-ticket:focus-visible{-webkit-mask:none;mask:none}
+.btn-ticket::before{content:"";position:absolute;right:18px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--surface);box-shadow:inset 0 1px 2px rgba(0,0,0,.35);transform:scale(0)}
+.btn-ticket>span{position:relative;padding-right:14px;border-right:2px dashed color-mix(in srgb,currentColor 45%,transparent)}
+.btn-ticket.is-busy{animation:punch-press .28s ease}
+.btn-ticket.is-busy::before{animation:punch .38s .08s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes punch{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes punch-press{35%{transform:translateY(2px) scale(.97)}}
+
+/* The pass tears in along its perforation */
+.ticket .ticket-top{animation:tear-top .55s cubic-bezier(.2,.9,.3,1) both}
+.ticket .ticket-body{animation:tear-body .6s .08s cubic-bezier(.2,.9,.3,1) both}
+@keyframes tear-top{from{transform:translateY(-14px) rotate(-1.2deg);opacity:0}}
+@keyframes tear-body{from{transform:translateY(18px) rotate(.8deg);opacity:0}}
+
+/* Live pass: check-in is open */
+.ticket.is-live{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent),var(--shadow);animation:live-glow 2.4s ease-in-out infinite}
+@keyframes live-glow{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--brand) 16%,transparent),var(--shadow)}}
+.live-pill{display:inline-flex;align-items:center;gap:8px;margin:0 0 8px;padding:5px 12px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:.88rem}
+.live-pill i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--brand);animation:live-dot 1.8s ease-out infinite}
+@keyframes live-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--brand) 55%,transparent)}80%,100%{box-shadow:0 0 0 9px transparent}}
+
+/* QR flips to the short code */
+.qr-flip{position:relative;display:grid;border:0;padding:0;margin:0;background:none;color:inherit;font:inherit;cursor:pointer;perspective:900px;border-radius:16px}
+.qr-face{grid-area:1/1;-webkit-backface-visibility:hidden;backface-visibility:hidden;transition:transform .5s cubic-bezier(.2,.9,.3,1)}
+.qr-front svg{display:block}
+.qr-back{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;border-radius:14px;background:var(--deep);color:#fff;transform:rotateY(180deg)}
+.qr-back b{font-family:var(--display);font-size:2.4rem;letter-spacing:.16em;line-height:1.1}
+.qr-back small{color:var(--on-deep-2)}
+.qr-flip[aria-pressed=true] .qr-front{transform:rotateY(-180deg)}
+.qr-flip[aria-pressed=true] .qr-back{transform:rotateY(0)}
+.qr-flip:focus-visible{outline:3px solid var(--brand);outline-offset:4px}
+
+/* Countdown, calendar and directions */
+.countdown{text-align:center;text-wrap:balance;font-weight:700;color:var(--ink-2);margin:-4px 0 10px;font-variant-numeric:tabular-nums}
+.pass-actions,.ev-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 16px}
+.ev-actions{justify-content:flex-start;margin:4px 0 10px}
+.chip-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border-radius:999px;background:var(--surface);border:1.5px solid var(--field-line,var(--line));color:var(--ink);font-weight:700;text-decoration:none}
+.chip-btn:hover{border-color:var(--brand);color:var(--brand)}
+.caps-warn{display:block;color:var(--warn);font-weight:600}
+
+/* Passport stamp slam */
+.stamps li.on.fresh{position:relative;animation:slam .5s var(--d,0s) cubic-bezier(.3,1.6,.5,1) both}
+.stamps li.on.fresh::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid color-mix(in srgb,var(--brand) 40%,transparent);opacity:0;animation:ink .7s calc(var(--d,0s) + .22s) ease-out both;pointer-events:none}
+@keyframes slam{0%{transform:scale(1.9) rotate(-24deg);opacity:0}55%{transform:scale(.9) rotate(-5deg);opacity:1}100%{transform:rotate(-8deg)}}
+@keyframes ink{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+
+/* Mutual connection spark */
+.spark-pop{position:fixed;z-index:45;left:50%;top:40%;display:flex;align-items:center;transform:translate(-50%,-50%);pointer-events:none;animation:sp-out .45s 2.3s ease forwards}
+.spark-pop i{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 10px 28px rgba(0,0,0,.2);font-style:normal;font-weight:800;font-size:1.5rem;color:#fff}
+.spark-pop .sp-a{background:linear-gradient(135deg,#2fb866,var(--brand));animation:sp-l .7s cubic-bezier(.2,1.3,.4,1) both}
+.spark-pop .sp-b{background:linear-gradient(135deg,#ffc766,#ffa53a);margin-left:-14px;animation:sp-r .7s cubic-bezier(.2,1.3,.4,1) both}
+.spark-pop b{position:absolute;left:50%;top:-26px;font-size:1.9rem;transform:translateX(-50%) scale(0);animation:sp-burst .5s .55s cubic-bezier(.2,1.8,.4,1) forwards}
+@keyframes sp-l{from{transform:translateX(-90px);opacity:0}}
+@keyframes sp-r{from{transform:translateX(90px);opacity:0}}
+@keyframes sp-burst{to{transform:translateX(-50%) scale(1)}}
+@keyframes sp-out{to{opacity:0;visibility:hidden}}
+html.a11y-motion .spark-pop{display:none}
+@media (prefers-reduced-motion:reduce){.spark-pop{display:none}}
+`);

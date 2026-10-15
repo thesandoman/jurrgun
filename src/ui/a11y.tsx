@@ -124,8 +124,16 @@ export function A11yMenu(props: { t: T; class?: string }) {
 }
 
 /**
- * When the browser refuses a form (required, pattern, min/max), mark each
- * failing field aria-invalid so screen readers say so, and clear the mark as
+ * Form safety nets: a Caps Lock note under password fields; "you have
+ * unsaved changes" before leaving a form marked data-guard (Edit profile);
+ * and when the browser refuses a form (required, pattern, min/max), each
+ * failing field is marked aria-invalid so screen readers say so, cleared as
  * soon as the value is fixed (WCAG 3.3.1).
  */
-export const A11Y_FORM_JS = `(function(){document.addEventListener("invalid",function(e){var f=e.target;if(f&&f.setAttribute)f.setAttribute("aria-invalid","true")},true);document.addEventListener("input",function(e){var f=e.target;if(f&&f.getAttribute&&f.getAttribute("aria-invalid")==="true"&&f.checkValidity&&f.checkValidity())f.removeAttribute("aria-invalid")},true)})()`;
+export const A11Y_FORM_JS = `(function(){
+function caps(e){var f=e.target;if(!f||!f.closest)return;var w=f.closest(".field");w=w&&w.querySelector(".caps-warn");if(!w)return;w.hidden=e.type==="blur"||!(e.getModifierState&&e.getModifierState("CapsLock"))}
+["keydown","keyup"].forEach(function(t){document.addEventListener(t,function(e){if(e.target&&e.target.closest&&e.target.closest(".pw,.field")&&e.target.matches("input"))caps(e)},true)});
+document.addEventListener("blur",function(e){if(e.target&&e.target.matches&&e.target.matches("input"))caps(e)},true);
+var dirty=false;document.querySelectorAll("form[data-guard]").forEach(function(f){f.addEventListener("input",function(){dirty=true});f.addEventListener("change",function(){dirty=true});f.addEventListener("submit",function(){dirty=false})});
+addEventListener("beforeunload",function(e){if(dirty){e.preventDefault();e.returnValue=""}});
+document.addEventListener("invalid",function(e){var f=e.target;if(f&&f.setAttribute)f.setAttribute("aria-invalid","true")},true);document.addEventListener("input",function(e){var f=e.target;if(f&&f.getAttribute&&f.getAttribute("aria-invalid")==="true"&&f.checkValidity&&f.checkValidity())f.removeAttribute("aria-invalid")},true)})()`;
