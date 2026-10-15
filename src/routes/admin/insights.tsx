@@ -437,6 +437,7 @@ adminInsights.get("/", async (c) => {
       ) : (
         <div class="table-wrap">
           <table>
+            <caption class="sr-only">{t("แยกตามเขต", "By district")}</caption>
             <thead>
               <tr>
                 <th>{t("เขต", "District")}</th>

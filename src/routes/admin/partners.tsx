@@ -101,6 +101,7 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
       ) : (
         <div class="table-wrap">
           <table>
+            <caption class="sr-only">{t("องค์กรพาร์ตเนอร์", "Partner organisations")}</caption>
             <thead>
               <tr>
                 <th>{t("ชื่อ", "Name")}</th>
@@ -127,6 +128,7 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
       ) : (
         <div class="table-wrap">
           <table>
+            <caption class="sr-only">{t("บัญชีทีมงาน", "Staff accounts")}</caption>
             <thead>
               <tr>
                 <th>{t("ชื่อผู้ใช้", "Username")}</th>

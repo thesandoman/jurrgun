@@ -59,6 +59,7 @@ import {
   Toggle,
   view,
   type View,
+  TableFilter,
 } from "../../ui/kit";
 
 export const adminEvents = new Hono<AppEnv>();
@@ -244,8 +245,11 @@ adminEvents.get("/", async (c) => {
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมในมุมมองนี้", "No events in this view yet")}</Empty>
       ) : (
-        <div class="table-wrap">
-          <table>
+        <>
+        <TableFilter t={t} target="admin-events" label={t("ค้นหาในรายการนี้ (ชื่อ เขต สถานะ)", "Search this list (name, district, status)")} />
+        <div class="table-wrap scroll">
+          <table id="admin-events">
+            <caption class="sr-only">{t("รายการกิจกรรม", "Events")}</caption>
             <thead>
               <tr>
                 <th>{t("กิจกรรม", "Event")}</th>
@@ -279,6 +283,7 @@ adminEvents.get("/", async (c) => {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   ));
@@ -1191,6 +1196,7 @@ adminEvents.get(
         ) : (
           <div class="table-wrap">
             <table>
+              <caption class="sr-only">{t("ผู้เข้าร่วม", "Attendees")}</caption>
               <thead>
                 <tr>
                   <th>{t("ชื่อเล่น", "Nickname")}</th>
@@ -1429,7 +1435,17 @@ adminEvents.get(
 
         <h2>{t("คนที่ไม่มาตามนัด", "No-shows")}</h2>
         {ended ? (
-          <form method="post" action={`${BASE}/${e.id}/noshows`}>
+          <form
+            method="post"
+            action={`${BASE}/${e.id}/noshows`}
+            onsubmit={`return confirm(${JSON.stringify(
+              ((n) =>
+                t(
+                  `บันทึก ${n} คนเป็นผู้ไม่มาตามนัด? แต่ละคนจะได้ 1 strike และได้รับแจ้ง (ยกเว้นให้ได้ภายหลัง)`,
+                  `Record ${n} ${n === 1 ? "person" : "people"} as no-shows? Each gets 1 strike and a private notice (you can waive one later).`,
+                ))(confirmed.filter((r) => !r.checkedInAt && !r.noShowRecorded).length),
+            )})`}
+          >
             <p>
               <small>
                 {t(

@@ -26,7 +26,7 @@ import { fmtDate, fmtDay } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { accounts, events, moderationActions, profiles, registrations, reports, sessions } from "../../schema";
-import { Button, Card, Empty, Field, int, Notice, page, str, Tag, TextArea, view } from "../../ui/kit";
+import { Button, Card, Empty, Field, int, Notice, page, str, TableFilter, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
@@ -123,8 +123,11 @@ adminModeration.get("/", async (c) => {
       {rows.length === 0 ? (
         <Empty>{t("ไม่มีรายงานในสถานะนี้", "No reports with this status")}</Empty>
       ) : (
-        <div class="table-wrap">
-          <table>
+        <>
+        <TableFilter t={t} target="admin-reports" label={t("ค้นหาในรายงาน (เหตุผล ผู้รายงาน ผู้ถูกรายงาน กิจกรรม)", "Search reports (reason, reporter, reported, event)")} />
+        <div class="table-wrap scroll">
+          <table id="admin-reports">
+            <caption class="sr-only">{t("รายงาน", "Reports")}</caption>
             <thead>
               <tr>
                 <th>{t("ความรุนแรง", "Severity")}</th>
@@ -151,6 +154,7 @@ adminModeration.get("/", async (c) => {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>,
   );
@@ -278,7 +282,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
             </span>
           ) : null}
         </p>
-        <h3>{t("รายละเอียดจากผู้รายงาน", "Reporter's details")}</h3>
+        <h2 class="h3">{t("รายละเอียดจากผู้รายงาน", "Reporter's details")}</h2>
         <p style="white-space:pre-wrap">{r.details || t("(ไม่มีรายละเอียด)", "(no details)")}</p>
       </Card>
 
@@ -314,6 +318,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
           ) : (
             <div class="table-wrap">
               <table>
+                <caption class="sr-only">{t("ประวัติการดำเนินการกับบัญชีนี้", "Prior actions on this account")}</caption>
                 <thead>
                   <tr>
                     <th>{t("เมื่อ", "When")}</th>
@@ -345,6 +350,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
           ) : (
             <div class="table-wrap">
               <table>
+                <caption class="sr-only">{t("รายงานอื่นเกี่ยวกับบัญชีนี้", "Other reports about this account")}</caption>
                 <thead>
                   <tr>
                     <th>{t("เมื่อ", "When")}</th>
@@ -375,6 +381,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
             ) : (
               <div class="table-wrap">
                 <table>
+                  <caption class="sr-only">{t("ประวัติการเข้าร่วมกิจกรรม", "Event participation")}</caption>
                   <thead>
                     <tr>
                       <th>{t("กิจกรรม", "Event")}</th>
@@ -413,7 +420,15 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
         {protectedTarget ? (
           <Notice kind="warn">{t("ผู้ดูแลจัดการบัญชีแอดมินไม่ได้", "Moderators can't act on an admin account.")}</Notice>
         ) : null}
-        <form method="post" action={`/admin/moderation/${encodeURIComponent(r.id)}/action`}>
+        {/* Warnings, suspensions and bans ask once first (WCAG 3.3.4); notes, dismissals and lifts don't. */}
+        <form
+          method="post"
+          action={`/admin/moderation/${encodeURIComponent(r.id)}/action`}
+          data-c-warning={t("ส่งคำเตือนถึงสมาชิกคนนี้?", "Send this member a warning?")}
+          data-c-suspend={t("ระงับบัญชีนี้ {d} วัน? สมาชิกจะออกจากระบบและได้รับแจ้ง", "Suspend this account for {d} days? They'll be signed out and notified.")}
+          data-c-ban={t("แบนบัญชีนี้ถาวร? สมาชิกจะออกจากระบบและได้รับแจ้ง", "Ban this account permanently? They'll be signed out and notified.")}
+          onsubmit="var a=this.elements.namedItem('action').value,m=this.dataset['c'+a.charAt(0).toUpperCase()+a.slice(1)];if(!m)return true;var d=this.elements.namedItem('days');return confirm(m.replace('{d}',d?d.value:''))"
+        >
           <div class="field">
             <label for="f-action">{t("การดำเนินการ", "Action")}</label>
             <select id="f-action" name="action" required>

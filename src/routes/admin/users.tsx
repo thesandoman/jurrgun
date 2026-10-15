@@ -75,8 +75,9 @@ adminUsers.get("/", async (c) => {
         rows.length === 0 ? (
           <Empty>{t("ไม่พบผู้ใช้", "No matching account")}</Empty>
         ) : (
-          <div class="table-wrap">
+          <div class="table-wrap scroll">
             <table>
+              <caption class="sr-only">{t("บัญชีผู้ใช้", "Accounts")}</caption>
               <thead>
                 <tr>
                   <th>{t("ชื่อผู้ใช้", "Username")}</th>
@@ -175,22 +176,23 @@ adminUsers.get("/:id", async (c) => {
       <Card>
         <div class="table-wrap" style="border:none;margin:0">
           <table>
+            <caption class="sr-only">{t("รายละเอียดบัญชี", "Account details")}</caption>
             <tbody>
-              <tr><th>{t("รหัสภายใน", "Internal id")}</th><td><small>{acct.id}</small></td></tr>
-              <tr><th>{t("บทบาท", "Role")}</th><td>{acct.role}</td></tr>
+              <tr><th scope="row">{t("รหัสภายใน", "Internal id")}</th><td><small>{acct.id}</small></td></tr>
+              <tr><th scope="row">{t("บทบาท", "Role")}</th><td>{acct.role}</td></tr>
               <tr>
-                <th>{t("สถานะ", "Status")}</th>
+                <th scope="row">{t("สถานะ", "Status")}</th>
                 <td>
                   {statusTag(acct.status, lang)}
                   {acct.status === "suspended" && acct.suspendedUntil ? <small> {t("ถึง", "until")} {fmtDate(acct.suspendedUntil, lang)}</small> : null}
                 </td>
               </tr>
-              <tr><th>{t("การยืนยันบัญชี", "Account verification")}</th><td>{L2(verLabel, acct.verification)}</td></tr>
-              <tr><th>{t("ทะเบียนบ้าน กทม.", "Bangkok registration")}</th><td>{L2(bkkLabel, acct.bkkRegistered)}</td></tr>
-              <tr><th>{t("เขต", "District")}</th><td>{acct.district ? label(DISTRICTS, acct.district, lang) : "—"}</td></tr>
-              <tr><th>{t("สร้างเมื่อ", "Created")}</th><td>{fmtDay(acct.createdAt, lang)}</td></tr>
+              <tr><th scope="row">{t("การยืนยันบัญชี", "Account verification")}</th><td>{L2(verLabel, acct.verification)}</td></tr>
+              <tr><th scope="row">{t("ทะเบียนบ้าน กทม.", "Bangkok registration")}</th><td>{L2(bkkLabel, acct.bkkRegistered)}</td></tr>
+              <tr><th scope="row">{t("เขต", "District")}</th><td>{acct.district ? label(DISTRICTS, acct.district, lang) : "—"}</td></tr>
+              <tr><th scope="row">{t("สร้างเมื่อ", "Created")}</th><td>{fmtDay(acct.createdAt, lang)}</td></tr>
               <tr>
-                <th>{t("รายงาน", "Reports")}</th>
+                <th scope="row">{t("รายงาน", "Reports")}</th>
                 <td>
                   {t("ถูกรายงาน", "Reported")} {counts.against ?? 0} ({t("ค้างอยู่", "open")} {counts.againstOpen ?? 0}) ·{" "}
                   {t("รายงานผู้อื่น", "Filed")} {counts.filed ?? 0}
@@ -243,6 +245,7 @@ adminUsers.get("/:id", async (c) => {
       ) : (
         <div class="table-wrap">
           <table>
+            <caption class="sr-only">{t("ประวัติการดำเนินการ", "Moderation history")}</caption>
             <thead>
               <tr>
                 <th>{t("เมื่อ", "When")}</th>

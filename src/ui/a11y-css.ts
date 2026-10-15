@@ -111,6 +111,18 @@ body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 /* The floating art moves for three loops, then rests (2.2.2). */
 .intro-art{animation-iteration-count:3}
 
+/* Staff area: the menu wraps on laptops instead of being cut off; phones keep the scroll. */
+@media (min-width:900px){.adminnav{flex-wrap:wrap;overflow:visible;row-gap:8px}}
+/* Long staff tables keep their column headings in view, and can be filtered. */
+.table-wrap.scroll{max-height:72vh;overflow:auto}
+.table-wrap.scroll thead th{position:sticky;top:0;z-index:1;box-shadow:0 1px 0 var(--line)}
+.tfilter{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:12px 0 8px}
+.tfilter label{font-weight:600;font-size:.92rem}
+.tfilter input{max-width:360px;flex:1 1 220px}
+.tfilter small{color:var(--ink-2)}
+/* A heading that's an h2 for the outline but sized like an h3. */
+h2.h3{font-size:1.02rem;margin:.2rem 0 .3rem}
+
 /* Missing page and error page. */
 .err-page{text-align:center;padding:8vh 0 4vh}
 .err-page .row{justify-content:center}

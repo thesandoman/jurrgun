@@ -206,6 +206,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
         <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS + A11Y_FORM_JS }} />
+        {opts.admin ? <script dangerouslySetInnerHTML={{ __html: TABLE_FILTER_JS }} /> : null}
         <script dangerouslySetInnerHTML={{ __html: ALIVE_JS }} />
         {member && !opts.fullscreen ? <script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}
         <script
@@ -512,6 +513,27 @@ export function LinkButton(props: { href: string; children: Child; kind?: "prima
     </a>
   );
 }
+
+/**
+ * Type-to-filter for a long staff table: hides rows that don't contain the
+ * text and says how many are showing. Pair with `<table id={target}>`.
+ */
+export function TableFilter(props: { t: T; target: string; label: string }) {
+  const { t, target } = props;
+  const id = `tf-${target}`;
+  return (
+    <div class="tfilter">
+      <label for={id}>{props.label}</label>
+      <input type="search" id={id} data-filter={target} autocomplete="off" />
+      <small id={`${id}-st`} role="status" data-tpl={t("แสดง {n} จาก {t} รายการ", "Showing {n} of {t}")} />
+    </div>
+  );
+}
+
+/** The browser side of TableFilter. */
+export const TABLE_FILTER_JS = `(function(){document.querySelectorAll("input[data-filter]").forEach(function(i){var tb=document.getElementById(i.dataset.filter);if(!tb)return;var rows=[].slice.call(tb.querySelectorAll("tbody tr")),st=document.getElementById(i.id+"-st");
+function run(){var q=i.value.trim().toLowerCase(),n=0;rows.forEach(function(r){var on=!q||r.textContent.toLowerCase().indexOf(q)>-1;r.hidden=!on;if(on)n++});if(st)st.textContent=q?st.dataset.tpl.replace("{n}",n).replace("{t}",rows.length):""}
+i.addEventListener("input",run);if(i.value)run()})})()`;
 
 export function Stat(props: { label: string; value: string | number | null; hint?: string }) {
   return (

@@ -297,6 +297,7 @@ adminPulse.get("/", async (c) => {
       ) : (
         <div class="table-wrap">
           <table>
+            <caption class="sr-only">{t("คำถาม City Pulse", "City Pulse questions")}</caption>
             <thead>
               <tr>
                 <th>{t("คำถาม", "Question")}</th>
@@ -593,6 +594,7 @@ adminPulse.get("/:id/results", async (c) => {
       ) : (
         <div class="table-wrap">
           <table>
+            <caption class="sr-only">{title}</caption>
             <thead>
               <tr>
                 <th>{t("กลุ่ม", "Group")}</th>
@@ -669,6 +671,7 @@ adminPulse.get("/:id/results", async (c) => {
           ) : null}
           <div class="table-wrap">
             <table>
+              <caption class="sr-only">{t("ภาพรวม", "Overall")}</caption>
               <thead>
                 <tr>
                   <th>{t("ตัวเลือก", "Option")}</th>

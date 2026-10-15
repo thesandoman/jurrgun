@@ -11,7 +11,7 @@ import type { AppEnv } from "../../lib/env";
 import { requireRole } from "../../lib/session";
 import { redactSensitive } from "../../lib/records";
 import { accounts, auditLog, profiles } from "../../schema";
-import { Button, Empty, page, view } from "../../ui/kit";
+import { Button, Empty, page, TableFilter, view } from "../../ui/kit";
 
 export const adminAudit = new Hono<AppEnv>();
 adminAudit.use("*", requireRole("bma_admin"));
@@ -87,8 +87,11 @@ adminAudit.get("/", async (c) => {
       {rows.length === 0 ? (
         <Empty>{t("ไม่มีรายการ", "No entries")}</Empty>
       ) : (
-        <div class="table-wrap">
-          <table>
+        <>
+        <TableFilter t={t} target="admin-audit" label={t("ค้นหาใน 200 รายการนี้", "Search these 200 entries")} />
+        <div class="table-wrap scroll">
+          <table id="admin-audit">
+            <caption class="sr-only">{t("บันทึกการตรวจสอบ", "Audit log entries")}</caption>
             <thead>
               <tr>
                 <th>{t("เวลา", "Time")}</th>
@@ -120,6 +123,7 @@ adminAudit.get("/", async (c) => {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>,
   );
