@@ -7,11 +7,11 @@
 import type { T } from "../lib/i18n";
 
 const KEY = "bkk-a11y";
-const FLAGS = ["contrast", "motion", "readable", "links"] as const;
+const FLAGS = ["contrast", "motion", "readable", "links", "touch", "wide", "spacing"] as const;
 
 /** Read the saved choices (migrating the old Aa "bkk-text" switch). Shared by both scripts. */
 const READ = `function rd(){try{var s=JSON.parse(localStorage.getItem("${KEY}")||"null");if(s&&typeof s==="object")return s;return localStorage.getItem("bkk-text")==="big"?{size:"large"}:{}}catch(e){return{}}}`;
-const APPLY = `function ap(s){var d=document.documentElement,c=d.classList,th=s.theme==="light"||s.theme==="dark"?s.theme:null;if(th)d.setAttribute("data-theme",th);else d.removeAttribute("data-theme");document.querySelectorAll("meta[name=theme-color]").forEach(function(m){var o=m.getAttribute("data-media");m.setAttribute("media",th?(th===m.getAttribute("data-scheme")?"all":"not all"):o)});c.toggle("a11y-large",s.size==="large");c.toggle("a11y-xl",s.size==="xl");${JSON.stringify(FLAGS)}.forEach(function(k){c.toggle("a11y-"+k,!!s[k])})}`;
+const APPLY = `function ap(s){var d=document.documentElement,c=d.classList,th=s.theme==="light"||s.theme==="dark"?s.theme:null;if(th)d.setAttribute("data-theme",th);else d.removeAttribute("data-theme");document.querySelectorAll("meta[name=theme-color]").forEach(function(m){var o=m.getAttribute("data-media");m.setAttribute("media",th?(th===m.getAttribute("data-scheme")?"all":"not all"):o)});c.toggle("a11y-small",s.size==="small");c.toggle("a11y-large",s.size==="large");c.toggle("a11y-xl",s.size==="xl");${JSON.stringify(FLAGS)}.forEach(function(k){c.toggle("a11y-"+k,!!s[k])})}`;
 
 /** Inline in <head>: apply saved choices before the page paints. */
 export const A11Y_HEAD_JS = `(function(){${READ}${APPLY}ap(rd())})()`;
@@ -40,6 +40,7 @@ export function A11yIcon() {
 export function A11yMenu(props: { t: T; class?: string }) {
   const { t } = props;
   const sizes: [string, string, string][] = [
+    ["small", t("เล็ก", "Small"), ".85rem"],
     ["normal", t("ปกติ", "Normal"), "1rem"],
     ["large", t("ใหญ่", "Large"), "1.2rem"],
     ["xl", t("ใหญ่มาก", "Largest"), "1.4rem"],
@@ -54,6 +55,9 @@ export function A11yMenu(props: { t: T; class?: string }) {
     ["motion", t("ลดการเคลื่อนไหว", "Reduce motion"), t("หยุดแอนิเมชันและข่าววิ่ง", "Stops animations and the scrolling ticker")],
     ["readable", t("ฟอนต์อ่านง่าย", "Easy-read font"), t("ฟอนต์ชัดขึ้น ระยะห่างกว้างขึ้น", "Clearer letters and wider spacing")],
     ["links", t("ขีดเส้นใต้ลิงก์", "Underline links"), t("เห็นลิงก์ได้โดยไม่ต้องดูสี", "Spot links without relying on colour")],
+    ["touch", t("ปุ่มใหญ่ขึ้น", "Bigger buttons"), t("กดง่ายขึ้นสำหรับนิ้วและมือที่สั่น", "Easier to tap, for any hands")],
+    ["spacing", t("ระยะบรรทัดกว้าง", "More line spacing"), t("อ่านสบายตาขึ้น", "Easier to follow lines of text")],
+    ["wide", t("หน้ากว้างบนจอใหญ่", "Wider pages on big screens"), t("ใช้พื้นที่จอแล็ปท็อปเต็มขึ้น", "Use more of a laptop screen")],
   ];
   return (
     <details class={`a11y ${props.class ?? ""}`.trim()} id="a11y">

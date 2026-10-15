@@ -5,6 +5,12 @@
  * wider column below it. The full-screen map keeps its floating bar.
  */
 export const LAYOUT_CSS = `
+html.a11y-small{font-size:90%}
+html.a11y-spacing body{line-height:1.85;letter-spacing:.01em}
+html.a11y-spacing p,html.a11y-spacing li{margin-bottom:.6em}
+html.a11y-touch .btn,html.a11y-touch .pill span,html.a11y-touch .chip,html.a11y-touch .seg a,html.a11y-touch .tabbar a,html.a11y-touch .top-nav a{min-height:56px;padding-top:12px;padding-bottom:12px}
+html.a11y-touch input[type=checkbox],html.a11y-touch input[type=radio]{width:26px;height:26px}
+@media (min-width:1024px){html.a11y-wide .wrap{max-width:1180px}html.a11y-wide .foot{max-width:1180px}}
 .top-nav{display:none}
 @media (min-width:700px) and (max-width:1023.98px){
   .tabbar{left:50%;right:auto;width:min(560px,calc(100% - 40px));transform:translateX(-50%)}

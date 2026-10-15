@@ -585,7 +585,7 @@ main.wrap>.ev-scene:first-child{margin-top:-26px}
 .a11y-h{margin:0 0 4px;font-family:var(--display);font-weight:700;font-size:1.1rem}
 .a11y-size{margin:0 0 6px}
 .a11y-size legend{font-size:.85rem;color:var(--ink-2);margin-bottom:6px}
-.a11y-size div{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.a11y-size div{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px}
 .a11y-size label{position:relative}
 .a11y-size input{position:absolute;opacity:0;inset:0}
 .a11y-size span{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-height:64px;padding:6px;border-radius:14px;border:1.5px solid var(--line);font-size:.78rem;color:var(--ink-2);cursor:pointer}

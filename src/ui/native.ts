@@ -54,5 +54,7 @@ body:has(.tabbar) .foot{display:none}
 .fullmap .view-switch{bottom:calc(var(--tab-h) + var(--sheet-h) + 14px)}
 .fullmap .svm-key{bottom:calc(var(--tab-h) + var(--sheet-h) + 70px)}
 @media (min-width:1024px){body:not(.fullmap-body) .view-switch{bottom:28px}}
+/* An open header menu (accessibility, notifications) sits above floating controls. */
+.topbar:has(details[open]){z-index:30}
 @media (prefers-reduced-motion:reduce){.seg a,details.how>summary::after{transition:none}}
 `;
