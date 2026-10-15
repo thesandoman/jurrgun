@@ -102,7 +102,7 @@ export const CLASSIC: Scenario[] = [
       BFMH: a("☯️", "pathum_wan", "Tai chi in Lumphini's big crowd, your spot under the same tree", "รำไทเก๊กเช้าวันอาทิตย์กับคนกลุ่มใหญ่ที่สวนลุมพินี จุดของคุณใต้ต้นไม้ต้นเดิม"),
       BFSN: a("🍳", "phaya_thai", "Ari brunch, your table pushed against two more as friends arrive", "บรันช์ที่อารีย์ โต๊ะของคุณต้องต่ออีกสองตัวเพราะเพื่อนทยอยมา"),
       BFSH: a("🥥", "chatuchak", "Chatuchak's Sunday crowds, then your coconut ice cream stall, as ever", "จตุจักรคนแน่นวันอาทิตย์ แวะร้านไอติมกะทิเจ้าประจำเหมือนเคย"),
-      CDMN: a("🌊", "yan_nawa", "Walk the Rama III riverside alone to a just-opened café", "เดินคนเดียวเลียบริมน้ำพระราม 3 ไปคาเฟ่ที่เพิ่งเปิด"),
+      CDMN: a("🌊", "yan_nawa", "Wander the sois off Rama III alone to a just-opened café", "เดินเล่นคนเดียวในซอยแถวพระราม 3 ไปคาเฟ่ที่เพิ่งเปิด"),
       CDMH: a("🌾", "bang_bon", "Explore Bang Bon's canal-side gardens alone, slowly", "เดินสำรวจสวนริมคลองบางบอนคนเดียว ช้า ๆ ไม่รีบ"),
       CDSN: a("✏️", "bang_phlat", "A Chang Chui café you just heard about, sketchbook out", "คาเฟ่ในช่างชุ่ยที่เพิ่งได้ยินชื่อ นั่งริมหน้าต่างกางสมุดสเก็ตช์"),
       CDSH: a("☕", "bang_khae", "Breakfast alone at a Bang Khae market kopi shop with no signboard", "มื้อเช้าคนเดียวที่ร้านกาแฟโบราณในตลาดบางแค ร้านไม่มีป้ายชื่อ"),
@@ -208,7 +208,7 @@ export const CLASSIC: Scenario[] = [
     mood: "everyday",
     answers: {
       BDMN: a("🎤", "nong_chok", "A Bangkok Arena gig, a band neither of you knows, thousands dancing", "คอนเสิร์ตที่บางกอกอารีนา ศิลปินที่ทั้งสองคนไม่รู้จัก เต้นไปกับคนเป็นพัน"),
-      BDMH: a("🍊", "chom_thong", "Join a Bang Mot orchard bike tour together, strangers riding alongside", "ไปร่วมทัวร์ปั่นจักรยานผ่านสวนเก่าบางมดด้วยกัน มีคนแปลกหน้าปั่นมาข้าง ๆ"),
+      BDMH: a("🍊", "chom_thong", "Group bike ride along Chom Thong's canal lanes, a first for both", "ปั่นจักรยานกับกลุ่มเลียบคลองย่านจอมทอง ครั้งแรกของทั้งสองคน"),
       BDSN: a("🌮", "din_daeng", "Jodd Fairs food with mutual friends, ordering whatever's trending this week", "ไปจ๊อดแฟร์กับเพื่อนที่รู้จักร่วมกัน สั่งเมนูที่กำลังดังสัปดาห์นี้"),
       BDSH: a("🍡", "bang_khen", "The busy Liab Duan market, ordering dishes neither of you can name", "ตลาดนัดเลียบด่วน รามอินทรา คนแน่น สั่งเมนูที่ทั้งสองคนเรียกชื่อไม่ถูก"),
       BFMN: a("🏃", "din_daeng", "Bring them to the crew's weekly run at the Thai-Japanese Sports Centre", "ชวนมาวิ่งกับก๊วนประจำสัปดาห์ที่ศูนย์เยาวชนไทย-ญี่ปุ่น"),

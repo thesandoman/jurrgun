@@ -82,7 +82,7 @@ export const PLAN: Scenario[] = [
       CDMH: a("🖼️", "yan_nawa", "Planned ahead: a slow walk to the Wat Chong Nonsi murals, finally", "วางแผนไว้ก่อน เดินช้า ๆ ไปดูจิตรกรรมฝาผนังวัดช่องนนทรี ได้ไปสักที", -1),
       CDSN: a("🎟️", "pathum_wan", "Two seats booked at House Samyan: the indie a friend swears by", "จองตั๋วสองที่ไว้ล่วงหน้าที่เฮาส์ สามย่าน หนังอินดี้ที่เพื่อนเชียร์นักหนา", -1),
       CDSH: a("☕", "thon_buri", "No plan: the first old coffee shop you pass near Talat Phlu", "ไม่วางแผนอะไร เดินเข้าร้านกาแฟเก่าร้านแรกที่เจอแถวตลาดพลู", 1),
-      CFMN: a("🌿", "yan_nawa", "Ping 'walk?' an hour before. The Rama III riverside, as always", "ทักไปก่อนแค่ชั่วโมงเดียวว่า “ไปเดินไหม” ริมน้ำพระราม 3 เหมือนทุกที", 1),
+      CFMN: a("🌿", "yan_nawa", "Ping 'walk?' an hour before. Round Wat Pariwat, as always", "ทักไปก่อนแค่ชั่วโมงเดียวว่า “ไปเดินไหม” เดินรอบวัดปริวาสเหมือนทุกที", 1),
       CFMH: a("🚲", "chom_thong", "Plan Sunday's 7am ride through the Bang Mot orchards, still your favourite", "วางแผนปั่นวันอาทิตย์ 7 โมงเช้า ผ่านสวนเก่าบางมด เส้นโปรดของคุณ", -1),
       CFSN: a("🧁", "phaya_thai", "Ask on the spot: the window seat at your favourite Ari café", "ชวนแบบปุบปับ ไปนั่งริมหน้าต่างที่คาเฟ่โปรดในอารีย์", 1),
       CFSH: a("🍲", "pom_prap", "Book your corner for lunch at the old Nang Loeng shop", "จองมุมประจำของคุณไว้ก่อน มื้อเที่ยงที่ร้านเก่าในตลาดนางเลิ้ง", -1),
@@ -151,7 +151,7 @@ export const PLAN: Scenario[] = [
     tone: "night",
     mood: "everyday",
     answers: {
-      BDMN: a("🏟️", "nong_chok", "A month ahead: birthday futsal for twenty at Bangkok Arena, a first", "จองล่วงหน้า 1 เดือน เตะฟุตซอลวันเกิด 20 คนที่บางกอกอารีนา ครั้งแรกของแก๊ง", -1),
+      BDMN: a("🏟️", "nong_chok", "A month ahead: twenty of you dancing at Bangkok Arena, a first", "จองล่วงหน้า 1 เดือน ยกแก๊ง 20 คนไปเต้นในคอนเสิร์ตที่บางกอกอารีนา ครั้งแรก", -1),
       BDMH: a("🏮", "samphanthawong", "That night, everyone walks Yaowarat's back lanes, stops picked on the spot", "คืนนั้นเลย ชวนทุกคนเดินตรอกหลังเยาวราช จะแวะไหนค่อยเลือกตอนนั้น", 1),
       BDSN: a("🎡", "bang_kho_laem", "Same-day invite to everyone: a table at Asiatique's latest opening", "ส่งคำชวนทุกคนวันนั้นเลย ไปนั่งร้านที่เพิ่งเปิดล่าสุดในเอเชียทีค", 1),
       BDSH: a("🦀", "samphanthawong", "Weeks ahead: a long table at a Talat Noi shophouse nobody knows", "จองล่วงหน้าหลายอาทิตย์ โต๊ะยาวในตึกแถวตลาดน้อย ร้านที่ยังไม่มีใครรู้จัก", -1),

@@ -67,7 +67,7 @@ export const FRIENDS_SOLO: Scenario[] = [
     tone: "evening",
     mood: "everyday",
     answers: {
-      BDMN: a("🌉", "yan_nawa", "Walk the Rama III riverside with everyone, hunting weekend pop-ups", "ชวนทุกคนเดินริมน้ำพระราม 3 ตามล่าป๊อปอัปสุดสัปดาห์"),
+      BDMN: a("🌉", "yan_nawa", "Walk Central Rama 3 with everyone, hunting this weekend's pop-ups", "ชวนทุกคนเดินเซ็นทรัล พระราม 3 ตามล่าป๊อปอัปสุดสัปดาห์นี้"),
       BDMH: a("🦀", "bang_khun_thian", "Finally, everyone walking the Bang Khun Thian mangrove boardwalk by the sea", "ได้ยกแก๊งไปเดินสะพานไม้ในป่าชายเลนบางขุนเทียนริมทะเลสักที"),
       BDSN: a("🌇", "sathon", "A long table at that Sathon rooftop everyone's talking about", "จองโต๊ะยาวที่รูฟท็อปย่านสาทรที่ใคร ๆ ก็พูดถึง"),
       BDSH: a("🍛", "phra_nakhon", "Everyone to Phahurat for Indian sweets and curries nobody's tried", "พาทั้งแชตไปพาหุรัด ลองขนมกับแกงอินเดียที่ยังไม่มีใครเคยกิน"),
@@ -129,7 +129,7 @@ export const FRIENDS_SOLO: Scenario[] = [
       BDSH: a("🍛", "ratchathewi", "Ban Khrua's busy halal kitchens, chatting with cooks you just met", "ตระเวนกินร้านฮาลาลคนแน่นในชุมชนบ้านครัว คุยกับคนทำครัวที่เพิ่งรู้จัก"),
       BFMN: a("👟", "prawet", "The weekday evening run club at Suan Luang Rama IX, back again", "ได้กลับไปวิ่งกับรันคลับวันธรรมดาที่สวนหลวง ร.9 อีกครั้ง"),
       BFMH: a("🌸", "thawi_watthana", "The bike club's orchid farm ride in Thawi Watthana, still your favourite", "ปั่นกับก๊วนจักรยานผ่านสวนกล้วยไม้ทวีวัฒนา ยังเป็นเส้นโปรดเสมอ"),
-      BFSN: a("🎲", "prawet", "Seacon Square's board game café, the big table saving your seat", "ร้านบอร์ดเกมในซีคอนสแควร์ โต๊ะใหญ่เก็บที่ไว้ให้คุณแล้ว"),
+      BFSN: a("🎲", "prawet", "Seacon Square's food court, your seat at the big shared table", "ฟู้ดคอร์ตซีคอนสแควร์ ที่นั่งประจำของคุณที่โต๊ะใหญ่ที่นั่งรวมกับคนอื่น"),
       BFSH: a("🏮", "bang_khen", "Your stall at the busy Liab Duan market, chatting with the owners", "ร้านประจำในตลาดนัดเลียบด่วนที่คนแน่น นั่งคุยยาวกับเจ้าของร้าน"),
       CDMN: a("🚝", "lak_si", "Ride the Pink Line alone, hop off somewhere random and walk", "นั่งรถไฟฟ้าสายสีชมพูคนเดียว สุ่มลงสักสถานีแล้วเดินสำรวจ"),
       CDMH: a("🏚️", "lat_phrao", "Walk Khlong Lat Phrao's canal path alone, curious about every wooden house", "เดินคนเดียวตามทางริมคลองลาดพร้าว อยากรู้เรื่องบ้านไม้ทุกหลังที่ผ่าน"),

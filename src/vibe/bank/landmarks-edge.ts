@@ -124,7 +124,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
     mood: "landmark",
     answers: {
       BDMN: a("🛍️", "bang_kapi", "Ten of you hunting Ramkhamhaeng's student pop-ups, buying anything odd", "สิบคนตระเวนป๊อปอัปของเด็กรามคำแหง เจออะไรแปลก ๆ ซื้อหมด"),
-      BDMH: av("🛶", "bang_kapi", "The whole gang exploring the Saen Saep canal path by Wat Thepleela", "ทั้งแก๊งเดินสำรวจทางเลียบคลองแสนแสบแถววัดเทพลีลา"),
+      BDMH: a("🛶", "bang_kapi", "The whole gang exploring round the Wat Thepleela pier on Saen Saep", "ทั้งแก๊งเดินสำรวจแถวท่าเรือวัดเทพลีลาริมคลองแสนแสบ"),
       BDSN: a("🍽️", "bueng_kum", "A long table at the Pattavikorn market café trending this week", "โต๊ะยาวที่คาเฟ่ในตลาดนัดปัฐวิกรณ์ ร้านที่กำลังดังสัปดาห์นี้"),
       BDSH: a("🍢", "bang_kapi", "The gang at a Lat Phrao 101 stall a friend swears by", "แก๊งไปร้านริมทางลาดพร้าว 101 ที่เพื่อนคนหนึ่งยืนยันว่าเด็ด"),
       BFMN: a("🏃", "bueng_kum", "Your crew's evening run round Seri Thai Park, the post-run smoothie ritual", "ก๊วนคุณวิ่งเย็นรอบสวนเสรีไทย จบด้วยสมูทตี้ตามธรรมเนียม"),
@@ -351,7 +351,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
       CDMH: a("🏯", "thon_buri", "With one friend, exploring the old lanes round Wat Kalayanamit", "เดินสำรวจตรอกเก่ารอบวัดกัลยาณมิตรกับเพื่อนอีกคน"),
       CDSN: a("☕", "bang_kho_laem", "Two lattes at a riverside café under Krung Thep Bridge, just spotted", "ลาเต้สองแก้วที่คาเฟ่ริมน้ำใต้สะพานกรุงเทพ เพิ่งสังเกตเห็น"),
       CDSH: a("🍲", "rat_burana", "Riverside lunch for two in Rat Burana, an unmarked shop", "มื้อเที่ยงริมน้ำสองคนในราษฎร์บูรณะ ร้านที่ไม่มีป้ายชื่อ"),
-      CFMN: av("👟", "yan_nawa", "Most evenings on the Rama III riverside, jogging beside one old friend", "เกือบทุกเย็นวิ่งริมน้ำถนนพระราม 3 กับเพื่อนเก่าอีกคน"),
+      CFMN: a("👟", "yan_nawa", "Most evenings jogging the sois off Rama III beside one old friend", "เกือบทุกเย็นวิ่งในซอยแถวพระราม 3 กับเพื่อนเก่าอีกคน"),
       CFMH: a("⛵", "sathon", "Walking round Wat Yannawa's boat-shaped temple with one friend, a ritual", "เดินรอบวัดยานนาวาวัดรูปเรือสำเภากับเพื่อนอีกคน เป็นธรรมเนียมของสองคน"),
       CFSN: a("🎡", "bang_kho_laem", "Your window table with one friend at an Asiatique café, as ever", "โต๊ะริมหน้าต่างกับเพื่อนอีกคนที่คาเฟ่ในเอเชียทีค เหมือนเคย"),
       CFSH: a("🍛", "yan_nawa", "Vegetarian khao gaeng with one friend at your stall off Rama III", "ข้าวแกงเจกับเพื่อนอีกคนที่ร้านประจำแถวถนนพระราม 3"),

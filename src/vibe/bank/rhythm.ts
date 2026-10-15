@@ -20,7 +20,7 @@ export const RHYTHM: Scenario[] = [
       BFMH: a("🎡", "bang_khen", "The yearly Bang Khen temple fair, ramwong with the crowd past 10pm", "งานวัดประจำปีที่บางเขน รำวงกับคนทั้งงานจนเลย 4 ทุ่ม", 1),
       BFSN: a("🎷", "ratchathewi", "Packed Saxophone past midnight on Friday. The band waves you in", "คืนวันศุกร์ที่แซกโซโฟนคนแน่น อยู่จนเลยเที่ยงคืน นักดนตรีโบกมือทักตั้งแต่เดินเข้าร้าน", 1),
       BFSH: a("🍡", "bangkok_noi", "Packed Wang Lang at 7am, and the auntie already has your sweets", "7 โมงเช้า วังหลังคนแน่น ป้าเตรียมขนมไทยของคุณไว้แล้ว", -1),
-      CDMN: a("🌃", "yan_nawa", "Cycling a Rama III riverside stretch at 10pm, alone, on a hunch", "ปั่นคนเดียวตอน 4 ทุ่ม เลี้ยวเข้าริมน้ำพระราม 3 ช่วงไหนก็ได้ตามใจ", 1),
+      CDMN: a("🌃", "yan_nawa", "Cycling quiet sois off Rama III at 10pm, alone, on a hunch", "ปั่นคนเดียวตอน 4 ทุ่ม เลี้ยวเข้าซอยเงียบ ๆ แถวพระราม 3 ตามใจ", 1),
       CDMH: a("🏘️", "thon_buri", "Walking Kudi Chin alone at 6am, lanes you've meant to explore", "6 โมงเช้า เดินกุฎีจีนคนเดียว ซอยที่ตั้งใจจะมาเดินนานแล้ว", -1),
       CDSN: a("☕", "phaya_thai", "7am in an Ari café that opened last month, sketchbook out", "7 โมงเช้าในคาเฟ่อารีย์ที่เพิ่งเปิดเดือนก่อน กางสมุดสเก็ตช์", -1),
       CDSH: a("🍜", "samphanthawong", "11pm noodles alone in a Yaowarat shophouse with no signboard", "ก๋วยเตี๋ยวตอน 5 ทุ่ม นั่งคนเดียวในตึกแถวเยาวราชที่ไม่มีป้ายร้าน", 1),

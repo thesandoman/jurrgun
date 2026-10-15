@@ -240,7 +240,7 @@ export const SEASONAL: Scenario[] = [
     tone: "evening",
     answers: {
       BDMN: a("🏮", "huai_khwang", "The whole Table hopping jay stalls at a pop-up night market", "ทั้งโต๊ะตะลอนร้านเจในตลาดนัดป๊อปอัป"),
-      BDMH: av("🚩", "pom_prap", "No map, the whole Table walking Wongwian 22's old yellow-flag lanes", "ไม่มีแผนที่ ทั้งโต๊ะเดินตามธงเหลืองในตรอกเก่ารอบวงเวียน 22 กรกฎา"),
+      BDMH: a("🚩", "samphanthawong", "No map, the whole Table walking Yaowarat's yellow-flag lanes", "ไม่มีแผนที่ ทั้งโต๊ะเดินตามธงเหลืองในตรอกเยาวราช"),
       BDSN: a("🥗", "watthana", "A long Table at a Thonglor vegan spot one member swears by", "โต๊ะยาวที่ร้านวีแกนย่านทองหล่อ ที่เพื่อนร่วมโต๊ะคนหนึ่งยืนยันว่าเด็ด"),
       BDSH: a("🍜", "lat_phrao", "On a tip, jay noodles for the whole Table at Chokchai 4", "มีคนบอกต่อ เลยพาทั้งโต๊ะไปกินก๋วยเตี๋ยวเจที่โชคชัย 4"),
       BFMN: a("🥡", "phra_khanong", "Your whole Table walking True Digital Park's jay stalls again", "ทั้งโต๊ะเดินตามร้านเจในทรู ดิจิทัล พาร์คอีกปี"),
@@ -296,7 +296,7 @@ export const SEASONAL: Scenario[] = [
     tone: "afternoon",
     answers: {
       BDMN: a("🍨", "wang_thonglang", "The gang hopping Lat Phrao 101's mango stalls everyone's posting", "แก๊งตะลอนร้านมะม่วงแถวลาดพร้าว 101 ที่ใคร ๆ ก็โพสต์"),
-      BDMH: av("🥭", "thawi_watthana", "The gang exploring Thawi Watthana's canal orchards, picking mangoes", "แก๊งลุยสวนผลไม้ริมคลองย่านทวีวัฒนา เก็บมะม่วงกันเอง"),
+      BDMH: a("🥭", "thawi_watthana", "First gang ride through Thawi Watthana's farm lanes, stopping at mango stalls", "แก๊งปั่นเลาะสวนริมคลองย่านทวีวัฒนาครั้งแรก แวะแผงมะม่วงข้างทาง"),
       BDSN: a("🍧", "bang_khen", "A big table sharing every mango bingsu at a pop-up someone posted", "โต๊ะใหญ่สั่งบิงซูมะม่วงทุกแบบในร้านป๊อปอัปที่มีคนโพสต์ มาแชร์กัน"),
       BDSH: a("🍚", "thung_khru", "The gang hunts down an old Bang Mot mango sticky rice stall", "แก๊งตามหาร้านข้าวเหนียวมะม่วงเก่าแก่แถวบางมด"),
       BFMN: a("🏸", "khan_na_yao", "Badminton with your crew, then mango smoothies; the loser always pays", "ตีแบดกับแก๊ง แล้วต่อสมูทตี้มะม่วง คนแพ้จ่ายทุกที"),
@@ -304,7 +304,7 @@ export const SEASONAL: Scenario[] = [
       BFSN: a("🍰", "bang_kapi", "Your crew at the dessert café, mango plates arriving without asking", "แก๊งนั่งคาเฟ่ของหวานร้านประจำ จานมะม่วงมาเสิร์ฟโดยไม่ต้องสั่ง"),
       BFSH: a("🥭", "chatuchak", "Your crew eating at Or Tor Kor market, the mango seller waves", "แก๊งไปกินที่ตลาด อ.ต.ก. คนขายมะม่วงโบกมือทัก"),
       CDMN: a("🛍️", "lat_phrao", "Browsing a weekend mango pop-up with one friend, curious about every flavour", "เดินดูป๊อปอัปมะม่วงสุดสัปดาห์กับเพื่อนหนึ่งคน อยากลองทุกรส"),
-      CDMH: av("🌳", "chom_thong", "With one friend, finally walking Chom Thong's canal orchards", "ได้เดินสวนผลไม้ริมคลองย่านจอมทองกับเพื่อนหนึ่งคนซะที"),
+      CDMH: a("🌳", "chom_thong", "Mango sticky rice, then finally exploring Wat Ratchaorasaram with one friend", "กินข้าวเหนียวมะม่วง แล้วได้เดินสำรวจวัดราชโอรสารามกับเพื่อนซะที"),
       CDSN: a("🍮", "bang_na", "Mango pudding and long talk at a café just found, one friend", "พุดดิ้งมะม่วงกับเพื่อนหนึ่งคน นั่งคุยยาวที่คาเฟ่ที่เพิ่งเจอ ย่านบางนา"),
       CDSH: a("🍚", "saphan_sung", "Mango sticky rice with one friend, an unmarked Saphan Sung canal stall", "ข้าวเหนียวมะม่วงกับเพื่อนหนึ่งคน ร้านไม่มีป้ายริมคลองสะพานสูง"),
       CFMN: a("🚲", "suan_luang", "Your Sunday ride with one friend, then smoothies at the same stand", "ปั่นจักรยานวันอาทิตย์กับเพื่อนหนึ่งคน ปิดท้ายที่ร้านสมูทตี้มะม่วงเจ้าเดิม"),
