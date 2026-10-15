@@ -1199,7 +1199,7 @@ adminEvents.get(
                   <th>{t("มากับ (+1)", "+1 with")}</th>
                   <th>{t("ขอบัดดี้", "Wants buddy")}</th>
                   <th>{t("เช็กอิน", "Checked in")}</th>
-                  <th>{t("โต๊ะ", "Group")}</th>
+                  <th>{t("โต๊ะ", "Table")}</th>
                   <th>{t("ไม่มาตามนัด", "No-show")}</th>
                 </tr>
               </thead>
@@ -1281,7 +1281,7 @@ adminEvents.get(
               "จัดเฉพาะคนที่เช็กอินแล้ว คู่ +1 ได้นั่งด้วยกัน และคนที่บล็อกกันจะไม่อยู่โต๊ะเดียวกัน",
               "Built from checked-in attendees only. +1 pairs stay together; blocked pairs are never seated together.",
             )}{" "}
-            {t(`โต๊ะละ ${e.groupMin} ถึง ${e.groupMax} คน`, `Group size ${e.groupMin} to ${e.groupMax}.`)}
+            {t(`โต๊ะละ ${e.groupMin} ถึง ${e.groupMax} คน`, `Tables of ${e.groupMin} to ${e.groupMax}.`)}
           </small>
         </p>
         {swaps !== undefined ? (
@@ -1301,7 +1301,7 @@ adminEvents.get(
           {groupNos.map((g) => (
             <Card>
               <h3>
-                {t("โต๊ะ", "Group")} {g} <small>({groups.get(g)!.length})</small>
+                {t("โต๊ะ", "Table")} {g} <small>({groups.get(g)!.length})</small>
               </h3>
               <ul>
                 {groups.get(g)!.map((r) => (
@@ -1341,7 +1341,7 @@ adminEvents.get(
                 lang={lang}
                 options={checked.map((r) => ({ value: r.id, th: nick.get(r.accountId)!, en: nick.get(r.accountId)! }))}
               />
-              <Field label={t("เลขโต๊ะ (เว้นว่าง = ไม่มีโต๊ะ)", "Group number (blank = none)")} name="groupNo" type="number" min={1} max={99} />
+              <Field label={t("เลขโต๊ะ (เว้นว่าง = ไม่มีโต๊ะ)", "Table number (blank = none)")} name="groupNo" type="number" min={1} max={99} />
               <Button kind="ghost">{t("ย้าย", "Move")}</Button>
             </form>
           </details>
@@ -1805,7 +1805,7 @@ adminEvents.post(
     const regId = str(body.registrationId);
     const rawGroup = str(body.groupNo);
     const groupNo = rawGroup === "" ? null : intIn(rawGroup, 1, 99);
-    if (rawGroup !== "" && groupNo === null) return refuse(c, e, t("เลขโต๊ะต้องอยู่ระหว่าง 1 ถึง 99", "Group number must be 1 to 99"));
+    if (rawGroup !== "" && groupNo === null) return refuse(c, e, t("เลขโต๊ะต้องอยู่ระหว่าง 1 ถึง 99", "Table number must be 1 to 99"));
     const [reg] = await db
       .select({ id: registrations.id, groupNo: registrations.groupNo, status: registrations.status, checkedInAt: registrations.checkedInAt })
       .from(registrations)

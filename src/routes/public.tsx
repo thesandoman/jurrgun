@@ -73,6 +73,10 @@ publicRoutes.get("/", (c) => {
           ))}
         </div>
       </div>
+      <div class="row doors">
+        <LinkButton href="/new" kind="ghost">👋 {t("เพิ่งย้ายมากรุงเทพฯ", "New to Bangkok")}</LinkButton>
+        <LinkButton href="/international" kind="ghost">🌏 {t("ชาวต่างชาติในกรุงเทพฯ", "From abroad, living here")}</LinkButton>
+      </div>
       <p class="muted">
         <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a> · <a href="/learn">{t("เรียนรู้", "Learn")}</a> · <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
       </p>

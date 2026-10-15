@@ -20,7 +20,8 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
-import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, womenOnlyEventOk } from "../domain/rules";
+import { segmentOf, type Segment } from "../domain/segment";
+import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
 import { cleanBio } from "../content/profile";
 import { Hono, type Context } from "hono";
@@ -398,6 +399,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (values(EVENT_TAGS).includes(q.tag)) where.push(jsonHas(events.tags, q.tag));
   // Dating events exist only for members with romance mode on (romanceEventOk).
   if (!romanceEligible(user.profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
+  // Women-only events are only listed for women and non-binary members (and anyone who hasn't said).
+  if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], user.profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   if (q.free) where.push(eq(events.costThb, 0));
   // Short and sweet: 90 minutes or less, for carers and long work days.
   if (q.short) where.push(sql`${events.endsAt} - ${events.startsAt} <= interval '90 minutes'`);
@@ -466,7 +469,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       {q.text ? <input type="hidden" name="q" value={q.text} /> : null}
       <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
       <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
-      <Select label={t("หมวด", "Category")} name="tag" options={romanceEligible(user.profile) ? EVENT_TAGS : EVENT_TAGS.filter((x) => x.value !== OPEN_TO_MORE_TAG)} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
+      <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS.filter((x) => (x.value !== OPEN_TO_MORE_TAG || romanceEligible(user.profile)) && (x.value !== WOMEN_ONLY_TAG || womenOnlyEventVisible([WOMEN_ONLY_TAG], user.profile)))} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
       <Select label={t("ภาษา", "Language")} name="language" options={LANGUAGES} value={q.language} lang={lang} blank={t("ทุกภาษา", "Any language")} />
       <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />
       <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
@@ -568,15 +571,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
         </nav>
       </div>
       <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
-      {user.profile.newcomer ? (
-        <Card class="hint">
-          <strong>{t("เพิ่งย้ายมากรุงเทพฯ ใช่ไหม? 👋", "New to Bangkok? 👋")}</strong>
-          <p>
-            {t("ลองกิจกรรม 'มาใหม่ในกรุงเทพฯ' ดูสิ ทุกคนก็มาคนเดียวเหมือนกัน", "Try a 'New to Bangkok' meet-up. Everyone arrives on their own.")}{" "}
-            <a href="/events?tag=newcomers">{t("ดูกิจกรรมสำหรับคนมาใหม่", "See newcomer events")}</a>
-          </p>
-        </Card>
-      ) : null}
+      <ForYou v={v} segment={segmentOf(user.profile)} />
       {myVibe.length === 0 ? (
         <Card class="hint quiz-hint">
           <div class="spread">
@@ -703,6 +698,54 @@ function mapChips(list: Event[], lang: Lang): MapChip[] {
     .map(([tag]) => ({ value: tag, label: label(EVENT_TAGS, tag, lang), emoji: CHIP_EMOJI[tag] ?? "•" }));
 }
 
+/**
+ * The first card on Discover, different for locals, newcomers and
+ * internationals (domain/segment.ts). Suggestions only: everyone sees every event.
+ */
+function ForYou(props: { v: View; segment: Segment }) {
+  const { t } = props.v;
+  const card = (title: string, body: string, links: [string, string][]) => (
+    <Card class="hint for-you">
+      <strong>{title}</strong>
+      <p>{body}</p>
+      <p class="row">
+        {links.map(([href, text]) => (
+          <a href={href}>{text}</a>
+        ))}
+      </p>
+    </Card>
+  );
+  if (props.segment === "international")
+    return card(
+      t("ยินดีต้อนรับสู่กรุงเทพฯ 👋", "Welcome to Bangkok 👋"),
+      t("เริ่มจากโต๊ะที่ใช้ภาษาอังกฤษได้และโต๊ะแลกเปลี่ยนภาษา เจอเพื่อนคนไทยได้ ไม่ต้องพูดไทยเก่ง", "Start with English-friendly and language-exchange tables. Make Thai friends, no fluent Thai needed."),
+      [
+        ["/events?tag=english_friendly", t("โต๊ะที่ใช้ภาษาอังกฤษได้", "English-friendly tables")],
+        ["/events?tag=language_exchange", t("แลกเปลี่ยนภาษา", "Language exchange")],
+        ["/learn/new-to-bangkok", t("คู่มือคนมาใหม่", "New to Bangkok guide")],
+      ],
+    );
+  if (props.segment === "newcomer")
+    return card(
+      t("เพิ่งย้ายมากรุงเทพฯ ใช่ไหม? 👋", "New to Bangkok? 👋"),
+      t("ลองโต๊ะสำหรับคนมาใหม่ ทุกคนก็มาคนเดียวเหมือนกัน แล้วหาบัดดี้ไว้ตะลุยเมืองด้วยกัน", "Try a newcomer table. Everyone comes alone. Then get a buddy to explore the city with."),
+      [
+        ["/events?tag=newcomers", t("โต๊ะสำหรับคนมาใหม่", "Newcomer tables")],
+        ["/events?tag=city_quest", t("ซิตี้เควสต์", "City Quests")],
+        ["/buddy", t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")],
+      ],
+    );
+  return card(
+    t("กรุงเทพฯ ของคุณ ในมุมใหม่ ✨", "Your Bangkok, new faces ✨"),
+    t("เจอคนใหม่ในย่านของคุณเอง ชวนคนที่เคยเจอกลับมาเจอกันอีก หรือลองเป็นโฮสต์ให้คนมาใหม่", "Meet new people in your own district, see people you've met again, or host a table for newcomers."),
+    [
+      ["/events?tag=run", t("วิ่งและกีฬา", "Runs and sport")],
+      ["/events?tag=board_game", t("บอร์ดเกม", "Board games")],
+      ["/connections", t("คนรู้จัก", "My people")],
+    ],
+  );
+}
+
 // -------------------------------------------------------------- detail --
 
 /** The event, or null when it doesn't exist or this viewer may not see it. */
@@ -722,7 +765,7 @@ async function visibleEvent(c: Ctx, id: string): Promise<Event | null> {
   const a = c.var.user!.account;
   const viewer = { id: a.id, role: a.role, partnerOrgId: a.partnerOrgId };
   const p = c.var.user!.profile;
-  if (!p || !romanceEventOk(event.tags, p)) return null;
+  if (!p || !romanceEventOk(event.tags, p) || !womenOnlyEventVisible(event.tags, p)) return null;
   if (canView(event, viewer)) return event;
   const fromLink = c.req.query("t");
   const token = fromLink ?? getCookie(c, privateCookie(id)) ?? null;
@@ -903,7 +946,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           </div>
           <div class="fact">
             <b aria-hidden="true">👥</b>
-            <small>{t("โต๊ะ", "Group")}</small>
+            <small>{t("โต๊ะ", "Table")}</small>
             <span>{t(`โต๊ะละ ${event.groupMin} ถึง ${event.groupMax} คน`, `Tables of ${event.groupMin}-${event.groupMax}`)}</span>
             <small>{label(INTENSITY, event.intensity, lang)}</small>
           </div>
@@ -993,7 +1036,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           </dd>
           <dt>{t("ความคึกคัก", "Social intensity")}</dt>
           <dd>{label(INTENSITY, event.intensity, lang)}</dd>
-          <dt>{t("ขนาดกลุ่ม", "Group size")}</dt>
+          <dt>{t("คนต่อโต๊ะ", "Table size")}</dt>
           <dd>{t(`โต๊ะละ ${event.groupMin} ถึง ${event.groupMax} คน`, `Tables of ${event.groupMin}-${event.groupMax}`)}</dd>
           <dt>{t("ชวนเพื่อนมาได้ (+1)", "Bring a friend (+1)")}</dt>
           <dd>{event.plusOneAllowed ? t("ได้", "Yes") : t("ไม่ได้", "No")}</dd>
@@ -1941,10 +1984,10 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
         {event.groupsPublishedAt && reg.groupNo !== null ? (
           <>
             <p>
-              <Tag tone="accent">{t(`กลุ่มที่ ${reg.groupNo}`, `Group ${reg.groupNo}`)}</Tag>
+              <Tag tone="accent">{t(`โต๊ะ ${reg.groupNo}`, `Table ${reg.groupNo}`)}</Tag>
             </p>
             {mates.length === 0 ? (
-              <Empty>{t("ยังไม่มีสมาชิกคนอื่นในกลุ่ม", "No one else in your group yet.")}</Empty>
+              <Empty>{t("ยังไม่มีใครอื่นที่โต๊ะของคุณ", "No one else at your table yet.")}</Empty>
             ) : (
               <ul class="people">
                 {mates.map((m) => (
@@ -1991,7 +2034,7 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
 
       <Card>
         <h2>{t("สัญญาณทักทายของฉัน", "My social signal")}</h2>
-        <p class="muted">{t("ไม่บังคับ เปลี่ยนได้ตลอด คนในกลุ่มจะเห็น", "Optional and easy to change. Your group can see it.")}</p>
+        <p class="muted">{t("ไม่บังคับ เปลี่ยนได้ตลอด คนที่โต๊ะจะเห็น", "Optional and easy to change. Your table can see it.")}</p>
         <form method="post" action={`/events/${id}/signal`}>
           <Choices legend={t("เลือกสัญญาณ", "Pick a signal")} name="signal" type="radio" options={opts} values={[reg.socialSignal ?? ""]} lang={lang} />
           <Field

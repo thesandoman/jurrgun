@@ -236,8 +236,9 @@ adminDashboard.get("/", async (c) => {
  * The north star (design/reference/customer-profile.md): members who checked in
  * this week at an event where someone else who checked in was already a
  * connection of theirs (connected before that event started, not removed).
+ * `among` narrows it to some members (tests).
  */
-export async function weeklyReconnected(db: ReturnType<typeof getDb>, since: Date): Promise<number> {
+export async function weeklyReconnected(db: ReturnType<typeof getDb>, since: Date, among?: string[]): Promise<number> {
   const r1 = alias(registrations, "r1");
   const r2 = alias(registrations, "r2");
   const [row] = await db
@@ -253,6 +254,6 @@ export async function weeklyReconnected(db: ReturnType<typeof getDb>, since: Dat
         or(and(eq(connections.aAccount, r1.accountId), eq(connections.bAccount, r2.accountId)), and(eq(connections.aAccount, r2.accountId), eq(connections.bAccount, r1.accountId))),
       ),
     )
-    .where(sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`);
+    .where(and(sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`, among ? inArray(r1.accountId, among) : undefined));
   return row?.n ?? 0;
 }

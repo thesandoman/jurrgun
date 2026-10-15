@@ -1,5 +1,5 @@
 /**
- * /new: the front door for "the Rebuilder" (design/reference/customer-profile.md),
+ * /new and /international: the front doors for "the Rebuilder" (design/reference/customer-profile.md),
  * people who moved to Bangkok in the last two years and are rebuilding a social
  * life. Public: what a first table looks like, this week's newcomer-friendly
  * tables (titles, times and districts only, never who's going), the quiz, and
@@ -7,12 +7,14 @@
  * pre-tick "New to Bangkok".
  */
 import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
+import type { Context } from "hono";
 import { and, asc, count, desc, eq, gt, lt, ne, or, sql, type AnyColumn } from "drizzle-orm";
 import { getDb } from "../db";
 import type { AppEnv } from "../lib/env";
 import { DISTRICTS, label } from "../lib/constants";
 import { fmtDate, L } from "../lib/i18n";
+import { SEGMENT_TAGS, segmentOf } from "../domain/segment";
 import { OPEN_TO_MORE_TAG, romanceEventOk, womenOnlyEventOk } from "../domain/rules";
 import { events, registrations, type Profile } from "../schema";
 import { BRAND } from "../ui/brand";
@@ -20,8 +22,11 @@ import { Empty, LinkButton, page, view, type View } from "../ui/kit";
 import { Bento, Big, Pill, Tile } from "../ui/visual";
 
 export const newcomerRoutes = new Hono<AppEnv>();
+type Ctx = Context<AppEnv>;
 
 export const NEWCOMER_COOKIE = "jg_new";
+/** Came in through /international: onboarding pre-selects the "expat" Bangkok story. */
+export const INTERNATIONAL_COOKIE = "jg_intl";
 /** Tags that make a table newcomer-friendly. */
 export const NEWCOMER_TAGS = ["newcomers", "language_exchange", "english_friendly", "city_quest"];
 
@@ -36,9 +41,57 @@ const NEW_CSS = `
 .new-steps li::marker{color:var(--brand);font-weight:700}
 `;
 
-newcomerRoutes.get("/new", async (c) => {
+type Audience = "newcomer" | "international";
+type Copy = { th: string; en: string };
+const c2 = (th: string, en: string): Copy => ({ th, en });
+
+/**
+ * One front door per audience (design/reference/customer-profile.md):
+ * /new for people new to Bangkok, /international for foreigners living here.
+ * Same shape, different promise, tables and first steps.
+ */
+const COPY: Record<Audience, {
+  title: Copy; pill: Copy; hero: Copy; sub: Copy; listTitle: Copy; tags: string[];
+  tile: { href: string; icon: string; title: Copy; body: Copy };
+  steps: Copy[];
+}> = {
+  newcomer: {
+    title: c2("ย้ายมากรุงเทพฯ? เจอเพื่อนใหม่ที่นี่", "New in Bangkok? Make friends here"),
+    pill: c2("มาใหม่ในกรุงเทพฯ", "New to Bangkok"),
+    hero: c2("ย้ายมากรุงเทพฯ?|เจอเพื่อนใหม่|ที่โต๊ะเล็ก ๆ|ใกล้บ้านคุณ", "New in Bangkok? Make friends at a small table near you."),
+    sub: c2("มาคนเดียวได้ ทุกคนก็มาคนเดียว แล้วกลับไปพร้อมคนที่อยากเจออีก", "Come alone, everyone does. Leave with people you'll see again."),
+    listTitle: c2("โต๊ะสำหรับคนมาใหม่ สัปดาห์นี้", "Newcomer tables this week"),
+    tags: NEWCOMER_TAGS,
+    tile: { href: "/learn/new-to-bangkok", icon: "🧭", title: c2("คู่มือคนมาใหม่", "New to Bangkok guide"), body: c2("การเดินทาง มารยาท และคำไทยง่าย ๆ", "Getting around, manners and easy Thai") },
+    steps: [
+      c2("เลือกกิจกรรมใกล้บ้าน เช่น เดินตลาดเช้า แลกเปลี่ยนภาษา หรือบอร์ดเกมหลังเลิกงาน", "Pick something near you: a morning market walk, a language table or after-work board games."),
+      c2("เราจัดโต๊ะละ 4 ถึง 6 คนอย่างยุติธรรม ดูจากภาษาและสิ่งที่ชอบ ไม่ใช่หน้าตา", "We seat 4 to 6 people fairly, by languages and interests, never by looks."),
+      c2("หลังกิจกรรม เลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "Afterwards, choose quietly who you'd like to see again. You only hear when it's mutual."),
+      c2("อยากไปต่อ? มีบัดดี้กรุงเทพฯ ไว้ตะลุยครบ 50 เขตด้วยกัน", "Want more? Get a Bangkok Buddy to explore all 50 districts with."),
+    ],
+  },
+  international: {
+    title: c2("อยู่กรุงเทพฯ แล้วอยากมีเพื่อนคนไทย?", "Living in Bangkok? Make Thai friends"),
+    pill: c2("สำหรับชาวต่างชาติในกรุงเทพฯ", "For internationals in Bangkok"),
+    hero: c2("อยู่กรุงเทพฯ?|มีเพื่อนคนไทย|ไม่ใช่แค่เพื่อนต่างชาติ", "Living in Bangkok? Make Thai friends, not just expat friends."),
+    sub: c2("โต๊ะที่ใช้ภาษาอังกฤษได้ แลกเปลี่ยนภาษา และที่จริงในเมือง ไม่ใช่แค่บาร์", "English-friendly tables, language exchange and real city places, not just bars."),
+    listTitle: c2("โต๊ะที่ใช้ภาษาอังกฤษได้ สัปดาห์นี้", "English-friendly tables this week"),
+    tags: ["english_friendly", "language_exchange"],
+    tile: { href: "/learn/getting-around", icon: "🚆", title: c2("เดินทางในกรุงเทพฯ", "Getting around Bangkok"), body: c2("รถไฟฟ้า เรือ รถเมล์ และกลับบ้านตอนดึก", "Trains, boats, buses and getting home late") },
+    steps: [
+      c2("เลือกโต๊ะที่ใช้ภาษาอังกฤษได้ หรือโต๊ะแลกเปลี่ยนภาษาไทย อังกฤษ", "Pick an English-friendly table, or a Thai and English language table."),
+      c2("เราจัดโต๊ะละ 4 ถึง 6 คนอย่างยุติธรรม ให้มีทั้งคนไทยและคนต่างชาติ", "We seat 4 to 6 people fairly, mixing Thai and international members."),
+      c2("หลังกิจกรรม เลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "Afterwards, choose quietly who you'd like to see again. You only hear when it's mutual."),
+      c2("อยากรู้จักเมืองมากขึ้น? ได้บัดดี้คนไทยไว้ตะลุย 50 เขตด้วยกัน", "Want to know the city? Get a Bangkok Buddy to explore all 50 districts with."),
+    ],
+  },
+};
+
+async function landing(c: Ctx, audience: Audience) {
   const { t, lang, user } = view(c);
-  setCookie(c, NEWCOMER_COOKIE, "1", { path: "/", maxAge: 30 * 86_400, sameSite: "Lax" });
+  const k = COPY[audience];
+  const L2 = (x: Copy) => t(x.th, x.en);
+  setCookie(c, audience === "international" ? INTERNATIONAL_COOKIE : NEWCOMER_COOKIE, "1", { path: "/", maxAge: 30 * 86_400, sameSite: "Lax" });
   const now = new Date();
   const list = await getDb(c.env)
     .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district, costThb: events.costThb })
@@ -48,7 +101,7 @@ newcomerRoutes.get("/new", async (c) => {
         eq(events.status, "published"),
         ne(events.visibility, "private"),
         gt(events.startsAt, now),
-        or(...NEWCOMER_TAGS.map((tag) => has(events.tags, tag)))!,
+        or(...k.tags.map((tag) => has(events.tags, tag)))!,
         sql`not ${has(events.tags, OPEN_TO_MORE_TAG)}`,
       ),
     )
@@ -58,18 +111,20 @@ newcomerRoutes.get("/new", async (c) => {
   const join = member ? "/events" : "/signup";
   return page(
     c,
-    { title: t("ย้ายมากรุงเทพฯ? เจอเพื่อนใหม่ที่นี่", "New in Bangkok? Make friends here") },
+    { title: L2(k.title) },
     <>
       <Bento>
-        <Tile size="hero" tone="brand" art={{ tone: "morning", icons: [], seed: 11 }} lang={lang}>
-          <Pill dot>{t("มาใหม่ในกรุงเทพฯ", "New to Bangkok")}</Pill>
+        <Tile size="hero" tone="brand" art={{ tone: audience === "international" ? "afternoon" : "morning", icons: [], seed: audience === "international" ? 17 : 11 }} lang={lang}>
+          <Pill dot>{L2(k.pill)}</Pill>
           {/* Phrases stay whole, so Thai never breaks mid-word-group. */}
           <h1>
-            {t("ย้ายมากรุงเทพฯ?|เจอเพื่อนใหม่|ที่โต๊ะเล็ก ๆ|ใกล้บ้านคุณ", "New in Bangkok? Make friends at a small table near you.")
-              .split("|")
-              .map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}
+            {L2(k.hero).includes("|")
+              ? L2(k.hero)
+                  .split("|")
+                  .map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)
+              : L2(k.hero)}
           </h1>
-          <small>{t("มาคนเดียวได้ ทุกคนก็มาคนเดียว แล้วกลับไปพร้อมคนที่อยากเจออีก", "Come alone, everyone does. Leave with people you'll see again.")}</small>
+          <small>{L2(k.sub)}</small>
           <small class="endorse">🏛️ {L(lang, BRAND.endorsement)}</small>
         </Tile>
         <Tile>
@@ -78,10 +133,10 @@ newcomerRoutes.get("/new", async (c) => {
         <Tile tone="gold" href="/buddy/passport">
           <Big n="50" label={t("เขตให้ตะลุยด้วยกัน", "districts to explore together")} />
         </Tile>
-        <Tile href="/learn/new-to-bangkok">
-          <span class="ico" aria-hidden="true">🧭</span>
-          <h3>{t("คู่มือคนมาใหม่", "New to Bangkok guide")}</h3>
-          <small>{t("การเดินทาง มารยาท และคำไทยง่าย ๆ", "Getting around, manners and easy Thai")}</small>
+        <Tile href={k.tile.href}>
+          <span class="ico" aria-hidden="true">{k.tile.icon}</span>
+          <h3>{L2(k.tile.title)}</h3>
+          <small>{L2(k.tile.body)}</small>
         </Tile>
         <Tile href="/quiz" tone="deep">
           <span class="ico" aria-hidden="true">🧩</span>
@@ -91,7 +146,7 @@ newcomerRoutes.get("/new", async (c) => {
       </Bento>
 
       <style dangerouslySetInnerHTML={{ __html: NEW_CSS }} />
-      <h2>{t("โต๊ะสำหรับคนมาใหม่ สัปดาห์นี้", "Newcomer tables this week")}</h2>
+      <h2>{L2(k.listTitle)}</h2>
       {list.length ? (
         <ul class="new-list" role="list">
           {list.map((e) => (
@@ -111,10 +166,9 @@ newcomerRoutes.get("/new", async (c) => {
 
       <h2>{t("โต๊ะแรกของคุณเป็นแบบนี้", "What your first table is like")}</h2>
       <ol class="new-steps">
-        <li>{t("เลือกกิจกรรมใกล้บ้าน เช่น เดินตลาดเช้า แลกเปลี่ยนภาษา หรือบอร์ดเกมหลังเลิกงาน", "Pick something near you: a morning market walk, a language table or after-work board games.")}</li>
-        <li>{t("เราจัดโต๊ะละ 4 ถึง 6 คนอย่างยุติธรรม ดูจากภาษาและสิ่งที่ชอบ ไม่ใช่หน้าตา", "We seat 4 to 6 people fairly, by languages and interests, never by looks.")}</li>
-        <li>{t("หลังกิจกรรม เลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "Afterwards, choose quietly who you'd like to see again. You only hear when it's mutual.")}</li>
-        <li>{t("อยากไปต่อ? มีบัดดี้กรุงเทพฯ ไว้ตะลุยครบ 50 เขตด้วยกัน", "Want more? Get a Bangkok Buddy to explore all 50 districts with.")}</li>
+        {k.steps.map((x) => (
+          <li>{L2(x)}</li>
+        ))}
       </ol>
 
       <div class="row">
@@ -123,18 +177,24 @@ newcomerRoutes.get("/new", async (c) => {
       </div>
       <p class="muted">
         {t("ใช้ภาษาไทยหรืออังกฤษก็ได้ สมัครได้ไม่ต้องมีเบอร์ไทย", "Thai or English. No Thai SIM needed to sign up.")} ·{" "}
+        {audience === "international" ? <><a href="/new">{t("ย้ายมาจากต่างจังหวัด?", "Moved from another province?")}</a> · </> : <><a href="/international">{t("ชาวต่างชาติในกรุงเทพฯ?", "From abroad?")}</a> · </>}
         <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
       </p>
     </>,
   );
-});
+}
+
+newcomerRoutes.get("/new", (c) => landing(c, "newcomer"));
+// The international door opens in English unless the visitor already chose a language.
+newcomerRoutes.get("/international", (c) => (getCookie(c, "lang") || c.req.query("lang") ? landing(c, "international") : c.redirect("/lang/en?back=%2Finternational")));
 
 type Pick = { id: string; title: string; titleEn: string | null; startsAt: Date; district: string; costThb: number };
 
 /**
  * "Your first table": for a member with no RSVPs yet, one upcoming public
- * table in the next two weeks, in their district first, then newcomer-friendly
- * ones, then the soonest. Never dating-only or private, and only one they may
+ * table in the next two weeks, in their district first, then ones that suit
+ * them (domain/segment.ts: English-friendly for internationals, newcomer tables
+ * for newcomers), then the soonest. Never dating-only or private, and only one they may
  * join (women-only and open_to_more rules).
  */
 export async function firstTable(env: AppEnv["Bindings"], p: Profile, now = new Date()): Promise<Pick | null> {
@@ -145,7 +205,7 @@ export async function firstTable(env: AppEnv["Bindings"], p: Profile, now = new 
     .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district, costThb: events.costThb, tags: events.tags })
     .from(events)
     .where(and(eq(events.status, "published"), ne(events.visibility, "private"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * 86_400_000))))
-    .orderBy(desc(sql`${events.district} = ${p.district}`), desc(or(...NEWCOMER_TAGS.map((tag) => has(events.tags, tag)))!), asc(events.startsAt))
+    .orderBy(desc(sql`${events.district} = ${p.district}`), desc(or(...SEGMENT_TAGS[segmentOf(p)].map((tag) => has(events.tags, tag)))!), asc(events.startsAt))
     .limit(10);
   const ok = rows.find((e) => romanceEventOk(e.tags, p) && womenOnlyEventOk(e.tags, p));
   return ok ? { id: ok.id, title: ok.title, titleEn: ok.titleEn, startsAt: ok.startsAt, district: ok.district, costThb: ok.costThb } : null;

@@ -50,7 +50,7 @@ import {
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
-import { NEWCOMER_COOKIE } from "./newcomers";
+import { INTERNATIONAL_COOKIE, NEWCOMER_COOKIE } from "./newcomers";
 import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation, withoutDating } from "../content/profile";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, isFriendsOnly, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
@@ -460,7 +460,7 @@ onboarding.post("/privacy", async (c) => {
 
 // ------------------------------------------------------------------ you --
 
-function YouForm(props: { v: View; error?: string }) {
+function YouForm(props: { v: View; error?: string; storyHint?: string }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   return (
@@ -479,7 +479,7 @@ function YouForm(props: { v: View; error?: string }) {
         <InterestPicker v={props.v} values={p?.interests} />
       </FlowStep>
       <FlowStep emoji="🛺" title={t("คุณกับกรุงเทพฯ", "You and Bangkok")} hint={t("คนกรุงเทพฯ คนต่างจังหวัด หรือมาจากแดนไกล ยินดีต้อนรับทุกคน ไม่บังคับ", "Locals, people from the provinces, from abroad: everyone's welcome. Optional.")}>
-        <BangkokStory v={props.v} story={cleanBio(p?.bio).story} time={cleanBio(p?.bio).bkkTime} hometown={cleanBio(p?.bio).hometown} compact />
+        <BangkokStory v={props.v} story={cleanBio(p?.bio).story ?? props.storyHint} time={cleanBio(p?.bio).bkkTime} hometown={cleanBio(p?.bio).hometown} compact />
       </FlowStep>
       <FlowStep emoji="💼" title={t("ทำงานและเรียนอะไร?", "Work and study")} hint={t("ไม่บังคับ ข้ามได้", "Optional. You can skip this.")}>
         <OccupationPicker v={props.v} value={cleanBio(p?.bio).occupation} other={cleanBio(p?.bio).occupationOther} />
@@ -509,7 +509,8 @@ function YouForm(props: { v: View; error?: string }) {
 
 onboarding.get("/you", (c) => {
   if (!c.var.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: TITLE, bare: true }, <YouForm v={view(c)} />);
+  // Came in through /international: start the Bangkok story on "expat" (they can change it).
+  return page(c, { title: TITLE, bare: true }, <YouForm v={view(c)} storyHint={getCookie(c, INTERNATIONAL_COOKIE) === "1" ? "expat" : undefined} />);
 });
 
 onboarding.post("/you", async (c) => {
@@ -627,15 +628,25 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
 export function WomenOnlyFields(props: { v: View }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
+  const eligible = canBeWomenOnly(p?.gender);
+  // The women-only option only exists for women and non-binary members: it is
+  // hidden for everyone else, and appears the moment one of those is picked.
   return (
-    <fieldset class="card">
-      <legend>🌸 {t("พื้นที่สำหรับผู้หญิงและนอนไบนารี (ไม่บังคับ)", "Women & non-binary spaces (optional)")}</legend>
+    <fieldset class="card" data-women-fields>
+      <legend>{t("เพศของคุณ (ไม่บังคับ)", "Your gender (optional)")}</legend>
       <Select label={t("เพศของคุณ (เป็นความลับ ไม่แสดงต่อใคร)", "Your gender (private, never shown)")} name="gender" options={GENDER_IDENTITIES} value={p?.gender} lang={lang} blank="-" />
-      <Toggle
-        name="womenOnly"
-        label={t("บัดดี้ การ์ด แมตช์ และแชต เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only: buddies, the deck, matches and chats")}
-        hint={t("ใช้ได้เมื่อเลือกเพศเป็นผู้หญิงหรือนอนไบนารี กิจกรรมที่ติดแท็กนี้ก็ใช้เพศที่เลือกไว้ตรงนี้ ไม่ว่าจะเปิดตัวเลือกนี้หรือไม่", "Available when your gender is Woman or Non-binary. Events with this tag use this gender too, whether or not this is on.")}
-        checked={!!p?.womenOnly}
+      <div data-women-only hidden={eligible ? undefined : true}>
+        <Toggle
+          name="womenOnly"
+          label={t("🌸 บัดดี้ การ์ด แมตช์ และแชต เฉพาะผู้หญิงและนอนไบนารี", "🌸 Women & non-binary only: buddies, the deck, matches and chats")}
+          hint={t("คุณจะเห็นกิจกรรมเฉพาะผู้หญิงและนอนไบนารีด้วย ไม่ว่าจะเปิดตัวเลือกนี้หรือไม่", "You'll also see women & non-binary events, whether or not this is on.")}
+          checked={!!p?.womenOnly}
+        />
+      </div>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var f=document.currentScript.parentNode,s=f.querySelector('select[name="gender"]'),w=f.querySelector("[data-women-only]");if(!s||!w)return;s.addEventListener("change",function(){var ok=s.value==="woman"||s.value==="non-binary";w.hidden=!ok;if(!ok){var c=w.querySelector("input");if(c)c.checked=false}})})();`,
+        }}
       />
     </fieldset>
   );

@@ -113,6 +113,14 @@ export function womenOnlyOk(a: { gender?: string | null; womenOnly?: boolean }, 
 export const OPEN_TO_MORE_TAG = "open_to_more";
 export const romanceEventOk = (tags: string[], p: { relationship: string; romanceOn: boolean }) => !tags.includes(OPEN_TO_MORE_TAG) || romanceEligible(p);
 
+/**
+ * Whether a women-only event shows up for this member at all: hidden from
+ * anyone whose (private) gender is set to something else. Members who haven't
+ * said still see it, with the RSVP gate telling them how to set it.
+ */
+export const womenOnlyEventVisible = (tags: string[], p: { gender?: string | null }) =>
+  !tags.includes(WOMEN_ONLY_TAG) || !p.gender || p.gender === "prefer_not" || isWoman(p);
+
 /** Whether this member may RSVP to an event with these tags. */
 export const womenOnlyEventOk = (tags: string[], p: { gender?: string | null }) => !tags.includes(WOMEN_ONLY_TAG) || isWoman(p);
 
