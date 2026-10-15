@@ -44,8 +44,10 @@ The spellings follow the Royal Institute's transliteration where one exists, mat
 | table (small group) | โต๊ะ | กลุ่มย่อย |
 | member | สมาชิก (people in the community) | ผู้ใช้ (admin/system screens only) |
 | People I Met | คนที่เจอ | |
-| Circle tab (your connections) | คนรู้จัก | |
-| a circle (a group with a head) | วง | กลุ่ม |
+| My people (tab: the people you've met, your connections) | คนรู้จัก | Circle, วง |
+| Regular Table (the recurring group that keeps meeting, led by a Table Host) | โต๊ะประจำ | วง, กลุ่ม, circle |
+| Table Host (leads a regular table) | เจ้าภาพโต๊ะ (short form: เจ้าภาพ when it's clear) | หัวหน้าวง, circle head |
+| Host a regular table | เป็นเจ้าภาพโต๊ะประจำ | ตั้งวง, Lead a circle |
 | Open to something more | เปิดใจมากกว่าเพื่อน | หาคู่, โหมดเดต |
 | friends only | โหมดเพื่อน | |
 | City Pulse | City Pulse (ช่วยพัฒนาเมือง) | |

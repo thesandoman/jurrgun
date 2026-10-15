@@ -234,7 +234,7 @@ settingsRoutes.get("/settings", async (c) => {
   const quick = (
     <section class="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
       <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
-      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies; circle and chats stay")} />
+      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies; your people and chats stay")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
         <QuickSwitch
@@ -268,7 +268,7 @@ settingsRoutes.get("/settings", async (c) => {
         {
           emoji: "🤝",
           n: Number(circle?.n ?? 0),
-          label: t("คนรู้จักของฉัน", "In my circle"),
+          label: t("คนรู้จักของฉัน", "My people"),
           sub: crews > 0 ? t(`จาก ${crews} กิจกรรม`, `across ${crews} ${crews === 1 ? "crew" : "crews"}`) : undefined,
           href: "/connections",
           tint: "teal",
@@ -284,7 +284,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
-          : { href: "/circles/lead", emoji: "👑", title: t("ตั้งวงของคุณเอง", "Lead a circle"), hint: t("ขอเป็นหัวหน้าวงเพื่อจัดแฮงเอาต์", "Ask to lead a circle and host hangouts"), tint: "lime" as const, group: gOut },
+          : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table"), hint: t("ขอเป็นเจ้าภาพโต๊ะเพื่อจัดแฮงเอาต์", "Ask to become a Table Host and run hangouts"), tint: "lime" as const, group: gOut },
         ...(dates
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดตแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),
@@ -1113,7 +1113,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
           )}
         </p>
         <p class="row">
-          <a class="btn ghost" href="/settings/habits">⏸️ {t("พักก่อนแทน (คนรู้จักและแชตยังอยู่)", "Take a break instead (circle and chats stay)")}</a>
+          <a class="btn ghost" href="/settings/habits">⏸️ {t("พักก่อนแทน (คนรู้จักและแชตยังอยู่)", "Take a break instead (your people and chats stay)")}</a>
         </p>
         <form method="post" action="/settings/deactivate">
           <fieldset class="choices">
@@ -1458,7 +1458,7 @@ settingsRoutes.get("/settings/habits", async (c) => {
         <h2 style="margin-top:0">⏸️ {t("พัก Jurrgun", "Take a break")}</h2>
         {paused ? (
           <>
-            <p>{t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)} ไม่มีการจับคู่บัดดี้ใหม่ระหว่างนี้ คนรู้จักและแชตยังอยู่`, `On a break until ${fmtDate(p.pausedUntil!, lang)}. No new buddy matches meanwhile; your circle and chats stay.`)}</p>
+            <p>{t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)} ไม่มีการจับคู่บัดดี้ใหม่ระหว่างนี้ คนรู้จักและแชตยังอยู่`, `On a break until ${fmtDate(p.pausedUntil!, lang)}. No new buddy matches meanwhile; your people and chats stay.`)}</p>
             <form method="post" action="/settings/habits">
               <input type="hidden" name="pause" value="0" />
               <Button>{t("กลับมาแล้ว", "I'm back")}</Button>
@@ -1466,7 +1466,7 @@ settingsRoutes.get("/settings/habits", async (c) => {
           </>
         ) : (
           <>
-            <p class="muted">{t("หยุดจับคู่บัดดี้และการปัดดูไว้ก่อน คนรู้จักและแชตยังอยู่ ลงทะเบียนกิจกรรมเมื่อไหร่ก็กลับมาใช้ได้ทันที", "Pauses buddy matching and the deck. Your circle and chats stay. RSVP anytime to come back.")}</p>
+            <p class="muted">{t("หยุดจับคู่บัดดี้และการปัดดูไว้ก่อน คนรู้จักและแชตยังอยู่ ลงทะเบียนกิจกรรมเมื่อไหร่ก็กลับมาใช้ได้ทันที", "Pauses buddy matching and the deck. Your people and chats stay. RSVP anytime to come back.")}</p>
             <form method="post" action="/settings/habits" class="row">
               {PAUSE_WEEKS.map((w) => (
                 <button class="btn ghost" name="pause" value={String(w)}>

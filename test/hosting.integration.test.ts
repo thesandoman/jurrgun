@@ -157,7 +157,7 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
 
   it("a member asks to lead a circle; a moderator approves; they can host", async () => {
     const [m, mod] = await Promise.all([createMember(), createMember({ role: "moderator" })]);
-    expect(await (await req("/circles/lead", { cookie: `${m.cookie}; lang=en` })).text()).toContain("Lead your own circle");
+    expect(await (await req("/circles/lead", { cookie: `${m.cookie}; lang=en` })).text()).toContain("Host your own regular table");
     await req("/circles/lead", { cookie: m.cookie, form: { circleName: "Ari coffee walkers", plan: "Saturday coffee walks", agree: "1" } });
     await req("/circles/lead", { cookie: m.cookie, form: { circleName: "Twice", agree: "1" } });
     const reqs = await db().select().from(circleHeadRequests).where(eq(circleHeadRequests.accountId, m.id));

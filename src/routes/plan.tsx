@@ -160,7 +160,7 @@ function reasonText(v: View, r: string): string {
     case "time":
       return t(`${label(TIME_WINDOWS, arg, "th")} คุณว่าง`, `${label(TIME_WINDOWS, arg, "en")} work for you`);
     case "friends":
-      return t(`คนรู้จักของคุณไป ${arg} คน`, `${arg} from your circle going`);
+      return t(`คนรู้จักของคุณไป ${arg} คน`, `${arg} of your people going`);
     case "step_free":
       return t("ไม่มีขั้นบันได", "Step-free");
     case "short":
@@ -249,7 +249,7 @@ planRoutes.get("/plan", async (c) => {
       {restHint ? (
         <Card class="hint">
           <strong>🌿 {t("อยากพักสักสัปดาห์ไหม?", "Fancy a rest week?")}</strong>
-          <p class="muted">{t("ข้ามมา 2 สัปดาห์ติดแล้ว พักได้นะ คนรู้จักของคุณยังอยู่ตรงนี้", "Two skips in a row. Taking a break is fine; your circle stays.")}</p>
+          <p class="muted">{t("ข้ามมา 2 สัปดาห์ติดแล้ว พักได้นะ คนรู้จักของคุณยังอยู่ตรงนี้", "Two skips in a row. Taking a break is fine; your people are still here.")}</p>
           <LinkButton href="/settings/habits" kind="ghost">{t("พัก Jurrgun", "Take a break")}</LinkButton>
         </Card>
       ) : null}
@@ -309,7 +309,7 @@ planRoutes.get("/plan", async (c) => {
             name="audience"
             options={[
               ...(circle.buddy ? [{ value: "buddy", th: "บัดดี้ของฉัน", en: "My buddy" }] : []),
-              { value: "circle", th: "คนรู้จักของฉัน", en: "My circle" },
+              { value: "circle", th: "คนรู้จักของฉัน", en: "My people" },
             ]}
             value={circle.buddy ? "buddy" : "circle"}
             lang={lang}
@@ -320,7 +320,7 @@ planRoutes.get("/plan", async (c) => {
       </Card>
       {visible.length ? (
         <>
-          <h3>🙌 {t("ไอเดียจากคนรู้จักของคุณ", "Pitches from your circle")}</h3>
+          <h3>🙌 {t("ไอเดียจากคนรู้จักของคุณ", "Pitches from your people")}</h3>
           {visible.map(({ p, nickname }) => {
             const going = joins.filter((j) => j.pitchId === p.id);
             const iJoined = going.some((j) => j.accountId === me);
@@ -444,7 +444,7 @@ planRoutes.get("/me/month", requireMember, async (c) => {
   const places = [...new Set([...went.map((x) => x.district), ...stamps.map((x) => x.district)])];
   const tiles: [string, number, string][] = [
     ["🍽️", went.length, t("โต๊ะที่ได้ไปนั่ง", "Tables you sat at")],
-    ["🫂", conns.length, t("คนรู้จักใหม่", "New people in your circle")],
+    ["🫂", conns.length, t("คนรู้จักใหม่", "New people you've met")],
     ["💬", shared.length, t("คนที่ยังคุยกันต่อ", "People you kept in touch with")],
     ["📍", places.length, t("ย่านที่ได้ไป", "Districts you explored")],
   ];

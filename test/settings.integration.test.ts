@@ -94,7 +94,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
       { id: newId(), ...pair(me.id, c.id), level: "activity", eventId: ev2 },
     ]);
     const html = await (await req("/settings", { cookie: `${me.cookie}; lang=en` })).text();
-    expect(html).toMatch(/<b>3<\/b><small>In my circle<\/small><small class="me-stat-sub">across 2 crews<\/small>/);
+    expect(html).toMatch(/<b>3<\/b><small>My people<\/small><small class="me-stat-sub">across 2 crews<\/small>/);
   });
 
   it("shows my numbers and nudges what my profile is missing", async () => {
@@ -102,7 +102,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
     let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Hey Nudge");
     expect(html).toContain("Events been");
-    expect(html).toContain("In my circle");
+    expect(html).toContain("My people");
     const pct = (h: string) => Number(/Your profile is (\d+)% there/.exec(h)?.[1]);
     const before = pct(html);
     expect(before).toBeLessThan(100);

@@ -403,7 +403,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
     ],
     hangouts: [
       h("🪩", "huai_khwang", "The RCA clubs", "คลับย่าน RCA", "Dance floors and live bands for a big group.", "ฟลอร์เต้นและวงดนตรีสดสำหรับกลุ่มใหญ่"),
-      h("🎶", "watthana", "Thonglor and Ekkamai music spots", "ร้านดนตรีย่านทองหล่อ เอกมัย", "Your usual table, a good band, new faces every week.", "โต๊ะประจำ วงดี และหน้าใหม่ทุกสัปดาห์"),
+      h("🎶", "watthana", "Thonglor and Ekkamai music spots", "ร้านดนตรีย่านทองหล่อ เอกมัย", "Your usual spot, a good band, new faces every week.", "มุมเดิม ดนตรีดี และหน้าใหม่ทุกสัปดาห์"),
       h("🌈", "bang_rak", "Silom Soi 4", "สีลมซอย 4", "A welcoming street for dancing and people-watching.", "ถนนที่เปิดรับทุกคน เต้นและนั่งดูผู้คน"),
     ],
   },

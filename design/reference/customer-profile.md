@@ -106,7 +106,7 @@ The Rebuilder came to Bangkok for a first job, a transfer, a degree or a new lif
 - **Needs from us:** activity-first events (sport, food, walks), the same faces again, no pressure.
 - **Triggers:** a free Sunday badminton table in their district, or a Songkran go-together event. They hesitate if it feels like a singles night.
 - **Channels:** Facebook, LINE, YouTube, Pantip.
-- **How Jurrgun solves it:** activity tables in their own district every week and a circle that meets again.
+- **How Jurrgun solves it:** activity tables in their own district every week and a regular table (โต๊ะประจำ) that meets again.
 
 Ton is the secondary segment (a "Rebuilder in their own city"). Ploy and Daniel are the core.
 
@@ -177,7 +177,7 @@ It is the one number that proves the mission (strangers becoming people you see 
 | New member → first RSVP | ≥ 40% | newcomer onboarding, type quiz, a "your first table" pick |
 | RSVP → check-in | ≥ 70% | reminders, a buddy to go with, the no-show rule |
 | Attended → mutual connection | ≥ 50% | hosts, small tables, People I Met |
-| Connected → a second table together within 30 days | ≥ 35% | "Meet again" tables, circles, buddy quests |
+| Connected → a second table together within 30 days | ≥ 35% | "Meet again" tables, regular tables, buddy quests |
 | Felt safe | ≥ 90% | public venues, hosts, the code of conduct |
 
 **Guardrails:** < 1 harassment report per 100 attendees, no-shows < 15%, and friends-only members never see dating.

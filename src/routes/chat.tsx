@@ -77,7 +77,7 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     if ((await blockedBetween(db, me, [other])).size) return null;
     // Connections from an event: you met there. From a buddy pairing: met once a quest is done together.
     const met = cn.eventId.startsWith("buddy:") ? await buddiesMet(db, cn.eventId.slice(6)) : true;
-    return { key, members: [cn.aAccount, cn.bAccount], open: !cn.removedAt, met, title: { th: "คนรู้จัก", en: "Circle" }, back: "/connections" };
+    return { key, members: [cn.aAccount, cn.bAccount], open: !cn.removedAt, met, title: { th: "คนรู้จัก", en: "My people" }, back: "/connections" };
   }
   const [e] = await db.select().from(events).where(eq(events.id, t.ref)).limit(1);
   if (!e || e.visibility !== "private" || e.status !== "published") return null;
@@ -161,7 +161,7 @@ chatRoutes.get("/chat", async (c) => {
       <h1>💬 {t("แชต", "Chats")}</h1>
       <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์ และไม่บอกว่าอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
       {rows.length === 0 ? (
-        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, a circle connection or a circle hangout.")}</Empty>
+        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met or a private hangout.")}</Empty>
       ) : (
         <ul class="chat-list">
           {rows.map(({ th, last }) => {
@@ -302,7 +302,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       </p>
       <h1>{title}</h1>
       {c.req.query("notice") === "reported" ? (
-        <Notice kind="ok">{t("ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ ถ้าไม่อยากคุยต่อ บล็อกได้จากหน้าคนรู้จัก", "Reported. Our team will review it. You can block from your circle if you'd rather not talk.")}</Notice>
+        <Notice kind="ok">{t("ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ ถ้าไม่อยากคุยต่อ บล็อกได้จากหน้าคนรู้จัก", "Reported. Our team will review it. You can block them from My people if you'd rather not talk.")}</Notice>
       ) : null}
       {!th.met ? (
         <Notice kind="info">
@@ -332,7 +332,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
             ) : null}
             {m.kind === "photo" ? (
               <figure class="chat-photo">
-                <img src={`/chat/${key}/photo/${m.id}`} alt={m.body || t("รูปจากแฮงเอาต์", "A photo from the circle")} loading="lazy" />
+                <img src={`/chat/${key}/photo/${m.id}`} alt={m.body || t("รูปจากแฮงเอาต์", "A photo from the hangout")} loading="lazy" />
                 {m.body ? <figcaption>{m.body}</figcaption> : null}
               </figure>
             ) : m.kind === "poll" ? (

@@ -21,7 +21,7 @@ adminPartners.use("*", requireRole("bma_admin"));
 
 export const ROLE_LABELS: Record<Role, [string, string]> = {
   user: ["สมาชิกทั่วไป", "Member"],
-  circle_head: ["หัวหน้าวง", "Circle head"],
+  circle_head: ["เจ้าภาพโต๊ะ", "Table Host"],
   host: ["ผู้จัดที่ยืนยันแล้ว (พาร์ตเนอร์)", "Verified partner host"],
   partner_admin: ["แอดมินองค์กรพาร์ตเนอร์", "Partner org admin"],
   moderator: ["ผู้ดูแลความปลอดภัย", "Moderator"],

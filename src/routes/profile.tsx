@@ -177,7 +177,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
     { title: self ? t("โปรไฟล์ของฉัน", "My profile") : person.nickname, tab: self ? "me" : "connections" },
     <>
       <p>
-        <a href={self ? "/settings" : "/connections"}>← {self ? t("ฉัน", "Me") : t("คนรู้จัก", "My circle")}</a>
+        <a href={self ? "/settings" : "/connections"}>← {self ? t("ฉัน", "Me") : t("คนรู้จัก", "My people")}</a>
       </p>
       {self ? (
         <p class="muted">{t("คนที่เคยเจอคุณในกิจกรรมจะเห็นโปรไฟล์แบบนี้", "This is what people you've met at events will see.")}</p>

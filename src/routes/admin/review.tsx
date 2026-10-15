@@ -52,9 +52,9 @@ adminReview.get("/", async (c) => {
     c,
     { title: t("ตรวจกิจกรรม", "Event review"), admin: true },
     <>
-      <h1>{t("คำขอเป็นหัวหน้าวง", "Circle head requests")}</h1>
+      <h1>{t("คำขอเป็นเจ้าภาพโต๊ะ", "Table Host requests")}</h1>
       <p class="muted">
-        {t("หัวหน้าวงจัดแฮงเอาต์ให้วงของตัวเองได้ อนุมัติเมื่อมั่นใจว่าจะดูแลคนในวงได้ดี", "Circle heads can host hangouts for their circle. Approve people you trust to look after a group.")}
+        {t("เจ้าภาพโต๊ะจัดแฮงเอาต์ให้โต๊ะประจำของตัวเองได้ อนุมัติเมื่อมั่นใจว่าจะดูแลคนในโต๊ะได้ดี", "Table Hosts can run hangouts for their regular table. Approve people you trust to look after a group.")}
       </p>
       {notice === "circle_approved" ? <Notice kind="ok">{t("อนุมัติแล้ว สมาชิกจัดแฮงเอาต์ได้แล้ว", "Approved. They can host now.")}</Notice> : null}
       {notice === "circle_declined" ? <Notice kind="ok">{t("ปฏิเสธแล้ว และแจ้งสมาชิกแล้ว", "Declined, and the member has been told.")}</Notice> : null}
@@ -73,7 +73,7 @@ adminReview.get("/", async (c) => {
             </p>
             <div class="grid2">
               <form method="post" action={`/admin/review/circle/${r.id}/approve`}>
-                <Button>✓ {t("อนุมัติเป็นหัวหน้าวง", "Approve as circle head")}</Button>
+                <Button>✓ {t("อนุมัติเป็นเจ้าภาพโต๊ะ", "Approve as Table Host")}</Button>
               </form>
               <form method="post" action={`/admin/review/circle/${r.id}/decline`}>
                 <TextArea label={t("ปฏิเสธพร้อมเหตุผล", "Decline with a note")} name="note" rows={2} maxlength={MAX_NOTE} hint={t("สมาชิกจะเห็นข้อความนี้", "The member sees this")} />
@@ -236,7 +236,7 @@ adminReview.post("/circle/:id/approve", async (c) => {
     db.update(circleHeadRequests).set({ status: "approved", reviewedBy: me.id, reviewedAt: now }).where(and(eq(circleHeadRequests.id, r.id), eq(circleHeadRequests.status, "pending"))),
     // Only a plain member becomes a circle head; staff and partners keep their role.
     db.update(accounts).set({ role: "circle_head" }).where(and(eq(accounts.id, r.accountId), eq(accounts.role, "user"))),
-    notify(db, r.accountId, "circle_head", `คุณเป็นหัวหน้าวง "${r.circleName}" แล้ว`, `You now lead "${r.circleName}"`, "/connections"),
+    notify(db, r.accountId, "circle_head", `คุณเป็นเจ้าภาพโต๊ะประจำ "${r.circleName}" แล้ว`, `You're now the Table Host of "${r.circleName}"`, "/connections"),
     audit(db, me.id, "circle_head.approve", { type: "account", id: r.accountId }, { request: r.id }),
   ]);
   return c.redirect("/admin/review?notice=circle_approved");
@@ -254,7 +254,7 @@ adminReview.post("/circle/:id/decline", async (c) => {
       .update(circleHeadRequests)
       .set({ status: "declined", reviewedBy: me.id, reviewedAt: new Date(), reviewNote: note })
       .where(and(eq(circleHeadRequests.id, r.id), eq(circleHeadRequests.status, "pending"))),
-    notify(db, r.accountId, "circle_head", "คำขอเป็นหัวหน้าวงยังไม่ผ่านรอบนี้ ดูเหตุผลได้ที่นี่", "Your circle head request wasn't approved yet. See why", "/circles/lead"),
+    notify(db, r.accountId, "circle_head", "คำขอเป็นเจ้าภาพโต๊ะยังไม่ผ่านรอบนี้ ดูเหตุผลได้ที่นี่", "Your Table Host request wasn't approved yet. See why", "/circles/lead"),
     audit(db, me.id, "circle_head.decline", { type: "account", id: r.accountId }, { request: r.id }),
   ]);
   return c.redirect("/admin/review?notice=circle_declined");

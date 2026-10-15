@@ -198,7 +198,7 @@ hostRoutes.get("/host", async (c) => {
       {c.req.query("notice") === "submitted" ? <Notice kind="ok">{t("ส่งให้ทีมงานตรวจแล้ว เราจะแจ้งเมื่อเผยแพร่", "Sent for review. We'll let you know when it's live.")}</Notice> : null}
       {c.req.query("notice") === "published" ? <Notice kind="ok">{t("เผยแพร่แล้ว!", "It's live!")}</Notice> : null}
       {c.req.query("notice") === "link_reset" ? <Notice kind="ok">{t("สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีก", "New private link made. The old one no longer works.")}</Notice> : null}
-      {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้คนรู้จักของคุณแล้ว", "Sent to your circle.")}</Notice> : null}
+      {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้คนรู้จักของคุณแล้ว", "Sent to your people.")}</Notice> : null}
       <p>
         <LinkButton href="/host/new">＋ {t("เสนอกิจกรรม", "Propose an event")}</LinkButton>
       </p>
@@ -244,7 +244,7 @@ hostRoutes.get("/host", async (c) => {
               {e.visibility === "private" && e.status === "published" ? (
                 <form method="post" action={`/host/${e.id}/circle`}>
                   <Button kind="ghost">
-                    👥 {t("ส่งให้คนรู้จัก", "Send to my circle")}
+                    👥 {t("ส่งให้คนรู้จัก", "Send to my people")}
                     {sharedCount(e.id) ? ` (${sharedCount(e.id)})` : ""}
                   </Button>
                 </form>

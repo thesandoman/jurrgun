@@ -44,7 +44,7 @@ export const PARTY_MEETUP_WORK: Scenario[] = [
       BDSH: a("🥟", "thon_buri", "Midnight dumplings at a Talat Phlu stall none of you have tried, a big noisy table", "ติ่มซำตอนเที่ยงคืนที่ร้านในตลาดพลูที่ยังไม่มีใครเคยลอง โต๊ะใหญ่เสียงดัง"),
       BFMN: a("🎉", "pathum_wan", "The CentralWorld countdown square with your usual crew, dancing until the fireworks", "ลานเคาท์ดาวน์เซ็นทรัลเวิลด์กับแก๊งประจำ เต้นจนพลุขึ้น"),
       BFMH: a("🏮", "phra_nakhon", "Your gang's yearly midnight walk around Sanam Luang, the same route every year", "เดินรอบสนามหลวงตอนเที่ยงคืนกับแก๊ง เส้นทางเดิมทุกปี"),
-      BFSN: a("🎷", "ratchathewi", "Hosting your usual table at Saxophone Pub for the live band countdown", "เป็นเจ้าภาพโต๊ะประจำที่แซกโซโฟนผับ นับถอยหลังกับวงดนตรีสด"),
+      BFSN: a("🎷", "ratchathewi", "Booking your usual spot at Saxophone Pub for the live band countdown", "จองที่นั่งมุมเดิมที่แซกโซโฟนผับ นับถอยหลังกับวงดนตรีสด"),
       BFSH: a("🍢", "bang_khen", "A long table at the Liab Duan Ram Inthra night market you go to every week, counting down with the stall owners", "โต๊ะยาวที่ตลาดนัดเลียบด่วน รามอินทราที่ไปทุกสัปดาห์ นับถอยหลังกับพ่อค้าแม่ค้า"),
       CDMN: a("🚴", "yan_nawa", "Cycle with one friend to a quiet new spot on the Rama III riverside to watch the fireworks", "ปั่นจักรยานกับเพื่อนสักคนไปมุมเงียบ ๆ ที่เพิ่งเจอริมน้ำพระราม 3 นั่งดูพลุ"),
       CDMH: a("💐", "phra_nakhon", "A late stroll with one friend past Pak Khlong Talat, seeing the old market at midnight for the first time", "เดินเล่นดึก ๆ กับเพื่อนสักคนผ่านปากคลองตลาด ได้เห็นตลาดเก่าตอนเที่ยงคืนเป็นครั้งแรก"),

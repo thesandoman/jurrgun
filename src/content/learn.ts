@@ -101,7 +101,7 @@ export const TOPICS: Topic[] = [
         blocks: [
           list(
             ["ตั้งจำนวนนัดต่อสัปดาห์ในหน้า 'นิสัยดี ๆ' เราจะถามก่อนถ้าเกิน", "Set your plans per week under Healthy habits. We'll check with you if you go over."],
-            ["พักแอปได้ 1 ถึง 4 สัปดาห์ วงและแชตยังอยู่", "Take a break for 1 to 4 weeks. Your circle and chats stay."],
+            ["พักแอปได้ 1 ถึง 4 สัปดาห์ คนรู้จักและแชตยังอยู่", "Take a break for 1 to 4 weeks. Your people and chats stay."],
             ["เมื่อแลกช่องทางติดต่อและเจอกันบ่อยแล้ว ย้ายไปคุยที่ LINE ได้เลย เราดีใจด้วย", "Once you've swapped contacts and met a few times, move to LINE. We'll be glad you did."],
             ["ระหว่างกิจกรรม วางมือถือลง แอปจะเหลือแค่บัตรเข้างานกับคำถามชวนคุย", "At an event, put your phone away. The app shrinks to your pass and a few conversation prompts."],
           ),
@@ -600,7 +600,7 @@ export const TOPICS: Topic[] = [
     slug: "new-to-bangkok",
     icon: "🙏",
     title: t("มาใหม่ในกรุงเทพฯ: วัฒนธรรมและภาษาไทย", "New to Bangkok: Thai culture basics"),
-    summary: t("การไหว้ การให้เกียรติ วัด คำไทยที่ใช้บ่อย และเคล็ดลับหาเพื่อนสำหรับชาวต่างชาติ", "The wai, showing respect, temples, handy Thai phrases and tips for building your circle."),
+    summary: t("การไหว้ การให้เกียรติ วัด คำไทยที่ใช้บ่อย และเคล็ดลับหาเพื่อนสำหรับชาวต่างชาติ", "The wai, showing respect, temples, handy Thai phrases and tips for making friends."),
     sections: [
       {
         heading: t("ทักทายและการไหว้", "Greetings and the wai"),
@@ -646,7 +646,7 @@ export const TOPICS: Topic[] = [
         ],
       },
       {
-        heading: t("สร้างวงเพื่อนในเมืองใหม่", "Building your circle"),
+        heading: t("สร้างกลุ่มเพื่อนในเมืองใหม่", "Making friends in a new city"),
         blocks: [
           list(
             ["มีทั้งเพื่อนไทยและเพื่อนต่างชาติ จะได้รู้จักเมืองจากหลายมุม", "Mix Thai and international friends to see the city from more than one angle."],

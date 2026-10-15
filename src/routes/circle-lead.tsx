@@ -34,23 +34,23 @@ circleLeadRoutes.get("/circles/lead", requireMember, async (c) => {
   const host = canHost(user.account, true);
   return page(
     c,
-    { title: t("เป็นหัวหน้าวง", "Lead a circle"), tab: "connections" },
+    { title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table"), tab: "connections" },
     <>
-      <h1>👥 {t("ตั้งวงของคุณเอง", "Lead your own circle")}</h1>
+      <h1>👥 {t("ตั้งโต๊ะประจำของคุณเอง", "Host your own regular table")}</h1>
       <p class="muted">
         {t(
-          "หัวหน้าวงจัดแฮงเอาต์ให้คนในวงได้ ทีมงานจะตรวจคำขอก่อน เพื่อให้ทุกวงปลอดภัยและน่าไป",
-          "Circle heads host hangouts for their circle. Our team reviews each request first, so every circle stays safe and worth joining.",
+          "เจ้าภาพโต๊ะจัดแฮงเอาต์ให้คนในโต๊ะประจำได้ ทีมงานจะตรวจคำขอก่อน เพื่อให้ทุกโต๊ะประจำปลอดภัยและน่าไป",
+          "Table Hosts run hangouts for their regular table. Our team reviews each request first, so every regular table stays safe and worth joining.",
         )}
       </p>
       {host ? (
         <Card>
           <h2 style="margin-top:0">✅ {t("คุณจัดกิจกรรมได้แล้ว", "You can host")}</h2>
-          <LinkButton href="/host/new?visibility=private">{t("จัดแฮงเอาต์ให้วง", "Host a circle hangout")}</LinkButton>
+          <LinkButton href="/host/new?visibility=private">{t("จัดแฮงเอาต์ให้โต๊ะประจำ", "Host a regular table hangout")}</LinkButton>
         </Card>
       ) : last?.status === "pending" ? (
         <Notice kind="info">
-          {t(`ส่งคำขอเป็นหัวหน้าวง "${last.circleName}" แล้ว ตอนนี้รอทีมงานตรวจ`, `Your request to lead "${last.circleName}" is with our team.`)}
+          {t(`ส่งคำขอเป็นเจ้าภาพโต๊ะประจำ "${last.circleName}" แล้ว ตอนนี้รอทีมงานตรวจ`, `Your request to host "${last.circleName}" is with our team.`)}
         </Notice>
       ) : (
         <>
@@ -62,9 +62,9 @@ circleLeadRoutes.get("/circles/lead", requireMember, async (c) => {
           ) : null}
           <Card>
             <form method="post" action="/circles/lead">
-              <Field label={t("ชื่อวง", "Circle name")} name="circleName" maxlength={MAX_NAME} required hint={t("เช่น วิ่งเช้าลุมพินี", "e.g. Lumphini morning runners")} />
+              <Field label={t("ชื่อโต๊ะประจำ", "Regular table name")} name="circleName" maxlength={MAX_NAME} required hint={t("เช่น วิ่งเช้าลุมพินี", "e.g. Lumphini morning runners")} />
               <TextArea
-                label={t("อยากจัดอะไรให้วง", "What would you host?")}
+                label={t("อยากจัดอะไรให้โต๊ะประจำ", "What would you host?")}
                 name="plan"
                 rows={3}
                 maxlength={MAX_PLAN}
@@ -74,8 +74,8 @@ circleLeadRoutes.get("/circles/lead", requireMember, async (c) => {
                 <input type="checkbox" name="agree" value="1" required />
                 <span>
                   {t(
-                    "ฉันจะนัดในที่สาธารณะ ดูแลทุกคนในวง และทำตามหลักปฏิบัติของชุมชน",
-                    "I'll meet in public places, look after everyone in my circle, and follow the code of conduct.",
+                    "ฉันจะนัดในที่สาธารณะ ดูแลทุกคนในโต๊ะ และทำตามหลักปฏิบัติของชุมชน",
+                    "I'll meet in public places, look after everyone at my regular table, and follow the code of conduct.",
                   )}
                 </span>
               </label>

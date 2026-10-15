@@ -561,7 +561,7 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
         <p class="muted">
           {t(
             "กดตกลงเพื่อปิดแบบดี ๆ ถ้าอยากคุยกันต่อ แชร์ช่องทางติดต่อได้ในหน้าคนรู้จัก ถ้าไม่ตอบ รอบนี้จะปิดเองใน 7 วัน",
-            "Agree to close it kindly. Want to keep in touch? Share a contact in your circle. If you don't reply, it closes on its own in 7 days.",
+            "Agree to close it kindly. Want to keep in touch? Share a contact in My people. If you don't reply, it closes on its own in 7 days.",
           )}
         </p>
         <form method="post" action={`/buddy/${m.id}/end`}>

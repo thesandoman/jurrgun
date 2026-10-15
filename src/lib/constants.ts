@@ -117,7 +117,7 @@ export const LANGUAGES: Opt[] = [
 export const INTENTS: Opt[] = [
   o("friends", "เพื่อนใหม่", "New friends"),
   o("activity-buddy", "เพื่อนทำกิจกรรม", "Activity buddies"),
-  o("explore", "ขยายวงเพื่อนในกรุงเทพฯ", "Expand my Bangkok circle"),
+  o("explore", "รู้จักเพื่อนมากขึ้นในกรุงเทพฯ", "Meet more people in Bangkok"),
 ];
 
 export const RELATIONSHIP: Opt[] = [

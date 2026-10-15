@@ -260,7 +260,7 @@ function PeopleClosed(props: { v: View; state: Exclude<PeopleState, { kind: "ope
         )}
       </Card>
       <LinkButton href="/connections" kind="ghost">
-        {t("ไปที่คนรู้จักของฉัน", "Go to my Bangkok circle")}
+        {t("ไปที่คนรู้จักของฉัน", "Go to my people")}
       </LinkButton>
     </>
   );
@@ -667,12 +667,12 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
         {host ? (
           <Tile href="/host/new?visibility=private" tone="brand">
             <span class="ico" aria-hidden="true">＋</span>
-            <h3>{t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your circle")}</h3>
+            <h3>{t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your people")}</h3>
           </Tile>
         ) : (
           <Tile href="/circles/lead" tone="brand">
             <span class="ico" aria-hidden="true">👑</span>
-            <h3>{t("ตั้งวงของคุณเอง", "Lead a circle")}</h3>
+            <h3>{t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table")}</h3>
           </Tile>
         )}
         <Tile href="/events">
@@ -696,11 +696,11 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
           ))}
         </div>
       ) : (
-        <p class="muted">{t("ยังไม่มีแฮงเอาต์จากคนรู้จักของคุณ", "No hangouts from your circle yet.")}</p>
+        <p class="muted">{t("ยังไม่มีแฮงเอาต์จากคนรู้จักของคุณ", "No hangouts from your people yet.")}</p>
       )}
       {ideas.length ? (
         <>
-          <h3>💡 {t("ไอเดียจากไทป์ของคนรู้จักคุณ", "Ideas from the types in your circle")}</h3>
+          <h3>💡 {t("ไอเดียจากไทป์ของคนรู้จักคุณ", "Ideas from your people's types")}</h3>
           <div class="rail2">
             {ideas.map((i) => (
               <a href={host ? `/host/new?visibility=private&district=${encodeURIComponent(i.district)}&title=${encodeURIComponent(i.name)}` : "/circles/lead"} class="place-card">
@@ -731,7 +731,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         <span />
         <a href="/chat">💬 {t("แชต", "Chats")}</a>
       </p>
-      <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My Bangkok circle")}</h1>
+      <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My people in Bangkok")}</h1>
       <script
         dangerouslySetInnerHTML={{
           __html: `document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-thanks]");if(!b)return;var i=b.closest("form").querySelector("input[name=body]");if(i){i.value=b.dataset.thanks;i.focus()}})`,
@@ -838,7 +838,7 @@ peopleRoutes.get("/connections", requireMember, async (c) => {
   const v = view(c);
   const { rows, myVibe } = await loadCircle(c);
   const extras = await loadCircleExtras(c, rows, myVibe);
-  return page(c, { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} />);
+  return page(c, { title: v.t("คนรู้จัก", "My people"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} />);
 });
 
 /** The connection, if I'm one of its two people and it's still active. */
@@ -860,7 +860,7 @@ peopleRoutes.post("/connections/:id/share", requireMember, async (c) => {
     const { rows, myVibe } = await loadCircle(c);
     return page(
       c,
-      { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections", status: 400 },
+      { title: v.t("คนรู้จัก", "My people"), tab: "connections", status: 400 },
       <Circle v={v} rows={rows} myVibe={myVibe} error={{ id: found.row.id, text: v.t("ใส่ไอดีให้ถูกต้อง (ตัวอักษร ตัวเลข _ . - ไม่เกิน 60 ตัว)", "Please enter a valid handle (letters, numbers, _ . -, up to 60).") }} />,
     );
   }
@@ -875,7 +875,7 @@ peopleRoutes.post("/connections/:id/share", requireMember, async (c) => {
     const { rows, myVibe } = await loadCircle(c);
     return page(
       c,
-      { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections", status: 400 },
+      { title: v.t("คนรู้จัก", "My people"), tab: "connections", status: 400 },
       <Circle v={v} rows={rows} myVibe={myVibe} error={{ id: found.row.id, text: v.t(`วันนี้แชร์ช่องทางติดต่อครบ ${MAX_SHARES_PER_DAY} ครั้งแล้ว ลองใหม่พรุ่งนี้`, `You've shared ${MAX_SHARES_PER_DAY} contacts today. Try again tomorrow.`) }} />,
     );
   }
