@@ -82,6 +82,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .seg{flex-wrap:nowrap}
 .seg a{flex:1 1 auto;min-width:0;white-space:normal;text-align:center;line-height:1.15;padding:6px 8px;font-size:.86rem}
 body:has(.view-switch) .discover-list{padding-bottom:72px}
+/* Sticky action bars (card flows, the quiz result's Done / Retake): a solid
+   cream ground edge to edge with a hairline and soft shadow, so text scrolling
+   behind never shows around the buttons. */
+main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -8px 18px rgba(30,43,34,.07);margin-inline:calc(-1 * var(--gx,20px));padding-inline:var(--gx,20px);-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Phones and tablets: the cream carries on down behind the floating tab bar.
+   Laptops (top menu): the bars sit at the very bottom instead. */
+@media (max-width:1023.98px){body:has(.tabbar) main :is(.flow-bar,.pf-save)::after{content:"";position:absolute;left:0;right:0;top:100%;height:calc(112px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:none}}
+@media (min-width:1024px){body:has(.top-nav) main .pf-save{bottom:0}}
+
 /* Laptops: the Map / Cards switch sits in the page, not over the cards. */
 @media (min-width:900px){body:not(.fullmap-body) .view-switch{position:static;transform:none;display:inline-flex;margin:0 0 12px;box-shadow:none}body:has(.view-switch) .discover-list{padding-bottom:0}}
 
