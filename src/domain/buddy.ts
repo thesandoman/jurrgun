@@ -65,9 +65,12 @@ export function pairScore(a: BuddyCandidate, b: BuddyCandidate): number | null {
   let s = 0;
   if (ARCHETYPES[a.archetype].clicks.some((c) => c.key === b.archetype)) s += 3;
   if (ARCHETYPES[b.archetype].clicks.some((c) => c.key === a.archetype)) s += 3;
+  // Types are conversation starters, not a sorting key (D31): the same type
+  // counts lightly, so the deck doesn't build same-type bubbles; one letter
+  // apart ("different in a way that fits") counts most.
   const ml = matchLabel(a.archetype, b.archetype);
-  if (ml === "natural" || ml === "complementary") s += 2;
-  else if (ml === "interesting") s += 1;
+  if (ml === "complementary") s += 2;
+  else if (ml === "natural" || ml === "interesting") s += 1;
   if (a.district === b.district) s += 3;
   if (typeDistricts(a.archetype).has(b.district)) s += 1;
   if (typeDistricts(b.archetype).has(a.district)) s += 1;

@@ -5,14 +5,15 @@
  * All timers are LAZY: these run when someone loads or changes the event,
  * comparing timestamps — no cron, no polling (SVAGENTS hard rule 10).
  */
-import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { buddyRound, type Attendee } from "../domain/matching";
-import { ageOn, OFFER_HOURS, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
+import { ageOn, OFFER_HOURS, romanceEligible, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { cleanBio, universityKey } from "../content/profile";
 import { audit, notify } from "../lib/records";
-import { accounts, blocks, buddyPairs, events, partnerOrgs, profiles, registrations, strikes, vibes, type Event } from "../schema";
+import { accounts, blocks, buddyPairs, connections, events, partnerOrgs, profiles, registrations, strikes, vibes, type Event } from "../schema";
+import { segmentOf } from "../domain/segment";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -128,19 +129,55 @@ export async function releaseUpcomingSeats(env: DatabaseEnv, accountId: string, 
   return held.length;
 }
 
-/** Attendees in the shape the matching code wants, blocks included. */
-export async function loadAttendees(db: Db, accountIds: string[], now = new Date()): Promise<Attendee[]> {
+/**
+ * Attendees in the shape the matching code wants, blocks included, plus what
+ * seating needs to mix tables (D31): Bangkok Type, segment, romance mode, who
+ * chose each other before (connections) and who sat together before without
+ * clicking. `eventId` (the event being seated) is left out of the history.
+ */
+export async function loadAttendees(db: Db, accountIds: string[], now = new Date(), eventId?: string): Promise<Attendee[]> {
   if (accountIds.length === 0) return [];
-  const [profs, blockRows, vibeRows] = await Promise.all([
+  const [profs, blockRows, vibeRows, connRows, seatRows] = await Promise.all([
     db.select().from(profiles).where(inArray(profiles.accountId, accountIds)).limit(5000),
     db
       .select({ blocker: blocks.blocker, blocked: blocks.blocked })
       .from(blocks)
       .where(or(inArray(blocks.blocker, accountIds), inArray(blocks.blocked, accountIds)))
       .limit(10_000),
-    db.select({ accountId: vibes.accountId, vector: vibes.vector }).from(vibes).where(inArray(vibes.accountId, accountIds)).limit(5000),
+    db.select({ accountId: vibes.accountId, vector: vibes.vector, archetype: vibes.archetype }).from(vibes).where(inArray(vibes.accountId, accountIds)).limit(5000),
+    db
+      .select({ a: connections.aAccount, b: connections.bAccount })
+      .from(connections)
+      .where(and(inArray(connections.aAccount, accountIds), inArray(connections.bAccount, accountIds), isNull(connections.removedAt)))
+      .limit(10_000),
+    db
+      .select({ accountId: registrations.accountId, eventId: registrations.eventId, groupNo: registrations.groupNo })
+      .from(registrations)
+      .where(and(inArray(registrations.accountId, accountIds), isNotNull(registrations.groupNo), isNotNull(registrations.checkedInAt)))
+      .limit(20_000),
   ]);
   const vibeOf = new Map(vibeRows.map((v) => [v.accountId, v.vector]));
+  const typeOf = new Map(vibeRows.map((v) => [v.accountId, v.archetype]));
+  const mutualOf = new Map<string, Set<string>>();
+  const link = (m: Map<string, Set<string>>, a: string, b: string) => {
+    if (!m.has(a)) m.set(a, new Set());
+    m.get(a)!.add(b);
+  };
+  for (const c of connRows) {
+    link(mutualOf, c.a, c.b);
+    link(mutualOf, c.b, c.a);
+  }
+  // Sat at the same table at an earlier event, and neither chose the other.
+  const tables = new Map<string, string[]>();
+  for (const r of seatRows) {
+    if (r.eventId === eventId) continue;
+    const key = `${r.eventId}#${r.groupNo}`;
+    tables.set(key, [...(tables.get(key) ?? []), r.accountId]);
+  }
+  const noClickOf = new Map<string, Set<string>>();
+  for (const members of tables.values()) {
+    for (const a of members) for (const b of members) if (a !== b && !mutualOf.get(a)?.has(b)) link(noClickOf, a, b);
+  }
   return profs.map((p) => ({
     accountId: p.accountId,
     age: ageOn(p.birthDate, now),
@@ -155,6 +192,11 @@ export async function loadAttendees(db: Db, accountIds: string[], now = new Date
       .map((b) => (b.blocker === p.accountId ? b.blocked : b.blocker)),
     vibe: vibeOf.get(p.accountId) ?? null,
     university: universityKey(cleanBio(p.bio)),
+    type: /^[BC][DF][MS][NH]$/.test(typeOf.get(p.accountId) ?? "") ? typeOf.get(p.accountId)! : null,
+    segment: segmentOf(p),
+    openToMore: romanceEligible(p),
+    mutual: [...(mutualOf.get(p.accountId) ?? [])],
+    metNoClick: [...(noClickOf.get(p.accountId) ?? [])],
   }));
 }
 

@@ -4,9 +4,9 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES } from "../src/vibe/content";
 import { createRng, shuffle } from "../src/vibe/rng";
-import { canPair, romanceCompatible, preferenceList, type Profile } from "../src/match/profile";
+import { canPair, comfort, difference, isAnchor, romanceCompatible, preferenceList, score, SCORE_WEIGHTS, type Profile } from "../src/match/profile";
 import { blockingPairs, stableRoommates, type Preferences } from "../src/match/roommates";
-import { formGroups, groupSizes } from "../src/match/clearinghouse";
+import { formGroups, groupSizes, MAX_SAME_TYPE } from "../src/match/clearinghouse";
 
 function person(id: string, overrides: Partial<Profile> = {}): Profile {
   return {
@@ -157,5 +157,99 @@ describe("formGroups", () => {
     const g1 = r.groups.find((g) => g.includes("u1"))!;
     expect(g1).toContain("u2");
     expect(r.metrics.blockedConflicts).toBe(0);
+  });
+});
+
+describe("seating mixes people instead of sorting them (D31)", () => {
+  const LETTERS = ["BC", "DF", "MS", "NH"];
+  /** A crowd where a third of the people share one type: common, but still possible to spread at 2 per table. */
+  const lumpy = (n: number, seed: string): Profile[] => {
+    const rng = createRng(seed);
+    return Array.from({ length: n }, (_, i) => {
+      const code = i % 3 === 0 ? "CFMH" : LETTERS.map((l) => l[Math.floor(rng() * 2)]).join("");
+      const sign = (k: number) => (code[k] === LETTERS[k][0] ? 1 : -1) * (0.3 + rng() * 0.7);
+      const r = rng();
+      return person(`u${i}`, {
+        vibe: { energy: sign(0), explore: sign(1), motion: sign(2), culture: sign(3), rhythm: 0, plan: 0 },
+        interests: ["food", "art", "run", "games", "books"].filter(() => rng() < 0.4),
+        languages: i % 6 === 0 ? ["th", "en"] : ["th"],
+        type: code,
+        segment: r < 0.6 ? "local" : r < 0.85 ? "newcomer" : "international",
+      });
+    });
+  };
+
+  it("scores interests, same-energy comfort, some difference and history; never vibe likeness across every letter", () => {
+    expect(SCORE_WEIGHTS).toEqual({ interests: 0.35, comfort: 0.2, difference: 0.25, history: 0.2 });
+    const a = person("a", { vibe: { energy: 1, explore: 1, motion: 1, culture: 1, rhythm: 0, plan: 0 } });
+    const twin = person("t", { vibe: { ...a.vibe } });
+    const someDiff = person("s", { vibe: { energy: 1, explore: -0.2, motion: 1, culture: 1, rhythm: 0, plan: 0 } });
+    expect(comfort(a, twin)).toBe(1);
+    expect(difference(a, someDiff)).toBeGreaterThan(difference(a, twin));
+    expect(score(a, someDiff)).toBeGreaterThan(score(a, twin));
+  });
+
+  it("caps one type at two per table, keeps 3+ types, and gives everyone an anchor", () => {
+    const people = lumpy(30, "mix");
+    const r = formGroups(people, { seed: "mix" });
+    const typeOf = new Map(people.map((p) => [p.id, p.type]));
+    const total = new Map<string, number>();
+    for (const p of people) total.set(p.type!, (total.get(p.type!) ?? 0) + 1);
+    for (const g of r.groups) {
+      const counts = new Map<string, number>();
+      for (const id of g) counts.set(typeOf.get(id)!, (counts.get(typeOf.get(id)!) ?? 0) + 1);
+      // At most 2 of a type, unless there are simply too many of it to spread that thin.
+      for (const [t, n] of counts) expect(n, t).toBeLessThanOrEqual(Math.max(MAX_SAME_TYPE, Math.ceil(total.get(t)! / r.groups.length)));
+    }
+    expect(r.metrics.sameTypeTables).toBe(0);
+    expect(r.metrics.typesPerTable).toBeGreaterThanOrEqual(3);
+    expect(r.metrics.anchored).toBe(1);
+    expect(r.metrics.withLocal).toBe(1);
+    expect(r.metrics.blockingSwaps).toBe(0);
+    expect(r.metrics.isolated).toBe(0);
+    // The old similarity score, on the same crowd, piles the common type together.
+    const old = formGroups(people, { seed: "mix", scoring: "similarity" });
+    expect(old.metrics.typesPerTable).toBeLessThan(r.metrics.typesPerTable);
+  });
+
+  it("on 💘 events seats every opted-in member with another, and never reads gender", () => {
+    const people = lumpy(24, "love").map((p, i) => ({
+      ...p,
+      openToMore: i % 5 === 0,
+      romance: { eligible: true, identity: i % 2 ? "woman" : "man", openTo: "everyone" as const },
+    }));
+    const r = formGroups(people, { seed: "love", romance: true });
+    expect(r.metrics.romanceTogether).toBe(1);
+    // Same seating whatever anyone's gender says: gender is never an input.
+    const flipped = people.map((p) => ({ ...p, romance: { ...p.romance, identity: p.romance.identity === "man" ? "woman" : "man" } }));
+    expect(formGroups(flipped, { seed: "love", romance: true }).groups).toEqual(r.groups);
+    // Off a 💘 event the opt-in isn't used.
+    expect(formGroups(people, { seed: "love" }).metrics.romanceTogether).toBe(1);
+  });
+
+  it("sometimes reunites people who chose each other, and doesn't reseat strangers who didn't click", () => {
+    const people = lumpy(30, "again");
+    people[0].mutual = ["u1"];
+    people[1].mutual = ["u0"];
+    people[2].metNoClick = ["u3", "u4"];
+    people[3].metNoClick = ["u2"];
+    people[4].metNoClick = ["u2"];
+    let together = 0;
+    for (let k = 0; k < 20; k++) {
+      const r = formGroups(people, { seed: `again-${k}` });
+      expect(r.metrics.noClickTogether).toBe(0);
+      if (r.groups.some((g) => g.includes("u0") && g.includes("u1"))) together += 1;
+    }
+    // "Sometimes": reunited at some events, not all.
+    expect(together).toBeGreaterThan(0);
+    expect(together).toBeLessThan(20);
+  });
+
+  it("an anchor is a shared interest, the same segment or the same energy letter", () => {
+    const a = person("a", { interests: ["food"], segment: "local", vibe: { energy: 0.5, explore: 0, motion: 0, culture: 0, rhythm: 0, plan: 0 } });
+    expect(isAnchor(a, person("b", { interests: ["food"], segment: "newcomer", vibe: { ...a.vibe, energy: -0.5 } }))).toBe(true);
+    expect(isAnchor(a, person("c", { segment: "local", vibe: { ...a.vibe, energy: -0.5 } }))).toBe(true);
+    expect(isAnchor(a, person("d", { segment: "newcomer", vibe: { ...a.vibe, energy: 0.9 } }))).toBe(true);
+    expect(isAnchor(a, person("e", { segment: "newcomer", vibe: { ...a.vibe, energy: -0.5 } }))).toBe(false);
   });
 });

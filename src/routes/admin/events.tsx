@@ -1817,8 +1817,8 @@ adminEvents.post(
       const other = r.plusOneWith ? byAccount.get(r.plusOneWith) : undefined;
       if (other && other.plusOneWith === r.accountId && r.accountId < other.accountId) keepTogether.push([r.accountId, other.accountId]);
     }
-    const attendees = await loadAttendees(db, checked.map((r) => r.accountId));
-    const result = suggestGroups(attendees, { seed: e.id, minSize: e.groupMin, maxSize: e.groupMax, keepTogether });
+    const attendees = await loadAttendees(db, checked.map((r) => r.accountId), new Date(), e.id);
+    const result = suggestGroups(attendees, { seed: e.id, minSize: e.groupMin, maxSize: e.groupMax, keepTogether, romance: e.tags.includes(OPEN_TO_MORE_TAG) });
     const blockedMap = new Map(attendees.map((x) => [x.accountId, new Set(x.blocked)]));
     const blockedLeft = separateBlocked(result.groups, blockedMap, keepTogether);
 

@@ -24,6 +24,16 @@ export type Attendee = {
   vibe?: Record<string, number> | null;
   /** Same key = same university (src/content/profile.ts universityKey). */
   university?: string | null;
+  /** Bangkok Type code, if the quiz was taken: keeps tables mixed, never a filter. */
+  type?: string | null;
+  /** local | newcomer | international (src/domain/segment.ts). */
+  segment?: "local" | "newcomer" | "international";
+  /** Romance mode on (single + switched on). Read only for 💘 open_to_more events. */
+  openToMore?: boolean;
+  /** People they chose and who chose them back at an earlier event. */
+  mutual?: string[];
+  /** People they sat with at an earlier event without either choosing the other. */
+  metNoClick?: string[];
 };
 
 const NEUTRAL_VIBE = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<Category, number>;
@@ -40,15 +50,23 @@ export function toMatchProfile(a: Attendee): MatchProfile {
     ageRange: [a.ageMin, a.ageMax],
     intents: intents.length ? intents : ["friends"],
     blocked: a.blocked,
+    ...(a.type ? { type: a.type } : {}),
+    ...(a.segment ? { segment: a.segment } : {}),
+    ...(a.openToMore ? { openToMore: true } : {}),
+    ...(a.mutual?.length ? { mutual: a.mutual } : {}),
+    ...(a.metNoClick?.length ? { metNoClick: a.metNoClick } : {}),
   };
 }
 
 /** Event tables: exchange-stable clearinghouse (PRD §8.1 v3). */
 export function suggestGroups(
   attendees: Attendee[],
-  opts: { seed: string; minSize: number; maxSize: number; keepTogether: [string, string][] },
+  opts: { seed: string; minSize: number; maxSize: number; keepTogether: [string, string][]; romance?: boolean },
 ): GroupResult {
-  return formGroups(attendees.map(toMatchProfile), {
+  // The 💘 opt-in is only read on 💘 events; everywhere else it isn't passed on at all.
+  const people = attendees.map((a) => toMatchProfile(opts.romance ? a : { ...a, openToMore: false }));
+  return formGroups(people, {
+    romance: opts.romance ?? false,
     seed: opts.seed,
     minSize: opts.minSize,
     maxSize: opts.maxSize,

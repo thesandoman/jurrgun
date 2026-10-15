@@ -19,15 +19,22 @@ Can a **clearinghouse** (a central, batch matching round, like medical residency
 
 Each person has a **6-category Bangkok Vibe vector** (non-political; see `vibe-quiz-v3.md`), optional **personal weights** saying how much each category matters to them, interest tags, and languages.
 
-`score(a → b)` = how much **a** would enjoy **b**, from 0 to 1:
+`score(a → b)` = how well **a** would get on with **b** at a table, roughly 0 to 1 (owner's seating design, D31, 10-15):
 
 | Part | Weight | Meaning |
 |---|---|---|
-| Vibe similarity | 0.55 | Closeness of the two vectors, weighted by *a's* personal weights |
-| Shared interests | 0.30 | Overlap of interest tags (Jaccard) |
-| Novelty | 0.15 | Bonus for exactly **one** strong difference: "mostly alike, one thing to talk about" |
+| Shared interests | 0.35 | Overlap of interest tags (Jaccard): something to talk about straight away |
+| Comfort | 0.20 | Same energy (Buzz or Chill) only: nobody overwhelmed or bored |
+| Healthy difference | 0.25 | Difference on exploring, motion and culture, best when moderate: new perspectives, no mirror tables |
+| Connection history | 0.20 | +1 for people who chose each other before (on a fair coin per event, so they're reunited "sometimes"); a strong penalty for strangers who sat together before and didn't click |
 
-**Hard rules:**
+Until 10-15 the score was 0.55 vibe similarity across every letter, 0.30 interests and 0.15 novelty. That sorted people into same-type tables, the dating-app pattern the owner wants to avoid; the old score is kept only as `similarityScore` for the comparison below.
+
+**Table costs** (soft, inside each person's happiness, so the exchange-stable search keeps them): no anchor at the table (a shared interest, the same segment, or the same energy letter); a third person of your Bangkok Type at the table; fewer than 3 types; a newcomer or international with no local; and, on 💘 open_to_more events only, an opted-in member with no other opted-in member. Gender is never an input, and nothing here is ever shown to a member.
+
+**Hard rules, in order:** blocked pairs never together; nobody left without a shared language; strangers who didn't click never seated together again unless there is no other way; then the table costs above.
+
+**Hard rules (unchanged):**
 - **Buddies** must share a language, be inside each other's private age range, have no block between them, and both have a non-romance intent.
 - **Groups:** +1 friends stay together, blocked pairs are never seated together, and **nobody is left at a table where no one shares their language**. A swap that would strand a bystander is not allowed.
 
@@ -119,3 +126,26 @@ Buddy results average 200 rounds per size. Group results average 50 rounds (20 a
 - Learn the score weights from post-event "would meet again" ratings, using a simple logistic model kept as interpretable as the current one.
 - Add a diversity metric (spread of vibe, age and language within each table) to the dashboard, to catch echo chambers.
 - Try "popular-matching" and "rank-maximal" variants for buddies when a stable matching doesn't exist.
+
+## Mixing tables, not sorting them (D31, 10-15)
+
+`npx tsx scripts/match-sim.ts`, last table. Synthetic events with types (some common), segments (60% local, 25% newcomer, 15% international), a 25% 💘 opt-in, about one earlier mutual pick and two "sat together, didn't click" pairs per person. Same people and the same exchange-stable search; only the score changes.
+
+| Attendees | Event | Score | Types per table | Same-type tables | Anchored | Newcomers with a local | 💘 with another opted-in | Shared-interest overlap | Mutual pairs together | No-click repeats | Blocking swaps | Language-isolated |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 24 | friends | similarity (old) | 3.07 | 5.0% | 100% | 97.2% | n/a | 0.226 | 2.33 | 5.53 | 0 | 0 |
+| 24 | friends | **mix (new)** | 4.20 | 0% | 100% | 100% | n/a | 0.243 | 3.90 | 0.13 | 0 | 0 |
+| 24 | 💘 | similarity (old) | 3.21 | 5.0% | 100% | 100% | 71.6% | 0.229 | 2.20 | 5.23 | 0 | 0 |
+| 24 | 💘 | **mix (new)** | 4.27 | 0% | 100% | 100% | 90.2% | 0.228 | 3.73 | 0.13 | 0 | 0.03 |
+| 48 | friends | similarity (old) | 2.96 | 5.4% | 100% | 100% | n/a | 0.272 | 2.60 | 5.27 | 0 | 0 |
+| 48 | friends | **mix (new)** | 4.29 | 0% | 100% | 100% | n/a | 0.309 | 5.30 | 0 | 0 | 0 |
+| 48 | 💘 | similarity (old) | 2.99 | 6.7% | 100% | 100% | 77.6% | 0.268 | 2.73 | 5.30 | 0 | 0 |
+| 48 | 💘 | **mix (new)** | 4.33 | 0% | 100% | 100% | 99.3% | 0.293 | 5.10 | 0 | 0 | 0 |
+| 96 | friends | similarity (old) | 2.91 | 11.9% | 100% | 98.5% | n/a | 0.321 | 2.70 | 5.00 | 0 | 0 |
+| 96 | friends | **mix (new)** | 4.25 | 0% | 100% | 100% | n/a | 0.375 | 7.60 | 0 | 0 | 0 |
+| 96 | 💘 | similarity (old) | 2.80 | 13.1% | 100% | 97.1% | 74.5% | 0.330 | 3.40 | 5.20 | 0 | 0 |
+| 96 | 💘 | **mix (new)** | 4.26 | 0% | 100% | 100% | 99.6% | 0.352 | 6.20 | 0 | 0 | 0 |
+
+What changed: about 1.3 more Bangkok Types at every table and no same-type tables; every newcomer sits with a local; 💘 members almost always have another opted-in member at their table (the rest are small events where the numbers don't allow it); shared-interest overlap goes **up**, so tables still have something in common; people who chose each other are reunited about half the time; strangers who didn't click are no longer reseated (a few remain only at small events where there's no other way); stability is unchanged (no blocking swaps). The one language-isolated person in 30 small 💘 events is the same edge case the old score has at 12 people (a single speaker of a language), not a new one.
+
+The weekly Bangkok Buddy deck (`src/domain/buddy.ts`) also stops favouring the same type: the same type now counts +1 (was +2), "one letter apart" +2, and the hand-written "clicks", which are always different types with a reason, are unchanged.

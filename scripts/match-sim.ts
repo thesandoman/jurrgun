@@ -137,6 +137,78 @@ function groupExperiment(n: number, trials: number) {
   return acc;
 }
 
+// ------------------------------------------------------------ mixing (D31) --
+
+/** The Bangkok Type a vibe vector reads as (sign of each code letter). */
+const typeOfVibe = (v: Record<Category, number>) =>
+  `${v.energy >= 0 ? "B" : "C"}${v.explore >= 0 ? "D" : "F"}${v.motion >= 0 ? "M" : "S"}${v.culture >= 0 ? "N" : "H"}`;
+
+/**
+ * A population with what seating mixes on: types (from the personas, so
+ * some types are common, as in real life), segments (60% local, 25%
+ * newcomer, 15% international), the 💘 opt-in (25%), about one mutual pick
+ * and two "sat together, didn't click" pairs per person from earlier events.
+ */
+function seatingPopulation(rng: Rng, n: number): Profile[] {
+  const people = population(rng, n, true).map((p) => {
+    const r = rng();
+    return {
+      ...p,
+      type: typeOfVibe(p.vibe),
+      segment: (r < 0.6 ? "local" : r < 0.85 ? "newcomer" : "international") as Profile["segment"],
+      openToMore: rng() < 0.25,
+      mutual: [] as string[],
+      metNoClick: [] as string[],
+    };
+  });
+  const link = (key: "mutual" | "metNoClick", a: number, b: number) => {
+    if (a === b) return;
+    people[a][key].push(people[b].id);
+    people[b][key].push(people[a].id);
+  };
+  for (let i = 0; i < n; i++) {
+    if (rng() < 0.5) link("mutual", i, Math.floor(rng() * n));
+    link("metNoClick", i, Math.floor(rng() * n));
+  }
+  return people;
+}
+
+const jac = (a: string[], b: string[]) => {
+  const inter = a.filter((x) => b.includes(x)).length;
+  return a.length + b.length - inter ? inter / (a.length + b.length - inter) : 0;
+};
+
+function mixExperiment(n: number, trials: number, romance: boolean) {
+  const rng = createRng(`mix:${n}:${romance}`);
+  const keys = ["similarity", "mix"] as const;
+  const acc = Object.fromEntries(keys.map((k) => [k, { types: [] as number[], same: [] as number[], anchored: [] as number[], local: [] as number[], romance: [] as number[], mutual: [] as number[], noClick: [] as number[], interests: [] as number[], blocking: [] as number[], isolated: [] as number[], ms: [] as number[] }]));
+  for (let t = 0; t < trials; t++) {
+    const people = seatingPopulation(rng, n);
+    const byId = new Map(people.map((p) => [p.id, p]));
+    for (const k of keys) {
+      const t0 = performance.now();
+      const r = formGroups(people, { seed: `${n}:${t}`, method: "stable", scoring: k, romance });
+      const a = acc[k];
+      a.ms.push(performance.now() - t0);
+      const m = r.metrics;
+      a.types.push(m.typesPerTable);
+      a.same.push(m.sameTypeTables / r.groups.length);
+      a.anchored.push(m.anchored);
+      a.local.push(m.withLocal);
+      a.romance.push(m.romanceTogether);
+      a.mutual.push(m.mutualTogether);
+      a.noClick.push(m.noClickTogether);
+      a.blocking.push(m.blockingSwaps);
+      a.isolated.push(m.isolated);
+      // Shared-interest overlap: mean Jaccard over pairs at a table.
+      const js: number[] = [];
+      for (const g of r.groups) for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) js.push(jac(byId.get(g[i])!.interests, byId.get(g[j])!.interests));
+      a.interests.push(mean(js));
+    }
+  }
+  return acc;
+}
+
 // ------------------------------------------------------------ report -------
 
 console.log("## 1:1 buddy pairing (Irving stable roommates vs baselines)\n");
@@ -164,5 +236,21 @@ for (const n of [12, 24, 48, 96]) {
   for (const m of ["random", "greedy", "stable"] as const) {
     const a = acc[m];
     console.log(`| ${n} | ${m} | ${f(mean(a.mean))} | ${f(mean(a.min))} | ${f(mean(a.blocking), 2)} | ${f(mean(a.isolated), 2)} | ${f(mean(a.swaps), 1)} | ${f(mean(a.ms), 1)} ms |`);
+  }
+}
+
+console.log("\n## Mixing tables, not sorting them (D31): old similarity score vs the new mix\n");
+console.log("Same people, same exchange-stable search; only the score changes. Types per table and anchors are per table and per person; same-type tables are 3+ typed people all of one type.\n");
+console.log("| Attendees | Event | Score | Types per table | Same-type tables | Anchored | Newcomers with a local | 💘 with another opted-in | Shared-interest overlap | Mutual pairs together | No-click repeats | Blocking swaps | Language-isolated | Time |");
+console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+for (const n of [24, 48, 96]) {
+  for (const romance of [false, true]) {
+    const acc = mixExperiment(n, n >= 96 ? 10 : 30, romance);
+    for (const k of ["similarity", "mix"] as const) {
+      const a = acc[k];
+      console.log(
+        `| ${n} | ${romance ? "💘" : "friends"} | ${k === "mix" ? "**mix (new)**" : "similarity (old)"} | ${f(mean(a.types), 2)} | ${f(mean(a.same) * 100, 1)}% | ${f(mean(a.anchored) * 100, 1)}% | ${f(mean(a.local) * 100, 1)}% | ${romance ? `${f(mean(a.romance) * 100, 1)}%` : "n/a"} | ${f(mean(a.interests))} | ${f(mean(a.mutual), 2)} | ${f(mean(a.noClick), 2)} | ${f(mean(a.blocking), 2)} | ${f(mean(a.isolated), 2)} | ${f(mean(a.ms), 0)} ms |`,
+      );
+    }
   }
 }

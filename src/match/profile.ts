@@ -10,7 +10,13 @@
  *   - Language is a hard constraint for 1:1 pairing so expats are never paired
  *     with someone they can't talk to — and a soft one for groups, where one
  *     bridge speaker is enough.
- *   - Inputs are the non-political Vibe vector, interests and languages only.
+ *   - Inputs are the non-political Vibe vector, interests, languages, and for
+ *     seating the Bangkok Type, the member's segment, the 💘 opt-in (only on
+ *     open_to_more events) and who chose each other before. Never gender.
+ *
+ * Seating mixes people instead of sorting them (owner, D31): everyone has an
+ * anchor at the table, the table spans different types, and nobody is ranked.
+ * No score here is ever shown to a member.
  */
 
 import { CATEGORIES, type Category } from "../vibe/content";
@@ -33,6 +39,16 @@ export type Profile = {
   ageRange: [number, number];
   intents: Intent[];
   blocked?: string[];
+  /** Bangkok Type code (e.g. "CFMH"), if the quiz was taken. Used only to keep tables mixed. */
+  type?: string;
+  /** local | newcomer | international (src/domain/segment.ts). */
+  segment?: "local" | "newcomer" | "international";
+  /** On a 💘 open_to_more event: this member has romance mode on. Never their gender. */
+  openToMore?: boolean;
+  /** People this member chose and who chose them back (a connection), at any earlier event. */
+  mutual?: string[];
+  /** People this member sat at a table with before without either choosing the other. */
+  metNoClick?: string[];
   romance?: {
     /** Declared Single AND opted in to "Open to something more". */
     eligible: boolean;
@@ -90,34 +106,94 @@ function jaccard(a: string[], b: string[]): number {
   return inter / (a.length + b.length - inter);
 }
 
-export const SCORE_WEIGHTS = { similarity: 0.55, interests: 0.3, novelty: 0.15 };
+/**
+ * The seating score's parts (D31). Similarity across every letter used to be
+ * 0.55 of the score, which sorted people into bubbles of the same type; now
+ * the only letter where likeness counts is energy (comfort), and the other
+ * three reward some difference.
+ */
+export const SCORE_WEIGHTS = { interests: 0.35, comfort: 0.2, difference: 0.25, history: 0.2 };
+
+/** The letters where some difference makes a table better: explore, motion, culture. */
+const DIFFERENCE_CATEGORIES: Category[] = ["explore", "motion", "culture"];
+
+/** Strangers who sat together before and didn't choose each other: never seat them together again. */
+export const NO_CLICK_SCORE = -0.6;
 
 /**
- * How much `a` would enjoy meeting `b`, in [0, 1]. Asymmetric: it uses a's
- * category weights. Three parts:
- *   similarity — closeness of Vibe vectors, weighted by what a cares about;
- *   interests  — overlap of interest tags;
- *   novelty    — a small bonus for exactly ONE strong difference: "mostly
- *                alike, one thing to talk about" beats identical twins.
+ * Same-energy comfort, 0..1: two Chill people or two Buzz people are at ease;
+ * opposite ends tire each other out.
  */
-export function score(a: Profile, b: Profile): number {
+export function comfort(a: Profile, b: Profile): number {
+  return 1 - Math.abs(a.vibe.energy - b.vibe.energy) / 2;
+}
+
+/**
+ * Healthy difference, 0..1: how much two people differ on explore, motion and
+ * culture. A moderate difference scores best ("one thing to talk about");
+ * total opposites a little less, twins least.
+ */
+export function difference(a: Profile, b: Profile): number {
+  let t = 0;
+  for (const c of DIFFERENCE_CATEGORIES) {
+    const d = Math.abs(a.vibe[c] - b.vibe[c]) / 2; // 0..1
+    t += d <= 0.6 ? d / 0.6 : 1 - (d - 0.6) * 0.5;
+  }
+  return t / DIFFERENCE_CATEGORIES.length;
+}
+
+/**
+ * Connection history: 1 when a and b chose each other before (and this
+ * event's coin says to reunite them: "sometimes", so mutual pairs still meet
+ * new people), the no-click penalty when they sat together before and neither
+ * chose the other, else 0.
+ */
+export function history(a: Profile, b: Profile, coin: (a: string, b: string) => boolean = () => true): number {
+  if (a.mutual?.includes(b.id) || b.mutual?.includes(a.id)) return coin(a.id, b.id) ? 1 : 0;
+  if (a.metNoClick?.includes(b.id) || b.metNoClick?.includes(a.id)) return NO_CLICK_SCORE / SCORE_WEIGHTS.history;
+  return 0;
+}
+
+/**
+ * How well `a` would get on with `b` at a table, roughly 0..1 (it can go
+ * below 0 for a pair who didn't click before). Interests are what people talk
+ * about first; comfort keeps energy compatible; difference keeps the table
+ * from being a mirror; history brings back people who chose each other.
+ * `a`'s personal weights tilt comfort and difference toward what a cares about.
+ */
+export function score(a: Profile, b: Profile, coin?: (a: string, b: string) => boolean): number {
+  const w = (c: Category) => a.weights?.[c] ?? 1;
+  const dw = DIFFERENCE_CATEGORIES.reduce((t, c) => t + w(c), 0) / DIFFERENCE_CATEGORIES.length;
+  return (
+    SCORE_WEIGHTS.interests * jaccard(a.interests, b.interests) +
+    SCORE_WEIGHTS.comfort * w("energy") * comfort(a, b) +
+    SCORE_WEIGHTS.difference * dw * difference(a, b) +
+    SCORE_WEIGHTS.history * history(a, b, coin)
+  );
+}
+
+/** The old score, kept only so the simulation can compare before and after (D31). Never used for seating. */
+export function similarityScore(a: Profile, b: Profile): number {
   let wSum = 0;
   let sim = 0;
   let strongDiffs = 0;
   for (const c of CATEGORIES) {
     const w = a.weights?.[c] ?? 1;
-    const diff = Math.abs(a.vibe[c] - b.vibe[c]); // 0..2
+    const diff = Math.abs(a.vibe[c] - b.vibe[c]);
     wSum += w;
     sim += w * (1 - diff / 2);
     if (diff >= 1) strongDiffs += 1;
   }
   const similarity = wSum === 0 ? 0 : sim / wSum;
   const novelty = strongDiffs === 1 ? 1 : strongDiffs === 0 ? 0.5 : strongDiffs === 2 ? 0.3 : 0;
-  return (
-    SCORE_WEIGHTS.similarity * similarity +
-    SCORE_WEIGHTS.interests * jaccard(a.interests, b.interests) +
-    SCORE_WEIGHTS.novelty * novelty
-  );
+  return 0.55 * similarity + 0.3 * jaccard(a.interests, b.interests) + 0.15 * novelty;
+}
+
+/** An anchor: a shared interest, the same segment, or the same energy letter (B or C). */
+export function isAnchor(a: Profile, b: Profile): boolean {
+  if (a.interests.some((i) => b.interests.includes(i))) return true;
+  if (a.segment && a.segment === b.segment) return true;
+  return a.vibe.energy >= 0 === b.vibe.energy >= 0;
 }
 
 /**
