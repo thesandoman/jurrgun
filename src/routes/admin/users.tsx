@@ -92,7 +92,7 @@ adminUsers.get("/", async (c) => {
                     <td>
                       <a href={`/admin/users/${encodeURIComponent(r.id)}`}>@{r.username}</a>
                     </td>
-                    <td>{r.nickname ?? "—"}</td>
+                    <td>{r.nickname ?? "-"}</td>
                     <td>{r.role}</td>
                     <td>{statusTag(r.status, lang)}</td>
                   </tr>
@@ -171,7 +171,7 @@ adminUsers.get("/:id", async (c) => {
         <a href="/admin/users">← {t("ค้นหาผู้ใช้", "Find a user")}</a>
       </p>
       <h1>
-        {acct.nickname ?? "—"} <small>@{acct.username}</small>
+        {acct.nickname ?? "-"} <small>@{acct.username}</small>
       </h1>
       <Card>
         <div class="table-wrap" style="border:none;margin:0">
@@ -189,7 +189,7 @@ adminUsers.get("/:id", async (c) => {
               </tr>
               <tr><th scope="row">{t("การยืนยันบัญชี", "Account verification")}</th><td>{L2(verLabel, acct.verification)}</td></tr>
               <tr><th scope="row">{t("ทะเบียนบ้าน กทม.", "Bangkok registration")}</th><td>{L2(bkkLabel, acct.bkkRegistered)}</td></tr>
-              <tr><th scope="row">{t("เขต", "District")}</th><td>{acct.district ? label(DISTRICTS, acct.district, lang) : "—"}</td></tr>
+              <tr><th scope="row">{t("เขต", "District")}</th><td>{acct.district ? label(DISTRICTS, acct.district, lang) : "-"}</td></tr>
               <tr><th scope="row">{t("สร้างเมื่อ", "Created")}</th><td>{fmtDay(acct.createdAt, lang)}</td></tr>
               <tr>
                 <th scope="row">{t("รายงาน", "Reports")}</th>
@@ -268,7 +268,7 @@ adminUsers.get("/:id", async (c) => {
                       </>
                     ) : null}
                   </td>
-                  <td>{h.byUsername ? `@${h.byUsername}` : "—"}</td>
+                  <td>{h.byUsername ? `@${h.byUsername}` : "-"}</td>
                   <td>{h.note}</td>
                 </tr>
               ))}

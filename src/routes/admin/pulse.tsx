@@ -322,7 +322,7 @@ adminPulse.get("/", async (c) => {
                     </td>
                     <td>
                       <small>
-                        {q.activeFrom ? fmtDate(q.activeFrom, lang) : "—"} → {q.activeTo ? fmtDate(q.activeTo, lang) : "—"}
+                        {q.activeFrom ? fmtDate(q.activeFrom, lang) : "-"} → {q.activeTo ? fmtDate(q.activeTo, lang) : "-"}
                       </small>
                     </td>
                     <td>{n === null ? "<10" : n}</td>
@@ -689,7 +689,7 @@ adminPulse.get("/:id/results", async (c) => {
                       <td>{k === null ? "<10" : k}</td>
                       <td>
                         {pct === null ? (
-                          "—"
+                          "-"
                         ) : (
                           <div class="row" style="flex-wrap:nowrap">
                             <div class="bar" style="flex:1;min-width:80px">

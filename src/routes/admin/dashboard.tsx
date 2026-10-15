@@ -216,7 +216,7 @@ adminDashboard.get("/", async (c) => {
   const reconnected = adminStats?.[3] ?? 0;
   const regs = adminStats?.[1][0];
   const att = adminStats?.[2][0];
-  const rate = att && att.expected > 0 ? `${Math.round(((att.checkedIn ?? 0) / att.expected) * 100)}%` : "—";
+  const rate = att && att.expected > 0 ? `${Math.round(((att.checkedIn ?? 0) / att.expected) * 100)}%` : "-";
   const openReports = reportStats?.[0]?.open ?? 0;
   const critical = reportStats?.[0]?.critical ?? 0;
 

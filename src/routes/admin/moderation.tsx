@@ -191,9 +191,9 @@ adminModeration.get("/", async (c) => {
                   <td>
                     <a href={`/admin/moderation/${encodeURIComponent(r.id)}`}>{label(REPORT_REASON_LABELS, r.reason, lang)}</a>
                   </td>
-                  <td>{r.reporterNick ?? "—"}</td>
-                  <td>{r.targetNick ?? "—"}</td>
-                  <td>{r.eventTitle ? (lang === "en" && r.eventTitleEn ? r.eventTitleEn : r.eventTitle) : "—"}</td>
+                  <td>{r.reporterNick ?? "-"}</td>
+                  <td>{r.targetNick ?? "-"}</td>
+                  <td>{r.eventTitle ? (lang === "en" && r.eventTitleEn ? r.eventTitleEn : r.eventTitle) : "-"}</td>
                   <td>
                     {age(r.createdAt, lang)}
                     {Date.now() - r.createdAt.getTime() > (r.severity === "critical" ? 1 : 24) * 3_600_000 ? (
@@ -327,7 +327,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
 
       <Card>
         <p class="meta">
-          <span>{t("ผู้รายงาน", "Reporter")}: {row.reporterNick ?? "—"}</span>
+          <span>{t("ผู้รายงาน", "Reporter")}: {row.reporterNick ?? "-"}</span>
           <span>{t("รายงานเมื่อ", "Filed")}: {fmtDate(r.createdAt, lang)}</span>
           {evTitle ? (
             <span>
@@ -344,7 +344,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
         <Card>
           <h2 style="margin-top:0">{t("บัญชีที่ถูกรายงาน", "Reported account")}</h2>
           <p>
-            <strong>{target.nickname ?? "—"}</strong> <small>@{target.username}</small> {statusTag(target.status, lang)}
+            <strong>{target.nickname ?? "-"}</strong> <small>@{target.username}</small> {statusTag(target.status, lang)}
             {target.status === "suspended" && target.suspendedUntil ? <small> {t("ถึง", "until")} {fmtDate(target.suspendedUntil, lang)}</small> : null}
           </p>
           <p>
@@ -389,7 +389,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
                         {a.action}
                         {a.until ? <small> → {fmtDay(a.until, lang)}</small> : null}
                       </td>
-                      <td>{a.byUsername ? `@${a.byUsername}` : "—"}</td>
+                      <td>{a.byUsername ? `@${a.byUsername}` : "-"}</td>
                       <td>{a.note}</td>
                     </tr>
                   ))}
@@ -450,7 +450,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
                         <td>{lang === "en" && h.titleEn ? h.titleEn : h.title}</td>
                         <td>{fmtDate(h.startsAt, lang)}</td>
                         <td>{h.status}</td>
-                        <td>{h.checkedInAt ? "✓" : "—"}</td>
+                        <td>{h.checkedInAt ? "✓" : "-"}</td>
                       </tr>
                     ))}
                   </tbody>

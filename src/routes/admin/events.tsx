@@ -1344,18 +1344,18 @@ adminEvents.get(
                       <td>{nick.get(r.accountId)}</td>
                       {isAdmin ? <td>{r.username}</td> : null}
                       <td>{registrationStatusLabel(v, r.status)}</td>
-                      <td>{r.plusOneWith ? nick.get(r.plusOneWith) ?? "—" : "—"}</td>
-                      <td>{r.wantsBuddy ? t("ใช่", "Yes") : "—"}</td>
+                      <td>{r.plusOneWith ? nick.get(r.plusOneWith) ?? "-" : "-"}</td>
+                      <td>{r.wantsBuddy ? t("ใช่", "Yes") : "-"}</td>
                       <td>
                         {r.checkedInAt ? (
                           <>
                             {fmtDate(r.checkedInAt, lang)} <small>({r.checkInMethod === "manual" ? t("พิมพ์รหัส", "manual") : t("สแกน", "scan")})</small>
                           </>
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </td>
-                      <td>{r.groupNo ?? "—"}</td>
+                      <td>{r.groupNo ?? "-"}</td>
                       <td>
                         {r.noShowRecorded ? (
                           s && !s.waivedBy && s.reason === "no_show" ? (
@@ -1369,7 +1369,7 @@ adminEvents.get(
                             <Tag tone="warn">{t("ไม่มาตามนัด", "No-show")}</Tag>
                           )
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </td>
                     </tr>
@@ -1533,7 +1533,7 @@ adminEvents.get(
             {pairs.length ? (
               <ul>
                 {pairs.map((p) => (
-                  <li>{p.members.map((m) => nick.get(m) ?? "—").join(" · ")}</li>
+                  <li>{p.members.map((m) => nick.get(m) ?? "-").join(" · ")}</li>
                 ))}
               </ul>
             ) : (

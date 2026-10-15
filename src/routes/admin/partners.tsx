@@ -209,11 +209,11 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
               {staff.map((s) => (
                 <tr>
                   <td>@{s.username}</td>
-                  <td>{s.nickname ?? "—"}</td>
+                  <td>{s.nickname ?? "-"}</td>
                   <td>
                     <Tag tone="accent">{roleLabel(s.role)}</Tag>
                   </td>
-                  <td>{s.partnerOrgId ? orgName.get(s.partnerOrgId) ?? s.partnerOrgId : "—"}</td>
+                  <td>{s.partnerOrgId ? orgName.get(s.partnerOrgId) ?? s.partnerOrgId : "-"}</td>
                   <td>{s.status}</td>
                 </tr>
               ))}
