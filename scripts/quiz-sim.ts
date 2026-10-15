@@ -34,7 +34,7 @@ function report(r: SimReport): string {
   return `## Run: ${fmt(r.sessions)} sessions (${secs} s)
 
 **Bank:** ${r.scenariosInBank} scenarios, ${r.scenariosUsed} used across the run. Questions per session: ${r.questionsPerSession.min} to ${r.questionsPerSession.max}.
-**Distinct sessions:** ${fmt(r.distinctSessions)} of ${fmt(r.sessions)} runs were different.
+**Curated sets:** ${fmt(r.distinctSessions)} distinct question lists (3 segments, with the seasonal slot by month).
 
 ### Structure
 - Questions with a letter not split half and half: **${r.structure.unbalancedQuestions}**

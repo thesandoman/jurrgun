@@ -578,13 +578,17 @@ export type TypeResult = {
   margin?: Partial<Record<Category, number>>;
   /** What moves you (D32): shown as one sentence with a place to try, never part of the type. */
   moves?: { motive: Motive; place: string };
+  /** Real picks (not "None of these") behind the result; under ROUGH_START it shows as a rough start. Absent on older results. */
+  answered?: number;
 };
 
 /**
- * The type, allowing for a margin of error. A clear letter is never
- * overruled; a letter within the margin (`unsure`, from scoreSession) is
- * decided by which types' answers the person actually picked. Without
- * `unsure`, a letter counts as clear when it is not "balanced".
+ * The type, allowing for a margin of error. The headline type is the side
+ * each letter leans to, unsure or not (owner, quiz-curated.md): with 16
+ * short questions each type is shown only a few times, so which types'
+ * answers were picked (affinity) is too thin to overrule a letter. Affinity
+ * only breaks a letter that sits exactly in the middle. Without `unsure`, a
+ * letter counts as clear when it is not "balanced".
  *
  * `range` is what the result page headlines: one type when every letter is
  * clear, the two types either side of a single unsure letter, or the three
@@ -599,7 +603,9 @@ export function typeOf(
   const isUnsure = (c: Category) => (unsure ? unsure.includes(c) : strengthOf(vector[c] ?? 0) === "balanced");
   const clear = CODE_AXES.map((a, i) => ({ i, c: a.category })).filter((x) => !isUnsure(x.c));
   const sign = signCode(vector);
-  const ok = (k: ArchetypeKey) => clear.every((x) => k[x.i] === sign[x.i]);
+  // Every letter that leans either way decides the headline; clear ones always did.
+  const leaning = CODE_AXES.map((a, i) => ({ i, c: a.category })).filter((x) => (vector[x.c] ?? 0) !== 0);
+  const ok = (k: ArchetypeKey) => clear.every((x) => k[x.i] === sign[x.i]) && leaning.every((x) => k[x.i] === sign[x.i]);
   const top = fits.find((f) => ok(f.key)) ?? fits[0];
   const flavour = (["rhythm", "plan"] as Category[])
     .filter((c) => !isUnsure(c) && (vector[c] ?? 0) !== 0)
@@ -630,7 +636,8 @@ export function resultOf(row: { archetype: ArchetypeKey; vector: Record<string, 
   const margin = !Array.isArray(raw) ? raw?.margin : undefined;
   const mv = !Array.isArray(raw) ? raw?.moves : undefined;
   const moves = mv && (MOTIVES as readonly string[]).includes(mv.motive) && MOTIVE_PLACES[mv.motive].some((p) => p.id === mv.place) ? mv : undefined;
-  return { types: blend, unsure, consistency, ...(margin ? { margin } : {}), ...(moves ? { moves } : {}), range };
+  const answered = !Array.isArray(raw) && typeof raw?.answered === "number" ? raw.answered : undefined;
+  return { types: blend, unsure, consistency, ...(margin ? { margin } : {}), ...(moves ? { moves } : {}), ...(answered !== undefined ? { answered } : {}), range };
 }
 
 /** The flavour badges for a modifier string, e.g. ["🌙 Night owl", "🗓️ Planner"]. */

@@ -77,11 +77,11 @@ export const quizRoutes = new Hono<AppEnv>();
 export type VibeRow = typeof vibes.$inferSelect;
 
 /**
- * Responses needed: a pick or "None of these" both count (D26, D30), so a member who
- * says "none" a lot still gets a result rather than an error. Only one real vote is
- * required; Q5's curated set adds the rough-start note for results under 10 votes.
+ * Every type question needs a response, a pick or "None of these" (D26, D30), and at
+ * least one real pick. Fewer than ROUGH_START picks still gives a result, shown as a
+ * rough start rather than refused.
  */
-export const MIN_ANSWERED = 14;
+export const ROUGH_START = 10;
 /** Keep the seen-list bounded; the generator only needs recent history. */
 const SEEN_MAX = 400;
 
@@ -110,10 +110,10 @@ export function seedMonth(seed: string): number | undefined {
 }
 
 /**
- * The member's session: 20 hand-written scenarios, with one or two answers
- * set near their home district when known and some prompts told through their
- * Bangkok story, then the style questions their profile calls for (generator.ts).
- * The POST rebuilds it from the same seed and profile inputs to score it.
+ * The member's session: their segment's 16 curated questions (the same for
+ * everyone in it, D26), worded for them, then the style questions their profile
+ * calls for (generator.ts). The POST rebuilds it from the same seed (which
+ * carries the month) and profile inputs to score it.
  */
 export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal): AnyQuestion[] {
   const options = { seed, seen: new Set(row?.seen ?? []), personal, month: seedMonth(seed) };
@@ -367,10 +367,19 @@ function Meter(props: { lang: Lang; vector: Record<string, number>; margin?: Par
 /** How sure the result is: unsure letters and twin-question consistency. */
 function Certainty(props: { v: View; res: TypeResult & { range: ArchetypeKey[] } }) {
   const { t, lang } = props.v;
-  const { unsure, consistency } = props.res;
+  const { unsure, consistency, answered } = props.res;
   const letters = unsure.filter((c) => CODE_AXES.some((a) => a.category === c));
   return (
     <>
+      {answered !== undefined && answered < ROUGH_START ? (
+        <p class="muted">
+          🌱{" "}
+          {t(
+            "ตอนนี้เป็นแค่ภาพร่างแรก เพราะหลายข้อไม่มีคำตอบที่ตรงกับคุณ ลองทำใหม่ได้ทุกเมื่อ",
+            "This is a rough start: many questions had nothing that fit you. Retake it whenever you like.",
+          )}
+        </p>
+      ) : null}
       <p class="muted">
         {letters.length === 0
           ? t("ทุกตัวอักษรชัดเจน พ้นค่าความคลาดเคลื่อนทั้งหมด", "Every letter is clear beyond the margin of error.")
@@ -692,20 +701,25 @@ quizRoutes.post("/quiz", async (c) => {
   const personal = next === "/onboarding/type" ? (v.lang === "en" ? { explainLocal: true } : undefined) : personalOf(user.profile, user.account.role);
   const questions = quizQuestions(seed, row, personal);
   const { answers, invalid, none } = parseAnswers(body, questions);
-  // Only the 20 type questions score: style answers never move the type.
+  // Only the 16 type questions score: style answers never move the type.
   const result = scoreSession(typeQuestions(questions), answers);
-  // "None of these" in the type questions counts as a response, not a vote.
-  const typeIdx = new Set(typeQuestions(questions).map((q) => questions.indexOf(q)));
-  const responded = result.answered + none.filter((i) => typeIdx.has(i)).length;
-  if (invalid.length > 0 || responded < MIN_ANSWERED || result.answered < 1) {
-    const bad = invalid[0];
+  // Every type question needs a response; "None of these" is one, it just isn't a vote.
+  const typeIdx = typeQuestions(questions).map((q) => questions.indexOf(q));
+  const missing = typeIdx.filter((i) => !(questions[i].id in answers) && !none.includes(i));
+  if (invalid.length > 0 || missing.length > 0 || result.answered < 1) {
+    const bad = invalid[0] ?? missing[0];
     const error =
-      bad !== undefined
+      invalid.length > 0
         ? v.t(
             `ข้อ ${bad + 1} ต้องเลือกจากคำตอบที่มีให้ ลองดูอีกครั้ง`,
             `Question ${bad + 1} needs another look: please pick one of the answers.`,
           )
-        : v.t(`ตอบอย่างน้อย ${MIN_ANSWERED} ข้อ`, `Please answer at least ${MIN_ANSWERED} questions.`);
+        : missing.length > 0
+          ? v.t(
+              `ข้อ ${bad + 1} ยังไม่ได้ตอบ เลือกคำตอบหรือ "ไม่มีข้อไหนเป็นฉัน" ได้เลย`,
+              `Question ${bad + 1} still needs an answer: pick one, or "None of these are me".`,
+            )
+          : v.t("เลือกคำตอบที่ใกล้ตัวคุณที่สุดอย่างน้อยหนึ่งข้อ", "Pick the closest answer on at least one question.");
     return page(
       c,
       { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), status: 400, bare: true },
@@ -724,7 +738,7 @@ quizRoutes.post("/quiz", async (c) => {
     );
   }
   const { archetype, modifier, blend: types } = typeOf(result.vector, result.affinity, result.unsure);
-  const blend: TypeResult = { types, unsure: result.unsure, consistency: result.consistency, margin: result.margin, ...(result.moves ? { moves: result.moves } : {}) };
+  const blend: TypeResult = { types, unsure: result.unsure, consistency: result.consistency, margin: result.margin, answered: result.answered, ...(result.moves ? { moves: result.moves } : {}) };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);
   const values = { vector: result.vector, archetype, modifier, blend, seen, takenAt: new Date() };
   const db = getDb(c.env);

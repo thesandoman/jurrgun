@@ -12,7 +12,7 @@ describe("GET /api/vibe/quiz", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { seed: string; questions: { id: string }[] };
     expect(body.seed).toBe("demo");
-    expect(body.questions).toHaveLength(20);
+    expect(body.questions).toHaveLength(16);
     expect(JSON.stringify(body)).not.toMatch(/"type"|"district"|"flavour"|BDMN|CFSH/);
   });
 
@@ -47,7 +47,7 @@ describe("POST /api/vibe/score", () => {
     const res = await post({ seed: "s1", answers: answersAs(qs, "BDMN") });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { answered: number; vector: Record<string, number>; unsure: string[] };
-    expect(body.answered).toBe(20);
+    expect(body.answered).toBe(16);
     for (const c of ["energy", "explore", "motion", "culture"]) expect(body.vector[c]).toBeGreaterThan(0);
   });
 

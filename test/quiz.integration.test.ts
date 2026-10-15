@@ -32,12 +32,12 @@ function form(seed: string, questions: AnyQuestion[], count = questions.length):
 const answersOf = (f: Record<string, string>, questions: AnyQuestion[]) => parseAnswers(f, questions).answers;
 
 describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
-  it("renders 20 plain six-answer questions for a member", async () => {
+  it("renders the 16 curated questions for a member", async () => {
     const m = await createMember();
     const r = await req("/quiz?lang=en", { cookie: m.cookie });
     expect(r.status).toBe(200);
     const html = await r.text();
-    expect(answerNames(html).size).toBe(20);
+    expect(answerNames(html).size).toBe(16);
     expect(seedIn(html)).toBe(quizSeed(m.id, null));
     expect(html).toContain("Tap the answer that");
     expect(html).toContain("Go with your gut");
@@ -45,7 +45,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(html).not.toContain("groupmates");
     // Plain scenarios only (owner, D26): no sliders, rank, swipes, maps or chips.
     for (const marker of ['type="range"', "data-budget", "data-tot", "data-slider", "data-rank", "data-map", "qf-photos", "data-sentence"]) expect(html).not.toContain(marker);
-    // Personalised: the page is the session for this member's home district.
+    // The page is this member's curated set.
     const qs = quizQuestions(seedIn(html), null, MEMBER);
     for (const q of qs) expect(html).toContain(q.prompt.en.replace(/'/g, "&#39;").replace(/"/g, "&quot;").slice(0, 20));
     // One radio per answer, then "None of these are me".
@@ -54,43 +54,45 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
       expect((html.match(new RegExp(`name="a${i}"`, "g")) ?? []).length).toBe(q.options.length + 1);
       expect(html).toContain(`name="a${i}" value="none"`);
     }
-    expect(qs.map((q) => q.id)).not.toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
+    // The same curated questions as anyone with no Bangkok story yet: a local member gets the local set (D26).
+    expect(qs.map((q) => q.id)).toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
+    expect(qs.every((q) => q.format === "choice" && q.options.length === 4)).toBe(true);
   });
 
   it("shows each member only the sets that fit them, and saves the style cards without changing the type", async () => {
-    // Friends only (romance off): the 20, no romance anywhere.
+    // Friends only (romance off): the 16, no romance anywhere.
     const plain = await createMember();
     const plainHtml = await (await req("/quiz?lang=en", { cookie: plain.cookie })).text();
-    expect(answerNames(plainHtml).size).toBe(20);
+    expect(answerNames(plainHtml).size).toBe(16);
     expect(plainHtml).not.toContain("Open to something more");
     // Date moments read as friend meetups (owner, Q-D1): no romance words on the page's questions.
     for (const q of quizQuestions(seedIn(plainHtml), null, MEMBER)) for (const x of [q.prompt, ...q.options.map((o) => o.label)]) if (q.kind !== "style" && q.context === "date") expect(ROMANCE_EN.test(x.en), x.en).toBe(false);
 
-    // Open to something more: 20 + 4 "how you date", saved to the dating profile.
+    // Open to something more: 16 + 4 "how you date", saved to the dating profile.
     const dater = await createMember({ romanceOn: true, relationship: "single", romanceOpenTo: "everyone" });
     const [dp] = await db().select().from(profiles).where(eq(profiles.accountId, dater.id));
     const daterPersonal = personalOf(dp);
     expect(daterPersonal?.openToMore).toBe(true);
     const dHtml = await (await req("/quiz?lang=en", { cookie: dater.cookie })).text();
-    expect(answerNames(dHtml).size).toBe(24);
+    expect(answerNames(dHtml).size).toBe(20);
     expect(dHtml).toContain("Open to something more · doesn");
     const dSeed = seedIn(dHtml);
     const dQs = quizQuestions(dSeed, null, daterPersonal);
     expect((await req("/quiz", { cookie: dater.cookie, form: form(dSeed, dQs) })).status).toBe(302);
     const [dRow] = await db().select().from(vibes).where(eq(vibes.accountId, dater.id));
     expect(dRow.archetype).toBe("BDSH");
-    expect(dRow.seen).toHaveLength(24);
+    expect(dRow.seen).toHaveLength(20);
     const dBio = cleanBio((await db().select().from(profiles).where(eq(profiles.accountId, dater.id)))[0].bio);
     expect(Object.keys(dBio.dateStyle ?? {})).toHaveLength(4);
     expect(dBio.hostStyle).toBeUndefined();
     expect(await (await req("/me/profile?lang=en", { cookie: dater.cookie })).text()).toContain("How I date");
 
-    // Table Host: 20 + 2 "how you host", shown on their result.
+    // Table Host: 16 + 2 "how you host", shown on their result.
     const host = await createMember({ role: "circle_head" });
     const [hp] = await db().select().from(profiles).where(eq(profiles.accountId, host.id));
     const [ha] = await db().select().from(accounts).where(eq(accounts.id, host.id));
     const hHtml = await (await req("/quiz?lang=en", { cookie: host.cookie })).text();
-    expect(answerNames(hHtml).size).toBe(22);
+    expect(answerNames(hHtml).size).toBe(18);
     expect(hHtml).not.toContain("Open to something more");
     const hSeed = seedIn(hHtml);
     const hQs = quizQuestions(hSeed, null, personalOf(hp, ha.role));
@@ -127,6 +129,8 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
       if (i > 0) f[`a${i}`] = "none";
     });
     expect((await req("/quiz", { cookie: m.cookie, form: f })).status).toBe(302);
+    // Under 10 real picks the result is a rough start, said plainly, not refused.
+    expect(await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text()).toContain("This is a rough start");
     const m2 = await createMember();
     const seed2 = quizSeed(m2.id, null);
     const qs2 = quizQuestions(seed2, null, MEMBER);
@@ -140,14 +144,19 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const seed = quizSeed(m.id, null);
     const qs = quizQuestions(seed, null, MEMBER);
     const good = form(seed, qs);
-    for (const v of ["6", "9", "-1", "abc", "1.5"]) {
-      const r = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, a3: v } });
-      expect(r.status).toBe(400);
+    const c = qs.findIndex((q, i) => i > 0 && q.format === "choice");
+    const bad: Record<string, string>[] = ["4", "6", "-1", "abc", "1.5"].map((v) => ({ [`a${c}`]: v }));
+    for (const b of bad) {
+      const r = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, ...b } });
+      expect(r.status, JSON.stringify(b)).toBe(400);
       expect(await r.text()).toContain("needs another look");
     }
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
-    // Leaving one question blank just skips it.
-    expect((await req("/quiz", { cookie: m.cookie, form: { ...good, a3: "" } })).status).toBe(302);
+    // Every question needs a response, a pick or "None of these": a blank one comes back to be answered.
+    const blank = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, [`a${c}`]: "" } });
+    expect(blank.status).toBe(400);
+    expect(await blank.text()).toContain("still needs an answer");
+    expect((await req("/quiz", { cookie: m.cookie, form: { ...good, [`a${c}`]: "none" } })).status).toBe(302);
   });
 
   it('takes "None of these are me" as no vote', async () => {
@@ -163,7 +172,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(row.vector).toEqual(scoreSession(typeQuestions(qs), without).vector);
   });
 
-  it("scores, saves the type, shows it, and retakes with fresh questions", async () => {
+  it("scores, saves the type, shows it, and a retake asks the same questions (D26)", async () => {
     const m = await createMember();
     const seed = quizSeed(m.id, null);
     const qs = quizQuestions(seed, null, MEMBER);
@@ -173,7 +182,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(r.headers.get("location")).toBe("/quiz/result?new=1");
 
     const scored = scoreSession(typeQuestions(qs), answersOf(f, qs));
-    expect(scored.answered).toBe(20);
+    expect(scored.answered).toBe(16);
     const expected = typeOf(scored.vector, scored.affinity, scored.unsure);
     const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
     expect(row.archetype).toBe(expected.archetype);
@@ -182,7 +191,8 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(row.blend?.types).toEqual(expected.blend);
     expect(row.blend?.unsure).toEqual(scored.unsure);
     expect(row.blend?.consistency).toBe(1);
-    expect(row.seen).toHaveLength(20);
+    expect(row.seen).toHaveLength(16);
+    expect(row.blend?.answered).toBe(16);
     expect(row.visible).toBe(false);
 
     const result = await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text();
@@ -192,21 +202,20 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(result).toContain("Clicks with");
     expect(result).toContain("Hangouts and areas");
 
-    // Retake: a new server-side seed, and (mostly) unseen questions.
+    // Retake: the same questions in the same order, so a change in the result is a real change.
     const again = await (await req("/quiz", { cookie: m.cookie })).text();
     expect(seedIn(again)).toBe(quizSeed(m.id, row));
-    expect(seedIn(again)).toMatch(new RegExp(`^${m.id}:20:\\d{4}-\\d{2}$`));
+    expect(seedIn(again)).toMatch(new RegExp(`^${m.id}:16:\\d{4}-\\d{2}$`));
     const next = quizQuestions(seedIn(again), row, MEMBER);
-    const seenScenarios = new Set(row.seen.map((id) => id.split(".")[0]));
-    expect(next.filter((q) => seenScenarios.has(q.scenario)).length).toBeLessThanOrEqual(6);
+    expect(next.map((q) => q.id)).toEqual(qs.map((q) => q.id));
 
-    // Retaking keeps `visible` and grows `seen`.
+    // Retaking keeps `visible`.
     await req("/quiz/visibility", { cookie: m.cookie, form: { visible: "1", next: "/quiz/result" } });
     const r2 = await req("/quiz", { cookie: m.cookie, form: form(seedIn(again), next) });
     expect(r2.status).toBe(302);
     const [row2] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
     expect(row2.visible).toBe(true);
-    expect(row2.seen.length).toBeGreaterThan(20);
+    expect(row2.seen).toHaveLength(16);
   });
 
   it("toggles visibility", async () => {
@@ -253,7 +262,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const quiz = await req("/onboarding/quiz", { cookie });
     expect(quiz.status).toBe(200);
     const qhtml = await quiz.text();
-    expect(answerNames(qhtml).size).toBe(20);
+    expect(answerNames(qhtml).size).toBe(16);
     expect(qhtml).toContain('formaction="/onboarding/quiz/skip"');
     const skip = await req("/onboarding/quiz/skip", { cookie, method: "POST" });
     expect(skip.headers.get("location")).toBe("/onboarding/basics");

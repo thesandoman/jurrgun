@@ -145,15 +145,14 @@ describe("segment flavour", () => {
   });
 });
 
-describe("the seed rebuilds the session", () => {
-  it("same seed and profile inputs give the same questions; changing an input changes the session", () => {
+describe("the session is rebuilt from the profile, not drawn (D26)", () => {
+  it("the same profile always gives the same questions; segment and the opt-ins change them, district doesn't", () => {
     const p: Personal = { district: "bang_rak", segment: "newcomer", openToMore: true, tableHost: true };
-    const ids = (x: ReturnType<typeof build>) => [...x.typed, ...x.styles].map((q) => q.id);
-    expect(ids(build("r1", p))).toEqual(ids(build("r1", { ...p })));
-    for (const change of [{ segment: "local" as const }, { openToMore: false }, { tableHost: false }, { district: "nong_chok" }]) {
-      const other = { ...p, ...change };
-      const prompts = (x: ReturnType<typeof build>) => [...x.typed, ...x.styles].map((q) => q.id + q.prompt.en);
-      expect(prompts(build("r1", other)), JSON.stringify(change)).not.toEqual(prompts(build("r1", p)));
+    const all = (x: ReturnType<typeof build>) => [...x.typed, ...x.styles].map((q) => q.id + q.prompt.en);
+    expect(all(build("r1", p))).toEqual(all(build("r2", { ...p })));
+    expect(all(build("r1", { ...p, district: "nong_chok" }))).toEqual(all(build("r1", p)));
+    for (const change of [{ segment: "local" as const }, { openToMore: false }, { tableHost: false }]) {
+      expect(all(build("r1", { ...p, ...change })), JSON.stringify(change)).not.toEqual(all(build("r1", p)));
     }
   });
 });
@@ -280,21 +279,18 @@ describe("blueprint sets and audiences (quiz-blueprint 2.3, 2.3b)", () => {
     }
   });
 
-  it("in-season scenarios are preferred in their months", () => {
-    const seasonal = SCENARIOS.filter((s) => s.months?.length);
+  it("in season, a seasonal scenario takes the seasonal slot; out of season it doesn't appear", () => {
+    const seasonal = SCENARIOS.filter((s) => s.months?.length && !s.twin);
     expect(seasonal.length).toBeGreaterThan(0);
+    let shownInSeason = 0;
     for (const s of seasonal) {
-      const inMonth = s.months![0];
-      const outMonth = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].find((m) => !s.months!.includes(m))!;
-      const p: Personal = s.context === "date" && !s.friend ? { openToMore: true } : {};
-      let inCount = 0;
-      let outCount = 0;
-      for (let i = 0; i < 200; i++) {
-        if (generateSession({ seed: `m${i}`, personal: p, month: inMonth }).some((q) => q.scenario === s.id)) inCount += 1;
-        if (generateSession({ seed: `m${i}`, personal: p, month: outMonth }).some((q) => q.scenario === s.id)) outCount += 1;
+      for (let month = 1; month <= 12; month++) {
+        const shown = generateSession({ seed: "m", personal: { segment: "local" }, month }).some((q) => q.scenario === s.id);
+        if (!s.months!.includes(month)) expect(shown, `${s.id} in month ${month}`).toBe(false);
+        else if (shown) shownInSeason += 1;
       }
-      expect(inCount, s.id).toBeGreaterThan(outCount);
     }
+    expect(shownInSeason).toBeGreaterThan(0);
   });
 
   it("table-host scenarios only for Table Hosts; audience scenarios only for that Bangkok story", () => {

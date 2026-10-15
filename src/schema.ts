@@ -593,7 +593,7 @@ export const vibes = pgTable("social_vibes", {
    * within the margin of error, margins, and twin-question consistency.
    * Null for results saved before this existed.
    */
-  blend: jsonb("blend").$type<{ types: { key: string; fit: number }[]; unsure: string[]; consistency: number | null; margin?: Record<string, number> }>(),
+  blend: jsonb("blend").$type<{ types: { key: string; fit: number }[]; unsure: string[]; consistency: number | null; margin?: Record<string, number>; answered?: number }>(),
   /** Question ids answered so far, so retakes get fresh questions. */
   seen: jsonb("seen").$type<string[]>().notNull().default([]),
   /** Shown on profile / to groupmates only if the user opts in. */

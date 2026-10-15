@@ -1,23 +1,21 @@
 /**
- * The Bangkok Type quiz: 20 hand-written scenario questions per session.
+ * The Bangkok Type quiz: 16 hand-written scenario questions, the same for
+ * everyone in a segment (owner, D26; design/reference/quiz-curated.md).
  *
  * Nothing here writes a question. Every scenario and every answer is
- * hand-written in src/vibe/bank/ (one answer per Bangkok Type). This file only
- * PICKS which scenarios a person sees, which six of the sixteen answers each
- * one shows, and in what order. A session is fully determined by its seed (and
- * the optional home district), so the server rebuilds it to score the answers
- * without keeping any session state.
+ * hand-written in src/vibe/bank/ (one answer per Bangkok Type), and which
+ * questions a segment gets, with which four answers and in what order, is
+ * data in curated-sets.ts (built by scripts/curate-quiz.ts, read by a
+ * person). Nothing is drawn at random, so a retake shows real change.
  *
- * A session:
- *   - 16 core scenarios + 2 rhythm + 2 plan scenarios;
- *   - a mix of who you're with (friends, family, dates, solo, coworkers,
- *     parties, meetups), at least CONTEXT_MIN of each;
- *   - 2 "twin" pairs (the same idea in other words), at least 8 questions
- *     apart, to check consistency;
- *   - each question shows 3 opposite pairs of types (X and its opposite), so
- *     every letter has 3 answers on each side and no letter is favoured;
- *   - every type is offered 7 or 8 times;
- *   - scenarios the person has already seen are avoided where possible.
+ * A set:
+ *   - 12 core + 2 rhythm + 2 plan questions;
+ *   - each question shows two opposite pairs of types (X, its opposite, Y,
+ *     its opposite), so every letter has two answers on each side and a pick
+ *     votes on all four letters; every type is shown exactly 4 times;
+ *   - 2 "twin" pairs (the same idea in other words), at least 8 apart, to
+ *     check consistency;
+ *   - one seasonal slot: the month picks its scenario, its answers' types stay.
  *
  * Who the member is (Personal) shapes the session without changing how types
  * are scored:
@@ -25,16 +23,12 @@
  *     only members who opted into 💘 Open to something more read them as
  *     dates; everyone else reads the same moment as a one-to-one friend
  *     meetup (Scenario.friend), with the same answers and types;
- *   - sets (quiz-blueprint 2.3b): "open-to-more" scenarios only for opted-in
- *     members, "table-host" only for Table Hosts;
- *   - season: scenarios with `months` are preferred in those months and kept
- *     for when nothing else fits outside them;
- *   - audience: scenarios written for one Bangkok story (local, newcomer,
- *     international) only for those members;
+ *   - segment: which curated set (local, newcomer, international); a set only
+ *     holds scenarios its members are offered (`offered`: set and audience);
  *   - style sets (styles.ts, generateStyleQuestions): 4 "how you date"
  *     questions for opted-in members and 2 "how you host" questions for Table
- *     Hosts, after the 20. They are their own question type with no type
- *     codes, and scoreSession only takes the 20, so they never move the type;
+ *     Hosts, after the 16. They are their own question type with no type
+ *     codes, and scoreSession only takes the 16, so they never move the type;
  *   - segment flavour: local, newcomer or international members see some
  *     prompts told through their own Bangkok story (bank/segment-prompts.ts),
  *     with the same answers;
@@ -51,20 +45,18 @@ import { CATEGORIES, MOTIVES, motivePlace, POLES, type Category, type Motive, ty
 import type { Segment } from "../domain/segment";
 import { SEGMENT_PROMPTS } from "./bank/segment-prompts";
 import { EXPAT_PROMPTS, explainLocal } from "./bank/plain-english";
-import { createRng, hashString, shuffle, type Rng } from "./rng";
-import { codePoles, oppositeCode, SCENARIOS, TYPE_CODES, type Context, type Kind, type Scenario, type ScenarioSet, type TypeCode } from "./scenarios";
+import { hashString } from "./rng";
+import { codePoles, SCENARIOS, type Context, type Kind, type Scenario, type ScenarioSet, type TypeCode } from "./scenarios";
 import { STYLE_DIMENSIONS, STYLE_SCENARIOS, type StyleCard, type StyleScenario, type StyleSet } from "./styles";
+import { DEFAULT_SEGMENT, entriesFor, type CuratedEntry } from "./curated";
+import { CURATED_SETS } from "./curated-sets";
 import type { Art } from "./visuals";
 
-export const QUIZ_LENGTH = 20;
-export const OPTIONS_PER_QUESTION = 6;
-/** Style questions after the 20: one per "how you date" dimension, two "how you host". */
+export const QUIZ_LENGTH = 16;
+export const OPTIONS_PER_QUESTION = 4;
+/** Style questions after the 16: one per "how you date" dimension, two "how you host". */
 export const DATE_STYLE_ITEMS = Object.keys(STYLE_DIMENSIONS["open-to-more"]).length;
 export const HOST_STYLE_ITEMS = 2;
-const CORE_ITEMS = 16;
-const FLAVOUR_ITEMS = 2; // per flavour kind (rhythm, plan)
-const TWIN_PAIRS = 2;
-const TWIN_GAP = 8;
 
 /** The least of each context in one session's 16 core questions. */
 export const CONTEXT_MIN: Record<Context, number> = { friends: 2, family: 3, date: 3, solo: 1, coworkers: 1, party: 2, meetup: 2 };
@@ -98,7 +90,7 @@ export type StyleQuestion = {
   art: Art;
 };
 
-/** Everything the quiz form shows: the 20 type questions, then any style questions. */
+/** Everything the quiz form shows: the 16 type questions, then any style questions. */
 export type AnyQuestion = Question | StyleQuestion;
 export const isStyleQuestion = (q: AnyQuestion): q is StyleQuestion => q.kind === "style";
 /** The type questions only, for scoreSession. */
@@ -108,11 +100,7 @@ export const typeQuestions = (qs: AnyQuestion[]): Question[] => qs.filter((q): q
 /** What the browser gets: no type, no district, nothing to game. */
 export type PublicQuestion = { id: string; format: "choice"; prompt: Text; options: Text[]; icons: string[]; art: Art };
 
-/**
- * Who the member is. The home district leans one or two questions toward it;
- * the rest choose which sets they see (see the top of this file). All of it
- * goes into the seed, so the server rebuilds the same session to score it.
- */
+/** Who the member is: which set, which wording, which style questions (see the top of this file). */
 export type Personal = {
   district?: string | null;
   interests?: readonly string[] | null;
@@ -128,34 +116,17 @@ export type Personal = {
 
 export type SessionOptions = {
   seed: string;
-  /** Question ids this user has already answered; their scenarios are avoided where possible. */
+  /** Kept for callers; a retake repeats the same questions on purpose (D26). */
   seen?: ReadonlySet<string>;
   personal?: Personal;
-  /** 1 to 12, the month in Bangkok: seasonal scenarios are preferred in season. Part of the seed key. */
+  /** 1 to 12, the month in Bangkok: picks the seasonal slot's scenario. The quiz seed carries it. */
   month?: number;
 };
 
-/** The 8 opposite pairs, e.g. [BDSH, CFMN], keyed by their B-side code. */
-const TYPE_PAIRS: [TypeCode, TypeCode][] = TYPE_CODES.filter((c) => c[0] === "B").map((c) => [c, oppositeCode(c)]);
+const SCENARIO_BY_ID = new Map(SCENARIOS.map((s) => [s.id, s]));
 
-const scenarioOfId = (id: string) => id.split(".")[0];
+// ------------------------------------------------------------ the set --
 
-// ------------------------------------------------------------ picking --
-
-/** Unseen first, then (if `prefer` is given) the preferred ones, then random. */
-/** A seasonal scenario outside its months (with no month given, everything is in season). */
-const outOfSeason = (s: Scenario, month?: number) => !!month && !!s.months && !s.months.includes(month);
-
-/** In season first, then unseen, then (if `prefer` is given) the preferred ones, then random. */
-function preferUnseen(rng: Rng, list: Scenario[], seen: ReadonlySet<string>, prefer?: (s: Scenario) => boolean, month?: number): Scenario[] {
-  const rank = (s: Scenario) => (outOfSeason(s, month) ? 4 : 0) + (seen.has(s.id) ? 2 : 0) + (prefer && !prefer(s) ? 1 : 0);
-  return shuffle(rng, list).sort((a, b) => rank(a) - rank(b));
-}
-
-const HOME_SCENARIOS = 2;
-const nearHome = (home: string | null | undefined) => (s: Scenario) => !!home && TYPE_CODES.some((c) => s.answers[c].district === home);
-
-/** 16 core scenarios: two twin pairs, the context minimums, then anything. */
 /** Whether this member is offered the scenario: its set (if any) is one of theirs, and so is its audience. */
 export function offered(s: Pick<Scenario, "set" | "audience" | "context" | "friend">, p: Personal | undefined): boolean {
   const sets: ScenarioSet[] = [...(p?.openToMore ? (["open-to-more"] as const) : []), ...(p?.tableHost ? (["table-host"] as const) : [])];
@@ -163,102 +134,6 @@ export function offered(s: Pick<Scenario, "set" | "audience" | "context" | "frie
   // A date moment reaches someone not open to something more only through its friend wording (bank-rules also checks).
   if (s.context === "date" && !p?.openToMore && !s.friend) return false;
   return !s.audience || (!!p?.segment && s.audience.includes(p.segment));
-}
-
-function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | undefined, p: Personal | undefined, month?: number): Scenario[] {
-  const core = SCENARIOS.filter((s) => s.kind === "core" && offered(s, p));
-  const twinPairs: [Scenario, Scenario][] = [];
-  for (const s of core) {
-    const t = s.twin ? core.find((x) => x.id === s.twin) : undefined;
-    if (t && s.id < t.id) twinPairs.push([s, t]);
-  }
-  // Out-of-season pairs go last too: twins are picked first, so without this a seasonal twin
-  // would show up just as often out of season once the bank is big.
-  const pairRank = (p: [Scenario, Scenario]) =>
-    (p.some((s) => outOfSeason(s, month)) ? 4 : 0) + (seen.has(p[0].id) ? 1 : 0) + (seen.has(p[1].id) ? 1 : 0);
-  const pairs = shuffle(rng, twinPairs).sort((a, b) => pairRank(a) - pairRank(b)).slice(0, TWIN_PAIRS);
-  const chosen: Scenario[] = pairs.flat();
-  // From the other twin pairs, at most one half may appear, so exactly two pairs are checked.
-  const blocked = new Set<string>();
-  const has = (s: Scenario) => chosen.includes(s) || blocked.has(s.id);
-  const isHome = nearHome(home);
-  const prefer = home ? (s: Scenario) => chosen.filter(isHome).length >= HOME_SCENARIOS || isHome(s) : undefined;
-  const take = (list: Scenario[]) => {
-    for (const s of list) {
-      chosen.push(s);
-      if (s.twin) blocked.add(s.twin);
-    }
-  };
-  for (const ctx of shuffle(rng, Object.keys(CONTEXT_MIN) as Context[])) {
-    const need = CONTEXT_MIN[ctx] - chosen.filter((s) => s.context === ctx).length;
-    for (let k = 0; k < need; k++) take(preferUnseen(rng, core.filter((s) => s.context === ctx && !has(s)), seen, prefer, month).slice(0, 1));
-  }
-  while (chosen.length < CORE_ITEMS) take(preferUnseen(rng, core.filter((s) => !has(s)), seen, prefer, month).slice(0, 1));
-  return chosen;
-}
-
-/**
- * Three distinct opposite pairs per question, so that across the session
- * each pair (and so each type) is offered 7 or 8 times. The two halves of a
- * twin pair show the same six types, so their answers can be compared.
- */
-function pairsPerQuestion(rng: Rng, scenarios: Scenario[]): [TypeCode, TypeCode][][] {
-  const n = scenarios.length;
-  const total = n * 3;
-  const quota = new Map<string, number>();
-  const extra = new Set(shuffle(rng, TYPE_PAIRS.map((p) => p[0])).slice(0, total % TYPE_PAIRS.length));
-  for (const [b] of TYPE_PAIRS) quota.set(b, Math.floor(total / TYPE_PAIRS.length) + (extra.has(b) ? 1 : 0));
-  const out: [TypeCode, TypeCode][][] = new Array(n);
-  const take = (times: number) => {
-    // Most quota left first, random among equals.
-    const three = shuffle(rng, TYPE_PAIRS)
-      .sort((a, b) => quota.get(b[0])! - quota.get(a[0])!)
-      .slice(0, 3);
-    for (const [b] of three) quota.set(b, quota.get(b)! - times);
-    return three;
-  };
-  const twinOf = (i: number) => scenarios.findIndex((s) => s.id === scenarios[i].twin);
-  const done = new Set<number>();
-  for (let i = 0; i < n; i++) {
-    const j = twinOf(i);
-    if (j < 0 || done.has(i)) continue;
-    out[i] = out[j] = take(2);
-    done.add(i).add(j);
-  }
-  for (const i of shuffle(rng, Array.from({ length: n }, (_, k) => k))) if (!done.has(i)) out[i] = take(1);
-  return out;
-}
-
-/** Order with twins far apart and the same context (or flavour kind) never back to back where avoidable. */
-function orderCost(order: Scenario[]): number {
-  let cost = 0;
-  for (let i = 1; i < order.length; i++) {
-    const a = order[i - 1];
-    const b = order[i];
-    if (a.kind !== "core" && a.kind === b.kind) cost += 50;
-    if (a.kind === "core" && b.kind === "core" && a.context === b.context) cost += 10;
-  }
-  for (let i = 0; i < order.length; i++) {
-    const t = order[i].twin;
-    if (!t) continue;
-    const j = order.findIndex((s) => s.id === t);
-    if (j >= 0 && Math.abs(i - j) < TWIN_GAP) cost += 1000;
-  }
-  return cost;
-}
-
-function arrange(rng: Rng, list: Scenario[]): Scenario[] {
-  let best = list;
-  let bestCost = Infinity;
-  for (let attempt = 0; attempt < 300 && bestCost > 0; attempt++) {
-    const order = shuffle(rng, list);
-    const cost = orderCost(order);
-    if (cost < bestCost) {
-      best = order;
-      bestCost = cost;
-    }
-  }
-  return best;
 }
 
 /** The words a member reads for a scenario: a date moment reads as a friend meetup unless they're open to something more. */
@@ -271,31 +146,33 @@ function wordingFor(sc: Scenario, p?: Personal): { prompt: Text; icon: string; a
   };
 }
 
-function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], p?: Personal): Question {
-  const codes = shuffle(rng, pairs.flat());
+/** One curated question: the entry's 4 answers (two opposite pairs) in its order. */
+function buildQuestion(e: CuratedEntry, p?: Personal): Question {
+  const sc = SCENARIO_BY_ID.get(e.scenario);
+  if (!sc) throw new Error(`curated scenario ${e.scenario} is not in the bank`);
   const en = (x: string) => (p?.explainLocal ? explainLocal(x) : x);
   const words = wordingFor(sc, p);
-  const told = words.prompt;
-  const options: Option[] = codes.map((code) => {
+  const options: Option[] = e.codes.map((code) => {
     const a = sc.answers[code];
     const label = words.answer(code);
     return { label: { en: en(label.en), th: label.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}), ...(a.motive ? { motive: a.motive } : {}) };
   });
   return {
-    id: `${sc.id}.${hashString(codes.join("")).toString(36)}`,
+    id: `${sc.id}.${hashString(e.codes.join("")).toString(36)}`,
     format: "choice",
     scenario: sc.id,
     kind: sc.kind,
     context: sc.context,
-    ...(sc.twin ? { twin: sc.twin } : {}),
-    prompt: { en: (p?.explainLocal && EXPAT_PROMPTS[sc.id]) || en(told.en), th: told.th },
+    ...(e.twin ? { twin: e.twin } : {}),
+    prompt: { en: (p?.explainLocal && EXPAT_PROMPTS[sc.id]) || en(words.prompt.en), th: words.prompt.th },
     options,
-    art: { tone: sc.tone, icons: [words.icon], seed: hashString(sc.id + codes.join("")) },
+    art: { tone: sc.tone, icons: [words.icon], seed: hashString(sc.id + e.codes.join("")) },
   };
 }
 
-function buildStyleQuestion(rng: Rng, sc: StyleScenario, p?: Personal): StyleQuestion {
-  const answers = shuffle(rng, sc.answers);
+/** A style question, its answers in the bank's order (the same for everyone). */
+function buildStyleQuestion(sc: StyleScenario, p?: Personal): StyleQuestion {
+  const answers = sc.answers;
   const en = (x: string) => (p?.explainLocal ? explainLocal(x) : x);
   return {
     id: `${sc.id}.${hashString(answers.map((a) => a.value).join("")).toString(36)}`,
@@ -310,62 +187,39 @@ function buildStyleQuestion(rng: Rng, sc: StyleScenario, p?: Personal): StyleQue
   };
 }
 
-/** One style scenario for each of `n` dimensions of the set (random dimensions when fewer than all). */
-function pickStyle(rng: Rng, set: StyleSet, n: number, seen: ReadonlySet<string>): StyleScenario[] {
-  const dimensions = shuffle(rng, Object.keys(STYLE_DIMENSIONS[set])).slice(0, n);
-  return dimensions.flatMap((d) => {
-    const list = STYLE_SCENARIOS.filter((s) => s.set === set && s.dimension === d);
-    const [first] = shuffle(rng, list).sort((a, b) => (seen.has(a.id) ? 1 : 0) - (seen.has(b.id) ? 1 : 0));
-    return first ? [first] : [];
-  });
-}
-
-/** Everything that changes which questions and answers appear, so the rebuild matches what the member saw. Language (explainLocal) only changes wording and is left out. */
-function personalKey(p: Personal | undefined): string {
-  if (!p) return "";
-  return [p.district ? `|d=${p.district}` : "", p.segment ? `|s=${p.segment}` : "", p.openToMore ? "|r" : "", p.tableHost ? "|h" : ""].join("");
-}
-
+/**
+ * The member's questions: their segment's curated set (local for anyone with
+ * no Bangkok story yet), in its fixed order, with the month's seasonal
+ * scenario. Only the wording depends on the member. The seed only proves the
+ * form is current; it doesn't change the questions.
+ */
 export function generateSession(options: SessionOptions): Question[] {
   const p = options.personal;
-  const rng = createRng(`bkk-type:${options.seed}${personalKey(p)}${options.month ? `|m=${options.month}` : ""}`);
-  const seenScenarios = new Set([...(options.seen ?? [])].map(scenarioOfId));
-  const flavour = (kind: Kind) =>
-    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && offered(s, p)), seenScenarios, undefined, options.month).slice(0, FLAVOUR_ITEMS);
-  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, p, options.month), ...flavour("rhythm"), ...flavour("plan")]);
-  const pairs = pairsPerQuestion(rng, scenarios);
-  // Home district: in up to two questions, bring in the pair whose answer is set near home.
-  // The pair is traded with another question, not just swapped in, so every type is
-  // still offered 7 or 8 times (test/quiz-balance.test.ts checks this).
-  const home = options.personal?.district;
-  if (home) {
-    let swapped = 0;
-    for (let i = 0; i < scenarios.length && swapped < 2; i++) {
-      const code = TYPE_CODES.find((c) => scenarios[i].answers[c].district === home);
-      if (!code || scenarios[i].twin || pairs[i].some((p) => p.includes(code))) continue;
-      const want = TYPE_PAIRS.find((p) => p.includes(code))!;
-      const give = pairs[i][0];
-      const j = pairs.findIndex((ps, k) => k !== i && !scenarios[k].twin && ps.includes(want) && !ps.includes(give));
-      if (j < 0) continue;
-      pairs[j] = pairs[j].map((p) => (p === want ? give : p));
-      pairs[i] = [want, ...pairs[i].slice(1)];
-      swapped += 1;
-    }
-  }
-  return scenarios.map((sc, i) => buildQuestion(rng, sc, pairs[i], p));
+  const set = CURATED_SETS[p?.segment ?? DEFAULT_SEGMENT];
+  return entriesFor(set, options.month).map((e) => buildQuestion(e, p));
 }
 
+/** For Q7: the curated follow-up questions for this member's set, in order; ask 1 or 2 only when a result is unsure. */
+export function followUpQuestions(personal?: Personal): Question[] {
+  const set = CURATED_SETS[personal?.segment ?? DEFAULT_SEGMENT];
+  return set.followUps.map((e) => buildQuestion(e, personal));
+}
+
+/** The fixed style questions: one per "how you date" dimension, and two "how you host". */
+export const STYLE_FIXED: Record<StyleSet, string[]> = {
+  "open-to-more": ["ds-place-saturday", "ds-pace-met", "ds-ease-safe", "ds-ask-best"],
+  "table-host": ["hs-welcome-first", "hs-include-quiet"],
+};
+
 /**
- * The style questions for this member, shown after the 20: "how you date"
- * only when opted into Open to something more, "how you host" only for Table
- * Hosts. Their own random stream, so they never change the 20.
+ * The style questions for this member, after the 16: "how you date" only when
+ * opted into Open to something more, "how you host" only for Table Hosts. The
+ * same ones every time, like the rest of the quiz.
  */
 export function generateStyleQuestions(options: SessionOptions): StyleQuestion[] {
   const p = options.personal;
-  const rng = createRng(`bkk-style:${options.seed}${personalKey(p)}`);
-  const seen = new Set([...(options.seen ?? [])].map(scenarioOfId));
-  const picked = [...(p?.openToMore ? pickStyle(rng, "open-to-more", DATE_STYLE_ITEMS, seen) : []), ...(p?.tableHost ? pickStyle(rng, "table-host", HOST_STYLE_ITEMS, seen) : [])];
-  return picked.map((sc) => buildStyleQuestion(rng, sc, p));
+  const ids = [...(p?.openToMore ? STYLE_FIXED["open-to-more"] : []), ...(p?.tableHost ? STYLE_FIXED["table-host"] : [])];
+  return ids.map((id) => buildStyleQuestion(STYLE_SCENARIOS.find((s) => s.id === id)!, p));
 }
 
 /** The style card a session's answers give for one set: dimension → picked value. */
@@ -441,8 +295,8 @@ export function strengthOf(score: number): Strength {
 const CODE_CATEGORIES: Category[] = ["energy", "explore", "motion", "culture"];
 /** How much wider a letter's margin gets for each twin pair that disagreed on it. */
 const TWIN_WIDEN = 1.25;
-/** z for a 90% margin of error: firm enough to be honest, not so strict that a clear 75/25 reads as unsure. */
-const Z = 1.645;
+/** z for a 95% margin of error (owner, D28): a letter counts as settled only at 95% confidence; below that Q7 asks a follow-up and the result shows a range. */
+const Z = 1.96;
 /** Floor on p(1−p) so a perfect run of picks still carries some margin. */
 const VAR_FLOOR = 0.04;
 
@@ -460,6 +314,8 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
   const pickByScenario = new Map<string, TypeCode>();
   const motiveCount = new Map<Motive, number>();
   const pickedDistricts: string[] = [];
+  /** Each letter's votes in order: a recent one settles an exact tie (see below). */
+  const poles = Object.fromEntries(CATEGORIES.map((c) => [c, [] as Pole[]])) as Record<Category, Pole[]>;
   let answered = 0;
   for (const q of questions) {
     const o = pickedOption(q, answers[q.id]);
@@ -473,6 +329,7 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
     for (const { category, pole } of codePoles(o.type)) {
       n[category] += 1;
       if (pole === 1) plus[category] += 1;
+      poles[category].push(pole);
     }
     if (o.flavour && q.kind !== "core") {
       n[q.kind] += 1;
@@ -500,7 +357,13 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
   const unsure: Category[] = [];
   for (const c of CATEGORIES) {
     const p = n[c] === 0 ? 0.5 : plus[c] / n[c];
-    vector[c] = 2 * p - 1 + 0;
+    // An exact tie (8 and 8 happens often in a 16-question quiz) leans, by a hair, to one of the
+    // person's latest answers: how they seem right now. Each letter looks back a different number
+    // of answers (B/C the last, D/F the one before, ...): one pick votes on all four letters, so
+    // using the same pick for every tied letter would favour that pick's types.
+    const back = Math.max(0, CODE_CATEGORIES.indexOf(c));
+    const recent = poles[c][poles[c].length - 1 - back] ?? poles[c][poles[c].length - 1] ?? 0;
+    vector[c] = 2 * p - 1 + 0 || recent * 1e-9;
     margin[c] = Math.min(1, marginOf(p, n[c]) * widen[c]);
     strength[c] = strengthOf(vector[c]);
     // Flavours come from 2 questions: only clear when every one agreed.

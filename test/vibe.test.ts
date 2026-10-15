@@ -1,6 +1,5 @@
 /**
- * Bangkok Type quiz: session building, balance, the 2,500-quiz rule, scoring
- * and the margin of error.
+ * Bangkok Type quiz: the curated sets (D26), scoring and the margin of error.
  */
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, MOTIVE_PLACES, motivePlace, motiveSentence } from "../src/vibe/content";
@@ -17,69 +16,73 @@ import {
 } from "../src/vibe/generator";
 import { LETTERS, SCENARIOS, TYPE_CODES, oppositeCode, type TypeCode } from "../src/vibe/scenarios";
 import { ARCHETYPE_KEYS, typeOf } from "../src/vibe/archetypes";
+import { followUpQuestions, offered } from "../src/vibe/generator";
+import { CURATED_SETS } from "../src/vibe/curated-sets";
 import { answerAs, answersAs } from "./quiz-helpers";
 
 const session = (seed: string, extra: Partial<Parameters<typeof generateSession>[0]> = {}) => generateSession({ seed, ...extra });
 const ids = (qs: Question[]) => qs.map((q) => q.id).join(",");
 const CODE_CATS = ["energy", "explore", "motion", "culture"] as const;
 
-describe("generateSession", () => {
-  it("is deterministic for a seed and different across seeds", () => {
-    expect(ids(session("alpha"))).toBe(ids(session("alpha")));
-    expect(ids(session("beta"))).not.toBe(ids(session("alpha")));
+const SEGMENTS = ["local", "newcomer", "international"] as const;
+const MONTHS = Array.from({ length: 12 }, (_, k) => k + 1);
+/** Every set a member can get: each segment, each month. */
+const allSets = () => SEGMENTS.flatMap((segment) => MONTHS.map((month) => ({ segment, month, qs: session("any", { personal: { segment }, month }) })));
+
+describe("the curated quiz (owner D26, quiz-curated.md)", () => {
+  it("everyone in a segment gets the same questions in the same order, whatever the seed, history or district", () => {
+    for (const segment of SEGMENTS) {
+      const base = ids(session("alpha", { personal: { segment }, month: 2 }));
+      expect(ids(session("beta", { personal: { segment }, month: 2 }))).toBe(base);
+      expect(ids(session("gamma", { personal: { segment, district: "nong_chok" }, month: 2, seen: new Set(base.split(",")) }))).toBe(base);
+    }
+    // No Bangkok story yet (anonymous, onboarding): the local set.
+    expect(ids(session("x", { month: 2 }))).toBe(ids(session("y", { personal: { segment: "local" }, month: 2 })));
   });
 
-  it("20 questions: 16 core, 2 rhythm, 2 plan, six answers each, every scenario once", () => {
-    for (let i = 0; i < 300; i++) {
-      const qs = session(`shape${i}`);
+  it("16 questions: 12 core, 2 rhythm, 2 plan, every scenario once, four answers in two opposite pairs", () => {
+    for (const { qs } of allSets()) {
       expect(qs).toHaveLength(QUIZ_LENGTH);
-      expect(qs.filter((q) => q.kind === "core")).toHaveLength(16);
+      expect(QUIZ_LENGTH).toBe(16);
+      expect(qs.filter((q) => q.kind === "core")).toHaveLength(12);
       expect(qs.filter((q) => q.kind === "rhythm")).toHaveLength(2);
       expect(qs.filter((q) => q.kind === "plan")).toHaveLength(2);
       expect(new Set(qs.map((q) => q.scenario)).size).toBe(QUIZ_LENGTH);
-      for (const q of qs) expect(q.options).toHaveLength(OPTIONS_PER_QUESTION);
-    }
-  });
-
-  it("every question shows three opposite pairs, so each letter (and flavour) is split 3/3", () => {
-    for (let i = 0; i < 300; i++) {
-      for (const q of session(`split${i}`)) {
-        // Every answer is the hand-written one for that type.
+      for (const q of qs) {
+        expect(q.format).toBe("choice");
+        expect(q.options).toHaveLength(OPTIONS_PER_QUESTION);
+        const codes = q.options.map((o) => o.type);
+        expect(new Set(codes).size).toBe(4);
+        for (const c of codes) expect(codes).toContain(oppositeCode(c));
+        for (let k = 0; k < 4; k++) expect(codes.filter((c) => LETTERS[c[k]].pole === 1)).toHaveLength(2);
+        if (q.kind !== "core") expect(q.options.filter((o) => o.flavour === 1)).toHaveLength(2);
+        // Every answer is the hand-written one for that type (the friend wording for anyone not open to something more).
         const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
         for (const o of q.options) expect(o.label.en).toBe((sc.friend?.answers?.[o.type] ?? sc.answers[o.type]).en);
-        const codes = q.options.map((o) => o.type);
-        expect(new Set(codes).size).toBe(6);
-        for (const c of codes) expect(codes).toContain(oppositeCode(c));
-        for (let k = 0; k < 4; k++) expect(codes.filter((c) => LETTERS[c[k]].pole === 1)).toHaveLength(3);
-        if (q.kind !== "core") expect(q.options.filter((o) => o.flavour === 1)).toHaveLength(3);
       }
     }
   });
 
-  it("every type is offered 7 or 8 times per session", () => {
-    for (let i = 0; i < 300; i++) {
-      const offered = new Map<string, number>(TYPE_CODES.map((c) => [c, 0]));
-      for (const q of session(`fair${i}`)) for (const o of q.options) offered.set(o.type, offered.get(o.type)! + 1);
-      for (const n of offered.values()) expect([7, 8]).toContain(n);
+  it("every type is shown exactly 4 times, in every set and every month", () => {
+    for (const { segment, month, qs } of allSets()) {
+      const shown = new Map<string, number>(TYPE_CODES.map((c) => [c, 0]));
+      for (const q of qs) for (const o of q.options) shown.set(o.type, shown.get(o.type)! + 1);
+      for (const c of TYPE_CODES) expect(shown.get(c), `${segment} ${month} ${c}`).toBe(4);
     }
   });
 
-  it("mixes who you're with: the context minimums hold in every session, opted in or not", () => {
-    for (let i = 0; i < 300; i++) {
-      const openToMore = i % 2 === 0;
-      const core = session(`ctx${i}`, { personal: { openToMore } }).filter((q) => q.kind === "core");
-      for (const [ctx, min] of Object.entries(CONTEXT_MIN)) {
-        expect(core.filter((q) => q.context === ctx).length, ctx).toBeGreaterThanOrEqual(min);
-      }
+  it("mixes who you're with: every context in the 12 core questions", () => {
+    for (const { qs } of allSets()) {
+      const contexts = new Set(qs.filter((q) => q.kind === "core").map((q) => q.context));
+      for (const ctx of Object.keys(CONTEXT_MIN)) expect(contexts, ctx).toContain(ctx);
     }
   });
 
   it("personality picks give one 'what moves you' sentence with a real place, never changing the type", () => {
+    // Every curated set carries at least one personality question with motives (D32, D37).
+    for (const { segment, month, qs } of allSets()) expect(qs.some((q) => q.options.some((o) => o.motive)), `${segment} ${month}`).toBe(true);
+    const qs = session("motive", { personal: { segment: "local" }, month: 2 });
     for (const code of ARCHETYPE_KEYS) {
-      // Q5's curated set will always include one; here, take the first random session that has one.
-      let k = 0;
-      while (!session(`motive-${code}-${k}`).some((q) => q.options.some((o) => o.motive))) k += 1;
-      const qs = session(`motive-${code}-${k}`);
       const answers = answersAs(qs, code);
       const r = scoreSession(qs, answers);
       const all = (v: Answers[string]) => (Array.isArray(v) ? v : [v]);
@@ -104,85 +107,115 @@ describe("generateSession", () => {
     for (const seed of [0, 1, 2, 7]) expect(MOTIVE_PLACES.calm.map((p) => p.id)).toContain(motivePlace("calm", ["nong_chok"], seed).id);
   });
 
-  it("includes two twin pairs, at least 8 questions apart", () => {
-    for (let i = 0; i < 300; i++) {
-      const qs = session(`twin${i}`);
+  it("includes two twin pairs, at least 8 questions apart, with the same answers' types", () => {
+    for (const { qs } of allSets()) {
       const pairs = qs.filter((q) => q.twin && qs.some((x) => x.scenario === q.twin) && q.scenario < q.twin!);
       expect(pairs).toHaveLength(2);
       for (const q of pairs) {
-        const j = qs.findIndex((x) => x.scenario === q.twin);
-        expect(Math.abs(qs.indexOf(q) - j)).toBeGreaterThanOrEqual(8);
+        const t = qs.find((x) => x.scenario === q.twin)!;
+        expect(Math.abs(qs.indexOf(q) - qs.indexOf(t))).toBeGreaterThanOrEqual(8);
+        expect(new Set(t.options.map((o) => o.type))).toEqual(new Set(q.options.map((o) => o.type)));
       }
     }
   });
 
-  it("avoids scenarios the person has already seen", () => {
-    const first = session("u1-a");
-    const second = session("u1-b", { seen: new Set(first.map((q) => q.id)) });
-    const firstScenarios = new Set(first.map((q) => q.scenario));
-    // 47 scenarios, 20 per quiz: twins and context minimums may force a few back.
-    expect(second.filter((q) => firstScenarios.has(q.scenario)).length).toBeLessThanOrEqual(6);
+  it("most questions are shared across segments, and each set only holds scenarios its members are offered", () => {
+    const local = session("s", { personal: { segment: "local" }, month: 2 });
+    for (const segment of SEGMENTS) {
+      const qs = session("s", { personal: { segment }, month: 2 });
+      expect(qs.filter((q, k) => q.scenario === local[k].scenario).length).toBeGreaterThanOrEqual(12);
+      for (const q of qs) expect(offered(SCENARIOS.find((s) => s.id === q.scenario)!, { segment }), q.scenario).toBe(true);
+    }
   });
 
-  it("a home district puts an answer set near home into the session", () => {
-    for (let i = 0; i < 100; i++) {
-      const qs = session(`home${i}`, { personal: { district: "nong_chok" } });
-      expect(qs.some((q) => q.options.some((o) => o.district === "nong_chok"))).toBe(true);
+  it("the seasonal slot follows the month and keeps its answers' types", () => {
+    const set = CURATED_SETS.local;
+    const slot = set.entries[set.season];
+    for (const month of MONTHS) {
+      const q = session("s", { personal: { segment: "local" }, month })[set.season];
+      expect(q.scenario).toBe(set.calendar[month] ?? slot.scenario);
+      expect(q.options.map((o) => o.type)).toEqual(slot.codes);
+      const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
+      if (set.calendar[month]) expect(sc.months).toContain(month);
+    }
+  });
+
+  it("someone answering at random lands evenly: the paired-letter pushes cancel in every set", () => {
+    // See scripts/curate-quiz.ts randomTilt: for each split of the four letters into two pairs, the
+    // questions whose two opposite pairs agree on both halves must cancel, or random answers tilt.
+    const sign = (code: string, k: number) => (code[k] === "BDMN"[k] ? 1 : -1);
+    for (const { segment, month, qs } of allSets()) {
+      for (const [k, l, m, n] of [[0, 1, 2, 3], [0, 2, 1, 3], [0, 3, 1, 2]]) {
+        let sum = 0;
+        for (const q of qs) {
+          const [x, y] = q.options.map((o) => o.type).filter((c) => c[0] === "B");
+          const c1 = (sign(x, k) * sign(x, l) + sign(y, k) * sign(y, l)) / 2;
+          const c2 = (sign(x, m) * sign(x, n) + sign(y, m) * sign(y, n)) / 2;
+          sum += c1 * c2;
+        }
+        expect(sum, `${segment} ${month} split ${k}${l}|${m}${n}`).toBe(0);
+      }
+    }
+  });
+
+  it("Q7's follow-ups: 4 more questions per segment, not in the set, together showing every opposite pair once", () => {
+    for (const segment of SEGMENTS) {
+      const fu = followUpQuestions({ segment });
+      expect(fu).toHaveLength(4);
+      const inSet = new Set(allSets().filter((x) => x.segment === segment).flatMap((x) => x.qs.map((q) => q.scenario)));
+      for (const q of fu) expect(inSet.has(q.scenario), q.scenario).toBe(false);
+      const pairs = fu.flatMap((q) => q.options.map((o) => o.type).filter((c) => c[0] === "B"));
+      expect(new Set(pairs).size).toBe(8);
     }
   });
 
   it("public questions leak no type, district or flavour", () => {
-    for (let i = 0; i < 30; i++) {
-      for (const q of session(`pub${i}`)) {
+    for (const { qs } of allSets()) {
+      for (const q of qs) {
         const json = JSON.stringify(toPublic(q));
         expect(json).not.toMatch(/"type"|"district"|"flavour"|"kind"|"context"|"twin"|"motive"|"mood"/);
         for (const code of TYPE_CODES) expect(json).not.toContain(`"${code}"`);
       }
     }
   });
-});
 
-describe("no two people get the same quiz", () => {
-  it("5,000 seeds give 5,000 different sessions", () => {
-    const all = new Set<string>();
-    for (let i = 0; i < 5000; i++) all.add(ids(session(`u${i}`)));
-    expect(all.size).toBe(5000);
-  });
-
-  it("at least 2,500 different quizzes lead to each of the 16 types", () => {
-    const quizzes = Array.from({ length: 2500 }, (_, i) => session(`perm${i}`));
-    expect(new Set(quizzes.map(ids)).size).toBe(2500);
-    for (const code of ARCHETYPE_KEYS) {
-      let reached = 0;
-      for (const qs of quizzes) {
+  it("every type is reachable in every set: a consistent person gets exactly their type", () => {
+    for (const { segment, month, qs } of allSets()) {
+      for (const code of ARCHETYPE_KEYS) {
         const r = scoreSession(qs, answersAs(qs, code));
-        if (typeOf(r.vector, r.affinity, r.unsure).archetype === code) reached += 1;
+        expect(typeOf(r.vector, r.affinity, r.unsure).archetype, `${segment} ${month} ${code}`).toBe(code);
       }
-      expect(reached, code).toBe(2500);
     }
-  }, 120_000);
+  });
 });
 
 describe("scoring and the margin of error", () => {
   it("only option indices are valid answers", () => {
     const q = session("valid")[0];
     expect(itemScore(q, 0)).toBe(1);
-    expect(itemScore(q, 5)).toBe(1);
-    for (const bad of [6, -2, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
+    expect(itemScore(q, 3)).toBe(1);
+    for (const bad of [4, -2, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
   });
 
-  it("someone answering consistently as a type gets exactly that type, every letter clear", () => {
+  it("someone answering consistently as a type gets exactly that type, at most one letter left for a follow-up", () => {
+    // 16 questions of 4: their own type is shown in only 4, so even a consistent person gives a few
+    // votes against a letter, and at 95% certainty (D28) one letter can stay open. That's when Q7 asks
+    // a follow-up; the headline type is still theirs and always within the range shown.
+    let allClear = 0;
     for (const code of ARCHETYPE_KEYS) {
       const qs = session(`clear-${code}`);
       const r = scoreSession(qs, answersAs(qs, code));
-      expect(r.answered).toBe(20);
-      for (const c of CODE_CATS) expect(r.unsure, `${code} ${c}`).not.toContain(c);
+      expect(r.answered).toBe(QUIZ_LENGTH);
+      const open = CODE_CATS.filter((c) => r.unsure.includes(c));
+      expect(open.length, code).toBeLessThanOrEqual(1);
+      if (open.length === 0) allClear += 1;
       expect(r.consistency).toBe(1);
       const t = typeOf(r.vector, r.affinity, r.unsure);
       expect(t.archetype).toBe(code);
-      expect(t.range).toEqual([code]);
+      expect(t.range).toContain(code);
       expect(r.affinity[code]).toBe(1);
     }
+    expect(allClear).toBeGreaterThanOrEqual(8);
   });
 
   it("a 50/50 answerer gets unsure letters and a range instead of one type", () => {
@@ -260,16 +293,17 @@ describe("romance in the core quiz (owner, Q-D1)", () => {
     for (let i = 0; i < 40; i++) {
       for (const qs of [generateSession({ seed: `f${i}` }), generateSession({ seed: `f${i}`, personal: { district: "bang_rak", segment: "newcomer", tableHost: true } })]) {
         expect(qs).toHaveLength(QUIZ_LENGTH);
-        expect(qs.filter((q) => q.context === "date").length).toBeGreaterThanOrEqual(3);
+        expect(qs.filter((q) => q.context === "date").length).toBeGreaterThanOrEqual(2);
         for (const x of words(qs)) {
           expect(ROMANCE_EN.test(x.en), x.en).toBe(false);
           expect(ROMANCE_TH.test(x.th), x.th).toBe(false);
         }
         for (const q of qs.filter((x) => x.context === "date")) expect(ROMANCE_ICONS.test(q.art.icons.join("")), q.scenario).toBe(false);
       }
-      // Opted in: the date wording.
-      const dated = generateSession({ seed: `f${i}`, personal: { openToMore: true } });
-      expect(words(dated).some((x) => ROMANCE_EN.test(x.en))).toBe(true);
+      // Opted in: each date moment's own wording, not the friend one.
+      const dated = generateSession({ seed: `f${i}`, personal: { openToMore: true } }).filter((q) => q.context === "date");
+      expect(dated.length).toBeGreaterThanOrEqual(1);
+      for (const q of dated) expect(q.prompt).toEqual(SCENARIOS.find((s) => s.id === q.scenario)!.prompt);
     }
   });
 });

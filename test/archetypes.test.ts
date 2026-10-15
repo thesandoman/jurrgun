@@ -75,13 +75,16 @@ describe("match labels", () => {
 });
 
 describe("blend, wing and type-linked picks", () => {
-  it("a balanced letter is decided by the types the person picked, a clear letter never is", () => {
-    // Energy is balanced (0.1), the rest clearly D, S, H.
+  it("the headline type is the side each letter leans to; picks only settle a letter exactly in the middle (quiz-curated.md)", () => {
+    // Energy leans B by a little (0.1), the rest clearly D, S, H: a lean is never overruled by picks.
     const v = vec({ energy: 0.1, explore: 0.8, motion: -0.8, culture: -0.8 });
     expect(typeOf(v).archetype).toBe("BDSH");
-    expect(typeOf(v, { CDSH: 1, BDSH: 0 }).archetype).toBe("CDSH");
-    // Even a strong pull toward a type cannot flip a clear letter (explore stays D).
-    expect(typeOf(v, { BFSH: 1, BDSH: 0 }).archetype.slice(1)).toBe("DSH");
+    expect(typeOf(v, { CDSH: 1, BDSH: 0 }, ["energy"]).archetype).toBe("BDSH");
+    expect(typeOf(v, { BFSH: 1, BDSH: 0 }).archetype).toBe("BDSH");
+    // Energy exactly in the middle: the types the person picked decide it.
+    const even = vec({ energy: 0, explore: 0.8, motion: -0.8, culture: -0.8 });
+    expect(typeOf(even, { CDSH: 1, BDSH: 0 }, ["energy"]).archetype).toBe("CDSH");
+    expect(typeOf(even, { BDSH: 1, CDSH: 0 }, ["energy"]).archetype).toBe("BDSH");
   });
 
   it("the blend is the type, its wing and a third, best first, with fits in 0..100", () => {

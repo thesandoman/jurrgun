@@ -15,7 +15,6 @@ import { typeOf } from "../src/vibe/archetypes";
 import { generateSession, scoreSession, NONE, type Answers, type Personal, type Question } from "../src/vibe/generator";
 import { createRng, type Rng } from "../src/vibe/rng";
 import { oppositeCode, SCENARIOS, TYPE_CODES, type TypeCode } from "../src/vibe/scenarios";
-import { DISTRICTS } from "../src/lib/constants";
 
 const shared = (a: string, b: string) => [0, 1, 2, 3].filter((i) => a[i] === b[i]).length;
 
@@ -114,26 +113,35 @@ export const passesIn = (answers: Answers) => Object.values(answers).filter((a) 
 
 // ------------------------------------------------------------ sessions --
 
-export type SessionSpec = { seed: string; personal?: Personal };
+export type SessionSpec = { seed: string; personal?: Personal; month: number };
 
 const SEGMENTS = ["local", "newcomer", "international"] as const;
 
 /**
- * The mix of sessions the live app builds: anonymous and onboarding (no
- * personalisation, so no romance), and members with a home district, a
- * segment, sometimes 💘 Open to something more (date scenarios) and sometimes
- * a Table Host. Add new profile options here as the quiz gains them.
+ * The sessions the live app builds: one curated set per segment (anonymous
+ * and onboarding get the local one), with the month's seasonal slot. Wording
+ * (💘 or friend, plain English) never changes the answers' types, so it
+ * doesn't matter here.
  */
-export function sessionSpec(k: number, rng: Rng): SessionSpec {
-  const roll = rng();
-  const district = DISTRICTS[Math.floor(rng() * DISTRICTS.length)].value;
-  const segment = SEGMENTS[Math.floor(rng() * SEGMENTS.length)];
-  const openToMore = rng() < 0.3;
-  const tableHost = rng() < 0.1;
-  return {
-    seed: `sim-${k}`,
-    personal: roll < 0.5 ? { district, segment, openToMore, tableHost, explainLocal: segment === "international" } : undefined,
-  };
+export function sessionSpec(k: number): SessionSpec {
+  const segment = SEGMENTS[k % SEGMENTS.length];
+  const month = 1 + (Math.floor(k / SEGMENTS.length) % 12);
+  return { seed: `sim-${k}`, personal: { segment }, month };
+}
+
+/** Rule checks on one curated session (quiz-curated.md). */
+function checkSet(qs: Question[]): { unbalanced: number; bad: boolean } {
+  let unbalanced = 0;
+  const shown = new Map<string, number>();
+  for (const q of qs) {
+    const types = q.options.map((o) => o.type);
+    // Two opposite pairs: four different types, each with its opposite there too.
+    if (types.length !== 4 || new Set(types).size !== 4 || !types.every((t) => types.includes(oppositeCode(t)))) unbalanced += 1;
+    for (const t of types) shown.set(t, (shown.get(t) ?? 0) + 1);
+  }
+  const twinsApart = qs.every((q, k) => !q.twin || Math.abs(qs.findIndex((x) => x.scenario === q.twin) - k) >= 8);
+  const bad = TYPE_CODES.some((c) => shown.get(c) !== 4) || !twinsApart;
+  return { unbalanced, bad };
 }
 
 // ------------------------------------------------------------ the run --
@@ -141,14 +149,14 @@ export function sessionSpec(k: number, rng: Rng): SessionSpec {
 export type SimReport = {
   sessions: number;
   questionsPerSession: { min: number; max: number };
-  /** Distinct sessions (scenario order + options shown) among `sessions` runs. */
+  /** Distinct question lists across segments and months (the curated sets with their seasonal slot). */
   distinctSessions: number;
   structure: {
-    /** Questions where some letter did not have exactly half its options on each side. */
+    /** Questions that are not two opposite pairs of types. */
     unbalancedQuestions: number;
-    /** Sessions where some type was offered outside 7 or 8 times (20-question sessions). */
+    /** Sets where some type is not shown exactly 4 times, or twins are under 8 apart. */
     offerOutOfRange: number;
-    /** How often each type sits in each of the 6 option positions, as max/min ratio across all cells. */
+    /** How often each type sits in each of the 4 answer positions, as max/min ratio (1 is perfectly even). */
     positionSpread: number;
   };
   random: { counts: Record<TypeCode, number>; maxDeviation: number; letterShare: Record<string, number> };
@@ -165,8 +173,9 @@ export type SimReport = {
 const LETTERS = ["B", "C", "D", "F", "M", "S", "N", "H"];
 
 /**
- * Runs `sessions` simulated quizzes. Each session is built once and answered
- * by every answerer model, so the models are compared on the same questions.
+ * Runs `sessions` simulated people through the curated sets (segment and month
+ * cycle). Each session is answered by every answerer model, so the models are
+ * compared on the same questions.
  */
 export function simulate(sessions: number, opts: { personaP?: number; noisyP?: number; seed?: string } = {}): SimReport {
   const personaP = opts.personaP ?? 0.7;
@@ -199,30 +208,23 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
   let qMax = 0;
 
   for (let k = 0; k < sessions; k++) {
-    const spec = sessionSpec(k, rng);
-    const qs = generateSession({ seed: spec.seed, personal: spec.personal });
+    const spec = sessionSpec(k);
+    const qs = generateSession({ seed: spec.seed, personal: spec.personal, month: spec.month });
     qMin = Math.min(qMin, qs.length);
     qMax = Math.max(qMax, qs.length);
-    signatures.add(qs.map((q) => q.id).join(","));
-
-    // Structure: letters balanced on every question, each type offered 7 or 8 times.
-    const offered = new Map<string, number>();
-    for (const q of qs) {
-      scenariosUsed.add(q.scenario);
-      const types = q.options.map((o) => o.type);
-      for (let i = 0; i < 4; i++) {
-        const plus = types.filter((t) => t[i] === TYPE_CODES[0][i]).length;
-        if (plus * 2 !== types.length) {
-          unbalanced += 1;
-          break;
-        }
+    const signature = qs.map((q) => q.id).join(",");
+    if (!signatures.has(signature)) {
+      signatures.add(signature);
+      const c = checkSet(qs);
+      unbalanced += c.unbalanced;
+      if (c.bad) offerOut += 1;
+      for (const q of qs) {
+        scenariosUsed.add(q.scenario);
+        q.options.forEach((o, j) => {
+          position.set(`${o.type}@${j}`, (position.get(`${o.type}@${j}`) ?? 0) + 1);
+        });
       }
-      q.options.forEach((o, j) => {
-        offered.set(o.type, (offered.get(o.type) ?? 0) + 1);
-        position.set(`${o.type}@${j}`, (position.get(`${o.type}@${j}`) ?? 0) + 1);
-      });
     }
-    if (qs.length === 20 && TYPE_CODES.some((c) => { const n = offered.get(c) ?? 0; return n < 7 || n > 8; })) offerOut += 1;
 
     // Random answerer.
     const r = outcomeOf(qs, answerAll(qs, randomAnswerer, rng));
@@ -230,7 +232,8 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
     for (const ch of r.type) letterCount[ch] += 1;
 
     // A real person of a known type (cycled so every type gets equal runs).
-    const truth = TYPE_CODES[k % 16];
+    // Types change slower than segment and month, so every type meets every set.
+    const truth = TYPE_CODES[Math.floor(k / 36) % 16];
     const personaAnswers = answerAll(qs, personaAnswerer(truth, personaP), rng);
     personaPasses += passesIn(personaAnswers);
     personaMaxPasses = Math.max(personaMaxPasses, passesIn(personaAnswers));
