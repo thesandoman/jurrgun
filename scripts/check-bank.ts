@@ -24,6 +24,11 @@ if (!Array.isArray(list)) {
 const { errors, warnings, districts } = checkScenarios(list, { oneFile: true });
 // Warnings are hints a human should look at (a letter with no word that shows it); they never fail the check.
 for (const w of warnings) console.log("WARN", w);
+// Places written from memory (verify: true) for the owner to double-check.
+const toVerify = list.flatMap((sc: { id: string; answers: Record<string, { district: string; en: string; verify?: true }> }) =>
+  Object.entries(sc.answers).filter(([, a]) => a.verify).map(([code, a]) => `${sc.id} ${code} [${a.district}] ${a.en}`),
+);
+if (toVerify.length) console.log(`VERIFY (${toVerify.length}):\n  ` + toVerify.join("\n  "));
 if (errors.length === 0) {
   console.log(`OK: ${list.length} scenarios, ${list.length * 16} answers, ${districts.counts.size} districts used.`);
 } else {

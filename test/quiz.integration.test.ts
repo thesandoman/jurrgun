@@ -40,13 +40,20 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(answerNames(html).size).toBe(20);
     expect(seedIn(html)).toBe(quizSeed(m.id, null));
     expect(html).toContain("Tap the answer that");
-    expect(html).toContain("No wrong answers");
+    expect(html).toContain("Go with your gut");
+    expect(html).toContain("None of these are me");
+    expect(html).not.toContain("groupmates");
     // Plain scenarios only (owner, D26): no sliders, rank, swipes, maps or chips.
     for (const marker of ['type="range"', "data-budget", "data-tot", "data-slider", "data-rank", "data-map", "qf-photos", "data-sentence"]) expect(html).not.toContain(marker);
     // Personalised: the page is the session for this member's home district.
     const qs = quizQuestions(seedIn(html), null, MEMBER);
     for (const q of qs) expect(html).toContain(q.prompt.en.replace(/'/g, "&#39;").replace(/"/g, "&quot;").slice(0, 20));
-    for (const q of qs) expect((html.match(new RegExp(`name="a${qs.indexOf(q)}"`, "g")) ?? []).length).toBe(6);
+    // One radio per answer, then "None of these are me".
+    for (const q of qs) {
+      const i = qs.indexOf(q);
+      expect((html.match(new RegExp(`name="a${i}"`, "g")) ?? []).length).toBe(q.options.length + 1);
+      expect(html).toContain(`name="a${i}" value="none"`);
+    }
     expect(qs.map((q) => q.id)).not.toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
   });
 
@@ -111,6 +118,23 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
   });
 
+  it("gives a result when most answers are None of these, but not when every answer is", async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    const f = form(seed, qs);
+    qs.forEach((_, i) => {
+      if (i > 0) f[`a${i}`] = "none";
+    });
+    expect((await req("/quiz", { cookie: m.cookie, form: f })).status).toBe(302);
+    const m2 = await createMember();
+    const seed2 = quizSeed(m2.id, null);
+    const qs2 = quizQuestions(seed2, null, MEMBER);
+    const all = form(seed2, qs2);
+    qs2.forEach((_, i) => (all[`a${i}`] = "none"));
+    expect((await req("/quiz", { cookie: m2.cookie, form: all })).status).toBe(400);
+  });
+
   it("rejects answers that aren't one of the options with 400, without saving", async () => {
     const m = await createMember();
     const seed = quizSeed(m.id, null);
@@ -124,6 +148,19 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
     // Leaving one question blank just skips it.
     expect((await req("/quiz", { cookie: m.cookie, form: { ...good, a3: "" } })).status).toBe(302);
+  });
+
+  it('takes "None of these are me" as no vote', async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    const good = form(seed, qs);
+    const three = { ...good, a1: "none", a2: "none", a3: "none" };
+    expect((await req("/quiz", { cookie: m.cookie, form: three })).status).toBe(302);
+    const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    // Scored as if those three were never answered.
+    const without = Object.fromEntries(Object.entries(answersOf(good, qs)).filter(([id]) => ![1, 2, 3].some((i) => qs[i].id === id)));
+    expect(row.vector).toEqual(scoreSession(typeQuestions(qs), without).vector);
   });
 
   it("scores, saves the type, shows it, and retakes with fresh questions", async () => {

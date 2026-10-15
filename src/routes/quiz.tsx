@@ -4,7 +4,7 @@
  *   GET  /quiz              take / retake (signed in)
  *   POST /quiz              score, save to `vibes`, redirect to the result
  *   GET  /quiz/result       my type
- *   POST /quiz/visibility   show / hide my type to groupmates
+ *   POST /quiz/visibility   show / hide my type to people at my Tables
  *   GET  /types             public gallery of all 16 types
  *   GET  /types/:slug       public type page (shareable)
  *
@@ -32,6 +32,7 @@ import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
 import { REFLECTION_CSS, ReflectionSteps } from "../ui/reflections";
 import { reflectionsFromForm, type Reflections } from "../content/reflections";
 import { syncQuizChange } from "./pulse";
+import { NoneData, NoneOfThese, QUIZ_NONE_CSS, QUIZ_NONE_JS } from "../ui/quiz-none";
 import {
   ARCHETYPES,
   ARCHETYPE_KEYS,
@@ -75,6 +76,11 @@ export const quizRoutes = new Hono<AppEnv>();
 
 export type VibeRow = typeof vibes.$inferSelect;
 
+/**
+ * Responses needed: a pick or "None of these" both count (D26, D30), so a member who
+ * says "none" a lot still gets a result rather than an error. Only one real vote is
+ * required; Q5's curated set adds the rough-start note for results under 10 votes.
+ */
 export const MIN_ANSWERED = 14;
 /** Keep the seen-list bounded; the generator only needs recent history. */
 const SEEN_MAX = 400;
@@ -224,6 +230,9 @@ export function QuizFlow(props: {
 }) {
   const { t, lang } = props.v;
   const n = props.questions.length;
+  const types = typeQuestions(props.questions).length;
+  // About 9 seconds a question.
+  const minutes = Math.max(2, Math.round((n * 9) / 60));
   return (
     <Flow
       v={props.v}
@@ -243,17 +252,21 @@ export function QuizFlow(props: {
         ) : undefined
       }
     >
-      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS + REFLECTION_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS + QUIZ_NONE_CSS + REFLECTION_CSS }} />
+      <NoneData v={props.v} />
       <FlowStep
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
-        hint={t("สถานการณ์จริงในกรุงเทพฯ ไม่มีถูกผิด เป็นความลับ", "Real Bangkok moments. No wrong answers. Private.")}
+        hint={t(
+          `${types} สถานการณ์สั้น ๆ ในกรุงเทพฯ ตอบตามความรู้สึกแรก ใช้เวลาราว ${minutes} นาที และมีแค่คุณที่เห็นคำตอบ`,
+          `${types} quick Bangkok moments. Go with your gut. About ${minutes} minutes, and only you see your answers.`,
+        )}
         cta={t("เริ่มเลย", "Start")}
       >
         <div class="tiles" aria-hidden="true">
-          <span class="tile"><b>👆</b>{t(`${n} ข้อ แตะเลือก`, `${n} questions, tap to pick`)}</span>
-          <span class="tile"><b>⏱️</b>{t("ราว 3 นาที", "About 3 min")}</span>
-          <span class="tile"><b>🔒</b>{t("เป็นความลับ", "Private")}</span>
+          <span class="tile"><b>👆</b>{t("แตะข้อที่เป็นคุณที่สุด", "Tap what's most you")}</span>
+          <span class="tile"><b>🤷</b>{t("ไม่ตรงเลย ก็บอกได้", "Nothing fits? Just say so")}</span>
+          <span class="tile"><b>🔒</b>{t("มีแค่คุณที่เห็น", "Only you see it")}</span>
         </div>
       </FlowStep>
       {props.questions.map((q, i) => (
@@ -265,29 +278,39 @@ export function QuizFlow(props: {
             {i + 1} / {n}
           </span>
           <AnswerField v={props.v} q={q} i={i} />
+          <NoneOfThese v={props.v} q={q} i={i} />
         </FlowStep>
       ))}
       {props.reflect !== undefined ? <ReflectionSteps v={props.v} value={props.reflect} /> : null}
+      {/* After the steps, so the radios it sets up are already parsed. */}
+      <script dangerouslySetInnerHTML={{ __html: QUIZ_NONE_JS }} />
     </Flow>
   );
 }
 
 /**
  * Turns the posted form into answers: question i posts a{i} = option index.
- * A question left blank is just unanswered; anything else that isn't a valid
- * option goes into `invalid` so the route can answer 400.
+ * "none" is "None of these are me" (D26, no cap per D29): it casts no vote, so
+ * it stays out of `answers` (scoreSession sees it as unanswered) and goes into
+ * `none`. A question left blank is just unanswered; anything else that isn't a
+ * valid option goes into `invalid` so the route can answer 400.
  */
-export function parseAnswers(body: Record<string, unknown>, questions: AnyQuestion[]): { answers: Answers; invalid: number[] } {
+export function parseAnswers(body: Record<string, unknown>, questions: AnyQuestion[]): { answers: Answers; invalid: number[]; none: number[] } {
   const answers: Answers = {};
   const invalid: number[] = [];
+  const none: number[] = [];
   questions.forEach((q, i) => {
     const raw = str(body[`a${i}`]);
     if (raw === "") return;
+    if (raw === "none") {
+      none.push(i);
+      return;
+    }
     const answer = /^\d{1,2}$/.test(raw) ? Number(raw) : NaN;
     if (itemScore(q, answer) !== null) answers[q.id] = answer;
     else invalid.push(i);
   });
-  return { answers, invalid };
+  return { answers, invalid, none };
 }
 
 export function answersFrom(body: Record<string, unknown>, questions: AnyQuestion[]): Answers {
@@ -431,7 +454,7 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
       <label class="toggle" style="margin:0">
         <input type="checkbox" name="visible" value="1" checked={props.visible} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
         <span>
-          {t("แสดงไทป์ของฉันให้เพื่อนร่วมกลุ่มเห็น", "Show my type to my groupmates")}
+          {t("แสดงไทป์ของฉันให้คนที่โต๊ะเห็น", "Show my type to people at my Tables")}
           <small>{t("ปิดไว้เป็นค่าเริ่มต้น", "Off by default")}</small>
         </span>
       </label>
@@ -667,10 +690,13 @@ quizRoutes.post("/quiz", async (c) => {
   // The onboarding quiz (onboarding.tsx) is built without profile inputs, only plain English for English readers; match it.
   const personal = next === "/onboarding/type" ? (v.lang === "en" ? { explainLocal: true } : undefined) : personalOf(user.profile, user.account.role);
   const questions = quizQuestions(seed, row, personal);
-  const { answers, invalid } = parseAnswers(body, questions);
+  const { answers, invalid, none } = parseAnswers(body, questions);
   // Only the 20 type questions score: style answers never move the type.
   const result = scoreSession(typeQuestions(questions), answers);
-  if (invalid.length > 0 || result.answered < MIN_ANSWERED) {
+  // "None of these" in the type questions counts as a response, not a vote.
+  const typeIdx = new Set(typeQuestions(questions).map((q) => questions.indexOf(q)));
+  const responded = result.answered + none.filter((i) => typeIdx.has(i)).length;
+  if (invalid.length > 0 || responded < MIN_ANSWERED || result.answered < 1) {
     const bad = invalid[0];
     const error =
       bad !== undefined

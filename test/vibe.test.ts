@@ -138,7 +138,7 @@ describe("scoring and the margin of error", () => {
     const q = session("valid")[0];
     expect(itemScore(q, 0)).toBe(1);
     expect(itemScore(q, 5)).toBe(1);
-    for (const bad of [6, -1, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
+    for (const bad of [6, -2, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
   });
 
   it("someone answering consistently as a type gets exactly that type, every letter clear", () => {
@@ -208,7 +208,7 @@ describe("scoring and the margin of error", () => {
 
   it("ignores malformed answers instead of throwing", () => {
     const qs = session("junk");
-    // Invalid for every format: 101 is past a slider's 0 to 100 and past any option index.
+    // Invalid everywhere: 101 is past any option index.
     const junk: unknown[] = [NaN, Infinity, -1, 1e9, [], "a", null, 101];
     const answers = Object.fromEntries(qs.map((q, i) => [q.id, junk[i % junk.length]])) as unknown as Answers;
     const r = scoreSession(qs, answers);

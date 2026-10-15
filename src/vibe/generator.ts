@@ -382,8 +382,11 @@ export function toPublic(q: AnyQuestion): PublicQuestion {
 
 // ---------------------------------------------------------------- scoring --
 
-/** The index of the picked option. */
+/** The index of the picked option, or NONE. */
 export type Answer = number;
+
+/** "None of these are me" (quiz-review 7): a valid answer that casts no vote, like an unanswered question. */
+export const NONE = -1;
 export type Answers = Record<string, Answer>;
 
 export type Strength = "strong" | "leans" | "balanced";
@@ -412,8 +415,9 @@ export function pickedOption<O>(q: { options: O[] }, answer: unknown): O | null 
   return isInt(answer) && answer >= 0 && answer < q.options.length ? q.options[answer] : null;
 }
 
-/** 1 for a valid answer, null otherwise (kept for form validation). */
+/** 1 for a valid answer, 0 for NONE (valid, no vote), null otherwise (kept for form validation). */
 export function itemScore(q: { options: unknown[] }, answer: unknown): number | null {
+  if (answer === NONE) return 0;
   return pickedOption(q, answer) ? 1 : null;
 }
 
