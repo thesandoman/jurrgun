@@ -9,7 +9,7 @@
  * buddy or circle is going. Hard rules first: age, language, seats, budget.
  * No popularity, no engagement prediction, no ranking of people.
  */
-import { womenOnlyEventOk } from "./rules";
+import { OPEN_TO_MORE_TAG, womenOnlyEventOk } from "./rules";
 
 export type PlanMember = {
   id: string;
@@ -25,6 +25,8 @@ export type PlanMember = {
   access: string[];
   energy?: string;
   groupSize?: string;
+  /** Romance mode on (Single + switched on): open_to_more events are only for them. */
+  romance?: boolean;
   /** "low" from the monthly social-energy check-in: smaller, closer, calmer picks. */
   socialEnergy?: string;
   /** Private gender, only to keep women-only events for women. */
@@ -70,6 +72,7 @@ export function scoreEvent(m: PlanMember, e: PlanEvent, now: Date): Pick | null 
   if (e.startsAt.getTime() <= now.getTime() || e.seatsLeft <= 0) return null;
   if (m.age < e.ageMin || m.age > e.ageMax) return null;
   if (!womenOnlyEventOk(e.tags, m)) return null;
+  if (e.tags.includes(OPEN_TO_MORE_TAG) && !m.romance) return null;
   if (!e.languages.some((l) => m.languages.includes(l))) return null;
   if (e.costThb > m.budgetMax) return null;
   const minutes = (e.endsAt.getTime() - e.startsAt.getTime()) / 60_000;

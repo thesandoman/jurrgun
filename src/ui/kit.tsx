@@ -77,6 +77,9 @@ const NOTICES: Record<string, [string, string]> = {
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
   vibe_saved: ["บันทึกแล้ว", "Saved"],
   stamped: ["ได้แสตมป์เขตใหม่ลงพาสปอร์ตแล้ว!", "New district stamped in your passport!"],
+  romance_on: ["เปิดใจมากกว่าเพื่อนแล้ว เป็นความลับ จะรู้ก็ต่อเมื่อเลือกตรงกัน ลองตอบคำถามเรื่องเดทดูนะ", "You're open to something more. It's private and only mutual choices show. Try a dating prompt."],
+  romance_off: ["กลับเป็นโหมดเพื่อนแล้ว ลบข้อมูลเรื่องเดททั้งหมดเรียบร้อย", "Back to friends only. Your dating details are deleted."],
+  romance_single: ["โหมดเปิดใจมากกว่าเพื่อนสำหรับคนโสดเท่านั้น เปลี่ยนสถานะได้ที่นี่", "Open to something more is for people who are single. You can change your status here."],
 };
 
 export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
@@ -135,7 +138,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         ) : (
           <>
         <div class="proto-banner">
-          {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลจริง", "Prototype — please don't use real personal data")}
+          {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลจริง", "Prototype: please don't use real personal data")}
         </div>
         <header class="topbar">
           <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">
@@ -162,6 +165,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
           <span>{t("แอปนัดเจอเพื่อนใหม่ในกรุงเทพฯ", "Social meetups for Bangkok")}</span>
+          <span class="foot-endorse">🏛️ {t(BRAND.endorsement.th, BRAND.endorsement.en)}</span>
         </footer>
           </>
         )}

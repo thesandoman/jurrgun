@@ -63,6 +63,8 @@ export type ProfileBio = {
   energyAt?: string;
   energyPrev?: string;
   deck?: string[];
+  /** Dating prompts, romance mode only (deleted when it's switched off). */
+  datingDeck?: string[];
   skipped?: string[];
   answers?: Record<string, { kind: string; value: string | number | string[]; photoKey?: string }>;
 };

@@ -59,7 +59,7 @@ export function PartnerSection(props: { events: PartnerEvent[]; t: T; lang: Lang
   return (
     <section class="pe-section" aria-label={t("กิจกรรมขายบัตรจากพาร์ตเนอร์", "Ticketed events from partners")}>
       <style dangerouslySetInnerHTML={{ __html: PARTNER_CSS }} />
-      <h2 class="pe-h">🎟️ {t("กิจกรรมขายบัตรจาก Kaipa", "Ticketed events from Kaipa")}</h2>
+      <h2 class="pe-h">🤝 {t("กิจกรรมขายบัตรจากพาร์ตเนอร์ Kaipa", "Ticketed events from our partner Kaipa")}</h2>
       <p class="muted pe-note">{t("ซื้อบัตรบนเว็บของ Kaipa ไม่ใช่กิจกรรมกลุ่มเล็กของ Jurrgun", "Tickets are bought on Kaipa. These aren't Jurrgun small-group meet-ups.")}</p>
       {events.map((e) => (
         <div class="ev-item" data-s={`${e.name} ${e.venue} ${e.city}`.toLowerCase()}>

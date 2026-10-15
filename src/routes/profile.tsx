@@ -16,7 +16,7 @@
 import { Hono, type Context } from "hono";
 import { and, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
-import { cleanBio, currentDeck, universityKey } from "../content/profile";
+import { cleanBio, currentDatingDeck, currentDeck, universityKey, withoutDating } from "../content/profile";
 import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, connections, profiles, registrations, type Account, type Profile } from "../schema";
@@ -25,7 +25,7 @@ import { ARCHETYPES } from "../vibe/archetypes";
 import { L } from "../lib/i18n";
 import { getObject, getObjectUrl } from "../storage";
 import { LinkButton, page, view } from "../ui/kit";
-import { datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
+import { datingPromptsShown, datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
 import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 
 export const profileRoutes = new Hono<AppEnv>();
@@ -41,7 +41,10 @@ function isActive(a: { status: string; suspendedUntil: Date | null }, now = new 
 
 /** Display-safe fields only. Never age, username, relationship or romance data. */
 export function cardPerson(p: Profile, viewer?: Profile | null): CardPerson {
-  const bio = cleanBio(p.bio);
+  const full = cleanBio(p.bio);
+  const showDating = datingPromptsShown(p, viewer ?? p);
+  // Dating answers never leave this function unless the viewer may see them.
+  const bio = showDating ? full : withoutDating(full);
   return {
     accountId: p.accountId,
     nickname: p.nickname,
@@ -55,6 +58,7 @@ export function cardPerson(p: Profile, viewer?: Profile | null): CardPerson {
     bio,
     deck: currentDeck(p.accountId, bio),
     dating: datingShown(p, viewer ?? p),
+    datingDeck: showDating ? currentDatingDeck(p.accountId, full) : [],
   };
 }
 

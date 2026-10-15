@@ -28,10 +28,10 @@
  *    shared a contact (they moved off the app), or after a kind wrap-up note
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
-import { datingChips, datingShown } from "../ui/profile-card";
+import { datingChips, datingPromptsShown, datingShown, datingTeaser } from "../ui/profile-card";
 import { SafeArrivalForm } from "./safety";
 import { cleanPrefs } from "../content/dating";
-import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
+import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio, currentDatingDeck } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
@@ -968,6 +968,7 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
     const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
     const shown = datingShown(person, mineP);
     const dating = shown ? datingChips(shown, lang) : [];
+    const teaser = datingPromptsShown(person, mineP) ? datingTeaser(bio, currentDatingDeck(person.accountId, bio), lang) : null;
     card = (
       <article class="deck-card" data-deck>
         <span class="deck-stamp keen" aria-hidden="true">{t("สนใจ", "Keen")}</span>
@@ -981,6 +982,7 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
           {a ? L(lang, a.name) : null} · 📍 {DISTRICTS.find((d) => d.value === person.district)?.[lang === "en" ? "en" : "th"]}
         </p>
         {why ? <p class="deck-why">🤝 {L(lang, why)}</p> : null}
+        {teaser ? <p class="deck-why">{teaser}</p> : null}
         {dating.length ? (
           <p class="chips2">
             {dating.map((x) => (

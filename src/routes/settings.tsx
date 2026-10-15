@@ -16,7 +16,7 @@
  *   POST /settings/password
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
-import { canBeWomenOnly, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS } from "../domain/rules";
+import { canBeWomenOnly, canSwitchToSingle, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS, romanceEligible } from "../domain/rules";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
 import { Flow } from "../ui/flow";
 import { cleanPrefs, EXIT_REASONS } from "../content/dating";
@@ -30,8 +30,11 @@ import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, valu
 import {
   cleanBio,
   COMM_STYLES,
+  currentDatingDeck,
   currentDeck,
   ENERGY,
+  isDatingPrompt,
+  withoutDating,
   INTEREST_VALUES,
   LEARNING_MAX,
   MAX_COMM,
@@ -179,7 +182,10 @@ settingsRoutes.get("/settings", async (c) => {
     { done: !!bio.story, label: t("เรื่องของคุณกับกรุงเทพฯ", "Your Bangkok story"), href: "/settings/profile#bangkok" },
     { done: !!bio.comm?.length, label: t("สไตล์การคุย", "How you keep in touch"), href: "/settings/profile#comm" },
     { done: !!(bio.energy || bio.weekend), label: t("ข้อมูลสั้น ๆ", "Quick facts"), href: "/settings/profile#facts" },
-    { done: Object.keys(bio.answers ?? {}).length >= 2, label: t("ตอบคำถามของคุณ", "Answer your prompts"), href: "/settings/profile#prompts" },
+    { done: Object.keys(bio.answers ?? {}).filter((id) => !isDatingPrompt(id)).length >= 2, label: t("ตอบคำถามของคุณ", "Answer your prompts"), href: "/settings/profile#prompts" },
+    ...(romanceEligible(p)
+      ? [{ done: Object.keys(bio.answers ?? {}).some(isDatingPrompt), label: t("ตอบคำถามเรื่องเดท", "Answer a dating prompt"), href: "/settings/profile#dating-prompts" }]
+      : []),
   ];
   const created = user.account.createdAt;
   const memberSince = created ? created.toLocaleDateString(lang === "en" ? "en-GB" : "th-TH", { month: "short", year: "numeric" }) : null;
@@ -230,6 +236,19 @@ settingsRoutes.get("/settings", async (c) => {
       <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
       <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ วงและแชตยังอยู่", "No new buddies; circle and chats stay")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
+      {p.relationship === "relationship" || p.relationship === "married" ? null : (
+        <QuickSwitch
+          k="romance"
+          on={romanceEligible(p)}
+          emoji="💘"
+          title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")}
+          hint={
+            romanceEligible(p)
+              ? t("ตัวเลือกหลังกิจกรรมและบัดดี้ จะรู้ก็ต่อเมื่อตรงกัน แตะเพื่อกลับเป็นโหมดเพื่อน", "Choices after events and with buddies, only shown when mutual. Tap to go back to friends only.")
+              : t("สำหรับคนโสด เป็นความลับเสมอ แตะเพื่อเปิดและยินยอมให้เก็บข้อมูลเรื่องเดท (PDPA)", "For people who are single, always private. Tapping switches it on and agrees to keep your dating details (PDPA).")
+          }
+        />
+      )}
       {canBeWomenOnly(p.gender) ? <QuickSwitch k="womenOnly" on={p.womenOnly} emoji="🌸" title={t("เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only")} hint={t("บัดดี้ การ์ด แมตช์ และแชต", "Buddies, deck, matches and chats")} /> : null}
     </section>
   );
@@ -308,6 +327,7 @@ settingsRoutes.post("/settings/quick", async (c) => {
   const p = user.profile!;
   const body = await c.req.parseBody();
   const on = str(body.on) === "1";
+  if (str(body.key) === "romance") return romanceQuick(c, on);
   const set: Partial<typeof profiles.$inferInsert> = {};
   switch (str(body.key)) {
     case "pause":
@@ -366,7 +386,7 @@ function Section(props: { id?: string; emoji: string; title: string; hint?: stri
   );
 }
 
-function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo: string | null; hasPhoto: boolean; promptPhoto: (id: string) => string | null; error?: string }) {
+function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; datingDeck: string[]; photo: string | null; hasPhoto: boolean; promptPhoto: (id: string) => string | null; error?: string }) {
   const { t, lang } = props.v;
   const vals = props.vals;
   const bio = vals.bio;
@@ -534,6 +554,23 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
           })}
         </Section>
 
+        {props.datingDeck.length ? (
+          <Section
+            id="dating-prompts"
+            emoji="💘"
+            title={t("คำถามเรื่องเดท", "Dating prompts")}
+            hint={t(
+              "เห็นเฉพาะคนที่เปิดใจมากกว่าเพื่อนและเข้ากันได้ คนในโหมดเพื่อนไม่เห็นเลย และจะถูกลบเมื่อคุณปิดโหมดนี้ กด ↻ เพื่อเปลี่ยนข้อที่ไม่ชอบ",
+              "Only members who are also open to something more, and a fit for you, can see these. Friends-only members never do, and they're deleted if you switch it off. Tap ↻ to swap one.",
+            )}
+          >
+            {props.datingDeck.map((id) => {
+              const p = promptById(id);
+              return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={null} /> : null;
+            })}
+          </Section>
+        ) : null}
+
         <div class="pf-save">
           <Button>{t("บันทึกโปรไฟล์", "Save profile")}</Button>
         </div>
@@ -563,13 +600,14 @@ async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string
   const p = user.profile!;
   const stored = cleanBio(p.bio);
   const deck = currentDeck(user.account.id, stored);
+  const datingDeck = romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [];
   const photo = await photoSrc(c, p.photoKey);
   // Prompt photos come from the stored bio (the form never holds unsaved files).
   const promptPhoto = (id: string) => (stored.answers?.[id]?.photoKey ? `/people/${user.account.id}/photo/${id}` : null);
   return page(
     c,
     { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: opts.status },
-    <ProfileForm v={view(c)} vals={vals} deck={deck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} />,
+    <ProfileForm v={view(c)} vals={vals} deck={deck} datingDeck={datingDeck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} />,
   );
 }
 
@@ -594,6 +632,9 @@ function parseProfileForm(c: C, body: Body): Parsed {
   const p = user.profile!;
   const stored = cleanBio(p.bio);
   const deck = currentDeck(user.account.id, stored);
+  // Dating prompts exist only while romance mode is on.
+  const datingDeck = romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [];
+  const allPrompts = [...deck, ...datingDeck];
   const pickAll = (key: string, allowed: string[]) => [...new Set(list(body[key]).filter((x) => allowed.includes(x)))];
   const comm = pickAll("comm", COMM_STYLES.map((x) => x.value));
   const energy = str(body.energy);
@@ -601,6 +642,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
   const bio: Bio = {
     ...stored,
     deck,
+    datingDeck: datingDeck.length ? datingDeck : undefined,
     comm,
     ...parseOccupation(str(body.occupation), str(body.occupationOther)),
     ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }),
@@ -659,11 +701,11 @@ function parseProfileForm(c: C, body: Body): Parsed {
   const answers: Record<string, Answer> = {};
   const dropKeys: string[] = [];
   for (const [id, a] of Object.entries(stored.answers ?? {})) {
-    if (deck.includes(id)) answers[id] = a;
+    if (allPrompts.includes(id)) answers[id] = a;
     else if (a.photoKey) dropKeys.push(a.photoKey);
   }
   const pending: { id: string; file: File }[] = [];
-  for (const id of deck) {
+  for (const id of allPrompts) {
     const q = promptById(id)!;
     const old = answers[id];
     const inForm = str(body[`m_${id}`]) === "1";
@@ -793,15 +835,17 @@ settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   }
   const p = user.profile!;
   const bio = cleanBio(p.bio);
-  const deck = currentDeck(user.account.id, bio);
   const id = str(body.promptId);
+  const dating = isDatingPrompt(id);
+  if (dating && !romanceEligible(p)) return c.text("Unknown prompt", 400);
+  const deck = dating ? currentDatingDeck(user.account.id, bio) : currentDeck(user.account.id, bio);
   if (!deck.includes(id)) return c.text("Unknown prompt", 400);
   const next = swapPrompt(deck, id, Math.random, bio.skipped ?? []);
-  if (next === deck) return c.redirect("/settings/profile#prompts");
+  if (next === deck) return c.redirect(dating ? "/settings/profile#dating-prompts" : "/settings/profile#prompts");
   const answers = { ...(bio.answers ?? {}) };
   const dropKey = answers[id]?.photoKey;
   delete answers[id];
-  const newBio: Bio = { ...bio, deck: next, answers, skipped: [...(bio.skipped ?? []).filter((x) => x !== id), id].slice(-40) };
+  const newBio: Bio = { ...bio, ...(dating ? { datingDeck: next } : { deck: next }), answers, skipped: [...(bio.skipped ?? []).filter((x) => x !== id), id].slice(-40) };
   await getDb(c.env).update(profiles).set({ bio: newBio, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
   if (dropKey) await deleteObject(c.env, dropKey).catch(() => {});
   const fresh = next[deck.indexOf(id)];
@@ -861,30 +905,18 @@ settingsRoutes.post("/settings/connections", async (c) => {
   const queries: { toSQL(): { sql: string; params: unknown[] } }[] = [
     db
       .update(profiles)
-      .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents })
+      .set({
+        ...result.patch,
+        intents: result.patch.romanceOn ? [...intents, "romance"] : intents,
+        // Dating prompts come with romance mode and go with it.
+        bio: result.patch.romanceOn ? { ...cleanBio(p.bio), datingDeck: currentDatingDeck(user.account.id, cleanBio(p.bio)) } : withoutDating(cleanBio(p.bio)),
+      })
       .where(eq(profiles.accountId, user.account.id)),
   ];
   if (result.romanceConsent !== null) {
     queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category: "romance_data", granted: result.romanceConsent, version: CONSENT_VERSION }));
   }
-  if (p.romanceOn && !result.patch.romanceOn) {
-    // PRD §4.4: pending romantic choices are withdrawn (they count as "friend",
-    // exactly what resolveMutual does for an ineligible person). Choices whose
-    // People I Met window is still open are the only pending ones.
-    const openSince = new Date(Date.now() - 72 * 3_600_000);
-    queries.push(
-      db
-        .update(connectionChoices)
-        .set({ choice: "friend" })
-        .where(
-          and(
-            eq(connectionChoices.fromAccount, user.account.id),
-            eq(connectionChoices.choice, "romance"),
-            inArray(connectionChoices.eventId, db.select({ id: events.id }).from(events).where(gt(events.endsAt, openSince))),
-          ),
-        ),
-    );
-  }
+  if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id));
   if (result.patch.relationship !== p.relationship) {
     queries.push(audit(db, user.account.id, "profile.relationship_changed", { type: "account", id: user.account.id }));
   }
@@ -892,13 +924,96 @@ settingsRoutes.post("/settings/connections", async (c) => {
   return c.redirect("/settings/connections?notice=saved");
 });
 
+/**
+ * One tap for "Open to something more" (Me → Quick switches). The same rules
+ * as Connection preferences: Single only (prefer-not becomes Single, within
+ * the 30-day limit), the tap itself is the PDPA consent the switch's hint
+ * states, and switching off deletes every dating detail and withdraws
+ * pending romantic choices.
+ */
+async function romanceQuick(c: C, on: boolean) {
+  const { t } = view(c);
+  const user = me(c);
+  const p = user.profile!;
+  const db = getDb(c.env);
+  const id = user.account.id;
+  const queries: { toSQL(): { sql: string; params: unknown[] } }[] = [];
+  if (!on) {
+    if (!p.romanceOn) return c.redirect("/settings");
+    queries.push(db.update(profiles).set({ ...romanceOffPatch(p), updatedAt: new Date() }).where(eq(profiles.accountId, id)));
+    queries.push(withdrawRomanceChoices(db, id));
+    queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: false, version: CONSENT_VERSION }));
+    await batch(c.env, queries);
+    return c.redirect("/settings?notice=romance_off");
+  }
+  if (p.relationship === "relationship" || p.relationship === "married") return c.redirect("/settings/connections?notice=romance_single");
+  const toSingle = p.relationship !== "single";
+  if (toSingle && !canSwitchToSingle(p.lastSingleSwitchAt)) {
+    return c.redirect(`/settings?error=${encodeURIComponent(t("เปลี่ยนเป็น 'โสด' ได้ไม่เกิน 1 ครั้งใน 30 วัน", "You can switch to Single at most once every 30 days."))}`);
+  }
+  const bio = cleanBio(p.bio);
+  const intents = p.intents.filter((i) => i !== "romance");
+  queries.push(
+    db
+      .update(profiles)
+      .set({
+        relationship: "single",
+        ...(toSingle ? { lastSingleSwitchAt: new Date() } : {}),
+        romanceOn: true,
+        romanceOpenTo: p.romanceOpenTo ?? "everyone",
+        intents: [...intents, "romance"],
+        bio: { ...bio, datingDeck: currentDatingDeck(id, bio) },
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.accountId, id)),
+  );
+  queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: true, version: CONSENT_VERSION }));
+  if (toSingle) queries.push(audit(db, id, "profile.relationship_changed", { type: "account", id }));
+  await batch(c.env, queries);
+  return c.redirect("/settings?notice=romance_on");
+}
+
+/** Every romance-only field cleared, dating prompts and answers included. */
+function romanceOffPatch(p: Profile): Partial<typeof profiles.$inferInsert> {
+  const intents = p.intents.filter((i) => i !== "romance");
+  return {
+    romanceOn: false,
+    genderIdentity: null,
+    romanceOpenTo: null,
+    orientation: null,
+    orientationOpenTo: null,
+    showDatingPrefs: false,
+    intents: intents.length ? intents : ["friends"],
+    bio: withoutDating(cleanBio(p.bio)),
+  };
+}
+
+/**
+ * PRD §4.4: pending romantic choices are withdrawn (they count as "friend",
+ * exactly what resolveMutual does for an ineligible person). Choices whose
+ * People I Met window (72h) is still open are the only pending ones.
+ */
+function withdrawRomanceChoices(db: ReturnType<typeof getDb>, accountId: string) {
+  const openSince = new Date(Date.now() - 72 * 3_600_000);
+  return db
+    .update(connectionChoices)
+    .set({ choice: "friend" })
+    .where(
+      and(
+        eq(connectionChoices.fromAccount, accountId),
+        eq(connectionChoices.choice, "romance"),
+        inArray(connectionChoices.eventId, db.select({ id: events.id }).from(events).where(gt(events.endsAt, openSince))),
+      ),
+    );
+}
+
 // -------------------------------------------------------------- privacy --
 
 const CATEGORIES: { key: string; required: boolean; th: string; en: string; hintTh: string; hintEn: string }[] = [
   { key: "service", required: true, th: "บัญชีและบริการกิจกรรม", en: "Account and event service", hintTh: "จำเป็นเพื่อให้แอปทำงาน ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Needed for the app to work. Withdrawn only by deactivating your account." },
   { key: "safety", required: true, th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation", hintTh: "ใช้ตรวจสอบรายงานและป้องกันการคุกคาม ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Used to review reports and prevent harassment. Withdrawn only by deactivating your account." },
   { key: "personalization", required: false, th: "จัดกลุ่มและแนะนำกิจกรรมตามความสนใจ", en: "Personalised groups and suggestions", hintTh: "ใช้ความสนใจและภาษาของคุณในการจัดโต๊ะ", hintEn: "Uses your interests and languages to seat you well." },
-  { key: "research", required: false, th: "City Pulse: ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse — anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people." },
+  { key: "research", required: false, th: "City Pulse: ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse: anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน และภาพรวมนี้ส่งให้ กทม.", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people. Those totals go to the BMA." },
   { key: "notifications", required: false, th: "การแจ้งเตือนกิจกรรม", en: "Event notifications", hintTh: "เตือนก่อนงานและแจ้งเมื่อมีที่ว่าง", hintEn: "Reminders and waitlist updates." },
   { key: "romance_data", required: false, th: "ข้อมูลโหมดเปิดใจ (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและคนที่อยากเจอ ถ้าถอนความยินยอม จะปิดโหมดและลบข้อมูลทันที", hintEn: "Gender identity and 'open to meeting' — withdrawing switches romance mode off and deletes them at once." },
 ];
@@ -1043,13 +1158,8 @@ settingsRoutes.post("/settings/privacy", async (c) => {
   // romance_data can only be withdrawn here; switching it on happens with romance mode.
   if (current.get("romance_data") && str(body.consent_romance_data) !== "1") {
     changed.romance_data = false;
-    const intents = p.intents.filter((i) => i !== "romance");
-    queries.push(
-      db
-        .update(profiles)
-        .set({ romanceOn: false, genderIdentity: null, romanceOpenTo: null, orientation: null, orientationOpenTo: null, showDatingPrefs: false, intents: intents.length ? intents : ["friends"], updatedAt: new Date() })
-        .where(eq(profiles.accountId, user.account.id)),
-    );
+    queries.push(db.update(profiles).set({ ...romanceOffPatch(p), updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id)));
+    if (p.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id));
   }
   for (const [category, granted] of Object.entries(changed)) {
     queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category, granted, version: CONSENT_VERSION }));

@@ -50,7 +50,7 @@ import {
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
-import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation } from "../content/profile";
+import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation, withoutDating } from "../content/profile";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, isFriendsOnly, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
@@ -756,7 +756,11 @@ onboarding.post("/connections", async (c) => {
   const db = getDb(c.env);
   const intents = p.intents.filter((i) => i !== "romance");
   const queries = [
-    db.update(profiles).set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents }).where(eq(profiles.accountId, user.account.id)),
+    db
+      .update(profiles)
+      // Dating prompts exist only while romance mode is on.
+      .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents, ...(result.patch.romanceOn ? {} : { bio: withoutDating(cleanBio(p.bio)) }) })
+      .where(eq(profiles.accountId, user.account.id)),
   ];
   if (result.romanceConsent !== null) {
     queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category: "romance_data", granted: result.romanceConsent, version: CONSENT_VERSION }) as never);

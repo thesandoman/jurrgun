@@ -172,8 +172,8 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
         <Card>
           <p>
             {t(
-              "City Pulse คือคำถามสั้น ๆ เกี่ยวกับการใช้ชีวิตในกรุงเทพฯ เช่น ความปลอดภัย การเดินทาง ที่นั่งสาธารณะ คำตอบเก็บด้วยรหัสวิจัยแทนตัวตน ผลลัพธ์แสดงเป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น และช่วยให้เราจัดกิจกรรมและเลือกสถานที่ได้ดีขึ้น",
-              "City Pulse asks quick questions about life in Bangkok: safety, getting around, places to sit. Answers are stored under a research code instead of your identity, results are only ever shown as totals from 10+ people, and they help us plan better meetups and pick better places.",
+              "City Pulse คือคำถามสั้น ๆ เกี่ยวกับการใช้ชีวิตในกรุงเทพฯ เช่น ความปลอดภัย การเดินทาง ที่นั่งสาธารณะ คำตอบเก็บด้วยรหัสวิจัยแทนตัวตน ผลลัพธ์แสดงเป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น ภาพรวมนี้ส่งให้กรุงเทพมหานคร (กทม.) เพื่อให้เมืองน่าออกไปพบปะผู้คนมากขึ้น และช่วยให้เราเลือกสถานที่ได้ดีขึ้น",
+              "City Pulse asks quick questions about life in Bangkok: safety, getting around, places to sit. Answers are stored under a research code instead of your identity, results are only ever shown as totals from 10+ people. Those totals go to the Bangkok Metropolitan Administration (BMA) to make the city easier to meet people in, and help us pick better places.",
             )}
           </p>
           <p>{t("คุณยังไม่ได้ให้ความยินยอมด้านการวิจัย", "You haven't switched on research consent.")}</p>
@@ -188,7 +188,7 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
     { title, tab: "pulse", status: opts.status ?? 200 },
     <>
       <h1>City Pulse</h1>
-      <p class="muted">{t("เสียงของคุณช่วยให้กรุงเทพฯ น่าออกไปพบปะผู้คนมากขึ้น", "Your answers help make Bangkok a better place to meet people.")}</p>
+      <p class="muted">{t("เสียงของคุณช่วยให้กรุงเทพฯ น่าออกไปพบปะผู้คนมากขึ้น ภาพรวมจากอย่างน้อย 10 คนส่งให้ กทม.", "Your answers help make Bangkok a better place to meet people. Totals from 10+ people go to the BMA.")}</p>
       {opts.error ? <Notice kind="error">{opts.error}</Notice> : null}
       {due ? <FollowupCard v={v} /> : null}
       {questions.length ? questions.map((q) => <QuestionCard v={v} q={q} />) : <Empty>{t("ตอบครบแล้ว! กลับมาใหม่เร็ว ๆ นี้ 🎉", "All caught up! Check back soon 🎉")}</Empty>}

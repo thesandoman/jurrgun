@@ -30,6 +30,7 @@ publicRoutes.get("/", (c) => {
           {/* Each phrase stays whole: Thai line breaking would otherwise split "แล้ว|เจอกันนะ". */}
           <h2>{L(lang, BRAND.tagline).split(" ").map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}</h2>
           <small>{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</small>
+          <small class="endorse">🏛️ {L(lang, BRAND.endorsement)}</small>
         </Tile>
         <Tile href="/buddy" tone="deep" size="tall">
           <span class="go" aria-hidden="true">↗</span>
@@ -84,12 +85,13 @@ publicRoutes.get("/intro", (c) => {
   const { t, user } = view(c);
   setCookie(c, INTRO_COOKIE, "seen", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
   const done = user ? (user.profile?.onboardedAt ? "/events" : "/onboarding") : "/signup";
-  const slides: { art: string; tone: string; title: string; body: string }[] = [
+  const slides: { art: string; tone: string; title: string; body: string; foot?: string }[] = [
     {
       art: "mark",
       tone: "s1",
       title: t("เจอกัน 👋", "Jurrgun 👋"),
       body: t("ที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ แล้วเจอกันนะ!", "“Jurrgun” (เจอกัน, say “jer-gun”) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
+      foot: t(BRAND.endorsement.th, BRAND.endorsement.en),
     },
     {
       art: "🗺️",
@@ -131,6 +133,7 @@ publicRoutes.get("/intro", (c) => {
             </div>
             <h1>{sl.title}</h1>
             <p>{sl.body}</p>
+            {sl.foot ? <p class="intro-foot">🏛️ {sl.foot}</p> : null}
             {i === slides.length - 1 ? (
               <div class="intro-cta">
                 <LinkButton href={done}>{user ? t("ไปต่อ", "Continue") : t("เริ่มเลย", "Get started")}</LinkButton>
@@ -178,15 +181,15 @@ publicRoutes.get("/privacy", (c) => {
     { title: t("ความเป็นส่วนตัว", "Privacy") },
     <>
       <h1>{t("นโยบายความเป็นส่วนตัว (ฉบับร่างต้นแบบ)", "Privacy notice (prototype draft)")}</h1>
-      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok. We collect only what's needed and keep it in three separate stores:")}</p>
+      <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ ดำเนินการโดยทีม Jurrgun ซึ่งเป็นผู้ควบคุมข้อมูลส่วนบุคคล ร่วมกับกรุงเทพมหานคร (กทม.) เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok, run by the Jurrgun team (the data controller) and made with the Bangkok Metropolitan Administration (BMA). We collect only what's needed and keep it in three separate stores:")}</p>
       <ul>
         <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัส) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
         <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม คนรู้จัก", "Social: nickname, interests, events attended, connections.")}</li>
-        <li>{t("ข้อมูลวิจัยเมือง (City Pulse): ใช้รหัสแฝง แสดงผลเฉพาะภาพรวมที่มีอย่างน้อย 10 คน", "City research (City Pulse): pseudonymous id only, and results are only ever shown as totals of 10 or more people.")}</li>
+        <li>{t("ข้อมูลวิจัยเมือง (City Pulse): ใช้รหัสแฝง แสดงผลเฉพาะภาพรวมที่มีอย่างน้อย 10 คน ภาพรวมนี้ส่งให้ กทม. เพื่อให้เมืองน่าออกไปพบปะผู้คนมากขึ้น", "City research (City Pulse): pseudonymous id only, and results are only ever shown as totals of 10 or more people. Those totals are shared with the BMA to make the city easier to meet people in.")}</li>
       </ul>
       <p>{t("สถานะความสัมพันธ์ อัตลักษณ์ทางเพศ และ 'เปิดใจให้ใคร' เป็นข้อมูลส่วนตัว ไม่แสดงต่อสาธารณะ และเจ้าหน้าที่ไม่สามารถดูได้", "Relationship status, gender identity and 'open to meeting' are private, never public, and not visible to any staff member.")}</p>
       <p>{t("คุณดู ดาวน์โหลด เปลี่ยนความยินยอม หรือปิดบัญชีได้ที่ ตั้งค่า → ศูนย์ความเป็นส่วนตัว", "You can view, download, change consents or deactivate in Settings → Privacy Center.")}</p>
-      <p class="muted">{t("เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): จะประกาศก่อนเปิดใช้งานจริง", "Data Protection Officer: to be named before public launch.")}</p>
+      <p class="muted">{t("กทม. ไม่ได้รับข้อมูลส่วนตัวของคุณ เห็นเฉพาะภาพรวม City Pulse เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): จะประกาศก่อนเปิดใช้งานจริง", "The BMA never receives your personal data, only City Pulse totals. Data Protection Officer: to be named before public launch.")}</p>
     </>,
   );
 });

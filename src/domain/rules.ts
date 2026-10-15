@@ -64,7 +64,7 @@ export function canSwitchToSingle(lastSwitch: Date | null, now: Date = new Date(
  * identities or "everyone". Someone with no stated identity only matches
  * people open to everyone.
  */
-type RomanceSide = {
+export type RomanceSide = {
   genderIdentity: string | null;
   romanceOpenTo: string[] | "everyone" | null;
   /** Optional orientation filter: only people who stated one of these. */
@@ -103,6 +103,15 @@ export const canBeWomenOnly = (gender: string | null | undefined) => isWoman({ g
 export function womenOnlyOk(a: { gender?: string | null; womenOnly?: boolean }, b: { gender?: string | null; womenOnly?: boolean }): boolean {
   return (!a.womenOnly || isWoman(b)) && (!b.womenOnly || isWoman(a));
 }
+
+/**
+ * Events tagged open_to_more (dating partners, singles socials) exist only for
+ * members with romance mode on: hidden from everyone else in Discover, the
+ * event page, RSVP and the weekly plan, so friends-only members never see
+ * dating anywhere (PRD v3 §3.4).
+ */
+export const OPEN_TO_MORE_TAG = "open_to_more";
+export const romanceEventOk = (tags: string[], p: { relationship: string; romanceOn: boolean }) => !tags.includes(OPEN_TO_MORE_TAG) || romanceEligible(p);
 
 /** Whether this member may RSVP to an event with these tags. */
 export const womenOnlyEventOk = (tags: string[], p: { gender?: string | null }) => !tags.includes(WOMEN_ONLY_TAG) || isWoman(p);

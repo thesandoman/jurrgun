@@ -144,11 +144,11 @@ describe.skipIf(!HAS_DB)("Kaipa on Discover", () => {
     }));
     const m = await createMember();
     const html = await (await get("/events?view=list", m.cookie)).text();
-    expect(html).toContain("Ticketed events from Kaipa");
+    expect(html).toContain("Ticketed events from our partner Kaipa");
     expect(html).toContain('href="/partner-events/kaipa/42"');
     expect(html).toContain("From ฿350.50");
     // A Jurrgun-only filter hides them.
-    expect(await (await get("/events?view=list&district=bang_rak", m.cookie)).text()).not.toContain("Ticketed events from Kaipa");
+    expect(await (await get("/events?view=list&district=bang_rak", m.cookie)).text()).not.toContain("Ticketed events from our partner Kaipa");
   });
 
   it("shows the detail page with a ticket link, and 404s anything else", async () => {

@@ -168,6 +168,11 @@ export const EVENT_TAGS: Opt[] = [
   o("daytime", "กลางวัน", "Daytime"),
   /** Only women and non-binary members can RSVP (rsvpGate), by the private gender in Settings. */
   o("women_only", "เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only"),
+  /**
+   * Open to something more (dating partners' events, singles socials). Only
+   * members with romance mode on ever see these, anywhere (romanceEventOk).
+   */
+  o("open_to_more", "💘 เปิดใจมากกว่าเพื่อน", "💘 Open to something more"),
 ];
 
 export const INTENSITY: Opt[] = [

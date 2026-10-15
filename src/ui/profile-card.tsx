@@ -34,7 +34,7 @@ import {
   occupationLabel,
 } from "../content/profile";
 import { DISTRICTS, GENDER_IDENTITIES, INTENTS, LANGUAGES, ORIENTATIONS, label } from "../lib/constants";
-import { romanceEligible } from "../domain/rules";
+import { romanceCompatible, romanceEligible, type RomanceSide } from "../domain/rules";
 import type { View } from "./kit";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
@@ -58,6 +58,8 @@ export type CardPerson = {
    * also open to dating. Null for everyone else.
    */
   dating?: DatingShown | null;
+  /** Dating prompt ids to show (see datingPromptsShown); empty for everyone else. */
+  datingDeck?: string[];
 };
 
 export type DatingShown = { orientation: string | null; openTo: string[] | "everyone" | null };
@@ -69,6 +71,33 @@ export function datingShown(
 ): DatingShown | null {
   if (!viewer || !target.showDatingPrefs || !romanceEligible(target) || !romanceEligible(viewer)) return null;
   return { orientation: target.orientation, openTo: target.romanceOpenTo };
+}
+
+type DatingSide = RomanceSide & { accountId: string; relationship: string; romanceOn: boolean };
+
+/**
+ * Dating prompts follow the same rule as romantic choices after an event:
+ * both open to something more and a fit for each other (or my own card).
+ * Friends-only members never see them.
+ */
+export function datingPromptsShown(target: DatingSide, viewer: DatingSide | null | undefined): boolean {
+  if (!viewer || !romanceEligible(target) || !romanceEligible(viewer)) return false;
+  return target.accountId === viewer.accountId || romanceCompatible(target, viewer);
+}
+
+/** One answered dating prompt as a line ("🌇 My ideal first date in Bangkok is… a canal boat"), for the buddy deck. */
+export function datingTeaser(bio: Bio, deck: string[], lang: "th" | "en"): string | null {
+  for (const id of deck) {
+    const q = promptById(id);
+    const a = bio.answers?.[id];
+    if (!q || !a) continue;
+    if (q.kind === "text" && typeof a.value === "string" && a.value) return `${q.emoji} ${L(lang, q)} ${a.value}`;
+    if (q.kind === "choice" && typeof a.value === "string") {
+      const opt = q.options?.find((o) => o.value === a.value);
+      if (opt) return `${q.emoji} ${L(lang, q)} ${opt.emoji} ${L(lang, opt)}`;
+    }
+  }
+  return null;
 }
 
 /** The dating details as chips, bilingual. */
@@ -111,6 +140,12 @@ export function ProfileCard(props: {
     const q = promptById(id);
     const a = bio.answers?.[id];
     if (q && a && hasValue(a)) answered.push({ q, a });
+  }
+  const datingAnswered: { q: Prompt; a: Answer }[] = [];
+  for (const id of p.datingDeck ?? []) {
+    const q = promptById(id);
+    const a = bio.answers?.[id];
+    if (q && a && hasValue(a)) datingAnswered.push({ q, a });
   }
   const legacy = Object.entries(p.legacy ?? {}).filter(([k, val]) => LEGACY[k] && val);
   const cards: Child[] = [
@@ -201,6 +236,14 @@ export function ProfileCard(props: {
               <span class="pc-chip">{x}</span>
             ))}
           </div>
+        </section>
+      ) : null}
+      {datingAnswered.length ? (
+        <section class="pc-dating" aria-label={t("คำถามเรื่องเดท", "Dating prompts")}>
+          <p class="eyebrow">💘 {t("เปิดใจมากกว่าเพื่อน", "Open to something more")}</p>
+          {datingAnswered.map(({ q, a }) => (
+            <PromptCard v={props.v} q={q} a={a} photo={null} />
+          ))}
         </section>
       ) : null}
       {props.actions ? <div class="pc-actions">{props.actions}</div> : null}
@@ -418,6 +461,8 @@ export const PROFILE_CSS = `
 .pc-badges{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pc-badges .type-spark small{margin-top:6px}
 .pc-lines{display:grid;gap:10px}
+.pc-dating{display:grid;gap:12px;padding:14px;border-radius:var(--radius);background:color-mix(in srgb,var(--coral,#ff7a5c) 12%,var(--surface))}
+.pc-dating .eyebrow{margin:0;color:var(--ink-2)}
 .pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
 .pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
 .pc-actions{display:flex;gap:10px;flex-wrap:wrap}

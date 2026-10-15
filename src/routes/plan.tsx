@@ -15,7 +15,7 @@ import { and, count, desc, eq, gt, gte, inArray, isNull, lt, ne, or } from "driz
 import { getDb } from "../db";
 import { weekKey } from "../domain/buddy";
 import { isSkipReason, pickPlan, SKIP_REASONS, type PlanEvent } from "../domain/plan";
-import { ageOn } from "../domain/rules";
+import { ageOn, romanceEligible } from "../domain/rules";
 import { budgetMax, cleanBio, TIME_WINDOWS } from "../content/profile";
 import { DISTRICTS, districtsAZ, EVENT_TAGS, label } from "../lib/constants";
 import { newId } from "../lib/crypto";
@@ -131,6 +131,7 @@ async function planFor(c: C) {
       groupSize: bio.groupSize,
       socialEnergy: bio.socialEnergy,
       gender: p.gender,
+      romance: romanceEligible(p),
     },
     cands,
     now,

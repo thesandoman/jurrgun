@@ -1135,10 +1135,75 @@ export const PROMPT_BANK: Prompt[] = [
   ]),
 ];
 
+// ------------------------------------------------------- dating prompts --
+
+/**
+ * Prompts only for members who are open to something more (romance mode on).
+ * Same kinds, validation, swap and card display as the main bank, but about
+ * dating in Bangkok, and woven into the rest of the app: districts, the
+ * passport and buddy quests, festivals, the no-ghosting rule. Warm and
+ * specific, never sexual. Shown only to other members who are open to
+ * something more and compatible, and deleted when romance mode is off.
+ */
+export const DATING_PROMPT_BANK: Prompt[] = [
+  text("date_first", "🌇", "เดทแรกในฝันที่กรุงเทพฯ คือ…", "My ideal first date in Bangkok is…"),
+  text("date_secret_spot", "🗝️", "ร้านลับที่อยากพาคนพิเศษไปคือ…", "The hidden spot I'd take someone special is…"),
+  text("date_quest", "🗺️", "เควสต์กรุงเทพฯ ที่อยากทำกับใครสักคนคือ…", "A Bangkok quest I'd love to do with someone is…"),
+  text("date_green_flag", "💚", "สัญญาณดีที่ทำให้ฉันใจเต้นคือ…", "A green flag that wins me over is…"),
+  text("date_looking_for", "🫶", "สิ่งที่ฉันมองหาคือ…", "What I'm looking for is…"),
+  choice("date_view", "🌃", "ดินเนอร์บนรูฟท็อป หรือริมแม่น้ำ?", "Rooftop dinner or riverside?", [
+    o("rooftop", "🏙️", "รูฟท็อป", "Rooftop"),
+    o("riverside", "🛶", "ริมแม่น้ำ", "Riverside"),
+    o("street", "🍢", "ข้างทางอร่อยกว่า", "Street food wins"),
+  ]),
+  choice("date_market", "🏮", "ตลาดกลางคืน หรือคาเฟ่เงียบ ๆ?", "Night market or a quiet café?", [
+    o("market", "🏮", "ตลาดกลางคืน", "Night market"),
+    o("cafe", "☕", "คาเฟ่เงียบ ๆ", "Quiet café"),
+  ]),
+  choice("date_bill", "🧾", "บิลเดทแรก", "The first-date bill", [
+    o("split", "➗", "หารกัน", "We split it"),
+    o("asker", "🙋", "คนชวนจ่าย", "Whoever asked pays"),
+    o("turns", "🔁", "ผลัดกันเลี้ยง", "We take turns"),
+  ]),
+  choice("date_getting_there", "🚆", "ไปเดทด้วยอะไร", "How I get to a date", [
+    o("train", "🚆", "BTS หรือ MRT", "BTS or MRT"),
+    o("boat", "⛴️", "เรือ", "By boat"),
+    o("motorbike", "🛵", "วินมอเตอร์ไซค์", "Motorbike taxi"),
+    o("walk", "🚶", "เดิน ถ้าไม่ร้อนเกิน", "Walk, if it isn't too hot"),
+  ]),
+  choice("date_festival", "🪷", "เทศกาลที่อยากไปด้วยกัน", "The festival I'd go to together", [
+    o("loy_krathong", "🪷", "ลอยกระทง", "Loy Krathong"),
+    o("songkran", "💦", "สงกรานต์", "Songkran"),
+    o("lunar_new_year", "🧧", "ตรุษจีนที่เยาวราช", "Lunar New Year in Yaowarat"),
+    o("design_week", "🎨", "Bangkok Design Week", "Bangkok Design Week"),
+  ]),
+  multi("date_districts", "📍", "ย่านที่อยากไปเดท", "Neighbourhoods I'd date in", [
+    o("ari", "☕", "อารีย์", "Ari"),
+    o("thonglor", "🍸", "ทองหล่อ", "Thong Lo"),
+    o("charoenkrung", "🎨", "เจริญกรุง", "Charoen Krung"),
+    o("yaowarat", "🏮", "เยาวราช", "Yaowarat"),
+    o("old_town", "🛕", "เกาะรัตนโกสินทร์", "Old Town"),
+    o("bang_krachao", "🌳", "บางกระเจ้า", "Bang Krachao"),
+    o("thonburi", "🛶", "ฝั่งธนฯ ริมคลอง", "Thonburi canals"),
+  ]),
+  scale("date_pace", "🐢", "จังหวะที่ชอบ", "My pace", ends("ค่อยเป็นค่อยไป", "Slow and steady", "รู้ใจเร็ว", "I know quickly")),
+  scale("date_plans", "🗓️", "แผนเดท", "Date plans", ends("ไปแบบไม่วางแผน", "Spontaneous", "วางแผนทุกนาที", "Planned to the minute")),
+  scale("date_reply", "💬", "ตอบแชตเร็วแค่ไหน", "How fast I reply", ends("ช้า แต่ตอบเสมอ", "Slow, but I always reply", "ตอบทันที", "Right away")),
+  emoji("date_vibe", "✨", "เดทในฝันเป็นอีโมจิ", "My date vibe in emoji", "🌇 🍜 🎨 🎶 🌳 🛶 ☕ 🏸 📚 🛕", 3),
+  rank("date_ideas", "🥇", "เรียงไอเดียเดท", "Rank these date ideas", [
+    o("temple_dawn", "🛕", "เดินวัดตอนเช้า", "A temple walk at dawn"),
+    o("cooking", "🍳", "คลาสทำอาหารไทย", "A Thai cooking class"),
+    o("chatuchak", "🛍️", "เดินจตุจักร", "Chatuchak on a Saturday"),
+    o("canal_boat", "🛶", "นั่งเรือคลองฝั่งธนฯ", "A canal boat in Thonburi"),
+  ]),
+];
+
 const PROMPT_BY_ID = new Map(PROMPT_BANK.map((p) => [p.id, p]));
+const DATING_BY_ID = new Map(DATING_PROMPT_BANK.map((p) => [p.id, p]));
 export function promptById(id: string): Prompt | undefined {
-  return PROMPT_BY_ID.get(id);
+  return PROMPT_BY_ID.get(id) ?? DATING_BY_ID.get(id);
 }
+export const isDatingPrompt = (id: string) => DATING_BY_ID.has(id);
 
 // ------------------------------------------------------------- the deck --
 
@@ -1161,10 +1226,10 @@ export const DECK_SIZE = 6;
  * least one short answer, one slider or scale, one this-or-that or emoji and
  * (when photos are allowed and n ≥ 4) one photo.
  */
-export function deckFor(accountId: string, n = DECK_SIZE, opts: { photo?: boolean; exclude?: string[] } = {}): string[] {
-  const rng = createRng(`deck:${accountId}`);
+export function deckFor(accountId: string, n = DECK_SIZE, opts: { photo?: boolean; exclude?: string[]; bank?: Prompt[]; seed?: string } = {}): string[] {
+  const rng = createRng(`${opts.seed ?? "deck"}:${accountId}`);
   const exclude = new Set(opts.exclude ?? []);
-  const pool = shuffle(rng, PROMPT_BANK.filter((p) => !exclude.has(p.id) && (opts.photo !== false || p.kind !== "photo")));
+  const pool = shuffle(rng, (opts.bank ?? PROMPT_BANK).filter((p) => !exclude.has(p.id) && (opts.photo !== false || p.kind !== "photo")));
   const need = ["text", "gauge", "pick", ...(opts.photo !== false && n >= 4 ? ["photo"] : [])];
   const out: Prompt[] = [];
   for (const fam of need) {
@@ -1191,6 +1256,25 @@ export function currentDeck(accountId: string, bio: Bio | null | undefined): str
   return stored.length ? stored : deckFor(accountId);
 }
 
+export const DATING_DECK_SIZE = 4;
+
+/** The dating prompt deck (romance mode only): same mix rules, its own bank and seed. */
+export function datingDeckFor(accountId: string): string[] {
+  return deckFor(accountId, DATING_DECK_SIZE, { photo: false, bank: DATING_PROMPT_BANK, seed: "dating-deck" });
+}
+
+export function currentDatingDeck(accountId: string, bio: Bio | null | undefined): string[] {
+  const stored = (bio?.datingDeck ?? []).filter((id, i, a) => DATING_BY_ID.has(id) && a.indexOf(id) === i);
+  return stored.length ? stored : datingDeckFor(accountId);
+}
+
+/** The bio with every dating prompt and answer removed (romance mode switched off). */
+export function withoutDating(bio: Bio): Bio {
+  const answers = Object.fromEntries(Object.entries(bio.answers ?? {}).filter(([id]) => !DATING_BY_ID.has(id)));
+  const { datingDeck: _drop, ...rest } = bio;
+  return { ...rest, answers, skipped: (bio.skipped ?? []).filter((id) => !DATING_BY_ID.has(id)) };
+}
+
 /**
  * Swap one prompt for an unused one, preferring the same kind family so the
  * mix survives. `seen` lists prompts to avoid (e.g. ones already swapped
@@ -1198,11 +1282,13 @@ export function currentDeck(accountId: string, bio: Bio | null | undefined): str
  */
 export function swapPrompt(deck: string[], promptId: string, rnd: () => number = Math.random, seen: string[] = []): string[] {
   const i = deck.indexOf(promptId);
-  const old = PROMPT_BY_ID.get(promptId);
+  const old = promptById(promptId);
   if (i < 0 || !old) return deck;
+  // A dating prompt swaps within the dating bank, a main one within the main bank.
+  const bank = isDatingPrompt(promptId) ? DATING_PROMPT_BANK : PROMPT_BANK;
   const used = new Set([...deck, ...seen]);
-  let pool = PROMPT_BANK.filter((p) => !used.has(p.id) && FAMILY[p.kind] === FAMILY[old.kind]);
-  if (pool.length === 0) pool = PROMPT_BANK.filter((p) => !deck.includes(p.id) && p.id !== promptId);
+  let pool = bank.filter((p) => !used.has(p.id) && FAMILY[p.kind] === FAMILY[old.kind]);
+  if (pool.length === 0) pool = bank.filter((p) => !deck.includes(p.id) && p.id !== promptId);
   if (pool.length === 0) return deck;
   const next = pool[Math.floor(rnd() * pool.length) % pool.length];
   const out = deck.slice();
@@ -1259,6 +1345,8 @@ export type Bio = {
   energyAt?: string;
   energyPrev?: string;
   deck?: string[];
+  /** Dating prompts (romance mode only), answered in `answers` like the rest. */
+  datingDeck?: string[];
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
   answers?: Record<string, Answer>;
@@ -1377,6 +1465,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.energyAt)) out.energyAt = s(b.energyAt);
   if (s(b.energyPrev)) out.energyPrev = s(b.energyPrev);
   if (strs(b.deck)) out.deck = strs(b.deck);
+  if (strs(b.datingDeck)) out.datingDeck = strs(b.datingDeck);
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;
   return out;

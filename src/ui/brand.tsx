@@ -8,6 +8,8 @@ export const BRAND = {
   th: "เจอกัน",
   /** The one line, used everywhere the brand introduces itself (hero, meta, manifest). */
   tagline: { th: "กลุ่มเล็ก สถานที่จริง แล้วเจอกันนะ", en: "Small groups. Real Bangkok places. See you there." },
+  /** The endorsement (endorsed-brand model, design/reference/brand-positioning.md). Wording to be confirmed with the BMA. */
+  endorsement: { th: "ร่วมกับกรุงเทพมหานคร", en: "Made with the Bangkok Metropolitan Administration" },
   meaning: { th: "เจอกัน = แล้วเจอกันนะ", en: "Jurrgun (เจอกัน, say “jer-gun”) means “see you later” in Thai" },
 };
 

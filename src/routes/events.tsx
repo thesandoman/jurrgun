@@ -20,7 +20,7 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
-import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, womenOnlyEventOk } from "../domain/rules";
+import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, womenOnlyEventOk } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
 import { cleanBio } from "../content/profile";
 import { Hono, type Context } from "hono";
@@ -57,6 +57,7 @@ import {
   events,
   feedback,
   invites,
+  partnerOrgs,
   profiles,
   registrations,
   strikes,
@@ -395,6 +396,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (win) where.push(gte(events.startsAt, win[0]), lt(events.startsAt, win[1]));
   if (values(DISTRICTS).includes(q.district)) where.push(eq(events.district, q.district));
   if (values(EVENT_TAGS).includes(q.tag)) where.push(jsonHas(events.tags, q.tag));
+  // Dating events exist only for members with romance mode on (romanceEventOk).
+  if (!romanceEligible(user.profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
   if (q.free) where.push(eq(events.costThb, 0));
   // Short and sweet: 90 minutes or less, for carers and long work days.
   if (q.short) where.push(sql`${events.endsAt} - ${events.startsAt} <= interval '90 minutes'`);
@@ -463,7 +466,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       {q.text ? <input type="hidden" name="q" value={q.text} /> : null}
       <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
       <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
-      <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
+      <Select label={t("หมวด", "Category")} name="tag" options={romanceEligible(user.profile) ? EVENT_TAGS : EVENT_TAGS.filter((x) => x.value !== OPEN_TO_MORE_TAG)} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
       <Select label={t("ภาษา", "Language")} name="language" options={LANGUAGES} value={q.language} lang={lang} blank={t("ทุกภาษา", "Any language")} />
       <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />
       <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
@@ -718,6 +721,8 @@ async function visibleEvent(c: Ctx, id: string): Promise<Event | null> {
   if (!event) return null;
   const a = c.var.user!.account;
   const viewer = { id: a.id, role: a.role, partnerOrgId: a.partnerOrgId };
+  const p = c.var.user!.profile;
+  if (!p || !romanceEventOk(event.tags, p)) return null;
   if (canView(event, viewer)) return event;
   const fromLink = c.req.query("t");
   const token = fromLink ?? getCookie(c, privateCookie(id)) ?? null;
@@ -820,7 +825,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const db = getDb(c.env);
   const now = new Date();
 
-  const [reg, state, host, buddies, standingRows, cover] = await Promise.all([
+  const [reg, state, host, buddies, standingRows, cover, partner] = await Promise.all([
     myRegistration(db, event.id, user.account.id),
     seatState(db, event),
     event.hostAccountId
@@ -829,6 +834,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
     buddyNicknames(db, event, user.account.id, now),
     myStrikes(db, user.account.id),
     coverSrc(c.env, event),
+    event.partnerOrgId
+      ? db.select({ name: partnerOrgs.name }).from(partnerOrgs).where(eq(partnerOrgs.id, event.partnerOrgId)).limit(1)
+      : Promise.resolve([] as { name: string }[]),
   ]);
 
   // Bring-a-friend (PRD §8.2): my open invite link, if I have one.
@@ -917,6 +925,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           </p>
         ) : null}
         <div class="tags">
+          {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
           <SpotsTag e={event} taken={state.taken} t={t} />
           {event.tags.map((tag) => (
             <Tag tone="muted">{label(EVENT_TAGS, tag, lang)}</Tag>
@@ -949,6 +958,12 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <dl class="facts">
           <dt>{t("ผู้จัด / โฮสต์", "Host")}</dt>
           <dd>{host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</dd>
+          {partner[0] ? (
+            <>
+              <dt>{t("พาร์ตเนอร์", "Partner")}</dt>
+              <dd>🤝 {partner[0].name}</dd>
+            </>
+          ) : null}
           <dt>{t("จำนวนที่นั่ง", "Capacity")}</dt>
           <dd>
             {event.capacity} · {left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : t("เต็มแล้ว มีคิวสำรอง", "Full — waitlist open")}
@@ -1234,6 +1249,7 @@ export async function rsvpGate(
   if (!withinRange(age, event.ageMin, event.ageMax)) {
     return no(`กิจกรรมนี้สำหรับอายุ ${event.ageMin}–${event.ageMax} ปี`, `This event is for ages ${event.ageMin}–${event.ageMax}.`, 403);
   }
+  if (!romanceEventOk(event.tags, user.profile)) return no("ไม่พบกิจกรรมนี้", "We can't find this event.", 403);
   if (!womenOnlyEventOk(event.tags, user.profile)) {
     return no(
       "กิจกรรมนี้สำหรับผู้หญิงและนอนไบนารี ถ้าใช่คุณ ตั้งค่าเพศได้ที่ ฉัน > ตั้งค่าการรู้จักกัน (เป็นความลับ)",

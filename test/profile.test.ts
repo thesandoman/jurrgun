@@ -2,11 +2,18 @@
  * The richer profile content: interests, communication styles, prompt bank,
  * per-member decks and answer validation. Pure, no database.
  */
+import { ADULT_EN, ADULT_TH, GENDERED_EN, GENDERED_TH } from "../src/vibe/bank-rules";
 import { describe, expect, it } from "vitest";
 import {
   ALL_INTERESTS,
   COMM_STYLES,
   deckFor,
+  datingDeckFor,
+  DATING_DECK_SIZE,
+  DATING_PROMPT_BANK,
+  isDatingPrompt,
+  withoutDating,
+  currentDeck,
   ENERGY,
   INTEREST_GROUPS,
   BKK_STORY,
@@ -171,6 +178,46 @@ describe("communication styles and quick facts", () => {
     for (const v of ["texter", "voice_noter", "caller", "meme_sender", "sticker_fan", "lets_meet"]) expect(vals).toContain(v);
     for (const c of COMM_STYLES) expect(bilingual(c) && bilingual(c.blurb)).toBe(true);
     for (const o of [...ENERGY, ...WEEKEND_RHYTHM]) expect(bilingual(o)).toBe(true);
+  });
+});
+
+describe("dating prompt bank", () => {
+  it("is bilingual, unique, no photos, and kept apart from the main deck", () => {
+    const ids = DATING_PROMPT_BANK.map((p) => p.id);
+    expect(ids.length).toBeGreaterThanOrEqual(12);
+    expect(new Set([...ids, ...PROMPT_BANK.map((p) => p.id)]).size).toBe(ids.length + PROMPT_BANK.length);
+    for (const p of DATING_PROMPT_BANK) {
+      expect(bilingual(p)).toBe(true);
+      expect(p.kind).not.toBe("photo");
+      expect(promptById(p.id)).toBe(p);
+      expect(isDatingPrompt(p.id)).toBe(true);
+    }
+    for (let i = 0; i < 50; i++) expect(currentDeck(`m-${i}`, {}).some(isDatingPrompt)).toBe(false);
+  });
+
+  it("follows the same content rules: no dashes, nothing gendered or adult", () => {
+    const all = JSON.stringify(DATING_PROMPT_BANK);
+    expect(all).not.toMatch(/[–—]/);
+    for (const p of DATING_PROMPT_BANK) {
+      const words = [p.en, ...(p.options ?? []).map((o) => o.en), ...(p.ends ?? []).map((e) => e.en)].join(" ");
+      const thai = [p.th, ...(p.options ?? []).map((o) => o.th), ...(p.ends ?? []).map((e) => e.th)].join(" ");
+      expect(words, p.id).not.toMatch(GENDERED_EN);
+      expect(words, p.id).not.toMatch(ADULT_EN);
+      expect(thai, p.id).not.toMatch(GENDERED_TH);
+      expect(thai, p.id).not.toMatch(ADULT_TH);
+    }
+  });
+
+  it("deals a stable mixed deck of 4, swaps within the dating bank and is wiped by withoutDating", () => {
+    const deck = datingDeckFor("d-1");
+    expect(deck).toEqual(datingDeckFor("d-1"));
+    expect(deck).toHaveLength(DATING_DECK_SIZE);
+    expect(deck.every(isDatingPrompt)).toBe(true);
+    const next = swapPrompt(deck, deck[0], () => 0.3);
+    expect(next[0]).not.toBe(deck[0]);
+    expect(isDatingPrompt(next[0])).toBe(true);
+    const bio = { deck: ["dream_city"], datingDeck: deck, skipped: [deck[1], "spice"], answers: { dream_city: { kind: "text", value: "Kyoto" }, [deck[0]]: { kind: "text", value: "x" } } };
+    expect(withoutDating(bio)).toEqual({ deck: ["dream_city"], skipped: ["spice"], answers: { dream_city: { kind: "text", value: "Kyoto" } } });
   });
 });
 
