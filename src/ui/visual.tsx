@@ -243,11 +243,11 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .guide-tips li b{flex:none;font-size:1.5rem;width:36px;text-align:center}
 .guide-promise{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:var(--brand-soft);font-weight:600;line-height:1.4}
 .guide-promise input{width:22px;height:22px;flex:none;margin-top:2px}
-.deck{position:relative;margin:16px auto 8px;max-width:420px;min-height:380px}
+.deck{position:relative;margin:12px auto 4px;max-width:420px}
 .deck-card{position:relative;z-index:2;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:28px 22px 22px;box-shadow:0 18px 40px rgba(6,40,22,.18);touch-action:pan-y;user-select:none;cursor:grab;text-align:center}
 .deck-card:active{cursor:grabbing}
 .deck-under{position:absolute;z-index:1;left:14px;right:14px;top:14px;bottom:-10px;border-radius:28px;background:var(--surface-2);border:1px solid var(--line)}
-.deck-face{font-size:4.2rem;line-height:1;width:112px;height:112px;margin:0 auto 10px;display:grid;place-items:center;border-radius:36px;background:var(--brand-soft)}
+.deck-face{font-size:3.4rem;line-height:1;width:92px;height:92px;margin:0 auto 10px;display:grid;place-items:center;border-radius:36px;background:var(--brand-soft)}
 .deck-card h2{margin:4px 0 2px;font-size:1.6rem}
 .deck-sub{margin:0 0 8px;color:var(--ink-2)}
 .deck-why{margin:6px 0 10px;font-weight:600}
@@ -257,7 +257,7 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .deck-stamp.keen{left:18px;color:var(--brand);transform:rotate(-12deg)}
 .deck-stamp.pass{right:18px;color:#d64545;transform:rotate(12deg)}
 .deck-card.is-keen .deck-stamp.keen,.deck-card.is-pass .deck-stamp.pass{opacity:1}
-.deck-acts{display:flex;justify-content:center;gap:28px;margin:18px 0}
+.deck-acts{display:flex;justify-content:center;gap:28px;margin:14px 0 8px}
 .deck-btn{width:68px;height:68px;border-radius:50%;border:0;font-size:1.7rem;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center}
 .deck-btn.pass{background:var(--surface);color:#d64545;border:1px solid var(--line)}
 .deck-btn.keen{background:var(--lime);color:var(--deep,#06492a)}
