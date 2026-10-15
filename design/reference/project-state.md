@@ -44,7 +44,8 @@ All chats share one Mac. Running renders and test suites at the same time pushed
 | D18 | **Love red** `#e23744` (ink `#c0222f`, tint `#fde3e5`) for Open to something more moments in the app and film 02 only: the profile dating section, dating prompts, the one-tap switch, the 💘 event tag. Coral stays as general warmth | Branding | 10-15 |
 | D19 | **Regular Tables (owner review):** up to 30 members per table; large events have no fixed cap (organiser sets it); anyone joins with the invite link or a confirmed seat at a started hangout; a block between two members is resolved by the Table Host (keep both apart, ask one to step back, or send to moderators), and the host is never told who blocked whom; women-only applies to new joins; existing Table Hosts get a table auto-created; a member can be "Regular at" many tables (shown on profile cards); each meetup is a Hangout (แฮงเอาต์) | Branding | 10-15 |
 | D20 | **Quiz decisions (owner):** Q-D1, date scenarios get two wordings: a date for opted-in members, a one-to-one friend meetup for everyone else, with the same scoring (confirmed in Branding). Q-D2, districts fixed (Krung Thep Aphiwat in Chatuchak, Chokchai 4 in Lat Phrao). Q-D3, new formats: Bangkok-themed, this or that, would you rather, letter association, more categories. Q-D4, pick by season, segment and the Table Host set. New formats are **tuned before push** so own-type accuracy is back near 86% (it was 82.1%) | Quiz, Branding | 10-15 |
-| D13 | Task 6 (brand kit in Blender) is **postponed until the owner says go** | Branding | 10-15 |
+| D13 | Task 6 (brand kit in Blender) is **removed** (owner) | Branding | 10-15 |
+| D21 | **Final (owner):** the privacy notice at /privacy is final (PDPA, controller = Jurrgun team, contact through the Privacy Center). **No BMA approval is needed** for wording, channels, venues or moderators. Don't ask for it or list it as a blocker | Branding | 10-15 |
 | D14 | **Quiz chats merge in this order** (owner, 18:50, in Branding): (1) "Audit the quiz bank and write its blueprint" lands first; (2) Q5 "Make the quiz fit each member's profile and mode" rebases on it and lands; (3) "Write 100 new Bangkok scenarios" and "Add funny and personality scenarios" rebase and fill the new structure. "Add interactive question formats" can land any time if it stays out of `src/vibe/bank` and `generator.ts`, otherwise after (2). Q5 is then folded into Task 10 and deployed. Each chat rebases on `main` before pushing, and only one quiz chat pushes at a time. **(1) and (2) done:** Q5 + Task 10 landed; the content chats are next and fill `set`, `audience`, `bank/segment-prompts.ts` and `bank/plain-english.ts` | Branding | 10-15 18:50 |
 
 ## Resolved by the owner (2026-10-15 18:30, in Branding)
@@ -80,7 +81,7 @@ None right now. New questions go to the Branding chat.
 
 ## Reference documents (not schedules)
 
-- `design/reference/pilot-launch-plan.md`: a stock pilot launch playbook. Its dates are examples, and no launch is scheduled (owner, 10-15).
+- `design/reference/pilot-launch-plan.md`: **in limbo** (owner). Don't act on it, schedule from it or bring it up until the owner raises it.
 
 ## Proposed next tasks (waiting for approval)
 
