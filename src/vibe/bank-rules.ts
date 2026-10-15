@@ -55,6 +55,15 @@ export const POLITE_TH = /คะ(?=\s|$|[?!…])|จ้ะ|จ้า(?=\s|$)/;
  */
 export const STOCK_WORDS_EN = /\b(usual|regular|regulars|never|new)\b/i;
 export const MAX_STOCK_ANSWERS = 3;
+/**
+ * Every D or F answer still shows its letter to a reader (owner, D24), so the
+ * type check stays honest; a detail counts as much as a word. D: new to you
+ * ("finally", "everyone keeps posting", "a friend swears by"). F: your usual
+ * ("the aunties already know your name", "your stool", "without asking").
+ * If an answer truly fits and still fails, add the cue here.
+ */
+export const DISCOVER_EN = /\b(new|newest|newly|never|first|firsts|first-ever|none|neither|nobody|haven't|hasn't|just (?:opened|found|spotted|launched|met)|just-opened|brand[- ]new|stumbled|don't know|know nothing|unknown|random|whatever|whichever|meaning to|meant to|curious|different|opening|this week|last (?:week|month)|surprise|on the spot|unplanned|impulse|on a whim|sight unseen|no map|no reviews|spotted|strangers|pop-ups?|tour|explor\w*|discover\w*|hunt\w*|finally|(?:everyone )?keeps posting|everyone's talking about|just heard (?:about|of)|a friend swears by|someone mentioned|a tip from|on a hunch|viral|trending|no sign(?:board)?|unmarked|down a soi you've|round a corner|first look|about time)\b/i;
+export const FAMILIAR_EN = /\b(usual|regular|regulars|always|every (?:week|year|time|month|sunday|saturday|day|april|birthday|holiday|visit|long weekend|kite season|school holiday)|each week|same|favourite|ritual|yearly|for years|since|again|know(?:s)? (?:your|you)|tradition|standing|weekly|monthly|grew up|loved|one more|one last|last time|last year|back to|like every|as always|like always|known|know well|daily|old friend|neighbourhood|local|never (?:skip|miss)|already knows?|by name|waves?|the aunties?|the uncle|your (?:seat|table|stall|spot|corner|stool|bench|lane)|saves? (?:you|your)|remembers?|without asking|before you (?:ask|order)|still|as ever|the old (?:crew|gang|spot))\b/i;
 /** Review rule 2: 6 to 12 words, one picture in your head. */
 export const MIN_WORDS = 6;
 export const MAX_WORDS = 12;
@@ -77,12 +86,12 @@ export const CONTRA_F_EN = /\b(never(?! skip| miss)|none of you|neither of you|h
 export const TIME_EN = /\b\d{1,2}(?::\d\d)? ?(?:am|pm)\b|midnight|sunrise|sunset|dawn|dusk|late|after[- ]dark|night|morning|past \d|till|until/i;
 export const PLAN_EN = /ahead|book|reserv|plan|schedul|sign up|register|rsvp|whim|on the spot|unplanned|unannounced|impulse|same-day|that morning|on the day|on the night|last.minute|an hour|\bnow\b|tonight|no plan|decide|calendar|saved|itinerar|kept for|\bmap|route|turn up|show up|drop into|drift|say yes|open call|soonest|whichever|whatever|\btext|message|\bring\b|\bcall\b|ping|\bask|right away|random|let's go|whoever's free|standing|no reviews/i;
 /** Softer hints for the other six letters: missing ones are warnings, not errors. */
-const HINT_EN: Record<string, RegExp> = {
+export const HINT_EN: Record<string, RegExp> = {
   B: /\b(crowds?|crowded|group|gang|crew|everyone|whole|team|teammates|all|friends|big|long table|packed|busy|bustl\w*|buzzing|lively|strangers|double date|relatives|cousins|family|siblings|regulars|thousands|half|six|ten|twelve|twenty|clan|club|invite\w*|welcome|noisy|anyone|whoever|party|fair|festival|tour|class|queue|room|locals|neighbourhood)\b/i,
   C: /\b(alone|solo|one|two|three|few|couple|small|quiet\w*|calm|slow\w*|just|your date|with them|sibling|grandparents?|parents?|housemate|flatmate|neither|both|corner|pairs|one-on-one|best friend|old friend|close|window seat|seat|no hurry|you two|kid)\b/i,
   M: /\b(walk\w*|wander\w*|rid(?:e|es|ing)|cycl\w*|bikes?|run\w*|jog\w*|danc\w*|paddl\w*|kayak|climb\w*|yoga|swim|badminton|football|futsal|games?|class|hunt\w*|explor\w*|stroll\w*|laps?|loop|tai chi|aerobics|bowling|kites?|hands-on|workshop|pilates|scooters|slides|picking|crawl|hop\w*|tour|sketch\w*|stretch|ramwong|muay thai|takraw|rac(?:e|ing)|match|rallies|soaked|water fights|on foot|steps|lead|squeeze|browse|dash|duck|follow)\b/i,
-  S: /\b(eat\w*|dinner|lunch|breakfast|brunch|tables?|caf[ée]s?|seats?|sit\w*|seated|film|movie|cinema|talk\w*|chat\w*|conversation|coffee|tea|cake|noodles?|feast|show|museum|read\w*|books?|supper|jok|dessert|sweets|plates?|dishes|bowls?|stools|curry|karaoke|music|jazz|band|concert|watch\w*|slow|sketchbook|board games?|library|snack\w*|food|stalls?|restaurant|mocktails|smoothies|coconut|ice cream|khao|bua loi|shaved ice|latte|pastry|kopi|seafood|rice|buns|banquet|gig|exhibition|picture|photo|order|stories|wheel|counting down|stay\w*|linger\w*|listen\w*)\b/i,
-  N: /\b(new\w*|caf[ée]s?|gallery|galleries|design|indie|pop-ups?|art|artists?|murals?|mall|rooftop|club|studio|film|cinema|board games?|DJ|jazz|concert|playlist|karaoke|yoga|pilates|run club|smoothies|latte|brunch|skywalk|expo|bowling|futsal|badminton|swim|dance|salad|mocktails|fair|book\w*|modern|station|terminal|Pink Line|campus|park|EmSphere|EmQuartier|ICONSIAM|Siam|Samyan|One Bangkok|Commons|Terminal 21|Fashion Island|Seacon|Union Mall|Jam Factory|Lhong|Chang Chui|BACC|TCDC|True Digital|Ari|Thonglor|Ekkamai|Charoenkrung|Charoen Nakhon|RCA|Silom|Sathon|BITEC|Benjakitti|Chula|Lido|House Samyan|Warehouse 30|Aphiwat|MahaNakhon|Asiatique|Jodd|Saxophone|Brown Sugar|Rama III|Lat Phrao|Pattavikorn|Amazing Park|Safari|Major|Arena|Rajamangala|Sports Centre|Benjasiri|Rot Fai|Suan Luang|Seri Thai|Lumphini)\b/i,
+  S: /\b(eat\w*|dinner|lunch|breakfast|brunch|tables?|caf[ée]s?|seats?|sit\w*|seated|film|movie|cinema|talk\w*|chat\w*|conversation|coffee|tea|cake|noodles?|feast|show|museum|read\w*|books?|supper|jok|dessert|sweets|plates?|dishes|bowls?|stools|curry|karaoke|music|jazz|band|concert|watch\w*|slow|sketchbook|board games?|library|snack\w*|food|stalls?|restaurant|mocktails|smoothies|coconut|ice cream|khao|bua loi|shaved ice|latte|pastry|kopi|seafood|rice|buns|banquet|gig|exhibition|picture|photo|order|stories|wheel|counting down|stay\w*|linger\w*|listen\w*)\b|\bcafé(?!\w)/i,
+  N: /\b(new\w*|caf[ée]s?|gallery|galleries|design|indie|pop-ups?|art|artists?|murals?|mall|rooftop|club|studio|film|cinema|board games?|DJ|jazz|concert|playlist|karaoke|yoga|pilates|run club|smoothies|latte|brunch|skywalk|expo|bowling|futsal|badminton|swim|dance|salad|mocktails|fair|book\w*|modern|station|terminal|Pink Line|campus|park|EmSphere|EmQuartier|ICONSIAM|Siam|Samyan|One Bangkok|Commons|Terminal 21|Fashion Island|Seacon|Union Mall|Jam Factory|Lhong|Chang Chui|BACC|TCDC|True Digital|Ari|Thonglor|Ekkamai|Charoenkrung|Charoen Nakhon|RCA|Silom|Sathon|BITEC|Benjakitti|Chula|Lido|House Samyan|Warehouse 30|Aphiwat|MahaNakhon|Asiatique|Jodd|Saxophone|Brown Sugar|Rama III|Lat Phrao|Pattavikorn|Amazing Park|Safari|Major|Arena|Rajamangala|Sports Centre|Benjasiri|Rot Fai|Suan Luang|Seri Thai|Lumphini)\b|\bcafé(?!\w)/i,
   H: /\b(old\w*|temples?|Wat|markets?|canals?|Khlong|shophouses?|recipes?|Kudi Chin|Yaowarat|Talat|Song Wat|Phahurat|Little India|Ban Khrua|Nang Loeng|Wang Lang|Golden Mount|Sanam Luang|Pak Khlong|Thewet|Rattanakosin|Phraeng Phuthon|Dusit|Lumphini|Santichaiprakarn|Songkran|Loy Krathong|krathong|kites?|tai chi|Muay Thai|takraw|ramwong|fair|sweets|jok|khao|bua loi|kopi|patongko|museum|Barges|Bangkokian|Baan Silapin|puppet|rice fields?|farms?|orchards?|orchid|mangroves?|long-tail|floating|noodles?|garlands?|street food|stalls?|Suan Luang|Seri Thai|curry|chicken rice|seafood|coconut|grandparents?|tradition|Chokchai|Pratunam|Victory Monument|Ramkhamhaeng|Din Daeng|Hua Takhe|Min Buri|Air Force|Rama VIII|Bang \w+|Isan|halal|dessert|coast|river\w*|pier|boat)\b/i,
 };
 /** Places that must be named in both languages when one of them names it (EN pattern, Thai substring). */
@@ -236,10 +245,12 @@ export function answerSense(where: string, code: string, kind: string, en: strin
   if (words < MIN_WORDS || words > max) out.push(`${where}: ${words} words; keep answers to ${MIN_WORDS} to ${max}`);
   if (/^I\b|\bI'm\b|\bmy\b/.test(en)) out.push(`${where}: write the action, not "I": ${en}`);
   if (code[1] === "D") {
+    if (!DISCOVER_EN.test(en)) out.push(`${where}: a D answer must show it is new to you (a detail like finally, everyone keeps posting, a friend swears by, first): ${en}`);
     const m = CONTRA_D_EN.exec(en);
     if (m) out.push(`${where}: a D answer reads as a habit ("${m[0]}"): ${en}`);
   }
   if (code[1] === "F") {
+    if (!FAMILIAR_EN.test(en)) out.push(`${where}: an F answer must show it is your usual (a detail like already knows you, your seat, by name, every week): ${en}`);
     const m = CONTRA_F_EN.exec(en);
     if (m) out.push(`${where}: an F answer reads as a first ("${m[0]}"): ${en}`);
   }

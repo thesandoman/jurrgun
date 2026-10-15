@@ -78,6 +78,23 @@ describe("quiz bank", () => {
     for (const id of LEGACY_IDS) expect(ids.has(id), id).toBe(true);
   });
 
+  it("every D and F answer shows its letter, and a detail counts as much as a word (D24)", async () => {
+    const { answerSense } = await import("../src/vibe/bank-rules");
+    const shows = (code: string, en: string) => answerSense("x", code, "core", en, "x").filter((e) => e.includes("must show"));
+    for (const en of ["That Ari noodle stall everyone keeps posting. Finally", "A soi with no signboard, on a hunch", "The dumpling place a friend swears by"]) expect(shows("CDSH", en), en).toEqual([]);
+    for (const en of ["Tai chi at Lumphini at 6am. The aunties already know your name", "Your stool at the Nang Loeng stall, iced coffee without asking", "The owner remembers your order"]) expect(shows("CFSH", en), en).toEqual([]);
+    // No cue at all still fails both ways; a habit still cannot be a D, nor a first an F.
+    expect(shows("CDSH", "Noodles at a stall in Ari, slow and quiet").join()).toContain("D answer must show");
+    expect(shows("CFSH", "Noodles at a stall in Ari, slow and quiet").join()).toContain("F answer must show");
+    expect(answerSense("x", "CDSH", "core", "Finally back at your usual Ari stall", "x").join()).toContain("D answer reads as a habit");
+    expect(answerSense("x", "CFSH", "core", "Your stool at a stall you've never tried", "x").join()).toContain("F answer reads as a first");
+  });
+
+  it("the letter hints see the word café", async () => {
+    const { HINT_EN } = await import("../src/vibe/bank-rules");
+    for (const L of ["S", "N"]) expect(HINT_EN[L].test("A quiet café by the canal"), L).toBe(true);
+  });
+
   it("every district has a landmark, and every landmark and type hangout is in a real district", () => {
     for (const d of DISTRICT_KEYS) expect(LANDMARKS.some((l) => l.district === d && l.kind === "landmark"), d).toBe(true);
     for (const l of LANDMARKS) expect(DISTRICT_KEYS.has(l.district), l.name.en).toBe(true);
