@@ -20,8 +20,8 @@ beforeAll(() => {
 
 describe("Bangkok Type quiz balance (5,000 simulated sessions)", () => {
   it("builds every session to the rules", () => {
-    expect(r.structure.unbalancedQuestions).toBe(0); // every letter split evenly on every question (the two sliders as a pair)
-    expect(r.structure.offerOutOfRange).toBe(0); // every type offered at least 6 times and within one of the others, home district or not
+    expect(r.structure.unbalancedQuestions).toBe(0); // every letter split 3 and 3 on every question
+    expect(r.structure.offerOutOfRange).toBe(0); // every type offered 7 or 8 times, home district or not
     expect(r.structure.positionSpread).toBeLessThan(1.25); // no type favoured in any option position
     expect(r.distinctSessions).toBe(SESSIONS);
     expect(r.scenariosUsed).toBe(r.scenariosInBank); // no scenario is unreachable

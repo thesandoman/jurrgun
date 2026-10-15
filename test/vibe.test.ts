@@ -29,7 +29,7 @@ describe("generateSession", () => {
     expect(ids(session("beta"))).not.toBe(ids(session("alpha")));
   });
 
-  it("20 questions: 16 core, 2 rhythm, 2 plan, every scenario once, six answers (four for rank, two for this-or-that and slider)", () => {
+  it("20 questions: 16 core, 2 rhythm, 2 plan, six answers each, every scenario once", () => {
     for (let i = 0; i < 300; i++) {
       const qs = session(`shape${i}`);
       expect(qs).toHaveLength(QUIZ_LENGTH);
@@ -37,17 +37,16 @@ describe("generateSession", () => {
       expect(qs.filter((q) => q.kind === "rhythm")).toHaveLength(2);
       expect(qs.filter((q) => q.kind === "plan")).toHaveLength(2);
       expect(new Set(qs.map((q) => q.scenario)).size).toBe(QUIZ_LENGTH);
-      for (const q of qs) expect(q.options).toHaveLength(q.format === "this-or-that" || q.format === "slider" ? 2 : q.format === "rank" ? 4 : OPTIONS_PER_QUESTION);
+      for (const q of qs) expect(q.options).toHaveLength(OPTIONS_PER_QUESTION);
     }
   });
 
-  it("every six-answer question shows three opposite pairs, so each letter (and flavour) is split 3/3", () => {
+  it("every question shows three opposite pairs, so each letter (and flavour) is split 3/3", () => {
     for (let i = 0; i < 300; i++) {
       for (const q of session(`split${i}`)) {
         // Every answer is the hand-written one for that type.
         const sc = SCENARIOS.find((s) => s.id === q.scenario)!;
         for (const o of q.options) expect(o.label.en).toBe((sc.friend?.answers?.[o.type] ?? sc.answers[o.type]).en);
-        if (q.options.length !== 6) continue;
         const codes = q.options.map((o) => o.type);
         expect(new Set(codes).size).toBe(6);
         for (const c of codes) expect(codes).toContain(oppositeCode(c));
@@ -57,13 +56,11 @@ describe("generateSession", () => {
     }
   });
 
-  it("every type is offered about equally often: at most one apart in a session", () => {
+  it("every type is offered 7 or 8 times per session", () => {
     for (let i = 0; i < 300; i++) {
       const offered = new Map<string, number>(TYPE_CODES.map((c) => [c, 0]));
       for (const q of session(`fair${i}`)) for (const o of q.options) offered.set(o.type, offered.get(o.type)! + 1);
-      const n = [...offered.values()];
-      expect(Math.min(...n)).toBeGreaterThanOrEqual(6);
-      expect(Math.max(...n) - Math.min(...n)).toBeLessThanOrEqual(1);
+      for (const n of offered.values()) expect([7, 8]).toContain(n);
     }
   });
 
@@ -137,9 +134,8 @@ describe("no two people get the same quiz", () => {
 });
 
 describe("scoring and the margin of error", () => {
-  it("only option indices are valid answers to a pick-one", () => {
+  it("only option indices are valid answers", () => {
     const q = session("valid")[0];
-    expect(q.format).toBe("choice");
     expect(itemScore(q, 0)).toBe(1);
     expect(itemScore(q, 5)).toBe(1);
     for (const bad of [6, -1, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();

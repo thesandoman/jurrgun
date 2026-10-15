@@ -11,12 +11,12 @@ import { ROMANCE_EN } from "../src/vibe/bank-rules";
 import { randomToken } from "../src/lib/crypto";
 import { parseAnswers, personalOf, quizQuestions, quizSeed, typeSlug } from "../src/routes/quiz";
 import { scoreSession, typeQuestions, type AnyQuestion } from "../src/vibe/generator";
-import { answersAs, formValue } from "./quiz-helpers";
+import { answersAs } from "./quiz-helpers";
 import { ARCHETYPES, displayName, typeOf, type ArchetypeKey } from "../src/vibe/archetypes";
 
 const seedIn = (html: string) => /name="seed" value="([^"]+)"/.exec(html)?.[1] ?? "";
-/** Question indices that have a field in the form (a3, or a3_0 for rank and coins). */
-const answerNames = (html: string) => new Set([...html.matchAll(/name="a(\d+)(?:_\d+)?"/g)].map((m) => m[1]));
+/** Question indices that have a field in the form (a3). */
+const answerNames = (html: string) => new Set([...html.matchAll(/name="a(\d+)"/g)].map((m) => m[1]));
 
 /** createMember()'s default profile, which personalises the /quiz session. */
 const MEMBER = personalOf({ district: "bang_rak", interests: ["food", "art"], languages: ["th", "en"], relationship: "single" });
@@ -25,14 +25,14 @@ const MEMBER = personalOf({ district: "bang_rak", interests: ["food", "art"], la
 function form(seed: string, questions: AnyQuestion[], count = questions.length): Record<string, string> {
   const f: Record<string, string> = { seed };
   const picks = answersAs(typeQuestions(questions), "BDSH");
-  questions.slice(0, count).forEach((q, i) => (f[`a${i}`] = formValue(picks[q.id] ?? 0)));
+  questions.slice(0, count).forEach((q, i) => (f[`a${i}`] = String(picks[q.id] ?? 0)));
   return f;
 }
 
 const answersOf = (f: Record<string, string>, questions: AnyQuestion[]) => parseAnswers(f, questions).answers;
 
 describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
-  it("renders 20 questions for a member, each in its format", async () => {
+  it("renders 20 plain six-answer questions for a member", async () => {
     const m = await createMember();
     const r = await req("/quiz?lang=en", { cookie: m.cookie });
     expect(r.status).toBe(200);
@@ -41,22 +41,12 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(seedIn(html)).toBe(quizSeed(m.id, null));
     expect(html).toContain("Tap the answer that");
     expect(html).toContain("No wrong answers");
-    expect(html).not.toContain("data-budget");
-    // The interactive formats, each as a plain form field first.
-    const shown = new Set(quizQuestions(seedIn(html), null, MEMBER).map((q) => q.format));
-    const markers: Record<string, string[]> = { "this-or-that": ["data-tot"], slider: ["data-slider", 'type="range"'], rank: ["data-rank"], map: ["data-map"], photo: ["qf-photos"], sentence: ["data-sentence"] };
-    // Each format this session uses is on the page (the shared script names every format, so absence isn't checked).
-    for (const [format, list] of Object.entries(markers)) if (shown.has(format as never)) for (const marker of list) expect(html).toContain(marker);
+    // Plain scenarios only (owner, D26): no sliders, rank, swipes, maps or chips.
+    for (const marker of ['type="range"', "data-budget", "data-tot", "data-slider", "data-rank", "data-map", "qf-photos", "data-sentence"]) expect(html).not.toContain(marker);
     // Personalised: the page is the session for this member's home district.
     const qs = quizQuestions(seedIn(html), null, MEMBER);
     for (const q of qs) expect(html).toContain(q.prompt.en.replace(/'/g, "&#39;").replace(/"/g, "&quot;").slice(0, 20));
-    // One radio per answer; a slider is one range; rank is one value field (plus a number select per answer).
-    for (const q of qs) {
-      const i = qs.indexOf(q);
-      const fields = (html.match(new RegExp(`name="a${i}"`, "g")) ?? []).length;
-      expect(fields, `${i} ${q.format}`).toBe(q.format === "slider" || q.format === "rank" ? 1 : q.options.length);
-      if (q.format === "rank") expect((html.match(new RegExp(`name="a${i}_\\d"`, "g")) ?? []).length).toBe(q.options.length);
-    }
+    for (const q of qs) expect((html.match(new RegExp(`name="a${qs.indexOf(q)}"`, "g")) ?? []).length).toBe(6);
     expect(qs.map((q) => q.id)).not.toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
   });
 
@@ -126,25 +116,14 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const seed = quizSeed(m.id, null);
     const qs = quizQuestions(seed, null, MEMBER);
     const good = form(seed, qs);
-    const c = qs.findIndex((q, i) => i > 0 && q.format === "choice");
-    const s = qs.findIndex((q) => q.format === "slider");
-    const k = qs.findIndex((q) => q.format === "rank");
-    const t = qs.findIndex((q) => q.format === "this-or-that");
-    const bad: Record<string, string>[] = [
-      ...["6", "9", "-1", "abc", "1.5"].map((v) => ({ [`a${c}`]: v })),
-      ...(s >= 0 ? [{ [`a${s}`]: "101" }] : []),
-      { [`a${k}`]: "0,0" },
-      { [`a${k}`]: "0" },
-      { [`a${t}`]: "2" },
-    ];
-    for (const b of bad) {
-      const r = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, ...b } });
-      expect(r.status, JSON.stringify(b)).toBe(400);
+    for (const v of ["6", "9", "-1", "abc", "1.5"]) {
+      const r = await req("/quiz?lang=en", { cookie: m.cookie, form: { ...good, a3: v } });
+      expect(r.status).toBe(400);
       expect(await r.text()).toContain("needs another look");
     }
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
     // Leaving one question blank just skips it.
-    expect((await req("/quiz", { cookie: m.cookie, form: { ...good, [`a${c}`]: "" } })).status).toBe(302);
+    expect((await req("/quiz", { cookie: m.cookie, form: { ...good, a3: "" } })).status).toBe(302);
   });
 
   it("scores, saves the type, shows it, and retakes with fresh questions", async () => {

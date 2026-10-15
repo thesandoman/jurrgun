@@ -12,7 +12,7 @@
  * numbers.
  */
 import { typeOf } from "../src/vibe/archetypes";
-import { generateSession, scoreSession, RANK_PICKS, type Answer, type Answers, type Personal, type Question } from "../src/vibe/generator";
+import { generateSession, scoreSession, type Answers, type Personal, type Question } from "../src/vibe/generator";
 import { createRng, type Rng } from "../src/vibe/rng";
 import { oppositeCode, SCENARIOS, TYPE_CODES, type TypeCode } from "../src/vibe/scenarios";
 import { DISTRICTS } from "../src/lib/constants";
@@ -84,24 +84,8 @@ export function outcomeOf(questions: Question[], answers: Answers): Outcome {
   return { type: archetype as TypeCode, range: range as TypeCode[], unsureLetters: codeUnsure, consistency: result.consistency };
 }
 
-/**
- * One answer in the question's own format, from an answerer that picks an
- * option: a pick-one gets that index; a slider goes to the picked end (the
- * random answerer drops it anywhere); rank asks the same person again over
- * the answers left, three times.
- */
-export function answerOne(q: Question, who: Answerer, rng: Rng, i: number, n: number): Answer {
-  if (q.format === "slider") return who === randomAnswerer ? Math.floor(rng() * 101) : who(q, rng, i, n) === 0 ? 0 : 100;
-  if (q.format === "rank") {
-    const left = q.options.map((_, j) => j);
-    const order: number[] = [];
-    while (order.length < RANK_PICKS) {
-      const k = who({ ...q, options: left.map((j) => q.options[j]) }, rng, i, n);
-      order.push(left[k]);
-      left.splice(k, 1);
-    }
-    return order;
-  }
+/** One answer: every question is a plain pick-one (D26), so it's the answerer's pick. Kept as the one place answers are made, for the adaptive driver. */
+export function answerOne(q: Question, who: Answerer, rng: Rng, i: number, n: number): number {
   return who(q, rng, i, n);
 }
 
@@ -143,11 +127,11 @@ export type SimReport = {
   /** Distinct sessions (scenario order + options shown) among `sessions` runs. */
   distinctSessions: number;
   structure: {
-    /** Questions where some letter did not have exactly half its options on each side (a session's two sliders count as one, since they mirror each other). */
+    /** Questions where some letter did not have exactly half its options on each side. */
     unbalancedQuestions: number;
-    /** Sessions where some type was offered fewer than 6 times, or two types more than one apart (20-question sessions). */
+    /** Sessions where some type was offered outside 7 or 8 times (20-question sessions). */
     offerOutOfRange: number;
-    /** How often each type sits in each of the 6 option positions of six-answer questions, as max/min ratio across all cells. */
+    /** How often each type sits in each of the 6 option positions, as max/min ratio across all cells. */
     positionSpread: number;
   };
   random: { counts: Record<TypeCode, number>; maxDeviation: number; letterShare: Record<string, number> };
@@ -199,12 +183,9 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
 
     // Structure: letters balanced on every question, each type offered 7 or 8 times.
     const offered = new Map<string, number>();
-    // The two sliders mirror each other, so their letters balance as a pair.
-    const sliders = qs.filter((q) => q.format === "slider");
-    const groups = [...qs.filter((q) => q.format !== "slider").map((q) => q.options), ...(sliders.length ? [sliders.flatMap((q) => q.options)] : [])];
-    for (const q of qs) scenariosUsed.add(q.scenario);
-    for (const options of groups) {
-      const types = options.map((o) => o.type);
+    for (const q of qs) {
+      scenariosUsed.add(q.scenario);
+      const types = q.options.map((o) => o.type);
       for (let i = 0; i < 4; i++) {
         const plus = types.filter((t) => t[i] === TYPE_CODES[0][i]).length;
         if (plus * 2 !== types.length) {
@@ -212,15 +193,12 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
           break;
         }
       }
-    }
-    for (const q of qs) {
       q.options.forEach((o, j) => {
         offered.set(o.type, (offered.get(o.type) ?? 0) + 1);
-        if (q.options.length === 6) position.set(`${o.type}@${j}`, (position.get(`${o.type}@${j}`) ?? 0) + 1);
+        position.set(`${o.type}@${j}`, (position.get(`${o.type}@${j}`) ?? 0) + 1);
       });
     }
-    const counts = TYPE_CODES.map((c) => offered.get(c) ?? 0);
-    if (qs.length === 20 && (Math.min(...counts) < 6 || Math.max(...counts) - Math.min(...counts) > 1)) offerOut += 1;
+    if (qs.length === 20 && TYPE_CODES.some((c) => { const n = offered.get(c) ?? 0; return n < 7 || n > 8; })) offerOut += 1;
 
     // Random answerer.
     const r = outcomeOf(qs, answerAll(qs, randomAnswerer, rng));

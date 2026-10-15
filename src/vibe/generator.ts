@@ -16,26 +16,8 @@
  *     apart, to check consistency;
  *   - each question shows 3 opposite pairs of types (X and its opposite), so
  *     every letter has 3 answers on each side and no letter is favoured;
- *   - every type is offered about equally often (within one of each other);
- *   - scenarios the person has already seen are avoided where possible;
- *   - 7 or 8 questions (at most 40%) use an interactive format instead of a
- *     plain pick-one (see FORMATS below); twin questions always stay pick-one
- *     so their answers can be compared; the slider pair only in a quarter of
- *     sessions (SLIDER_SESSIONS).
- *
- * Formats, and how each one scores. Every format turns an answer into votes
- * on the answers shown (see votesFor): a weight for the letters and a credit
- * for the type votes (affinity), following quiz-blueprint 4.2.
- *   choice        pick one of six (3 opposite pairs)              1 vote
- *   this-or-that  two answers from opposite types, swipe or tap     0.75 (a forced choice says a little less)
- *   slider        two answers whose types differ in ONE letter;     that letter only,
- *                 sliders come as a mirrored pair (X / X with the   by position, with
- *                 letter flipped, then the opposites of both), so   a dead zone in the
- *                 together they still show two opposite pairs      middle (SLIDER_MARGIN)
- *   rank          first and second choice of four (2 opposite pairs)  1 and 0.5 (quiz-blueprint 4.2 C)
- *   map           six pins on a Bangkok map, one per answer         1 vote
- *   photo         six answers, each with a postcard of its place    1 vote
- *   sentence      finish a sentence with one of six chips           1 vote
+ *   - every type is offered 7 or 8 times;
+ *   - scenarios the person has already seen are avoided where possible.
  *
  * Who the member is (Personal) shapes the session without changing how types
  * are scored:
@@ -73,8 +55,6 @@ import { createRng, hashString, shuffle, type Rng } from "./rng";
 import { codePoles, oppositeCode, SCENARIOS, TYPE_CODES, type Context, type Kind, type Scenario, type ScenarioSet, type TypeCode } from "./scenarios";
 import { STYLE_DIMENSIONS, STYLE_SCENARIOS, type StyleCard, type StyleScenario, type StyleSet } from "./styles";
 import type { Art } from "./visuals";
-import { DISTRICTS } from "../lib/constants";
-import { pinsFor } from "./quiz-map";
 
 export const QUIZ_LENGTH = 20;
 export const OPTIONS_PER_QUESTION = 6;
@@ -91,37 +71,10 @@ export const CONTEXT_MIN: Record<Context, number> = { friends: 2, family: 3, dat
 
 export type Option = { label: Text; icon: string; type: TypeCode; district: string; flavour?: Pole };
 
-export const FORMATS = ["choice", "this-or-that", "slider", "rank", "map", "photo", "sentence"] as const;
-export type Format = (typeof FORMATS)[number];
-
-/** At most this many questions per session are not a plain pick-one (40% of 20). */
-export const NON_CHOICE_MAX = 8;
-const NON_CHOICE_MIN = 7;
-/** Slider positions within this of the middle (0..100 scale) count as "both equally". */
-export const SLIDER_MARGIN = 10;
-/**
- * Share of sessions that get the mirrored slider pair. A slider stands in for
- * a question that would have measured all four letters, so each one costs
- * accuracy: in the 5,000-session simulation, sliders in every session cut
- * "real person gets their own type" from 86.7% to 81.6%; in a quarter of
- * sessions the cost is about one point.
- */
-export const SLIDER_SESSIONS = 0.25;
-/** Slider positions this far from the middle or further count as a full pick. */
-const SLIDER_FULL = 40;
-/** Rank: how many to rank, and their weights, favourite first. */
-export const RANK_PICKS = 2;
-/** Rank weights, first pick first: the second choice is real but weaker (quiz-blueprint 4.2, format C). */
-export const RANK_WEIGHTS = [1, 0.5] as const;
-/** A this-or-that pick's letter weight (quiz-blueprint 4.2). */
-export const THIS_OR_THAT_WEIGHT = 0.75;
-
-/** Opposite pairs each format shows (a slider shows half of one pair and half of another). */
-const PAIRS_FOR: Record<Format, number> = { choice: 3, "this-or-that": 1, slider: 1, rank: 2, map: 3, photo: 3, sentence: 3 };
-
 export type Question = {
   id: string;
-  format: Format;
+  /** Every question is a plain pick-one (owner, D26). */
+  format: "choice";
   scenario: string;
   kind: Kind;
   context: Context;
@@ -129,12 +82,6 @@ export type Question = {
   prompt: Text;
   options: Option[];
   art: Art;
-  /** slider: the letter (0..3 of the code) its two ends differ on. Never sent to the browser. */
-  letter?: number;
-  /** map: each answer's pin, in % of the map box. */
-  pins?: { x: number; y: number }[];
-  /** sentence: the start of the sentence the chips finish. */
-  stem?: Text;
 };
 
 /** A style question (styles.ts): its answers fill a style card and carry no type code. */
@@ -158,26 +105,8 @@ export const isStyleQuestion = (q: AnyQuestion): q is StyleQuestion => q.kind ==
 export const typeQuestions = (qs: AnyQuestion[]): Question[] => qs.filter((q): q is Question => !isStyleQuestion(q));
 
 
-/**
- * What the browser gets: no type, no district key, no letter, nothing to game.
- * `areas` (map, photo) are display names of the places, which say nothing
- * about a type.
- */
-export type PublicQuestion = {
-  id: string;
-  format: Format;
-  prompt: Text;
-  options: Text[];
-  icons: string[];
-  art: Art;
-  pins?: { x: number; y: number }[];
-  areas?: Text[];
-  photos?: Art[];
-  stem?: Text;
-  pick?: number;
-  min?: number;
-  max?: number;
-};
+/** What the browser gets: no type, no district, nothing to game. */
+export type PublicQuestion = { id: string; format: "choice"; prompt: Text; options: Text[]; icons: string[]; art: Art };
 
 /**
  * Who the member is. The home district leans one or two questions toward it;
@@ -265,115 +194,37 @@ function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | und
   return chosen;
 }
 
-/** The opposite pair a code belongs to. */
-const pairOf = (code: TypeCode) => TYPE_PAIRS.find((p) => p.includes(code))!;
-/** The code with letter k flipped: BDSH, 0 → CDSH. */
-function flipLetter(code: TypeCode, k: number): TypeCode {
-  const opp = oppositeCode(code);
-  return (code.slice(0, k) + opp[k] + code.slice(k + 1)) as TypeCode;
-}
-
 /**
- * The types each question shows, as opposite pairs, so that across the
- * session every pair (and so every type) is offered about equally often.
- * Most formats show three pairs, this-or-that one. The two halves of a twin
- * pair show the same six types, so their answers can be compared. The two
- * sliders share one letter k: the first shows X and X with k flipped, the
- * second the opposites of both, so together they show two whole opposite
- * pairs and every other letter is balanced too.
+ * Three distinct opposite pairs per question, so that across the session
+ * each pair (and so each type) is offered 7 or 8 times. The two halves of a
+ * twin pair show the same six types, so their answers can be compared.
  */
-function pairsPerQuestion(rng: Rng, scenarios: Scenario[], formats: Format[]): [TypeCode, TypeCode][][] {
+function pairsPerQuestion(rng: Rng, scenarios: Scenario[]): [TypeCode, TypeCode][][] {
   const n = scenarios.length;
-  const total = formats.reduce((t, f) => t + PAIRS_FOR[f], 0);
+  const total = n * 3;
   const quota = new Map<string, number>();
   const extra = new Set(shuffle(rng, TYPE_PAIRS.map((p) => p[0])).slice(0, total % TYPE_PAIRS.length));
   for (const [b] of TYPE_PAIRS) quota.set(b, Math.floor(total / TYPE_PAIRS.length) + (extra.has(b) ? 1 : 0));
   const out: [TypeCode, TypeCode][][] = new Array(n);
-  const most = () => shuffle(rng, TYPE_PAIRS).sort((a, b) => quota.get(b[0])! - quota.get(a[0])!);
-  const take = (times: number, k: number) => {
+  const take = (times: number) => {
     // Most quota left first, random among equals.
-    const chosen = most().slice(0, k);
-    for (const [b] of chosen) quota.set(b, quota.get(b)! - times);
-    return chosen;
+    const three = shuffle(rng, TYPE_PAIRS)
+      .sort((a, b) => quota.get(b[0])! - quota.get(a[0])!)
+      .slice(0, 3);
+    for (const [b] of three) quota.set(b, quota.get(b)! - times);
+    return three;
   };
   const twinOf = (i: number) => scenarios.findIndex((s) => s.id === scenarios[i].twin);
   const done = new Set<number>();
   for (let i = 0; i < n; i++) {
     const j = twinOf(i);
     if (j < 0 || done.has(i)) continue;
-    out[i] = out[j] = take(2, 3);
+    out[i] = out[j] = take(2);
     done.add(i).add(j);
   }
-  const sliders = formats.flatMap((f, i) => (f === "slider" && !done.has(i) ? [i] : []));
-  for (let s = 0; s + 1 < sliders.length; s += 2) {
-    const k = Math.floor(rng() * 4);
-    const p = most()[0];
-    const x = p[0];
-    const y = flipLetter(x, k);
-    const q = pairOf(y);
-    quota.set(p[0], quota.get(p[0])! - 1);
-    quota.set(q[0], quota.get(q[0])! - 1);
-    out[sliders[s]] = [[x, y]];
-    out[sliders[s + 1]] = [[oppositeCode(x), oppositeCode(y)]];
-    done.add(sliders[s]).add(sliders[s + 1]);
-  }
-  // Three-pair questions next; one-pair questions last, where they fill whatever quota is left.
-  const rest = shuffle(rng, Array.from({ length: n }, (_, k) => k)).filter((i) => !done.has(i));
-  for (const i of [...rest].sort((a, b) => PAIRS_FOR[formats[b]] - PAIRS_FOR[formats[a]])) out[i] = take(1, PAIRS_FOR[formats[i]]);
+  for (const i of shuffle(rng, Array.from({ length: n }, (_, k) => k))) if (!done.has(i)) out[i] = take(1);
   return out;
 }
-
-/**
- * Which questions use which format: two mirrored sliders and one rank on core
- * scenarios (their votes are partial, and flavours need whole picks), then one
- * each of this-or-that, map, photo and sentence, and sometimes one more of
- * those: 7 or 8 in all (35 to 40%). Never the first question (it teaches tap-to-pick) and never a
- * twin. Spread out where possible, so two interactive questions are rarely
- * back to back.
- */
-function assignFormats(rng: Rng, scenarios: Scenario[], home?: string | null): Format[] {
-  const formats: Format[] = scenarios.map(() => "choice");
-  const inSession = new Set(scenarios.map((s) => s.id));
-  const free = (i: number) => i > 0 && formats[i] === "choice" && !(scenarios[i].twin && inSession.has(scenarios[i].twin!));
-  const crowd = (i: number) => (formats[i - 1] && formats[i - 1] !== "choice" ? 1 : 0) + (formats[i + 1] && formats[i + 1] !== "choice" ? 1 : 0);
-  // Sliders can't take in the home pair (they keep their mirrored pair), so they go elsewhere where they can.
-  const isHome = nearHome(home);
-  const place = (f: Format, coreOnly: boolean) => {
-    const spots = shuffle(rng, scenarios.map((_, i) => i)).filter((i) => free(i) && (!coreOnly || scenarios[i].kind === "core"));
-    const cost = (i: number) => crowd(i) + (f === "slider" && isHome(scenarios[i]) ? 10 : 0);
-    const best = spots.sort((a, b) => cost(a) - cost(b))[0];
-    if (best !== undefined) formats[best] = f;
-    return best !== undefined;
-  };
-  // Sliders only in mirrored pairs, and only in some sessions: place both or neither.
-  if (rng() < SLIDER_SESSIONS && place("slider", true) && !place("slider", true)) formats[formats.indexOf("slider")] = "choice";
-  place("rank", true);
-  const light: Format[] = ["this-or-that", "map", "photo", "sentence"];
-  for (const f of light) place(f, false);
-  // Fill up to 7 or 8 with the formats that score like a pick-one.
-  const target = NON_CHOICE_MIN + Math.floor(rng() * (NON_CHOICE_MAX - NON_CHOICE_MIN + 1));
-  for (const f of shuffle(rng, [...EXTRA, ...EXTRA])) {
-    if (formats.filter((x) => x !== "choice").length >= target) break;
-    place(f, false);
-  }
-  return formats;
-}
-
-/** Formats that top a session up to 7 or 8: they score exactly like a pick-one, so they cost no accuracy. */
-const EXTRA: Format[] = ["map", "photo", "sentence"];
-
-/** Sentence starts for "finish the sentence": each fits any answer after it. */
-const STEMS: Text[] = [
-  { en: "If I'm honest, it's this:", th: "ถ้าพูดตรง ๆ ก็คือ" },
-  { en: "Knowing me, I'd go for:", th: "รู้จักฉันดีก็รู้ว่าฉันเลือก" },
-  { en: "The most me answer is:", th: "คำตอบที่เป็นตัวฉันที่สุดคือ" },
-  { en: "My friends would bet on:", th: "เพื่อน ๆ คงเดาถูกว่าฉันจะ" },
-];
-
-const districtText = (key: string): Text => {
-  const d = DISTRICTS.find((x) => x.value === key);
-  return d ? { en: d.en, th: d.th } : { en: key, th: key };
-};
 
 /** Order with twins far apart and the same context (or flavour kind) never back to back where avoidable. */
 function orderCost(order: Scenario[]): number {
@@ -417,7 +268,7 @@ function wordingFor(sc: Scenario, p?: Personal): { prompt: Text; icon: string; a
   };
 }
 
-function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], format: Format, p?: Personal): Question {
+function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], p?: Personal): Question {
   const codes = shuffle(rng, pairs.flat());
   const en = (x: string) => (p?.explainLocal ? explainLocal(x) : x);
   const words = wordingFor(sc, p);
@@ -427,15 +278,9 @@ function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], fo
     const label = words.answer(code);
     return { label: { en: en(label.en), th: label.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}) };
   });
-  // Pick-one questions keep the ids they always had; other formats get their own.
-  const key = format === "choice" ? codes.join("") : `${format}:${codes.join("")}`;
-  const extra: Partial<Question> = {};
-  if (format === "slider") extra.letter = [0, 1, 2, 3].find((k) => codes[0][k] !== codes[1][k]);
-  if (format === "map") extra.pins = pinsFor(options.map((o) => o.district));
-  if (format === "sentence") extra.stem = STEMS[Math.floor(rng() * STEMS.length)];
   return {
-    id: `${sc.id}.${hashString(key).toString(36)}`,
-    format,
+    id: `${sc.id}.${hashString(codes.join("")).toString(36)}`,
+    format: "choice",
     scenario: sc.id,
     kind: sc.kind,
     context: sc.context,
@@ -443,7 +288,6 @@ function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], fo
     prompt: { en: (p?.explainLocal && EXPAT_PROMPTS[sc.id]) || en(told.en), th: told.th },
     options,
     art: { tone: sc.tone, icons: [words.icon], seed: hashString(sc.id + codes.join("")) },
-    ...extra,
   };
 }
 
@@ -486,28 +330,26 @@ export function generateSession(options: SessionOptions): Question[] {
   const flavour = (kind: Kind) =>
     preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && offered(s, p)), seenScenarios, undefined, options.month).slice(0, FLAVOUR_ITEMS);
   const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, p, options.month), ...flavour("rhythm"), ...flavour("plan")]);
-  const formats = assignFormats(rng, scenarios, p?.district);
-  const pairs = pairsPerQuestion(rng, scenarios, formats);
+  const pairs = pairsPerQuestion(rng, scenarios);
   // Home district: in up to two questions, bring in the pair whose answer is set near home.
   // The pair is traded with another question, not just swapped in, so every type is
-  // still offered 7 or 8 times (test/quiz-balance.test.ts checks this). Sliders keep
-  // their mirrored pair, so they never trade.
+  // still offered 7 or 8 times (test/quiz-balance.test.ts checks this).
   const home = options.personal?.district;
   if (home) {
     let swapped = 0;
     for (let i = 0; i < scenarios.length && swapped < 2; i++) {
       const code = TYPE_CODES.find((c) => scenarios[i].answers[c].district === home);
-      if (!code || scenarios[i].twin || formats[i] === "slider" || pairs[i].some((p) => p.includes(code))) continue;
+      if (!code || scenarios[i].twin || pairs[i].some((p) => p.includes(code))) continue;
       const want = TYPE_PAIRS.find((p) => p.includes(code))!;
       const give = pairs[i][0];
-      const j = pairs.findIndex((ps, k) => k !== i && !scenarios[k].twin && formats[k] !== "slider" && ps.includes(want) && !ps.includes(give));
+      const j = pairs.findIndex((ps, k) => k !== i && !scenarios[k].twin && ps.includes(want) && !ps.includes(give));
       if (j < 0) continue;
       pairs[j] = pairs[j].map((p) => (p === want ? give : p));
       pairs[i] = [want, ...pairs[i].slice(1)];
       swapped += 1;
     }
   }
-  return scenarios.map((sc, i) => buildQuestion(rng, sc, pairs[i], formats[i], p));
+  return scenarios.map((sc, i) => buildQuestion(rng, sc, pairs[i], p));
 }
 
 /**
@@ -534,38 +376,14 @@ export function styleOf(questions: AnyQuestion[], answers: Answers, set: StyleSe
   return out;
 }
 
-/** A postcard per answer for photo cards: the answer's icon over its area, in the scenario's light. */
-export function photoArts(q: Question): Art[] {
-  return q.options.map((o) => ({ tone: q.art.tone, icons: [o.icon], caption: districtText(o.district), seed: hashString(q.scenario + o.label.en) }));
-}
-
 export function toPublic(q: AnyQuestion): PublicQuestion {
-  const base: PublicQuestion = { id: q.id, format: q.format, prompt: q.prompt, options: q.options.map((o) => ({ en: o.label.en, th: o.label.th })), icons: q.options.map((o) => o.icon), art: q.art };
-  if (isStyleQuestion(q)) return base;
-  switch (q.format) {
-    case "slider":
-      return { ...base, min: 0, max: 100 };
-    case "rank":
-      return { ...base, pick: RANK_PICKS };
-    case "map":
-      return { ...base, pins: q.pins, areas: q.options.map((o) => districtText(o.district)) };
-    case "photo":
-      return { ...base, photos: photoArts(q).map((a) => ({ ...a })), areas: q.options.map((o) => districtText(o.district)) };
-    case "sentence":
-      return { ...base, stem: q.stem };
-    default:
-      return base;
-  }
+  return { id: q.id, format: "choice", prompt: q.prompt, options: q.options.map((o) => ({ en: o.label.en, th: o.label.th })), icons: q.options.map((o) => o.icon), art: q.art };
 }
 
 // ---------------------------------------------------------------- scoring --
 
-/**
- * choice, this-or-that, map, photo, sentence: the index of the picked option.
- * slider: 0..100, from the first option (0) to the second (100).
- * rank: RANK_PICKS distinct option indices, favourite first.
- */
-export type Answer = number | number[];
+/** The index of the picked option. */
+export type Answer = number;
 export type Answers = Record<string, Answer>;
 
 export type Strength = "strong" | "leans" | "balanced";
@@ -590,49 +408,12 @@ export type VibeResult = {
 
 const isInt = (x: unknown): x is number => typeof x === "number" && Number.isInteger(x);
 
-/** One answer's vote: `share` is its weight on the letters (1 for a pick-one), `credit` its weight toward the type vote (0..1). */
-export type Vote = { option: Option; share: number; credit: number };
-
-/** −1..+1: how far a slider position leans to the second option, 0 inside the margin. */
-export function sliderLean(value: number): number {
-  const d = value - 50;
-  const a = Math.abs(d);
-  if (a <= SLIDER_MARGIN) return 0;
-  return Math.sign(d) * Math.min(1, (a - SLIDER_MARGIN) / (SLIDER_FULL - SLIDER_MARGIN));
-}
-
-/** The votes an answer casts, or null when it is not a valid answer to the question. */
-export function votesFor(q: Question, answer: unknown): Vote[] | null {
-  switch (q.format) {
-    case "slider": {
-      if (!isInt(answer) || answer < 0 || answer > 100 || q.options.length !== 2) return null;
-      const r = (1 + sliderLean(answer)) / 2;
-      return [
-        { option: q.options[0], share: 1 - r, credit: 1 - r },
-        { option: q.options[1], share: r, credit: r },
-      ];
-    }
-    case "rank": {
-      if (!Array.isArray(answer) || answer.length !== RANK_PICKS) return null;
-      if (!answer.every((j) => isInt(j) && j >= 0 && j < q.options.length) || new Set(answer).size !== answer.length) return null;
-      return answer.map((j, k) => ({ option: q.options[j], share: RANK_WEIGHTS[k], credit: RANK_WEIGHTS[k] }));
-    }
-    default: {
-      const o = pickedOption(q, answer);
-      // Two full opposites force a choice even when neither fits, so this-or-that says a little less (quiz-blueprint 4.2).
-      return o ? [{ option: o, share: q.format === "this-or-that" ? THIS_OR_THAT_WEIGHT : 1, credit: 1 }] : null;
-    }
-  }
-}
-
-/** The picked option, or null when the answer is not valid for the question. */
 export function pickedOption<O>(q: { options: O[] }, answer: unknown): O | null {
   return isInt(answer) && answer >= 0 && answer < q.options.length ? q.options[answer] : null;
 }
 
 /** 1 for a valid answer, null otherwise (kept for form validation). */
-export function itemScore(q: { options: unknown[]; format?: string }, answer: unknown): number | null {
-  if (q.format === "slider" || q.format === "rank") return votesFor(q as Question, answer) ? 1 : null;
+export function itemScore(q: { options: unknown[] }, answer: unknown): number | null {
   return pickedOption(q, answer) ? 1 : null;
 }
 
@@ -665,24 +446,19 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
   const pickByScenario = new Map<string, TypeCode>();
   let answered = 0;
   for (const q of questions) {
-    const votes = votesFor(q, answers[q.id]);
-    if (!votes) continue;
+    const o = pickedOption(q, answers[q.id]);
+    if (!o) continue;
     answered += 1;
-    pickByScenario.set(q.scenario, votes.reduce((a, b) => (b.share > a.share ? b : a)).option.type);
+    pickByScenario.set(q.scenario, o.type);
     for (const opt of q.options) offered[opt.type] = (offered[opt.type] ?? 0) + 1;
-    for (const { option: o, share, credit } of votes) {
-      picked[o.type] = (picked[o.type] ?? 0) + credit;
-      // A slider's two ends differ in one letter only: that letter is all it measures.
-      codePoles(o.type).forEach(({ category, pole }, k) => {
-        if (q.format === "slider" && k !== q.letter) return;
-        n[category] += share;
-        if (pole === 1) plus[category] += share;
-      });
-      // Flavours count whole picks (only pick-one style formats reach rhythm and plan), so "both agreed" stays two votes.
-      if (o.flavour && q.kind !== "core") {
-        n[q.kind] += credit;
-        if (o.flavour === 1) plus[q.kind] += credit;
-      }
+    picked[o.type] = (picked[o.type] ?? 0) + 1;
+    for (const { category, pole } of codePoles(o.type)) {
+      n[category] += 1;
+      if (pole === 1) plus[category] += 1;
+    }
+    if (o.flavour && q.kind !== "core") {
+      n[q.kind] += 1;
+      if (o.flavour === 1) plus[q.kind] += 1;
     }
   }
   // Twins: letters on which the two answers of a pair disagreed.

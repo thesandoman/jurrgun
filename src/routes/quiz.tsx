@@ -29,7 +29,6 @@ import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
 import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, POLES } from "../vibe/content";
 import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
-import { AUTO_FORMATS, FormatField, QUIZ_FORMATS_CSS, QUIZ_FORMATS_JS, formatHint } from "../ui/quiz-formats";
 import {
   ARCHETYPES,
   ARCHETYPE_KEYS,
@@ -64,9 +63,7 @@ import {
   strengthOf,
   styleOf,
   typeQuestions,
-  RANK_PICKS,
   type AnyQuestion,
-  type Answer,
   type Answers,
   type Personal,
 } from "../vibe/generator";
@@ -165,7 +162,6 @@ export function isArchetype(key: string): key is ArchetypeKey {
 
 function AnswerField(props: { v: View; q: AnyQuestion; i: number }) {
   const { lang } = props.v;
-  if (props.q.format !== "choice") return <FormatField v={props.v} q={props.q} i={props.i} />;
   return (
     <div class="answers answers-six">
       {props.q.options.map((o, j) => (
@@ -242,7 +238,7 @@ export function QuizFlow(props: {
         ) : undefined
       }
     >
-      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS + QUIZ_FORMATS_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS }} />
       <FlowStep
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
@@ -250,62 +246,39 @@ export function QuizFlow(props: {
         cta={t("เริ่มเลย", "Start")}
       >
         <div class="tiles" aria-hidden="true">
-          <span class="tile"><b>👆</b>{t(`${n} ข้อ แตะ ปัด เลื่อน`, `${n} questions: tap, swipe, slide`)}</span>
+          <span class="tile"><b>👆</b>{t(`${n} ข้อ แตะเลือก`, `${n} questions, tap to pick`)}</span>
           <span class="tile"><b>⏱️</b>{t("ราว 3 นาที", "About 3 min")}</span>
           <span class="tile"><b>🔒</b>{t("เป็นความลับ", "Private")}</span>
         </div>
       </FlowStep>
-      {props.questions.map((q, i) => {
-        const hint = formatHint(props.v, q.format);
-        return (
-          <FlowStep title={L(lang, q.prompt)} auto={AUTO_FORMATS.has(q.format)} class={`q q-${q.format}`}>
-            {q.format === "map" || q.format === "photo" ? null : <QuestionArt art={q.art} lang={lang} />}
-            <StyleLabel v={props.v} q={q} />
-            {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ตรงกับคุณที่สุด", "Tap the answer that's most you")}</span> : null}
-            <span class="muted q-count">
-              {i + 1} / {n}
-            </span>
-            {hint ? <span class="qf-hint">{hint}</span> : null}
-            <AnswerField v={props.v} q={q} i={i} />
-          </FlowStep>
-        );
-      })}
-      {/* After the steps, so the widgets it sets up are already parsed. */}
-      <script dangerouslySetInnerHTML={{ __html: QUIZ_FORMATS_JS }} />
+      {props.questions.map((q, i) => (
+        <FlowStep title={L(lang, q.prompt)} auto class="q q-choice">
+          <QuestionArt art={q.art} lang={lang} />
+          <StyleLabel v={props.v} q={q} />
+          {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ตรงกับคุณที่สุด", "Tap the answer that's most you")}</span> : null}
+          <span class="muted q-count">
+            {i + 1} / {n}
+          </span>
+          <AnswerField v={props.v} q={q} i={i} />
+        </FlowStep>
+      ))}
     </Flow>
   );
 }
 
 /**
- * Turns the posted form into answers. Question i posts a{i}: the option index,
- * the slider position (0..100), or for rank "j,j,j" (favourite first; without
- * JavaScript, rank posts a{i}_{j} = 1..3 per option instead). A question left
- * blank is just unanswered; anything else that isn't a valid answer goes into
- * `invalid` so the route can answer 400.
+ * Turns the posted form into answers: question i posts a{i} = option index.
+ * A question left blank is just unanswered; anything else that isn't a valid
+ * option goes into `invalid` so the route can answer 400.
  */
 export function parseAnswers(body: Record<string, unknown>, questions: AnyQuestion[]): { answers: Answers; invalid: number[] } {
   const answers: Answers = {};
   const invalid: number[] = [];
   questions.forEach((q, i) => {
     const raw = str(body[`a${i}`]);
-    let answer: Answer | undefined;
-    if (q.format === "rank") {
-      const parts = q.options.map((_, j) => str(body[`a${i}_${j}`]));
-      if (raw !== "") {
-        if (/^\d(,\d){0,9}$/.test(raw)) answer = raw.split(",").map(Number);
-      } else {
-        if (parts.every((p) => p === "")) return;
-        const order: number[] = [];
-        parts.forEach((p, j) => {
-          if (/^\d$/.test(p) && Number(p) >= 1 && Number(p) <= RANK_PICKS) order[Number(p) - 1] = order[Number(p) - 1] === undefined ? j : -1;
-        });
-        if (parts.every((p) => p === "" || /^\d$/.test(p)) && parts.filter((p) => p !== "").length === order.length) answer = [...order];
-      }
-    } else {
-      if (raw === "") return;
-      if (/^\d{1,3}$/.test(raw)) answer = Number(raw);
-    }
-    if (answer !== undefined && itemScore(q, answer) !== null) answers[q.id] = answer;
+    if (raw === "") return;
+    const answer = /^\d{1,2}$/.test(raw) ? Number(raw) : NaN;
+    if (itemScore(q, answer) !== null) answers[q.id] = answer;
     else invalid.push(i);
   });
   return { answers, invalid };
@@ -686,7 +659,7 @@ quizRoutes.post("/quiz", async (c) => {
       bad !== undefined
         ? v.t(
             `ข้อ ${bad + 1} ต้องเลือกจากคำตอบที่มีให้ ลองดูอีกครั้ง`,
-            `Question ${bad + 1} needs another look: please pick from the answers given.`,
+            `Question ${bad + 1} needs another look: please pick one of the answers.`,
           )
         : v.t(`ตอบอย่างน้อย ${MIN_ANSWERED} ข้อ`, `Please answer at least ${MIN_ANSWERED} questions.`);
     return page(
