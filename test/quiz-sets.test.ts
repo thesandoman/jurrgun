@@ -12,6 +12,7 @@ import {
   QUIZ_LENGTH,
   generateSession,
   generateStyleQuestions,
+  offered,
   scoreSession,
   styleOf,
   type Answers,
@@ -40,8 +41,8 @@ describe("who sees which set", () => {
     for (let i = 0; i < 30; i++) {
       const { styles } = build(`d${i}`, { openToMore: true });
       expect(styles).toHaveLength(DATE_STYLE_ITEMS);
-      expect(styles.every((q) => q.set === "date")).toBe(true);
-      expect(new Set(styles.map((q) => q.dimension))).toEqual(new Set(Object.keys(STYLE_DIMENSIONS.date)));
+      expect(styles.every((q) => q.set === "open-to-more")).toBe(true);
+      expect(new Set(styles.map((q) => q.dimension))).toEqual(new Set(Object.keys(STYLE_DIMENSIONS["open-to-more"])));
     }
   });
 
@@ -49,7 +50,7 @@ describe("who sees which set", () => {
     for (let i = 0; i < 30; i++) {
       const { typed, styles } = build(`h${i}`, { tableHost: true });
       expect(styles).toHaveLength(HOST_STYLE_ITEMS);
-      expect(styles.every((q) => q.set === "host")).toBe(true);
+      expect(styles.every((q) => q.set === "table-host")).toBe(true);
       expect(new Set(styles.map((q) => q.dimension)).size).toBe(HOST_STYLE_ITEMS);
       expect(typed.some((q) => q.context === "date")).toBe(false);
     }
@@ -57,7 +58,7 @@ describe("who sees which set", () => {
 
   it("an opted-in Table Host gets both sets, dating first", () => {
     const { styles } = build("both", { openToMore: true, tableHost: true });
-    expect(styles.map((q) => q.set)).toEqual([...Array(DATE_STYLE_ITEMS).fill("date"), ...Array(HOST_STYLE_ITEMS).fill("host")]);
+    expect(styles.map((q) => q.set)).toEqual([...Array(DATE_STYLE_ITEMS).fill("open-to-more"), ...Array(HOST_STYLE_ITEMS).fill("table-host")]);
   });
 
   it("personalOf reads the profile: romance only when single and switched on, host only for circle_head", () => {
@@ -66,7 +67,7 @@ describe("who sees which set", () => {
     expect(personalOf({ ...base, romanceOn: true })?.openToMore).toBe(true);
     expect(personalOf({ ...base, romanceOn: true, relationship: "married" })?.openToMore).toBe(false);
     expect(personalOf(base, "circle_head")?.tableHost).toBe(true);
-    expect(personalOf(base, "host")?.tableHost).toBe(false);
+    expect(personalOf(base, "table-host")?.tableHost).toBe(false);
     expect(personalOf({ ...base, newcomer: true })?.segment).toBe("newcomer");
     expect(personalOf({ ...base, bio: { story: "expat" } })?.segment).toBe("international");
     expect(personalOf(null)).toBeUndefined();
@@ -91,13 +92,13 @@ describe("style sets never change the type", () => {
   it("styleOf turns picks into a card of known values", () => {
     const { styles } = build("card", { openToMore: true, tableHost: true });
     const answers: Answers = Object.fromEntries(styles.map((q) => [q.id, 0]));
-    const date = styleOf(styles, answers, "date");
-    const host = styleOf(styles, answers, "host");
+    const date = styleOf(styles, answers, "open-to-more");
+    const host = styleOf(styles, answers, "table-host");
     expect(Object.keys(date)).toHaveLength(DATE_STYLE_ITEMS);
     expect(Object.keys(host)).toHaveLength(HOST_STYLE_ITEMS);
-    for (const [d, v] of Object.entries(date)) expect(isStyleValue("date", d, v!)).toBe(true);
-    for (const [d, v] of Object.entries(host)) expect(isStyleValue("host", d, v!)).toBe(true);
-    expect(styleOf(styles, {}, "date")).toEqual({});
+    for (const [d, v] of Object.entries(date)) expect(isStyleValue("open-to-more", d, v!)).toBe(true);
+    for (const [d, v] of Object.entries(host)) expect(isStyleValue("table-host", d, v!)).toBe(true);
+    expect(styleOf(styles, {}, "open-to-more")).toEqual({});
   });
 
   it("the dating card is romance data: kept in the bio, cleared with romance mode; the host card stays", () => {
@@ -162,8 +163,8 @@ describe("style banks", () => {
   const PARTICLES = /(ครับ|ค่ะ|แฟนหนุ่ม|แฟนสาว|สามี|ภรรยา|เดท|แชท)/;
 
   it("about 20 date scenarios and about 10 host scenarios, ids unique", () => {
-    expect(STYLE_SCENARIOS.filter((s) => s.set === "date")).toHaveLength(20);
-    expect(STYLE_SCENARIOS.filter((s) => s.set === "host")).toHaveLength(10);
+    expect(STYLE_SCENARIOS.filter((s) => s.set === "open-to-more")).toHaveLength(20);
+    expect(STYLE_SCENARIOS.filter((s) => s.set === "table-host")).toHaveLength(10);
     const ids = [...STYLE_SCENARIOS.map((s) => s.id), ...SCENARIOS.map((s) => s.id)];
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -174,7 +175,7 @@ describe("style banks", () => {
       for (const a of s.answers) expect(isStyleValue(s.set, s.dimension, a.value), `${s.id} ${a.value}`).toBe(true);
       expect(new Set(s.answers.map((a) => a.value)).size, s.id).toBe(s.answers.length);
     }
-    for (const set of ["date", "host"] as const)
+    for (const set of ["open-to-more", "table-host"] as const)
       for (const d of Object.keys(STYLE_DIMENSIONS[set])) expect(STYLE_SCENARIOS.some((s) => s.set === set && s.dimension === d), d).toBe(true);
   });
 
@@ -247,5 +248,36 @@ describe("language flavour (Task 10)", () => {
       expect(/[–—]/.test(en)).toBe(false);
     }
     for (const [, gloss] of GLOSSES) expect(/[–—]/.test(gloss)).toBe(false);
+  });
+});
+
+describe("blueprint sets and audiences (quiz-blueprint 2.3, 2.3b)", () => {
+  it("every date moment is in the open-to-more set, and only opted-in members are offered it", () => {
+    for (const s of SCENARIOS.filter((x) => x.context === "date")) expect(s.set, s.id).toBe("open-to-more");
+    const date = { context: "date" as const, set: "open-to-more" as const };
+    expect(offered(date, undefined)).toBe(false);
+    expect(offered(date, { tableHost: true })).toBe(false);
+    expect(offered(date, { openToMore: true })).toBe(true);
+    // A date moment that forgot its set still never reaches the core quiz.
+    expect(offered({ context: "date" }, {})).toBe(false);
+  });
+
+  it("table-host scenarios only for Table Hosts; audience scenarios only for that Bangkok story", () => {
+    const host = { context: "meetup" as const, set: "table-host" as const };
+    expect(offered(host, { openToMore: true })).toBe(false);
+    expect(offered(host, { tableHost: true })).toBe(true);
+    const forNew = { context: "solo" as const, audience: ["newcomer" as const, "international" as const] };
+    expect(offered(forNew, undefined)).toBe(false);
+    expect(offered(forNew, { segment: "local" })).toBe(false);
+    expect(offered(forNew, { segment: "newcomer" })).toBe(true);
+    expect(offered(forNew, { segment: "international" })).toBe(true);
+    expect(offered({ context: "friends" }, undefined)).toBe(true);
+  });
+
+  it("no session offers a scenario outside the member's sets or story", () => {
+    const people: Personal[] = [{}, { openToMore: true }, { tableHost: true }, { segment: "newcomer" }, { segment: "international", openToMore: true }];
+    for (let i = 0; i < 40; i++)
+      for (const p of people)
+        for (const q of generateSession({ seed: `b${i}`, personal: p })) expect(offered(SCENARIOS.find((s) => s.id === q.scenario)!, p), q.scenario).toBe(true);
   });
 });

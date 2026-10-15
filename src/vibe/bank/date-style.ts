@@ -12,7 +12,7 @@ export const DATE_STYLE: StyleScenario[] = [
   // ------------------------------------------------------------ place --
   {
     id: "ds-place-saturday",
-    set: "date",
+    set: "open-to-more",
     dimension: "place",
     prompt: { en: "You matched on Thursday. Where would you like to meet on Saturday afternoon?", th: "แมตช์กันวันพฤหัส บ่ายวันเสาร์อยากนัดเจอที่ไหน?" },
     icon: "💘",
@@ -26,7 +26,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-place-hour",
-    set: "date",
+    set: "open-to-more",
     dimension: "place",
     prompt: { en: "Just one hour free before dinner with family. A quick first meet:", th: "ว่างแค่ชั่วโมงเดียวก่อนกินข้าวกับที่บ้าน นัดเจอกันครั้งแรกสั้น ๆ…" },
     icon: "⏳",
@@ -40,7 +40,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-place-rain",
-    set: "date",
+    set: "open-to-more",
     dimension: "place",
     prompt: { en: "Rain all afternoon on the day of your first date. Where to?", th: "ฝนตกทั้งบ่ายในวันเดตแรก ไปไหนดี?" },
     icon: "🌧️",
@@ -54,7 +54,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-place-new",
-    set: "date",
+    set: "open-to-more",
     dimension: "place",
     prompt: { en: "They ask you to choose the spot. You pick:", th: "เขาให้คุณเป็นคนเลือกที่ คุณเลือก…" },
     icon: "📍",
@@ -68,7 +68,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-place-morning",
-    set: "date",
+    set: "open-to-more",
     dimension: "place",
     prompt: { en: "A Sunday morning first date. What sounds best?", th: "เดตแรกเช้าวันอาทิตย์ แบบไหนฟังดีที่สุด?" },
     icon: "🌤️",
@@ -83,7 +83,7 @@ export const DATE_STYLE: StyleScenario[] = [
   // ------------------------------------------------------------- pace --
   {
     id: "ds-pace-met",
-    set: "date",
+    set: "open-to-more",
     dimension: "pace",
     prompt: { en: "You clicked with someone at a Table. What feels right next?", th: "คุยถูกคอกับใครสักคนที่โต๊ะ ต่อจากนี้แบบไหนดี?" },
     icon: "✨",
@@ -96,7 +96,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-pace-chat",
-    set: "date",
+    set: "open-to-more",
     dimension: "pace",
     prompt: { en: "The chat is going well. When do you want to meet?", th: "แชตกันไปได้ดี อยากเจอตัวจริงเมื่อไร?" },
     icon: "💬",
@@ -109,7 +109,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-pace-second",
-    set: "date",
+    set: "open-to-more",
     dimension: "pace",
     prompt: { en: "A nice first coffee. How soon is the second?", th: "กาแฟครั้งแรกดีมาก ครั้งที่สองเร็วแค่ไหนดี?" },
     icon: "🔁",
@@ -122,7 +122,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-pace-new",
-    set: "date",
+    set: "open-to-more",
     dimension: "pace",
     prompt: { en: "Dating again after a long break. You'd like to:", th: "กลับมาเดตอีกครั้งหลังพักไปนาน คุณอยาก…" },
     icon: "🌱",
@@ -135,7 +135,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-pace-busy",
-    set: "date",
+    set: "open-to-more",
     dimension: "pace",
     prompt: { en: "A busy month at work, and someone you like asks to meet:", th: "เดือนนี้งานยุ่ง แล้วคนที่คุณชอบชวนเจอ…" },
     icon: "💼",
@@ -149,7 +149,7 @@ export const DATE_STYLE: StyleScenario[] = [
   // ------------------------------------------------------------- ease --
   {
     id: "ds-ease-nerves",
-    set: "date",
+    set: "open-to-more",
     dimension: "ease",
     prompt: { en: "First-date nerves. What helps most?", th: "ตื่นเต้นก่อนเดตแรก อะไรช่วยได้มากที่สุด?" },
     icon: "🫶",
@@ -163,7 +163,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ease-quiet",
-    set: "date",
+    set: "open-to-more",
     dimension: "ease",
     prompt: { en: "A quiet moment in the conversation. You feel fine when:", th: "บทสนทนาเงียบไปแป๊บหนึ่ง คุณสบายใจถ้า…" },
     icon: "🤫",
@@ -177,7 +177,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ease-safe",
-    set: "date",
+    set: "open-to-more",
     dimension: "ease",
     prompt: { en: "Meeting someone from the app for the first time. The must-have:", th: "เจอคนจากแอปครั้งแรก สิ่งที่ต้องมี…" },
     icon: "🛡️",
@@ -191,7 +191,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ease-best",
-    set: "date",
+    set: "open-to-more",
     dimension: "ease",
     prompt: { en: "Your best first date ever felt easy because:", th: "เดตแรกที่ดีที่สุดรู้สึกสบายเพราะ…" },
     icon: "🌈",
@@ -205,7 +205,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ease-late",
-    set: "date",
+    set: "open-to-more",
     dimension: "ease",
     prompt: { en: "They're running 15 minutes late. What keeps you relaxed?", th: "เขามาสาย 15 นาที อะไรทำให้คุณยังใจเย็น?" },
     icon: "⌛",
@@ -220,7 +220,7 @@ export const DATE_STYLE: StyleScenario[] = [
   // -------------------------------------------------------------- ask --
   {
     id: "ds-ask-best",
-    set: "date",
+    set: "open-to-more",
     dimension: "ask",
     prompt: { en: "Someone wants to ask you out. The best way:", th: "มีคนอยากชวนคุณไปเดต แบบไหนดีที่สุด?" },
     icon: "💌",
@@ -234,7 +234,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ask-message",
-    set: "date",
+    set: "open-to-more",
     dimension: "ask",
     prompt: { en: "Which message would make you smile?", th: "ข้อความแบบไหนทำให้คุณยิ้ม?" },
     icon: "📱",
@@ -248,7 +248,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ask-you",
-    set: "date",
+    set: "open-to-more",
     dimension: "ask",
     prompt: { en: "You're the one asking. You'd most likely:", th: "ถ้าคุณเป็นคนชวน คุณน่าจะ…" },
     icon: "🙋",
@@ -262,7 +262,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ask-unsure",
-    set: "date",
+    set: "open-to-more",
     dimension: "ask",
     prompt: { en: "You like someone but you're not sure they feel the same. You'd want them to:", th: "ชอบใครสักคน แต่ไม่แน่ใจว่าเขาคิดเหมือนกันไหม คุณอยากให้เขา…" },
     icon: "🤔",
@@ -276,7 +276,7 @@ export const DATE_STYLE: StyleScenario[] = [
   },
   {
     id: "ds-ask-no",
-    set: "date",
+    set: "open-to-more",
     dimension: "ask",
     prompt: { en: "Saying no is easiest for you when they ask:", th: "คุณปฏิเสธได้ง่ายที่สุดเมื่อเขาชวนแบบ…" },
     icon: "🙂",

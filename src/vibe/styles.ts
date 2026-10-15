@@ -3,21 +3,23 @@
  * they fit. They never move the 4-letter type: their answers carry a style
  * trait, not a type code, and scoreSession skips them.
  *
- *  - date: only for members who opted into 💘 Open to something more. Four
+ *  - open-to-more: only for members who opted into 💘 Open to something more. Four
  *    questions, one per dimension, give the "how you date" card on the dating
  *    profile (src/ui/profile-card.tsx).
- *  - host: only for Table Hosts. Two questions give a "how you host" line.
+ *  - table-host: only for Table Hosts. Two questions give a "how you host" line.
  *
  * Every scenario belongs to one dimension and every answer is one value of
  * it, so a picked answer is that dimension's value. Bilingual, gender
  * neutral, no em or en dashes (same rules as bank/WRITING.md).
  */
 import type { Text } from "./content";
+import type { ScenarioSet } from "./scenarios";
 import type { Tone } from "./visuals";
 import { DATE_STYLE } from "./bank/date-style";
 import { HOST_STYLE } from "./bank/host-style";
 
-export type StyleSet = "date" | "host";
+/** The same set names as the type scenarios (scenarios.ts ScenarioSet, quiz-blueprint 2.3b). */
+export type StyleSet = ScenarioSet;
 
 const t = (en: string, th: string): Text => ({ en, th });
 
@@ -26,7 +28,7 @@ type Dimension = { title: Text; values: Record<string, Value> };
 
 /** The dimensions of each set and the card wording for each value. */
 export const STYLE_DIMENSIONS = {
-  date: {
+  "open-to-more": {
     place: {
       title: t("First date at", "เดตแรกที่"),
       values: {
@@ -63,7 +65,7 @@ export const STYLE_DIMENSIONS = {
       },
     },
   },
-  host: {
+  "table-host": {
     welcome: {
       title: t("Opens a Table with", "เปิดโต๊ะด้วย"),
       values: {
@@ -94,8 +96,8 @@ export const STYLE_DIMENSIONS = {
   },
 } as const satisfies Record<StyleSet, Record<string, Dimension>>;
 
-export type DateDimension = keyof typeof STYLE_DIMENSIONS.date;
-export type HostDimension = keyof typeof STYLE_DIMENSIONS.host;
+export type DateDimension = keyof (typeof STYLE_DIMENSIONS)["open-to-more"];
+export type HostDimension = keyof (typeof STYLE_DIMENSIONS)["table-host"];
 export type StyleDimension = DateDimension | HostDimension;
 
 export type StyleAnswer = Text & { icon: string; value: string };

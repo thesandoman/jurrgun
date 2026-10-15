@@ -1471,9 +1471,9 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.energyPrev)) out.energyPrev = s(b.energyPrev);
   if (strs(b.deck)) out.deck = strs(b.deck);
   if (strs(b.datingDeck)) out.datingDeck = strs(b.datingDeck);
-  const dateStyle = cleanStyle("date", b.dateStyle);
+  const dateStyle = cleanStyle("open-to-more", b.dateStyle);
   if (dateStyle) out.dateStyle = dateStyle;
-  const hostStyle = cleanStyle("host", b.hostStyle);
+  const hostStyle = cleanStyle("table-host", b.hostStyle);
   if (hostStyle) out.hostStyle = hostStyle;
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;

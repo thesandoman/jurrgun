@@ -163,7 +163,7 @@ function AnswerField(props: { v: View; q: AnyQuestion; i: number }) {
 function StyleLabel(props: { v: View; q: AnyQuestion }) {
   const { t } = props.v;
   if (!isStyleQuestion(props.q)) return null;
-  return props.q.set === "date" ? (
+  return props.q.set === "open-to-more" ? (
     <span class="q-set q-set-date">💘 {t("เปิดใจมากกว่าเพื่อน · ไม่มีผลกับไทป์", "Open to something more · doesn't change your type")}</span>
   ) : (
     <span class="q-set">🍽️ {t("เจ้าภาพโต๊ะ · ไม่มีผลกับไทป์", "Table Host · doesn't change your type")}</span>
@@ -176,7 +176,7 @@ const STYLE_SET_CSS = `.q-set{display:inline-block;font-size:.82rem;border-radiu
 /** "How you host", from the Table Host questions, on the host's own result. */
 function HostStyle(props: { v: View; bio: unknown }) {
   const { t, lang } = props.v;
-  const lines = styleLines("host", cleanBio(props.bio).hostStyle, lang);
+  const lines = styleLines("table-host", cleanBio(props.bio).hostStyle, lang);
   if (!lines.length) return null;
   return (
     <Card>
@@ -677,8 +677,8 @@ quizRoutes.post("/quiz", async (c) => {
     .onConflictDoUpdate({ target: vibes.accountId, set: values });
   // Style cards go on the profile, merged with earlier answers. "How you date" is
   // romance data, so it lives in the bio and is cleared with romance mode (withoutDating).
-  const dateStyle = personal?.openToMore ? styleOf(questions, answers, "date") : {};
-  const hostStyle = personal?.tableHost ? styleOf(questions, answers, "host") : {};
+  const dateStyle = personal?.openToMore ? styleOf(questions, answers, "open-to-more") : {};
+  const hostStyle = personal?.tableHost ? styleOf(questions, answers, "table-host") : {};
   if (user.profile && (Object.keys(dateStyle).length || Object.keys(hostStyle).length)) {
     const bio = cleanBio(user.profile.bio);
     await db

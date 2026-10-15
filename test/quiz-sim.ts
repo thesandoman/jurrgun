@@ -92,20 +92,25 @@ export function answerAll(questions: Question[], who: Answerer, rng: Rng): Answe
 
 // ------------------------------------------------------------ sessions --
 
-export type SessionSpec = { seed: string; personal?: Personal; friendsOnly: boolean };
+export type SessionSpec = { seed: string; personal?: Personal };
+
+const SEGMENTS = ["local", "newcomer", "international"] as const;
 
 /**
  * The mix of sessions the live app builds: anonymous and onboarding (no
- * personalisation), members with a home district, and friends-only members
- * (no date scenarios). Add new profile options here as the quiz gains them.
+ * personalisation, so no romance), and members with a home district, a
+ * segment, sometimes 💘 Open to something more (date scenarios) and sometimes
+ * a Table Host. Add new profile options here as the quiz gains them.
  */
 export function sessionSpec(k: number, rng: Rng): SessionSpec {
   const roll = rng();
   const district = DISTRICTS[Math.floor(rng() * DISTRICTS.length)].value;
+  const segment = SEGMENTS[Math.floor(rng() * SEGMENTS.length)];
+  const openToMore = rng() < 0.3;
+  const tableHost = rng() < 0.1;
   return {
     seed: `sim-${k}`,
-    personal: roll < 0.5 ? { district } : undefined,
-    friendsOnly: rng() < 0.2,
+    personal: roll < 0.5 ? { district, segment, openToMore, tableHost, explainLocal: segment === "international" } : undefined,
   };
 }
 
@@ -166,7 +171,7 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
 
   for (let k = 0; k < sessions; k++) {
     const spec = sessionSpec(k, rng);
-    const qs = generateSession({ seed: spec.seed, personal: spec.personal, friendsOnly: spec.friendsOnly });
+    const qs = generateSession({ seed: spec.seed, personal: spec.personal });
     qMin = Math.min(qMin, qs.length);
     qMax = Math.max(qMax, qs.length);
     signatures.add(qs.map((q) => q.id).join(","));

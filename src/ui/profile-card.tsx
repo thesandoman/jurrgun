@@ -149,7 +149,7 @@ export function ProfileCard(props: {
     if (q && a && hasValue(a)) datingAnswered.push({ q, a });
   }
   // "How you date" from the quiz. bio only carries it when the viewer may see dating (cardPerson strips it otherwise).
-  const dateStyle = (p.datingDeck ?? []).length ? styleLines("date", bio.dateStyle, lang) : [];
+  const dateStyle = (p.datingDeck ?? []).length ? styleLines("open-to-more", bio.dateStyle, lang) : [];
   const legacy = Object.entries(p.legacy ?? {}).filter(([k, val]) => LEGACY[k] && val);
   const cards: Child[] = [
     ...answered.map(({ q, a }) => <PromptCard v={props.v} q={q} a={a} photo={q.kind === "photo" && a.photoKey ? props.promptPhoto(q.id) : null} />),

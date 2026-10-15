@@ -21,8 +21,11 @@
  *
  * Who the member is (Personal) shapes the session without changing how types
  * are scored:
- *   - romance: date scenarios only for members who opted into 💘 Open to
- *     something more; everyone else gets none;
+ *   - sets (quiz-blueprint 2.3b): scenarios in the "open-to-more" set (every
+ *     date moment) only for members who opted into 💘 Open to something more,
+ *     "table-host" only for Table Hosts; the core quiz has no romance;
+ *   - audience: scenarios written for one Bangkok story (local, newcomer,
+ *     international) only for those members;
  *   - style sets (styles.ts, generateStyleQuestions): 4 "how you date"
  *     questions for opted-in members and 2 "how you host" questions for Table
  *     Hosts, after the 20. They are their own question type with no type
@@ -44,14 +47,14 @@ import type { Segment } from "../domain/segment";
 import { SEGMENT_PROMPTS } from "./bank/segment-prompts";
 import { EXPAT_PROMPTS, explainLocal } from "./bank/plain-english";
 import { createRng, hashString, shuffle, type Rng } from "./rng";
-import { codePoles, oppositeCode, SCENARIOS, TYPE_CODES, type Context, type Kind, type Scenario, type TypeCode } from "./scenarios";
+import { codePoles, oppositeCode, SCENARIOS, TYPE_CODES, type Context, type Kind, type Scenario, type ScenarioSet, type TypeCode } from "./scenarios";
 import { STYLE_DIMENSIONS, STYLE_SCENARIOS, type StyleCard, type StyleScenario, type StyleSet } from "./styles";
 import type { Art } from "./visuals";
 
 export const QUIZ_LENGTH = 20;
 export const OPTIONS_PER_QUESTION = 6;
 /** Style questions after the 20: one per "how you date" dimension, two "how you host". */
-export const DATE_STYLE_ITEMS = Object.keys(STYLE_DIMENSIONS.date).length;
+export const DATE_STYLE_ITEMS = Object.keys(STYLE_DIMENSIONS["open-to-more"]).length;
 export const HOST_STYLE_ITEMS = 2;
 const CORE_ITEMS = 16;
 const FLAVOUR_ITEMS = 2; // per flavour kind (rhythm, plan)
@@ -141,8 +144,18 @@ const HOME_SCENARIOS = 2;
 const nearHome = (home: string | null | undefined) => (s: Scenario) => !!home && TYPE_CODES.some((c) => s.answers[c].district === home);
 
 /** 16 core scenarios: two twin pairs, the context minimums, then anything. */
-function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | undefined, romance: boolean): Scenario[] {
-  const core = SCENARIOS.filter((s) => s.kind === "core" && (romance || s.context !== "date"));
+/** Whether this member is offered the scenario: its set (if any) is one of theirs, and so is its audience. */
+export function offered(s: Pick<Scenario, "set" | "audience" | "context">, p: Personal | undefined): boolean {
+  const sets: ScenarioSet[] = [...(p?.openToMore ? (["open-to-more"] as const) : []), ...(p?.tableHost ? (["table-host"] as const) : [])];
+  if (s.set && !sets.includes(s.set)) return false;
+  // Belt and braces: a date moment is romance even if a scenario forgot its set (bank-rules also checks).
+  if (s.context === "date" && !p?.openToMore) return false;
+  return !s.audience || (!!p?.segment && s.audience.includes(p.segment));
+}
+
+function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | undefined, p: Personal | undefined): Scenario[] {
+  const romance = !!p?.openToMore;
+  const core = SCENARIOS.filter((s) => s.kind === "core" && offered(s, p));
   const twinPairs: [Scenario, Scenario][] = [];
   for (const s of core) {
     const t = s.twin ? core.find((x) => x.id === s.twin) : undefined;
@@ -290,12 +303,11 @@ function personalKey(p: Personal | undefined): string {
 
 export function generateSession(options: SessionOptions): Question[] {
   const p = options.personal;
-  const romance = !!p?.openToMore;
   const rng = createRng(`bkk-type:${options.seed}${personalKey(p)}`);
   const seenScenarios = new Set([...(options.seen ?? [])].map(scenarioOfId));
   const flavour = (kind: Kind) =>
-    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && (romance || s.context !== "date")), seenScenarios).slice(0, FLAVOUR_ITEMS);
-  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, romance), ...flavour("rhythm"), ...flavour("plan")]);
+    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && offered(s, p)), seenScenarios).slice(0, FLAVOUR_ITEMS);
+  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, p), ...flavour("rhythm"), ...flavour("plan")]);
   const pairs = pairsPerQuestion(rng, scenarios);
   // Home district: in up to two questions, bring in the pair whose answer is set near home.
   // The pair is traded with another question, not just swapped in, so every type is
@@ -327,7 +339,7 @@ export function generateStyleQuestions(options: SessionOptions): StyleQuestion[]
   const p = options.personal;
   const rng = createRng(`bkk-style:${options.seed}${personalKey(p)}`);
   const seen = new Set([...(options.seen ?? [])].map(scenarioOfId));
-  const picked = [...(p?.openToMore ? pickStyle(rng, "date", DATE_STYLE_ITEMS, seen) : []), ...(p?.tableHost ? pickStyle(rng, "host", HOST_STYLE_ITEMS, seen) : [])];
+  const picked = [...(p?.openToMore ? pickStyle(rng, "open-to-more", DATE_STYLE_ITEMS, seen) : []), ...(p?.tableHost ? pickStyle(rng, "table-host", HOST_STYLE_ITEMS, seen) : [])];
   return picked.map((sc) => buildStyleQuestion(rng, sc, p));
 }
 

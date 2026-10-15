@@ -11,7 +11,7 @@ export const HOST_STYLE: StyleScenario[] = [
   // ---------------------------------------------------------- welcome --
   {
     id: "hs-welcome-first",
-    set: "host",
+    set: "table-host",
     dimension: "welcome",
     prompt: { en: "Six people at your Regular Table, two of them new. How do you start?", th: "โต๊ะประจำของคุณมา 6 คน มีคนใหม่ 2 คน คุณเริ่มยังไง?" },
     icon: "🍽️",
@@ -25,7 +25,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-welcome-late",
-    set: "host",
+    set: "table-host",
     dimension: "welcome",
     prompt: { en: "Someone new arrives 20 minutes late, looking unsure. You:", th: "คนใหม่มาสาย 20 นาที ท่าทางไม่แน่ใจ คุณ…" },
     icon: "🚪",
@@ -39,7 +39,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-welcome-icebreak",
-    set: "host",
+    set: "table-host",
     dimension: "welcome",
     prompt: { en: "The first ten minutes feel stiff. Your move:", th: "สิบนาทีแรกยังเกร็ง ๆ คุณจะทำยังไง?" },
     icon: "🧊",
@@ -53,7 +53,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-welcome-regulars",
-    set: "host",
+    set: "table-host",
     dimension: "welcome",
     prompt: { en: "Your regulars all know each other. A newcomer joins. You make sure:", th: "ขาประจำรู้จักกันหมดแล้ว มีคนใหม่มาร่วม คุณจะดูให้…" },
     icon: "🌱",
@@ -68,7 +68,7 @@ export const HOST_STYLE: StyleScenario[] = [
   // ---------------------------------------------------------- include --
   {
     id: "hs-include-quiet",
-    set: "host",
+    set: "table-host",
     dimension: "include",
     prompt: { en: "One person hasn't said much all evening. You:", th: "มีคนหนึ่งแทบไม่ได้พูดเลยทั้งคืน คุณ…" },
     icon: "🤫",
@@ -82,7 +82,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-include-loud",
-    set: "host",
+    set: "table-host",
     dimension: "include",
     prompt: { en: "Two people are doing all the talking. To open it up:", th: "สองคนพูดอยู่ฝ่ายเดียว จะเปิดวงยังไงดี?" },
     icon: "📣",
@@ -96,7 +96,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-include-language",
-    set: "host",
+    set: "table-host",
     dimension: "include",
     prompt: { en: "Someone at your Table is more at home in another language. You:", th: "มีคนในโต๊ะถนัดอีกภาษามากกว่า คุณ…" },
     icon: "🗣️",
@@ -111,7 +111,7 @@ export const HOST_STYLE: StyleScenario[] = [
   // ------------------------------------------------------------- plan --
   {
     id: "hs-plan-month",
-    set: "host",
+    set: "table-host",
     dimension: "plan",
     prompt: { en: "Planning next month for your Regular Table. You:", th: "วางแผนเดือนหน้าให้โต๊ะประจำ คุณ…" },
     icon: "🗓️",
@@ -125,7 +125,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-plan-rain",
-    set: "host",
+    set: "table-host",
     dimension: "plan",
     prompt: { en: "Rain on the day of your outdoor Table. You:", th: "ฝนตกในวันที่โต๊ะนัดกันกลางแจ้ง คุณ…" },
     icon: "🌧️",
@@ -139,7 +139,7 @@ export const HOST_STYLE: StyleScenario[] = [
   },
   {
     id: "hs-plan-new",
-    set: "host",
+    set: "table-host",
     dimension: "plan",
     prompt: { en: "Your Table wants to try something new. You:", th: "คนในโต๊ะอยากลองอะไรใหม่ ๆ คุณ…" },
     icon: "✨",

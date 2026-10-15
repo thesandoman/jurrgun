@@ -61,6 +61,7 @@ export const RHYTHM: Scenario[] = [
     id: "date-time",
     kind: "rhythm",
     context: "date",
+    set: "open-to-more",
     prompt: { en: "The perfect time for a date?", th: "ช่วงเวลาไหนดีที่สุดสำหรับเดต?" },
     icon: "💞",
     tone: "night",

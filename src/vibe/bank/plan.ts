@@ -61,6 +61,7 @@ export const PLAN: Scenario[] = [
     id: "date-plan",
     kind: "plan",
     context: "date",
+    set: "open-to-more",
     prompt: { en: "A second date is happening this week. How does it get planned?", th: "สัปดาห์นี้มีนัดเดตครั้งที่สอง จะวางแผนแบบไหน?" },
     icon: "💞",
     tone: "evening",

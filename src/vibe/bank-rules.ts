@@ -141,6 +141,8 @@ export function checkScenarios(list: Scenario[], opts: { requireEveryDistrict?: 
     }
     for (const x of sc.audience ?? []) if (!AUDIENCES.has(x)) errors.push(`${w}: bad audience ${x}`);
     if (sc.set !== undefined && !SETS.has(sc.set)) errors.push(`${w}: bad set ${sc.set}`);
+    // Romance never reaches the core quiz (D4, quiz-blueprint 2.3b): every date moment is in the open-to-more set.
+    if (sc.context === "date" && sc.set !== "open-to-more") errors.push(`${w}: date scenarios belong in set "open-to-more"`);
     text(`${w} prompt`, sc.prompt?.en, sc.prompt?.th);
     for (const [lang, p] of [["EN", sc.prompt?.en], ["TH", sc.prompt?.th]] as const) if (p && !/[?:…]$/.test(p.trim())) errors.push(`${w}: ${lang} prompt must end with "?", ":" or "…"`);
     const keys = Object.keys(sc.answers ?? {});
