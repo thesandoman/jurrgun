@@ -1236,8 +1236,8 @@ export async function rsvpGate(
   }
   if (!womenOnlyEventOk(event.tags, user.profile)) {
     return no(
-      "กิจกรรมนี้สำหรับผู้หญิงเท่านั้น ถ้าคุณเป็นผู้หญิง ตั้งค่าเพศได้ที่ ฉัน > ตั้งค่าการรู้จักกัน (เป็นความลับ)",
-      "This event is for women only. If you're a woman, set your gender in Me > Connection preferences (it stays private).",
+      "กิจกรรมนี้สำหรับผู้หญิงและนอนไบนารี ถ้าใช่คุณ ตั้งค่าเพศได้ที่ ฉัน > ตั้งค่าการรู้จักกัน (เป็นความลับ)",
+      "This event is for women and non-binary people. If that's you, set your gender in Me > Connection preferences (it stays private).",
       403,
     );
   }

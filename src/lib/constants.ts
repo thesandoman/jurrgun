@@ -166,8 +166,8 @@ export const EVENT_TAGS: Opt[] = [
   o("city_quest", "ซิตี้เควสต์", "City Quest"),
   o("festival", "เทศกาล", "Festival go-together"),
   o("daytime", "กลางวัน", "Daytime"),
-  /** Only women can RSVP (rsvpGate), by the private gender in Settings. */
-  o("women_only", "เฉพาะผู้หญิง", "Women only"),
+  /** Only women and non-binary members can RSVP (rsvpGate), by the private gender in Settings. */
+  o("women_only", "เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only"),
 ];
 
 export const INTENSITY: Opt[] = [

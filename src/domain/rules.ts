@@ -88,14 +88,16 @@ export function romanceCompatible(a: RomanceSide, b: RomanceSide): boolean {
 }
 
 // ------------------------------------------------------ women-only spaces --
-// Optional. A woman can choose women-only buddies, deck, dating matches and
+// Optional. Women and non-binary members can choose women-only buddies, deck, dating matches and
 // chats (chats follow matches), and RSVP to events tagged women_only. The
 // gender behind it is private: self-described, never shown, never verified.
 
 export const WOMEN_ONLY_TAG = "women_only";
-export const isWoman = (p: { gender?: string | null }) => p.gender === "woman";
-/** Only a woman can switch women-only on. */
-export const canBeWomenOnly = (gender: string | null | undefined) => gender === "woman";
+/** Who women-only spaces are for: women and non-binary members. */
+export const WOMEN_SPACE_GENDERS: readonly string[] = ["woman", "non-binary"];
+export const isWoman = (p: { gender?: string | null }) => !!p.gender && WOMEN_SPACE_GENDERS.includes(p.gender);
+/** Only women and non-binary members can switch women-only on. */
+export const canBeWomenOnly = (gender: string | null | undefined) => isWoman({ gender });
 
 /** Neither side's women-only choice rules the other out. */
 export function womenOnlyOk(a: { gender?: string | null; womenOnly?: boolean }, b: { gender?: string | null; womenOnly?: boolean }): boolean {

@@ -625,12 +625,12 @@ export function WomenOnlyFields(props: { v: View }) {
   const p = props.v.user?.profile;
   return (
     <fieldset class="card">
-      <legend>🌸 {t("พื้นที่เฉพาะผู้หญิง (ไม่บังคับ)", "Women-only spaces (optional)")}</legend>
+      <legend>🌸 {t("พื้นที่สำหรับผู้หญิงและนอนไบนารี (ไม่บังคับ)", "Women & non-binary spaces (optional)")}</legend>
       <Select label={t("เพศของคุณ (เป็นความลับ ไม่แสดงต่อใคร)", "Your gender (private, never shown)")} name="gender" options={GENDER_IDENTITIES} value={p?.gender} lang={lang} blank="—" />
       <Toggle
         name="womenOnly"
-        label={t("บัดดี้ การ์ด แมตช์ และแชตกับผู้หญิงเท่านั้น", "Women only: buddies, the deck, matches and chats")}
-        hint={t("ใช้ได้เมื่อเลือกเพศเป็นผู้หญิง กิจกรรม 'เฉพาะผู้หญิง' ก็ใช้เพศที่เลือกไว้ตรงนี้", "Available when your gender is Woman. Women-only events use this gender too, whether or not this is on.")}
+        label={t("บัดดี้ การ์ด แมตช์ และแชต เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only: buddies, the deck, matches and chats")}
+        hint={t("ใช้ได้เมื่อเลือกเพศเป็นผู้หญิงหรือนอนไบนารี กิจกรรมที่ติดแท็กนี้ก็ใช้เพศที่เลือกไว้ตรงนี้", "Available when your gender is Woman or Non-binary. Events with this tag use this gender too, whether or not this is on.")}
         checked={!!p?.womenOnly}
       />
     </fieldset>
@@ -718,7 +718,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
         <Field label={t("สรรพนาม", "Pronouns")} name="pronouns" value={p?.pronouns} maxlength={30} placeholder={t("เช่น she/her", "e.g. they/them")} />
         <Toggle name="showPronouns" label={t("แสดงในโปรไฟล์", "Show on my profile")} checked={!!p?.showPronouns} />
       </FlowStep>
-      <FlowStep emoji="🌸" title={t("พื้นที่เฉพาะผู้หญิง", "Women-only spaces")} hint={t("ไม่บังคับ ข้ามได้", "Optional. Skip if you like.")}>
+      <FlowStep emoji="🌸" title={t("พื้นที่สำหรับผู้หญิงและนอนไบนารี", "Women & non-binary spaces")} hint={t("ไม่บังคับ ข้ามได้", "Optional. Skip if you like.")}>
         <WomenOnlyFields v={props.v} />
       </FlowStep>
       {props.mode === "friends" && !p?.romanceOn ? null : (

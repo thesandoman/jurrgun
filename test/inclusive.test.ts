@@ -23,12 +23,14 @@ describe("orientation filter", () => {
 describe("women-only", () => {
   it("only women can switch it on, and it rules out everyone else both ways", () => {
     expect(canBeWomenOnly("woman")).toBe(true);
+    expect(canBeWomenOnly("non-binary")).toBe(true);
     expect(canBeWomenOnly("man")).toBe(false);
     expect(canBeWomenOnly(null)).toBe(false);
     const w = { gender: "woman", womenOnly: true };
     expect(womenOnlyOk(w, { gender: "woman" })).toBe(true);
     expect(womenOnlyOk(w, { gender: "man" })).toBe(false);
-    expect(womenOnlyOk({ gender: "non-binary" }, w)).toBe(false);
+    expect(womenOnlyOk({ gender: "non-binary" }, w)).toBe(true);
+    expect(womenOnlyOk({ gender: "self" }, w)).toBe(false);
     expect(womenOnlyOk({ gender: "man" }, { gender: "woman" })).toBe(true);
     expect(romanceCompatible(side("woman", w), side("man", { gender: "man" }))).toBe(false);
   });
@@ -36,6 +38,7 @@ describe("women-only", () => {
   it("events tagged women_only are for women", () => {
     expect(womenOnlyEventOk(["food"], { gender: null })).toBe(true);
     expect(womenOnlyEventOk(["women_only"], { gender: "woman" })).toBe(true);
+    expect(womenOnlyEventOk(["women_only"], { gender: "non-binary" })).toBe(true);
     expect(womenOnlyEventOk(["women_only"], { gender: "man" })).toBe(false);
     expect(womenOnlyEventOk(["women_only"], {})).toBe(false);
   });
@@ -43,8 +46,8 @@ describe("women-only", () => {
   it("the buddy deck leaves out everyone who isn't a woman", () => {
     const m = (id: string, extra: Partial<PoolMember> = {}): PoolMember => ({ accountId: id, archetype: ARCHETYPE_KEYS[0], district: "bang_rak", languages: ["th"], age: 28, ageMin: 18, ageMax: 99, excluded: new Set(), weeksWaiting: 0, ...extra });
     const me = m("me", { gender: "woman", womenOnly: true });
-    const pool = [me, m("w", { gender: "woman" }), m("x", { gender: "man" }), m("y")];
-    expect(deckFor(me, pool, new Set(), "d")).toEqual(["w"]);
+    const pool = [me, m("w", { gender: "woman" }), m("x", { gender: "man" }), m("y"), m("n", { gender: "non-binary" })];
+    expect(deckFor(me, pool, new Set(), "d").sort()).toEqual(["n", "w"]);
     // And a man never sees a women-only member.
     expect(deckFor(pool[2], pool, new Set(), "d")).not.toContain("me");
   });

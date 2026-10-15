@@ -177,7 +177,7 @@ export const profiles = pgTable(
      * optional women-only spaces. Never shown to anyone.
      */
     gender: text("gender"),
-    /** Women only: buddies, the deck and dating matches are women only (needs gender = woman). */
+    /** Women and non-binary only: buddies, the deck and dating matches (needs gender = woman or non-binary). */
     womenOnly: boolean("women_only").notNull().default(false),
     pronouns: text("pronouns"),
     showPronouns: boolean("show_pronouns").notNull().default(false),
