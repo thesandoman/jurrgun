@@ -76,6 +76,11 @@ export const quizRoutes = new Hono<AppEnv>();
 
 export type VibeRow = typeof vibes.$inferSelect;
 
+/**
+ * Responses needed: a pick or "None of these" both count (D26, D30), so a member who
+ * says "none" a lot still gets a result rather than an error. Only one real vote is
+ * required; Q5's curated set adds the rough-start note for results under 10 votes.
+ */
 export const MIN_ANSWERED = 14;
 /** Keep the seen-list bounded; the generator only needs recent history. */
 const SEEN_MAX = 400;
@@ -694,10 +699,13 @@ quizRoutes.post("/quiz", async (c) => {
   // The onboarding quiz (onboarding.tsx) is built without profile inputs, only plain English for English readers; match it.
   const personal = next === "/onboarding/type" ? (v.lang === "en" ? { explainLocal: true } : undefined) : personalOf(user.profile, user.account.role);
   const questions = quizQuestions(seed, row, personal);
-  const { answers, invalid } = parseAnswers(body, questions);
+  const { answers, invalid, none } = parseAnswers(body, questions);
   // Only the 20 type questions score: style answers never move the type.
   const result = scoreSession(typeQuestions(questions), answers);
-  if (invalid.length > 0 || result.answered < MIN_ANSWERED) {
+  // "None of these" in the type questions counts as a response, not a vote.
+  const typeIdx = new Set(typeQuestions(questions).map((q) => questions.indexOf(q)));
+  const responded = result.answered + none.filter((i) => typeIdx.has(i)).length;
+  if (invalid.length > 0 || responded < MIN_ANSWERED || result.answered < 1) {
     const bad = invalid[0];
     const error =
       bad !== undefined

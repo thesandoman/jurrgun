@@ -124,6 +124,23 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
   });
 
+  it("gives a result when most answers are None of these, but not when every answer is", async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    const f = form(seed, qs);
+    qs.forEach((_, i) => {
+      if (i > 0) f[`a${i}`] = "none";
+    });
+    expect((await req("/quiz", { cookie: m.cookie, form: f })).status).toBe(302);
+    const m2 = await createMember();
+    const seed2 = quizSeed(m2.id, null);
+    const qs2 = quizQuestions(seed2, null, MEMBER);
+    const all = form(seed2, qs2);
+    qs2.forEach((_, i) => (all[`a${i}`] = "none"));
+    expect((await req("/quiz", { cookie: m2.cookie, form: all })).status).toBe(400);
+  });
+
   it("rejects answers that aren't one of the options with 400, without saving", async () => {
     const m = await createMember();
     const seed = quizSeed(m.id, null);
