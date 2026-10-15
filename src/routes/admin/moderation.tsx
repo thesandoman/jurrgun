@@ -7,12 +7,17 @@
  *                     participation history, audited separately
  *   POST /:id/action  note | warning | suspend | ban | lift | dismiss
  *
+ * Fair process (domain/rules.ts removalAllowed): suspending or banning needs
+ * the Terms / code of conduct rule that was broken, unless the member already
+ * has 3 flags. A flag is an upheld warning; the third one suspends the
+ * account automatically for FLAG_SUSPEND_DAYS.
+ *
  * Staff never see relationship status, romance settings, gender identity,
  * age preferences or connection choices here — only account basics.
  */
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { aliasedTable, and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, count, desc, eq, gte, ne, sql } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { label, REPORT_REASON_LABELS } from "../../lib/constants";
 import { newId } from "../../lib/crypto";
@@ -24,6 +29,19 @@ import { accounts, events, moderationActions, profiles, registrations, reports, 
 import { Button, Card, Empty, Field, int, Notice, page, str, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
+import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
+
+/** Rules a moderator can name as broken: the report reasons, minus "other". */
+const RULES = REPORT_REASON_LABELS.filter((r) => r.value !== "other");
+
+/** Upheld warnings in the last year. */
+async function flagCount(db: ReturnType<typeof getDb>, accountId: string, now = new Date()): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(moderationActions)
+    .where(and(eq(moderationActions.accountId, accountId), eq(moderationActions.action, "warning"), gte(moderationActions.createdAt, new Date(now.getTime() - FLAG_WINDOW_DAYS * 86_400_000))));
+  return Number(row?.n ?? 0);
+}
 
 export const adminModeration = new Hono<AppEnv>();
 adminModeration.use("*", requireRole("moderator"));
@@ -169,6 +187,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
   const targetId = r.targetAccount;
   const showHistory = c.req.query("history") === "1" && !!targetId;
 
+  const flags = targetId ? await flagCount(db, targetId) : 0;
   const [target, actions, otherReports, history] = await Promise.all([
     targetId
       ? db
@@ -269,6 +288,15 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
           <p>
             <strong>{target.nickname ?? "—"}</strong> <small>@{target.username}</small> {statusTag(target.status, lang)}
             {target.status === "suspended" && target.suspendedUntil ? <small> {t("ถึง", "until")} {fmtDate(target.suspendedUntil, lang)}</small> : null}
+          </p>
+          <p>
+            <Tag>🚩 {t(`ธง ${flags}/${FLAGS_TO_REMOVE}`, `Flags ${flags}/${FLAGS_TO_REMOVE}`)}</Tag>{" "}
+            <small class="muted">
+              {t(
+                "ระงับหรือแบนได้เฉพาะเมื่อระบุข้อที่ละเมิด หรือมีครบ 3 ธง (คำเตือนที่ยืนยันแล้วในรอบปี)",
+                "Suspend or ban only for a named rule broken, or at 3 flags (upheld warnings in the last year).",
+              )}
+            </small>
           </p>
           <p class="muted">
             {t("สร้างบัญชีเมื่อ", "Account created")} {fmtDay(target.createdAt, lang)} · <a href={`/admin/users/${encodeURIComponent(target.id)}`}>{t("ดูบัญชี", "View account")}</a>
@@ -401,6 +429,20 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
               <option value="dismiss">{t("ยกเลิกรายงาน (ไม่พบการละเมิด)", "Dismiss report")}</option>
             </select>
           </div>
+          {target ? (
+            <div class="field">
+              <label for="f-rule">{t("ข้อที่ละเมิด (ข้อกำหนด / หลักปฏิบัติ)", "Rule broken (Terms / code of conduct)")}</label>
+              <select id="f-rule" name="rule">
+                <option value="">{t("ไม่ระบุ", "None named")}</option>
+                {RULES.map((o) => (
+                  <option value={o.value}>{label(REPORT_REASON_LABELS, o.value, lang)}</option>
+                ))}
+              </select>
+              <small class="muted">
+                {t("จำเป็นสำหรับการระงับหรือแบน เว้นแต่มีครบ 3 ธง", "Needed to suspend or ban, unless the member has 3 flags.")}
+              </small>
+            </div>
+          ) : null}
           {target ? <Field label={t("จำนวนวันที่ระงับ (1–90)", "Suspension days (1–90)")} name="days" type="number" min={1} max={90} value={7} /> : null}
           <TextArea
             label={t("บันทึกของผู้ดูแล", "Moderator note")}
@@ -430,11 +472,12 @@ adminModeration.post("/:id/action", async (c) => {
 
   const body = await c.req.parseBody();
   const action = str(body.action) as Action;
-  const note = str(body.note).slice(0, 2000);
+  const rawNote = str(body.note).slice(0, 2000);
+  const rule = RULES.some((o) => o.value === str(body.rule)) ? str(body.rule) : null;
   const bad = (msg: string) => renderDetail(c, id, { error: msg, status: 400 });
 
   if (!(ACTIONS as readonly string[]).includes(action)) return bad(t("การดำเนินการไม่ถูกต้อง", "Unknown action"));
-  if ((action === "warning" || action === "suspend" || action === "ban") && !note) {
+  if ((action === "warning" || action === "suspend" || action === "ban") && !rawNote) {
     return bad(t("กรุณาใส่บันทึกสำหรับการดำเนินการนี้", "A note is required for this action"));
   }
 
@@ -458,7 +501,22 @@ adminModeration.post("/:id/action", async (c) => {
     if (target.id === me.id) return bad(t("ไม่สามารถดำเนินการกับบัญชีของตัวเองได้", "You can't act on your own account"));
   }
 
+  // Fair process: removal needs a named rule, or 3 flags already.
+  const flagsBefore = target ? await flagCount(db, target.id) : 0;
+  if ((action === "suspend" || action === "ban") && !removalAllowed({ rule, flags: flagsBefore })) {
+    return bad(
+      t(
+        `ระงับหรือแบนได้เฉพาะเมื่อระบุข้อที่ละเมิด หรือมีครบ ${FLAGS_TO_REMOVE} ธง (ตอนนี้ ${flagsBefore}) ให้ตักเตือนแทน`,
+        `Suspend or ban only for a named rule broken, or at ${FLAGS_TO_REMOVE} flags (now ${flagsBefore}). Give a warning instead.`,
+      ),
+    );
+  }
+  const note = rule ? `[${rule}] ${rawNote}` : rawNote;
+  // The third flag suspends automatically.
+  const autoSuspend = action === "warning" && !!target && target.status === "active" && flagLimitReached(flagsBefore);
+
   let until: Date | null = null;
+  if (autoSuspend) until = new Date(Date.now() + FLAG_SUSPEND_DAYS * 86_400_000);
   if (action === "suspend") {
     const days = int(body.days, 0);
     if (days < 1 || days > 90) return bad(t("จำนวนวันต้องอยู่ระหว่าง 1–90", "Days must be between 1 and 90"));
@@ -501,6 +559,19 @@ adminModeration.post("/:id/action", async (c) => {
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
     } else if (action === "lift") {
       ops.push(db.update(accounts).set({ status: "active", suspendedUntil: null }).where(eq(accounts.id, target.id)));
+    } else if (action === "warning" && autoSuspend) {
+      ops.push(db.update(accounts).set({ status: "suspended", suspendedUntil: until }).where(eq(accounts.id, target.id)));
+      ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
+      ops.push(
+        notify(
+          db,
+          target.id,
+          "moderation",
+          `คุณได้รับธงครบ ${FLAGS_TO_REMOVE} ครั้ง บัญชีจึงถูกระงับถึง ${fmtDay(until!, "th")}`,
+          `You've reached ${FLAGS_TO_REMOVE} flags, so your account is suspended until ${fmtDay(until!, "en")}`,
+          "/code-of-conduct",
+        ),
+      );
     } else if (action === "warning") {
       ops.push(
         notify(
@@ -519,6 +590,9 @@ adminModeration.post("/:id/action", async (c) => {
       target: target?.id ?? null,
       until: until ? until.toISOString() : undefined,
       reportStatus,
+      rule,
+      flags: action === "warning" ? flagsBefore + 1 : flagsBefore,
+      autoSuspend: autoSuspend || undefined,
     }),
   );
   await batch(c.env, ops);

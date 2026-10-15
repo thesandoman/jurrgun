@@ -75,7 +75,9 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "7" } })).status).toBe(400);
     expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "120", note: "x" } })).status).toBe(400);
 
-    const r = await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "7", note: "Repeated harassment" } });
+    // Fair process: no rule named and no flags yet, so no suspension.
+    expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "7", note: "Repeated harassment" } })).status).toBe(400);
+    const r = await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "7", note: "Repeated harassment", rule: "harassment" } });
     expect(r.status).toBe(302);
 
     const [acct] = await db().select().from(accounts).where(eq(accounts.id, target.id));
@@ -98,6 +100,7 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     expect(rep.resolvedBy).toBe(mod.id);
     const acts = await db().select().from(moderationActions).where(eq(moderationActions.accountId, target.id));
     expect(acts.map((a) => a.action)).toContain("suspend");
+    expect(acts.find((a) => a.action === "suspend")!.note).toBe("[harassment] Repeated harassment");
     expect(await auditRows(mod.id, "moderation.suspend")).toHaveLength(1);
   });
 
@@ -138,12 +141,38 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     const target = await createMember();
     const id = await report((await createMember()).id, target.id);
     expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "warning" } })).status).toBe(400);
-    expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "ban", note: "x" } })).status).toBe(302);
+    expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "ban", note: "x" } })).status).toBe(400);
+    expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "ban", note: "x", rule: "spam_scam" } })).status).toBe(302);
     let [acct] = await db().select().from(accounts).where(eq(accounts.id, target.id));
     expect(acct.status).toBe("banned");
     expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "lift" } })).status).toBe(302);
     [acct] = await db().select().from(accounts).where(eq(accounts.id, target.id));
     expect(acct.status).toBe("active");
+  });
+});
+
+describe.skipIf(!HAS_DB)("three flags", () => {
+  it("only removes at 3 flags: the third upheld warning suspends for 30 days", async () => {
+    const mod = await createMember({ role: "moderator" });
+    const target = await createMember();
+    const status = async () => (await db().select().from(accounts).where(eq(accounts.id, target.id)))[0];
+    for (let i = 1; i <= 2; i++) {
+      const id = await report((await createMember()).id, target.id);
+      expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "warning", note: `flag ${i}` } })).status).toBe(302);
+      expect((await status()).status).toBe("active");
+    }
+    // Two flags: still no suspension without a named rule.
+    const id2 = await report((await createMember()).id, target.id);
+    expect((await req(`/admin/moderation/${id2}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "3", note: "x" } })).status).toBe(400);
+    // The third flag suspends automatically.
+    expect((await req(`/admin/moderation/${id2}/action`, { cookie: mod.cookie, form: { action: "warning", note: "flag 3" } })).status).toBe(302);
+    const acct = await status();
+    expect(acct.status).toBe("suspended");
+    const days = (acct.suspendedUntil!.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(days).toBeLessThan(30.1);
+    const notes = await db().select().from(notifications).where(eq(notifications.accountId, target.id));
+    expect(notes.some((n) => n.titleEn.includes("3 flags"))).toBe(true);
   });
 });
 

@@ -260,3 +260,26 @@ export function cleanHandle(raw: string): string | null {
   const v = raw.trim().replace(/^@/, "");
   return /^[A-Za-z0-9_.\-]{1,60}$/.test(v) ? v : null;
 }
+
+// ------------------------------------------------- removal (fair process) --
+//
+// A member is only removed (suspended or banned) when a moderator names the
+// Terms / code of conduct rule they broke, or once they have FLAGS_TO_REMOVE
+// flags. A flag is a warning a moderator upheld after reviewing a report, so
+// a pile of raw reports never removes anyone on its own. Event strikes
+// (no-shows, late cancels) only pause RSVPs; they never remove an account.
+
+export const FLAGS_TO_REMOVE = 3;
+/** Flags count for a year. */
+export const FLAG_WINDOW_DAYS = 365;
+/** The automatic suspension when a third flag lands. */
+export const FLAG_SUSPEND_DAYS = 30;
+
+export function removalAllowed(p: { rule: string | null; flags: number }): boolean {
+  return !!p.rule || p.flags >= FLAGS_TO_REMOVE;
+}
+
+/** True when this warning is the one that reaches the flag limit. */
+export function flagLimitReached(flagsBefore: number): boolean {
+  return flagsBefore + 1 === FLAGS_TO_REMOVE;
+}

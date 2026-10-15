@@ -19,6 +19,8 @@ import {
   strikeStanding,
   waitlistOrder,
   type Choice,
+  removalAllowed,
+  flagLimitReached,
 } from "../src/domain/rules";
 import { buddyRound, suggestGroups, type Attendee } from "../src/domain/matching";
 
@@ -168,5 +170,17 @@ describe("matching glue", () => {
     const sizes = r.groups.map((g) => g.length).sort();
     expect(sizes).toEqual([3]);
     expect(r.unmatched).toEqual(["x"]);
+  });
+});
+
+describe("fair removal", () => {
+  it("needs a named rule or 3 flags", () => {
+    expect(removalAllowed({ rule: null, flags: 0 })).toBe(false);
+    expect(removalAllowed({ rule: null, flags: 2 })).toBe(false);
+    expect(removalAllowed({ rule: null, flags: 3 })).toBe(true);
+    expect(removalAllowed({ rule: "harassment", flags: 0 })).toBe(true);
+    expect(flagLimitReached(2)).toBe(true);
+    expect(flagLimitReached(1)).toBe(false);
+    expect(flagLimitReached(3)).toBe(false);
   });
 });

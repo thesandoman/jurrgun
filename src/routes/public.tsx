@@ -1,6 +1,7 @@
 /**
  * Public pages: landing, language switch, policies, PWA manifest and icon.
  */
+import { FAIR_PROCESS } from "../content/accountability";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
@@ -214,7 +215,8 @@ publicRoutes.get("/code-of-conduct", (c) => {
       <ol>{rules.map(([th, en]) => <li>{t(th, en)}</li>)}</ol>
       <h2 id="no-ghosting">{t("ไม่ทิ้งเงียบ", "No ghosting")}</h2>
       <ul>{ghosting.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
-      <p class="muted">{t("การละเมิดอาจนำไปสู่การเตือน ระงับ หรือแบนถาวร", "Breaking these can lead to a warning, suspension or permanent ban.")}</p>
+      <h2 id="fair-process">{t("ยุติธรรมและรับผิดชอบ", "Fair and accountable")}</h2>
+      <ul>{FAIR_PROCESS.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
     </>,
   );
 });
