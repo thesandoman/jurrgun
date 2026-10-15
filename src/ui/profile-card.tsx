@@ -16,6 +16,13 @@ import {
   interestOpt,
   promptById,
   WEEKEND_RHYTHM,
+  PAY_METHODS,
+  BILL_STYLE,
+  GETTING_AROUND,
+  DIET,
+  SPICE,
+  PETS,
+  PUNCTUAL,
   type Answer,
   type Bio,
   type Prompt,
@@ -111,6 +118,19 @@ export function ProfileCard(props: {
   if (education) facts.push([education.emoji, t("การศึกษา", "Education"), education.text]);
   if (energy) facts.push([energy.emoji, t("ตอนเจอกันครั้งแรก", "First-meet energy"), L(lang, energy)]);
   if (weekend) facts.push([weekend.emoji, t("จังหวะวันหยุด", "Weekend rhythm"), L(lang, weekend)]);
+  const many = (list: typeof PAY_METHODS, vals?: string[]) => (vals ?? []).map((v) => list.find((x) => x.value === v)).filter((x) => !!x).map((x) => L(lang, x!)).join(", ");
+  const one = (list: typeof PAY_METHODS, v?: string) => list.find((x) => x.value === v);
+  if (bio.pay?.length) facts.push(["💳", t("จ่ายด้วย", "Pays with"), many(PAY_METHODS, bio.pay)]);
+  const bill = one(BILL_STYLE, bio.bill);
+  if (bill) facts.push([bill.emoji, t("เวลาเช็กบิล", "Bill style"), L(lang, bill)]);
+  if (bio.travel?.length) facts.push(["🚇", t("เดินทางด้วย", "Gets around by"), many(GETTING_AROUND, bio.travel)]);
+  if (bio.diet?.length) facts.push(["🍽️", t("เรื่องอาหาร", "Food needs"), many(DIET, bio.diet)]);
+  const spice = one(SPICE, bio.spice);
+  if (spice) facts.push([spice.emoji, t("ความเผ็ด", "Spice"), L(lang, spice)]);
+  const pets = one(PETS, bio.pets);
+  if (pets) facts.push([pets.emoji, t("สัตว์เลี้ยง", "Pets"), L(lang, pets)]);
+  const punctual = one(PUNCTUAL, bio.punctual);
+  if (punctual) facts.push([punctual.emoji, t("เวลานัด", "Timing"), L(lang, punctual)]);
   if (p.languages.length) facts.push(["🗣️", t("คุยได้", "Speaks"), p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
   if (bio.learningLangs?.length) facts.push(["🔤", t("กำลังหัดภาษา", "Learning"), bio.learningLangs.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
 

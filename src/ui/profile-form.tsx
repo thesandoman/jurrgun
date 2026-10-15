@@ -127,6 +127,18 @@ export function OptRadios(props: { v: View; name: string; options: Opt[]; value?
   );
 }
 
+/** Pick-several pills (a max is enforced on save). */
+export function OptChecks(props: { v: View; name: string; options: Opt[]; values?: string[] }) {
+  const { lang } = props.v;
+  return (
+    <div class="pills">
+      {props.options.map((o) => (
+        <EmojiPill name={props.name} o={o} lang={lang} checked={(props.values ?? []).includes(o.value)} />
+      ))}
+    </div>
+  );
+}
+
 /**
  * Occupation: a dropdown, and a text box for "Other". The box hides itself
  * unless "Other" is picked (CSS :has; browsers without it just always show it).

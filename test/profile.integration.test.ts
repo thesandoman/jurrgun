@@ -85,6 +85,27 @@ describe.skipIf(!HAS_DB)("profile: edit", () => {
     expect(bio.deck).toEqual(deckFor(m.id));
   });
 
+  it("saves the out-and-about options (payment, bill, travel, food, spice, pets, timing) and shows them", async () => {
+    const m = await createMember();
+    const r = await req("/settings/profile", {
+      cookie: m.cookie,
+      form: { ...base, pay: ["promptpay", "cash", "card", "ewallet", "gold"], bill: "split", travel: ["rail", "boat"], diet: ["halal", "x"], spice: "thai_hot", pets: "cats", punctual: "nope" },
+    });
+    expect(r.status).toBe(302);
+    const bio = cleanBio((await profileOf(m.id)).bio);
+    expect(bio.pay).toEqual(["promptpay", "cash", "card"]);
+    expect(bio.bill).toBe("split");
+    expect(bio.travel).toEqual(["rail", "boat"]);
+    expect(bio.diet).toEqual(["halal"]);
+    expect(bio.spice).toBe("thai_hot");
+    expect(bio.pets).toBe("cats");
+    expect(bio.punctual).toBeUndefined();
+    const card = await (await req("/me/profile", { cookie: en(m) })).text();
+    expect(card).toContain("PromptPay / QR, Cash, Card");
+    expect(card).toContain("Split it evenly");
+    expect(card).toContain("Thai spicy");
+  });
+
   it("saves prompt answers per kind and rejects bad ones", async () => {
     const m = await createMember();
     const deck = ALL_KINDS.map((k) => first(k).id);

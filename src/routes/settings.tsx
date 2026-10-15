@@ -36,6 +36,15 @@ import {
   swapPrompt,
   validateAnswer,
   WEEKEND_RHYTHM,
+  PAY_METHODS,
+  MAX_PAY,
+  BILL_STYLE,
+  GETTING_AROUND,
+  MAX_TRAVEL,
+  DIET,
+  SPICE,
+  PETS,
+  PUNCTUAL,
   type Answer,
   type Bio,
   isResidency,
@@ -44,7 +53,7 @@ import {
   parseOccupation,
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
-import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
+import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -377,6 +386,37 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
           </fieldset>
         </Section>
 
+        <Section id="out" emoji="🧾" title={t("เวลาออกไปเจอกัน", "Out and about")} hint={t("ไม่บังคับ ช่วยให้นัดแรกง่ายขึ้น", "All optional. Makes a first meet smoother.")}>
+          <fieldset class="choices">
+            <legend>{t(`จ่ายเงินแบบไหนสะดวก (สูงสุด ${MAX_PAY})`, `How I like to pay (up to ${MAX_PAY})`)}</legend>
+            <OptChecks v={props.v} name="pay" options={PAY_METHODS} values={bio.pay} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("เวลาเช็กบิล", "When the bill comes")}</legend>
+            <OptRadios v={props.v} name="bill" options={BILL_STYLE} value={bio.bill} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t(`เดินทางยังไง (สูงสุด ${MAX_TRAVEL})`, `How I get around (up to ${MAX_TRAVEL})`)}</legend>
+            <OptChecks v={props.v} name="travel" options={GETTING_AROUND} values={bio.travel} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("เรื่องอาหารที่ควรรู้", "Food needs")}</legend>
+            <OptChecks v={props.v} name="diet" options={DIET} values={bio.diet} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("กินเผ็ดได้แค่ไหน", "Spice level")}</legend>
+            <OptRadios v={props.v} name="spice" options={SPICE} value={bio.spice} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("สายสัตว์เลี้ยง", "Pets")}</legend>
+            <OptRadios v={props.v} name="pets" options={PETS} value={bio.pets} />
+          </fieldset>
+          <fieldset class="choices">
+            <legend>{t("เรื่องเวลานัด", "Punctuality")}</legend>
+            <OptRadios v={props.v} name="punctual" options={PUNCTUAL} value={bio.punctual} />
+          </fieldset>
+        </Section>
+
         <Section
           id="prompts"
           emoji="🃏"
@@ -443,6 +483,8 @@ const fileOf = (raw: unknown): File | null => {
   return f instanceof File && f.size > 0 ? f : null;
 };
 
+const oneOf = (v: string, list: { value: string }[]) => (list.some((x) => x.value === v) ? v : undefined);
+
 /** Read and validate the whole profile form. Touches nothing. */
 function parseProfileForm(c: C, body: Body): Parsed {
   const { t } = view(c);
@@ -467,6 +509,13 @@ function parseProfileForm(c: C, body: Body): Parsed {
     learningLangs: pickAll("learningLangs", values(LANGUAGES)),
     energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,
     weekend: WEEKEND_RHYTHM.some((x) => x.value === weekend) ? weekend : undefined,
+    pay: pickAll("pay", PAY_METHODS.map((x) => x.value)).slice(0, MAX_PAY),
+    bill: oneOf(str(body.bill), BILL_STYLE),
+    travel: pickAll("travel", GETTING_AROUND.map((x) => x.value)).slice(0, MAX_TRAVEL),
+    diet: pickAll("diet", DIET.map((x) => x.value)),
+    spice: oneOf(str(body.spice), SPICE),
+    pets: oneOf(str(body.pets), PETS),
+    punctual: oneOf(str(body.punctual), PUNCTUAL),
   };
   const vals: ProfileVals = {
     nickname: str(body.nickname),

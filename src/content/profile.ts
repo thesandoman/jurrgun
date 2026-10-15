@@ -577,6 +577,67 @@ export const WEEKEND_RHYTHM: Opt[] = [
   o("spontaneous", "🎲", "แล้วแต่วันนั้น", "Decided on the day"),
 ];
 
+// ------------------------------------------------------- out and about --
+// Small, practical things that make a first meet smoother. All optional.
+
+/** How they like to pay (up to MAX_PAY). Jurrgun never takes payment itself. */
+export const PAY_METHODS: Opt[] = [
+  o("promptpay", "📱", "พร้อมเพย์ / สแกน QR", "PromptPay / QR"),
+  o("cash", "💵", "เงินสด", "Cash"),
+  o("card", "💳", "บัตร", "Card"),
+  o("ewallet", "👛", "วอลเล็ต (TrueMoney, Rabbit LINE Pay)", "E-wallet (TrueMoney, Rabbit LINE Pay)"),
+];
+export const MAX_PAY = 3;
+
+export const BILL_STYLE: Opt[] = [
+  o("split", "➗", "หารเท่ากัน", "Split it evenly"),
+  o("own", "🧾", "ใครสั่งอะไรจ่ายอันนั้น", "Pay for what I order"),
+  o("turns", "🔁", "ผลัดกันเลี้ยง", "Take turns treating"),
+  o("flex", "🤷", "ได้หมด", "Easy either way"),
+];
+
+export const GETTING_AROUND: Opt[] = [
+  o("rail", "🚇", "BTS / MRT", "BTS / MRT"),
+  o("bus", "🚌", "รถเมล์", "Bus"),
+  o("boat", "⛴️", "เรือ", "Boat"),
+  o("motosai", "🛵", "วินมอเตอร์ไซค์", "Motorbike taxi"),
+  o("ride", "🚕", "แท็กซี่ / Grab / Bolt", "Taxi / Grab / Bolt"),
+  o("own", "🚗", "ขับเอง", "Own wheels"),
+  o("walk", "🚲", "เดินหรือปั่นจักรยาน", "Walk or cycle"),
+];
+export const MAX_TRAVEL = 3;
+
+export const DIET: Opt[] = [
+  o("vegetarian", "🥗", "มังสวิรัติ", "Vegetarian"),
+  o("vegan", "🌱", "วีแกน", "Vegan"),
+  o("halal", "☪️", "ฮาลาล", "Halal"),
+  o("no_pork", "🐖", "ไม่ทานหมู", "No pork"),
+  o("no_beef", "🐄", "ไม่ทานเนื้อวัว", "No beef"),
+  o("seafood_allergy", "🦐", "แพ้อาหารทะเล", "Seafood allergy"),
+  o("nut_allergy", "🥜", "แพ้ถั่ว", "Nut allergy"),
+];
+
+export const SPICE: Opt[] = [
+  o("none", "🥛", "ไม่เผ็ดเลย", "Not spicy at all"),
+  o("mild", "🌶️", "เผ็ดนิดหน่อย", "A little spicy"),
+  o("medium", "🌶️🌶️", "เผ็ดกลาง ๆ", "Medium"),
+  o("thai_hot", "🔥", "เผ็ดแบบไทย", "Thai spicy"),
+];
+
+export const PETS: Opt[] = [
+  o("dogs", "🐶", "ทาสหมา", "Dog person"),
+  o("cats", "🐱", "ทาสแมว", "Cat person"),
+  o("both", "🐾", "รักทั้งหมาและแมว", "Both, please"),
+  o("other", "🐢", "สัตว์เลี้ยงแปลก ๆ", "Unusual pets"),
+  o("not_really", "🙂", "ไม่ค่อยสายสัตว์", "Not really an animal person"),
+];
+
+export const PUNCTUAL: Opt[] = [
+  o("early", "⏰", "ไปถึงก่อนเวลา", "Usually early"),
+  o("on_time", "🕐", "ตรงเวลาเป๊ะ", "Right on time"),
+  o("bit_late", "🐢", "ช้าไปนิดแต่ทักบอกเสมอ", "A bit late, but I always text"),
+];
+
 /** Occupation: one pick from this list, or "other" plus the member's own words. */
 export const OCCUPATIONS: Opt[] = [
   o("student", "🎓", "นักเรียน นักศึกษา", "Student"),
@@ -1127,6 +1188,14 @@ export type Bio = {
   learningLangs?: string[];
   energy?: string;
   weekend?: string;
+  /** Out and about: PAY_METHODS, BILL_STYLE, GETTING_AROUND, DIET, SPICE, PETS, PUNCTUAL values. */
+  pay?: string[];
+  bill?: string;
+  travel?: string[];
+  diet?: string[];
+  spice?: string;
+  pets?: string;
+  punctual?: string;
   deck?: string[];
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
@@ -1228,6 +1297,13 @@ export function cleanBio(raw: unknown): Bio {
   if (strs(b.learningLangs)) out.learningLangs = strs(b.learningLangs);
   if (s(b.energy)) out.energy = s(b.energy);
   if (s(b.weekend)) out.weekend = s(b.weekend);
+  if (strs(b.pay)) out.pay = strs(b.pay);
+  if (s(b.bill)) out.bill = s(b.bill);
+  if (strs(b.travel)) out.travel = strs(b.travel);
+  if (strs(b.diet)) out.diet = strs(b.diet);
+  if (s(b.spice)) out.spice = s(b.spice);
+  if (s(b.pets)) out.pets = s(b.pets);
+  if (s(b.punctual)) out.punctual = s(b.punctual);
   if (strs(b.deck)) out.deck = strs(b.deck);
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;
