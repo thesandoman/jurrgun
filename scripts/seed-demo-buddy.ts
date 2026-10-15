@@ -2,6 +2,8 @@
  * LOCAL demo: Bangkok Buddy and the dating features, using the dummy members
  * from scripts/seed-demo-event.ts (run that first). Never point this at the
  * deployed database. Idempotent: skips if the demo match exists.
+ * `--reset` wipes the buddy and dating demo state first, so the
+ * "one tap from the reveal" moment can be shown again.
  *
  *  - demo_fern + demo_jay: an active buddy pair, both "open to more" and in
  *    dating mode. Last week's quest is done (one stamp each); this week Jay has
@@ -11,17 +13,34 @@
  *  - demo_arun + demo_max: a fresh proposal this round, waiting for both to say meet.
  *  - demo_toey: here for dating only. demo_pim, demo_mew, demo_ravi: in the buddy pool.
  */
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
 import { getDb } from "../src/db";
 import { newId } from "../src/lib/crypto";
 import { dayKey, pickQuest, weekKey } from "../src/domain/buddy";
 import type { ArchetypeKey } from "../src/vibe/archetypes";
-import { accounts, buddyMatches, buddyOptins, buddyQuests, buddyRounds, connections, datingIntents, passportStamps, profiles } from "../src/schema";
+import { accounts, buddyMatches, buddyOptins, buddyQuests, buddyRounds, connections, datingIntents, notifications, passportStamps, profiles } from "../src/schema";
 
 const env = { DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/cloud_dev" };
 const db = getDb(env);
 const DAY = 86_400_000;
 const MATCH_ID = "demo-buddy-fern-jay";
+
+if (process.argv.includes("--reset")) {
+  const demo = await db.select({ id: accounts.id }).from(accounts).where(like(accounts.username, "demo\\_%"));
+  const ids = demo.map((d) => d.id);
+  if (ids.length) {
+    const matches = await db.select({ id: buddyMatches.id }).from(buddyMatches).where(or(inArray(buddyMatches.aAccount, ids), inArray(buddyMatches.bAccount, ids)));
+    if (matches.length) await db.delete(buddyQuests).where(inArray(buddyQuests.matchId, matches.map((m) => m.id)));
+    await db.delete(buddyMatches).where(or(inArray(buddyMatches.aAccount, ids), inArray(buddyMatches.bAccount, ids)));
+    await db.delete(connections).where(and(like(connections.eventId, "buddy:%"), or(inArray(connections.aAccount, ids), inArray(connections.bAccount, ids))));
+    await db.delete(passportStamps).where(inArray(passportStamps.accountId, ids));
+    await db.delete(buddyOptins).where(inArray(buddyOptins.accountId, ids));
+    await db.delete(datingIntents).where(inArray(datingIntents.accountId, ids));
+    await db.delete(notifications).where(inArray(notifications.accountId, ids));
+    await db.update(profiles).set({ romanceOn: false, intents: ["friends"], genderIdentity: null, romanceOpenTo: null, relationship: "prefer_not" }).where(inArray(profiles.accountId, ids));
+  }
+  console.log("Buddy and dating demo state cleared.");
+}
 
 const [exists] = await db.select({ id: buddyMatches.id }).from(buddyMatches).where(eq(buddyMatches.id, MATCH_ID)).limit(1);
 if (exists) {

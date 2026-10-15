@@ -1,8 +1,9 @@
 /**
  * LOCAL demo: one fully filled-in event with dummy participants, for showing
  * the event page off. Run with `npx vite-node scripts/seed-demo-event.ts`
- * after `npm run seed`. Idempotent (skips if the demo event exists). Never
- * point this at the deployed database.
+ * after `npm run seed`. Idempotent (skips if the demo event exists); `--reset`
+ * deletes the demo event and its sign-ups first. Never point this at the
+ * deployed database.
  *
  * Dummy members log in as demo_<name> with the same password as scripts/seed.ts.
  */
@@ -15,6 +16,12 @@ const env = { DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:pos
 const db = getDb(env);
 const PASSWORD = "bkksocial123";
 const DEMO_ID = "demo-yaowarat-night-crawl";
+
+if (process.argv.includes("--reset")) {
+  await db.delete(registrations).where(eq(registrations.eventId, DEMO_ID));
+  await db.delete(events).where(eq(events.id, DEMO_ID));
+  console.log("Demo event cleared.");
+}
 
 const [exists] = await db.select({ id: events.id }).from(events).where(eq(events.id, DEMO_ID)).limit(1);
 if (exists) {
