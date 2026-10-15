@@ -229,8 +229,8 @@ describe.skipIf(!HAS_DB)("Regular at on the profile card", () => {
       expect(html).toContain(open.name);
       expect(html).not.toContain(womenOnly.name);
     }
-    // Thai label.
-    expect(await (await req(`/people/${member.id}`, { cookie: `${woman.cookie}; lang=th` })).text()).toContain("ขาประจำที่");
+    // Thai label (two tables: a count and a chip each).
+    expect(await (await req(`/people/${member.id}`, { cookie: `${woman.cookie}; lang=th` })).text()).toContain("ขาประจำ 2 โต๊ะ");
     // Not connected: no card at all.
     expect((await req(`/people/${member.id}`, { cookie: stranger.cookie })).status).toBe(404);
   });
