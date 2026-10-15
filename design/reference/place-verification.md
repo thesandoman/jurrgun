@@ -142,3 +142,68 @@ These are suggested texts. The quiz owner should run `scripts/check-bank.ts` aft
    `a("🍲", "wang_thonglang", "The team's regular table at an old shop on Sriwara Road, everyone ordering the usual", "โต๊ะประจำของทีมที่ร้านเก่าบนถนนศรีวรา ทุกคนสั่งเมนูเดิม")`
 
 Wang Thonglang goes back to 6 answers. Five lean on Sriwara Road, which is the district's real food strip. If the quiz chat wants more variety, swap one of them for WT3 (park) or WT4 (garden walk).
+
+---
+
+## Q2 batch: the 57 `verify` answers (commit 83446bb, added 2026-10-15)
+
+Scope: every `av(...)` answer in the seven new bank files on `origin/main` (`everyday-commute`, `everyday-home`, `everyday-rut`, `jurrgun`, `landmarks-city`, `landmarks-edge`, `seasonal`). That is 57 answers about 35 places. I read the files from the commit (`git show 83446bb:…`); the local `main` checkout is one commit behind, and I didn't pull. Line numbers are as of 83446bb, and all paths are under `src/vibe/bank/`.
+
+**Result:** 39 answers can drop `verify`. **8 answers need a fix**: 3 are in the wrong district, 1 names a film night Warehouse 30 no longer runs, 1 gives the wrong opening hours, and 3 promise a canal path that may not exist yet. 10 could not be fully verified; leave `verify` on those or reword them.
+
+### Fix table
+
+| # | File:line | As written | Problem | Correct value | Conf. | Source |
+|---|---|---|---|---|---|---|
+| Q1 | `everyday-home.ts:162` | "The Ekkamai planetarium show for two" → `watthana` | **Wrong district.** The Science Centre for Education (planetarium) is at 928 Sukhumvit Rd, on the south side opposite BTS Ekkamai, in **Khlong Toei**. Listed open Tue–Sun 09:00–16:30, ticketed separately for exhibits and the dome. I found no renovation closure. | ศูนย์วิทยาศาสตร์เพื่อการศึกษา (ท้องฟ้าจำลองกรุงเทพ) / Science Centre for Education (Bangkok Planetarium) → `khlong_toei` | high (district), medium (open) | [TrueID](https://travel.trueid.net/detail/gZ675YYpkPg), [Time Out](https://www.timeout.com/bangkok/th/museums/%E0%B8%97%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%9F%E0%B9%89%E0%B8%B2%E0%B8%88%E0%B8%B3%E0%B8%A5%E0%B8%AD%E0%B8%87-bangkok-planetarium) |
+| Q2 | `landmarks-city.ts:129` | "Hands-on rooms at Ekkamai Science Centre" → `watthana` | Same as Q1. `landmarks-edge.ts:292` already keys it `khlong_toei`, which is correct. | → `khlong_toei` | high | as Q1 |
+| Q3 | `everyday-commute.ts:299` | "A walk past Wat Nimmanoradee's canal-side houses" → `bang_khae` | **Wrong district.** Wat Nimmanoradee (the old "Wat Bang Khae", which may explain the key) is in Bang Wa, **Phasi Charoen**, on Khlong Phasi Charoen. | วัดนิมมานรดี / Wat Nimmanoradee → `phasi_charoen` | medium-high | [Thairath](https://www.thairath.co.th/newspaper/2702603) |
+| Q4 | `everyday-rut.ts:218` | "an indie film night at Warehouse 30" → `bang_rak` | **No longer runs.** The screening room at Warehouse 30 was the Documentary Club's. Doc Club & Pub moved away and closed its later Sala Daeng venue in March 2025. I found no current film nights at Warehouse 30. The district is right. | Keep Warehouse 30 (`bang_rak`) but swap the activity for "a new exhibition opening" or "a pop-up talk". Or move the film night to House Samyan (`pathum_wan`). | medium | [Khaosod 2017 (Doc Club screening room)](https://www.khaosodenglish.com/life/events/2017/07/17/new-art-space-warehouse-30-sees-saturday-soft-opening/amp/), [Time Out Mar 2025](https://www.timeout.com/bangkok/th/news/doc-club-pub-saladeang-031325) |
+| Q5 | `landmarks-city.ts:344` | "Midnight with the gang at Wongsakorn Market" → `sai_mai` | **Wrong time.** Wongsakorn is an afternoon and evening market. Its shops list closing at about 19:00–20:00, and I found nothing open at midnight. The district is right. | "An evening with the gang at Wongsakorn Market…" (เย็น ๆ กับแก๊งที่ตลาดวงศกร). For a midnight market in the north, use Liab Duan Ram Inthra (`bang_khen`, open 17:00–02:00). | medium | [Wongnai shop hours, Wongsakorn](https://www.wongnai.com/restaurants/3391808oc-thx-coffee-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%A7%E0%B8%87%E0%B8%A8%E0%B8%81%E0%B8%A3-%E0%B8%AA%E0%B8%B2%E0%B8%A2%E0%B9%84%E0%B8%AB%E0%B8%A1), [Matichon (Liab Duan hours)](https://www.matichon.co.th/lifestyle/news_495049) |
+| Q6 | `landmarks-edge.ts:127`, `jurrgun.ts:416`, `everyday-rut.ts:217` | "the Saen Saep canal path by Wat Thepleela" / "the Wat Thepleela canal walk" → `bang_kapi` | **District right, the path is unconfirmed.** The BMA canal-side walkway and bike lane along Saen Saep is being built in stretches. I found no report that the Hua Mak/Ramkhamhaeng stretch is finished, and Ramkhamhaeng to Khlong Tan was listed as the dirtiest section. | Say "by the Wat Thepleela pier on Saen Saep" rather than "canal path", or keep `verify` until someone walks it. `landmarks-edge.ts:141` (boat noodles by Wat Thepleela) is fine. | medium | [Daily News](https://www.dailynews.co.th/news/5117087/), [Thai PBS](https://www.thaipbs.or.th/news/content/250117) |
+
+### Confirmed: `verify` can come off (39 answers)
+
+| Place | Key ✓ | Lines (all `av`) | What I confirmed | Source |
+|---|---|---|---|---|
+| Jodd Fairs Ratchada | din_daeng | everyday-rut:262, jurrgun:247, :383, everyday-home:294 | 129 Ratchadaphisek, Din Daeng; open about 17:00–01:00, so "11 pm", "till late" and "till midnight" all hold | see M3 above |
+| Brown Sugar | pom_prap | everyday-rut:133, jurrgun:382 | 18 Soi Nana, Pom Prap Sattru Phai; Tue–Sun 17:00–01:00, so "until midnight" holds (closed Mondays) | Time Out (above) |
+| Warehouse 30, exhibition opening | bang_rak | jurrgun:324 | Charoen Krung Soi 30 gallery and event warehouses | [Time Out](https://www.timeout.com/bangkok/th/art/warehouse-30) |
+| Chao Phraya Bodindecha house museum | wang_thonglang | landmarks-city:134, landmarks-edge:135, seasonal:391 | 40 Soi Ramkhamhaeng 43/1, Phlapphla; listed daily 09:00–16:00, free. **Call ahead (it's inside a school)**, so it isn't a pure walk-in; the answers don't promise one. | Love Thailand (above) |
+| Wat Thepleela, boat noodles | bang_kapi | landmarks-edge:141 | Hua Mak, Bang Kapi | th.wikipedia (above) |
+| Chao Phraya Sky Park | khlong_san (everyday-commute:134), phra_nakhon (jurrgun:303) | — | Free, daily 05:00–20:00 (reviewed June 2026). It spans both districts, so both keys are valid. | [Thai Holiday Guide](https://www.thaiholidayguide.com/attraction/chao-phraya-sky-park/), [Time Out](https://www.timeout.com/bangkok/attractions/chao-phraya-sky-park) |
+| Central Rama 2 | bang_khun_thian | everyday-commute:211, landmarks-city:158 | Rama 2 Rd, Samae Dam, Bang Khun Thian | (geography; confirmed in the first pass) |
+| Central EastVille | lat_phrao | seasonal:362, landmarks-edge:408 | Pradit Manutham Rd, Lat Phrao, an indoor and outdoor garden mall; neighbours on the road list Lat Phrao, Lat Phrao | [Marketeer](https://marketeeronline.co/archives/41689) |
+| Nong Bon Water Sports Centre / Nong Bon Park | prawet | jurrgun:280, seasonal:82 | Chaloem Phrakiat R.9 Soi 43, Nong Bon, Prawet; daily 08:30–18:30; kayak, sailing and SUP (may need an annual membership); the park is free | [Time Out](https://www.timeout.com/bangkok/th/things-to-do/ศูนย์กีฬาบึงหนองบอน-bueng-nong-bon-sports-center), [Wikipedia](https://en.wikipedia.org/wiki/Nong_Bon_Water_Sports_Center) |
+| Esplanade Ratchada bowling | din_daeng | landmarks-edge:400 | Blu-O Rhythm & Bowl, 4th floor; hosted ASEAN Para Games bowling in January 2026 | [Wikipedia](https://en.wikipedia.org/wiki/Bowling_at_the_2025_ASEAN_Para_Games) |
+| Lumpinee Stadium, Ram Inthra | bang_khen | landmarks-edge:268 | 6 Ram Inthra Rd, Anusawari, Bang Khen | AAA Tripcanvas (above) |
+| Liab Duan Ram Inthra market | bang_khen | everyday-commute:270 | Tha Raeng, Bang Khen; 17:00–02:00, so "11 pm" holds | [Matichon](https://www.matichon.co.th/lifestyle/news_495049) |
+| Pattavikorn Market | bueng_kum | everyday-commute:347 | Nawamin 70/72, Khlong Kum | [Wikipedia](https://en.wikipedia.org/wiki/Pattavikorn_Market) |
+| Terminal 21 Rama 3 | bang_kho_laem | everyday-home:154 | Rama 3 Rd, Bang Kho Laem | Nation (above) |
+| Paradise Park | prawet | everyday-home:346 | Srinakarin, Nong Bon, Prawet | (geography) |
+| IT Square Lak Si café | lak_si | landmarks-city:374 | Laksi Plaza, Lak Si | (geography) |
+| Baan Kudichin Museum | thon_buri | landmarks-city:140 | 271 Soi Wat Kalaya, Thon Buri; Tue–Sun 09:30–18:00, free (reviewed July 2026) | [Time Out](https://timeout.com/bangkok/museums/baan-kudichin-museum) |
+| Thonburirom Park | thung_khru | seasonal:86 | Pracha Uthit, Thung Khru; the BMA extended its hours to 04:00–21:00 | [Matichon](https://www.matichon.co.th/local/news_3825094) |
+| Seri Thai Park | bueng_kum | seasonal:88 | (confirmed in the first pass) | — |
+| Saranrom Park, 6 am | phra_nakhon | seasonal:135 | Opens about 04:30–05:00, free; morning exercise groups noted | [Thai Holiday Guide](https://www.thaiholidayguide.com/attraction/saranrom-park/) |
+| W District café | watthana | seasonal:312 | Phra Khanong Nuea, Watthana (corrected key, now right) | (first pass) |
+| Generic "a café/stall in…" answers | huai_khwang (everyday-home:302, jurrgun:295 escape room "in Ratchada"), lat_phrao (seasonal:144 Chokchai 4 café), rat_burana (seasonal:252 Suk Sawat jay café), sai_mai (seasonal:253 old jay shop), saphan_sung (seasonal:284 garden café), khan_na_yao (jurrgun:105 Fashion Island pop-up classes), prawet (jurrgun:111 Seacon Square board games) | — | These name a real area, not a venue, so there's nothing to close. The `verify` mark isn't needed. | — |
+
+### Could not verify: keep `verify` or reword (10 answers)
+
+| File:line | Place | What I found |
+|---|---|---|
+| `everyday-home.ts:350` | Clay workshop at Warehouse 30 (`bang_rak`) | Warehouse 30 has a hire-out workshop space, but I found no current clay or pottery class there. Safer: "a hands-on workshop at Warehouse 30". |
+| `jurrgun.ts:272`, `everyday-home.ts:327` | Bangkok Arena futsal / badminton courts (`nong_chok`) | The BMA sports centre at Bangkok Arena lists badminton, gym, table tennis and pool for the public (2020 report). I found no current booking info for futsal. District right; open status medium. |
+| `landmarks-edge.ts:354` | "Rama III riverside" jogging path (`yan_nawa`) | I found no continuous public riverside jogging path on Rama III; the Chao Phraya riverside walkway was halted by court order in 2021. Safer: "evening jogs along Rama III's riverside parks" or "by the river off Rama III". This also affects the older main bank lines on the "Rama III riverside path" (`yan_nawa`, 8 answers), so it's worth a quick look. |
+| `jurrgun.ts:357` | Street art on Soi Nana, Chinatown (`pom_prap`) | The district is right, and Soi Nana is the Chinatown bar lane. I found no source for a street-art trail there; Talat Noi (`samphanthawong`) is the documented mural area. |
+| `jurrgun.ts:146` | A Thawi Watthana orchid farm taking groups monthly (`thawi_watthana`) | Orchid farms exist in the district, but I found no named farm that takes visitor groups. Reword to "the orchid farms of Thawi Watthana" (the existing landmark) without promising a group visit. |
+| `seasonal.ts:299` | Thawi Watthana canal orchards, picking mangoes | Plausible farm area, but no source for pick-your-own mangoes. |
+| `seasonal.ts:307` | Chom Thong canal orchards | The Bang Mot orchards are mostly gone or remnant; there's no source for a walkable orchard. The existing landmark "the old orchards of Bang Mot" is already broad. |
+| `seasonal.ts:243` | Jay (vegetarian festival) lanes round Wongwian 22 Karakadakhom (`pom_prap`) | The district is right. The festival's documented centre is Yaowarat (`samphanthawong`); I found no source for Wongwian 22's jay lanes. Safer: move it to Yaowarat / `samphanthawong`. |
+| `jurrgun.ts:111` | Seacon Square board game café | The mall is right; I found no current board-game café there. Could be "a board-game night at Seacon Square". |
+
+### Not in the verify list, but still in the batch
+- `everyday-commute.ts:86`: "a Sena Nikhom café" → `lat_phrao`. Sena Nikhom subdistrict is in **Chatuchak** (W10 in the first pass). Low-medium; change it to `chatuchak` or say "a Lat Phrao café".
+- The batch's "Ratchada" answers keyed `huai_khwang` (everyday-rut:168, everyday-commute:266, everyday-home:275, landmarks-city:372, jurrgun:295) are fine. Ratchadaphisek runs mostly through Huai Khwang. Only the west side near the Cultural Centre (Jodd Fairs, The Street, Esplanade) is Din Daeng.
+- The first pass's worktree problems (Krung Thep Aphiwat, Chokchai 4, Benjasiri, Emporium, W District, Kasetsart, The Street, Doc Club, the Phasi Charoen boat) are **all fixed** in this commit.
