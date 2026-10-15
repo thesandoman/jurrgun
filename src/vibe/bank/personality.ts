@@ -447,7 +447,7 @@ export const PERSONALITY: Scenario[] = [
     answers: {
       BDMN: a("🧗", "watthana", "discovery", "A first team climbing session at a bouldering studio", "พาทีมไปปีนผาจำลองที่สตูดิโอโบลเดอริง ครั้งแรกของทุกคน"),
       BDMH: a("🧭", "lat_krabang", "belonging", "The team exploring an old market together, coming back one crew", "ทั้งทีมเดินสำรวจตลาดเก่าด้วยกัน กลับมาเป็นแก๊งเดียวกัน"),
-      BDSN: a("🎨", "khlong_san", "useful", "Booking a pop-up workshop at Lhong 1919, seats for the whole team", "จองเวิร์กช็อปป๊อปอัปที่ล้ง 1919 ให้เพื่อนร่วมทีมได้ที่นั่งครบทุกคน"),
+      BDSN: a("🎨", "khlong_san", "useful", "Booking a pop-up workshop at ICONSIAM, seats for the whole team", "จองเวิร์กช็อปป๊อปอัปที่ไอคอนสยาม ให้เพื่อนร่วมทีมได้ที่นั่งครบทุกคน"),
       BDSH: a("🍛", "bang_kho_laem", "known", "The team at a halal stall you just found, praising your nose", "พาทีมไปร้านฮาลาลที่เพิ่งเจอ ทุกคนชมว่าคุณจมูกไวเรื่องของกิน"),
       BFMN: a("🏸", "din_daeng", "freedom", "The team's weekly badminton, open court, whoever wants to play", "แบดประจำสัปดาห์ของทีม เปิดคอร์ตไว้ ใครอยากตีก็มา"),
       BFMH: a("🌊", "bang_khae", "calm", "The team's same slow canal walk in Bang Khae", "ทีมเดินเลียบคลองช้า ๆ เส้นเดิมในบางแค"),

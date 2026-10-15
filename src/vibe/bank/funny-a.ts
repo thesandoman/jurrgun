@@ -121,7 +121,7 @@ export const FUNNY_A: Scenario[] = [
     icon: "⛴️",
     tone: "afternoon",
     answers: {
-      BDMN: a("🏮", "khlong_san", "Off at Khlong San: the gang explores Lhong 1919 on foot", "ลงท่าคลองสาน แก๊งเดินสำรวจล้ง 1919 กันเต็มที่"),
+      BDMN: a("🏮", "khlong_san", "Off at Khlong San: the gang explores Charoen Nakhon's cafés on foot", "ลงท่าคลองสาน แก๊งเดินสำรวจคาเฟ่ถนนเจริญนครกันเต็มที่"),
       BDMH: a("⛵", "bangkok_noi", "Phra Pin Klao pier: lead the gang to explore the Royal Barges", "ลงท่าพระปิ่นเกล้า พาแก๊งไปสำรวจพิพิธภัณฑ์เรือพระราชพิธี"),
       BDSN: a("🍨", "khlong_san", "Stay on to ICONSIAM, the gang tries whichever café just opened", "นั่งยาวไปไอคอนสยาม แก๊งลองคาเฟ่ที่เพิ่งเปิดร้านไหนก็ได้"),
       BDSH: a("🍤", "bangkok_yai", "Cross with the gang to a Wat Arun riverside lunch nobody knows", "ข้ามฟากกับแก๊งไปหาร้านริมน้ำฝั่งวัดอรุณที่ยังไม่มีใครรู้จัก"),

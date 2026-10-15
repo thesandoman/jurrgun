@@ -78,7 +78,7 @@ export const PARTY_MEETUP_WORK: Scenario[] = [
       BFSH: a("🍢", "phaya_thai", "The gang at your stall in Saphan Khwai, every dish they love", "ยกแก๊งไปร้านประจำในตลาดสะพานควาย สั่งทุกจานที่เขาชอบ"),
       CDMN: a("🌿", "sathon", "Exploring Sathon's quiet sois on foot with them, a first for both", "เดินสำรวจซอยเงียบ ๆ ย่านสาทรกับเขา ครั้งแรกของทั้งสองคน"),
       CDMH: a("🛕", "chom_thong", "Wandering Wat Ratchaorasaram with them, a temple neither of you knows", "เดินเล่นวัดราชโอรสารามกับเขา วัดที่ทั้งสองคนยังไม่เคยมา"),
-      CDSN: a("🎧", "khlong_san", "Coffee for two at Lhong 1919, finally, swapping playlists for their flight", "กาแฟสองแก้วที่ล้ง 1919 ได้มาสักที แลกเพลย์ลิสต์ไว้ให้เขาฟังบนเครื่อง"),
+      CDSN: a("🎧", "khlong_san", "Coffee for two at The Jam Factory, finally, swapping flight playlists", "กาแฟสองแก้วที่เดอะ แจม แฟคทอรี่ ได้มาสักที แลกเพลย์ลิสต์ไว้ให้เขาฟังบนเครื่อง"),
       CDSH: a("🏡", "bang_rak", "An afternoon with them at the Bangkokian Museum, a first for both", "ใช้บ่ายกับเขาที่พิพิธภัณฑ์ชาวบางกอก ครั้งแรกของทั้งสองคน"),
       CFMN: a("🏓", "lat_phrao", "Your weekly table tennis with them off Chokchai 4, one last game", "ตีปิงปองกับเขาแถวโชคชัย 4 อย่างที่ตีกันทุกสัปดาห์ เกมสุดท้ายก่อนเขาไป"),
       CFMH: a("🌅", "chom_thong", "Sunrise walk with them through the Bang Mot orchards, every Sunday", "เดินตอนเช้ามืดกับเขาผ่านสวนเก่าบางมด เหมือนทุกวันอาทิตย์"),

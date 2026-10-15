@@ -104,7 +104,7 @@ export const EVERYDAY_RUT: Scenario[] = [
       BFSN: a("🎸", "lat_phrao", "The whole class at the Lat Phrao music café, loved since school", "ทั้งห้องไปคาเฟ่ดนตรีสดย่านลาดพร้าว ร้านที่รักกันมาตั้งแต่สมัยเรียน"),
       BFSH: a("🍢", "phaya_thai", "The whole class back to the Saphan Khwai market after-school stalls", "ทั้งห้องกลับไปร้านหลังเลิกเรียนในตลาดสะพานควาย"),
       CDMN: a("🛍️", "pathum_wan", "Exploring Lido Connect's indie shops with the one friend you miss most", "เดินสำรวจร้านอินดี้ในลิโด้ คอนเน็คท์กับเพื่อนคนที่คิดถึงที่สุด"),
-      CDMH: a("⚓", "khlong_san", "First walk round Lhong 1919's old pier with your two closest", "เดินรอบท่าเรือเก่าล้ง 1919 ครั้งแรกกับเพื่อนสนิทสองคน"),
+      CDMH: a("⚓", "khlong_san", "First walk through Khlong San's old riverside lanes with your two closest", "เดินซอยเก่าริมน้ำย่านคลองสานครั้งแรกกับเพื่อนสนิทสองคน"),
       CDSN: a("🌆", "sathon", "Three of you, mocktails at a Sathon rooftop someone just heard about", "สามคนขึ้นรูฟท็อปย่านสาทรที่เพิ่งมีคนบอกต่อมา สั่งม็อกเทล"),
       CDSH: a("🍛", "phra_nakhon", "A Phahurat curry house, a menu neither of you can read", "ร้านแกงอินเดียในพาหุรัด เมนูที่ทั้งสองคนอ่านไม่ออก"),
       CFMN: a("👟", "bueng_kum", "The Seri Thai Park jog you and one school friend never skip", "วิ่งรอบสวนเสรีไทยกับเพื่อนสมัยเรียน ที่ไม่เคยขาดสักครั้ง"),

@@ -75,7 +75,7 @@ export const SEASONAL: Scenario[] = [
       BDSH: a("🦑", "samphanthawong", "Grilled squid on stools in a Talat Noi lane, strangers becoming friends", "หมึกย่างนั่งเก้าอี้พลาสติกในซอยตลาดน้อย คนแปลกหน้ากลายเป็นเพื่อน"),
       BFMN: a("🚶", "pathum_wan", "The whole Table's yearly lap of Lumphini lake, lights everywhere", "ทั้งโต๊ะเดินรอบบึงสวนลุมพินีเหมือนทุกปี ไฟเต็มสวน"),
       BFMH: a("🍃", "prawet", "The whole Table folds krathong again, then Suan Luang Rama IX", "ทั้งโต๊ะนั่งพับกระทงกันอีกปี แล้วไปลอยที่สวนหลวง ร.9"),
-      BFSN: a("🏮", "khlong_san", "Mocktails at Lhong 1919 with the whole Table, the staff wave hello", "จิบม็อกเทลที่ล้ง 1919 กับทั้งโต๊ะ พนักงานโบกมือทักทาย"),
+      BFSN: a("🏮", "pathum_wan", "Mocktails by Lumphini's lake with the whole Table, the vendors wave hello", "จิบม็อกเทลริมบึงสวนลุมพินีกับทั้งโต๊ะ แม่ค้าโบกมือทักทาย"),
       BFSH: a("🍚", "phra_nakhon", "The whole Table's khao tom by Tha Tien. The aunties know you", "ทั้งโต๊ะกินข้าวต้มแถวท่าเตียน ป้า ๆ จำได้หมดแล้ว"),
       CDMN: a("🌙", "prawet", "With one app friend, finally strolling Suan Wanatham on Loy Krathong night", "กับเพื่อนจากแอปหนึ่งคน ได้เดินเล่นสวนวนธรรมคืนลอยกระทงซะที"),
       CDMH: a("🍌", "bangkok_noi", "Two app friends folding their first clumsy krathong, then a river walk", "เพื่อนจากแอปสองคนหัดพับกระทงอันแรกแบบงก ๆ เงิ่น ๆ แล้วเดินไปริมน้ำ"),
@@ -153,7 +153,7 @@ export const SEASONAL: Scenario[] = [
     icon: "🧧",
     tone: "morning",
     answers: {
-      BDMN: a("🏮", "khlong_san", "The whole family walking under Lhong 1919's lanterns everyone keeps posting", "ทั้งบ้านเดินใต้โคมแดงที่ล้ง 1919 ที่ใคร ๆ ก็โพสต์"),
+      BDMN: a("🏮", "khlong_san", "The whole family walking under ICONSIAM's red lanterns everyone keeps posting", "ทั้งบ้านเดินใต้โคมแดงที่ไอคอนสยามที่ใคร ๆ ก็โพสต์"),
       BDMH: a("🦁", "samphanthawong", "The whole family following a lion dance down Song Wat, on impulse", "ทั้งบ้านเดินตามเชิดสิงโตไปตามถนนทรงวาด แบบไม่ได้คิดไว้ก่อน"),
       BDSN: a("🥢", "lat_phrao", "Big family table, a modern vegetarian Chinese spot your cousin swears by", "โต๊ะใหญ่ทั้งบ้าน ร้านจีนมังสวิรัติสไตล์โมเดิร์นที่ลูกพี่ลูกน้องยืนยันว่าเด็ด"),
       BDSH: a("🥟", "pom_prap", "The family at an old Pom Prap shop a neighbour swears by", "ทั้งบ้านนั่งโต๊ะกลมร้านเก่าในป้อมปราบที่เพื่อนบ้านยืนยันว่าเด็ด"),

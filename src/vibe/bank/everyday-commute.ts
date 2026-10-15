@@ -218,7 +218,7 @@ export const EVERYDAY_COMMUTE: Scenario[] = [
       CDSH: a("🥢", "rat_burana", "An old Wat Rat Burana noodle shop neither of you has tried", "ร้านก๋วยเตี๋ยวเก่าแถววัดราษฎร์บูรณะที่ทั้งสองคนยังไม่เคยลอง"),
       CFMN: a("🏊", "bang_na", "Laps for you two at the Bang Na indoor pool, lifeguard waves", "คุณสองคนว่ายน้ำที่สระในร่มแถวบางนา ไลฟ์การ์ดโบกมือทัก"),
       CFMH: a("☂️", "bang_phlat", "Walk your route home along a Bang Phlat canal, one umbrella", "เดินกลับบ้านเลียบคลองเส้นเดิมในบางพลัด แชร์ร่มคันเดียว"),
-      CFSN: a("🧇", "khlong_san", "The same two seats at a Lhong 1919 café till it clears", "สองที่นั่งเดิมในคาเฟ่ที่ล้ง 1919 จนฝนหยุด"),
+      CFSN: a("🧇", "khlong_san", "The same two seats in a Charoen Nakhon café till it clears", "สองที่นั่งเดิมในคาเฟ่ถนนเจริญนคร จนฝนหยุด"),
       CFSH: a("🍚", "bang_kho_laem", "Hot soup for two at your stall in Bang Kho Laem", "ซุปร้อน ๆ สองที่ที่ร้านเดิมในบางคอแหลม"),
     },
   },

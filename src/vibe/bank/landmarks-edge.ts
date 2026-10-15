@@ -344,7 +344,7 @@ export const LANDMARKS_EDGE: Scenario[] = [
       BDSH: a("🦆", "samphanthawong", "Everyone's riverside lunch at a Talat Noi shophouse a friend swears by", "มื้อเที่ยงริมน้ำของทุกคนที่ร้านห้องแถวในตลาดน้อย ร้านที่เพื่อนยืนยันว่าเด็ด"),
       BFMN: a("🏃", "sathon", "Your crew's run through Chong Nonsi Canal Park to the river", "ก๊วนคุณวิ่งผ่านสวนคลองช่องนนทรีไปจนถึงแม่น้ำ"),
       BFMH: a("🖼️", "yan_nawa", "Walking the gang past the Wat Chong Nonsi murals, your yearly ritual", "พาแก๊งเดินชมจิตรกรรมฝาผนังวัดช่องนนทรี ธรรมเนียมประจำปีของคุณ"),
-      BFSN: a("🏮", "khlong_san", "Your gang's riverside corner at Lhong 1919, iced coffees before you order", "มุมริมน้ำของแก๊งที่ล้ง 1919 กาแฟเย็นมาก่อนจะทันสั่ง"),
+      BFSN: a("🏮", "khlong_san", "Your gang's corner at The Jam Factory, iced coffees before you order", "มุมประจำของแก๊งที่เดอะ แจม แฟคทอรี่ กาแฟเย็นมาก่อนจะทันสั่ง"),
       BFSH: a("🍗", "thon_buri", "Your gang's riverside khao man gai in Bukkhalo, same shop since uni", "ข้าวมันไก่ริมน้ำของแก๊งที่บุคคโล ร้านเดิมตั้งแต่สมัยมหาวิทยาลัย"),
       CDMN: a("🎨", "bang_rak", "Walking Warehouse 30's studios with one friend, curious about every door", "เดินดูสตูดิโอใน Warehouse 30 กับเพื่อนอีกคน อยากรู้ไปทุกห้อง"),
       CDMH: a("🏯", "thon_buri", "With one friend, exploring the old lanes round Wat Kalayanamit", "เดินสำรวจตรอกเก่ารอบวัดกัลยาณมิตรกับเพื่อนอีกคน"),

@@ -60,4 +60,6 @@ Every answer that was marked `verify` has now been checked. Commit 6a768c1 fixed
 | a W District café | an EmQuartier café | no café confirmed inside W District |
 | EastVille's December lights | EastVille's year-end garden decorations | the mall runs a year-end campaign; lights not confirmed |
 
+**Lhong 1919 (D41):** closed for AWC's Ritz-Carlton redevelopment (Thairath, 10 Jun 2025); its heritage area is due back in early 2027. All 12 answers that named it, across the bank (Q2's files plus funny-a, party-meetup-work and personality), now use open places nearby: ICONSIAM, The Jam Factory, Candide Books, Charoen Nakhon cafés, Khlong San's old riverside lanes, and Lumphini for Loy Krathong. Khlong San market (railway land up for redevelopment) and Chang Chui (2025 status unconfirmed) were avoided.
+
 Main sources: Time Out Bangkok (Brown Sugar, Sky Park, Loy Krathong parks 22 Oct 2025, planetarium 13 Mar 2026), Thai Holiday Guide (Bodindecha, Kudichin, Lumpinee, Saranrom), Wikipedia (Central Rama 2, Pattavikorn, Bangkok Arena, Nong Chok Park, Paradise Park, Wat Nimmanoradee), TrueID (Liab Duan), Major Cineplex investor pages (Esplanade bowling), Central Pattana (EastVille), The Smart Local (Nong Bon), Wongnai (Chokchai 4, Ramkhamhaeng 39).
