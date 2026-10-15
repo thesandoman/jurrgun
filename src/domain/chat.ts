@@ -98,3 +98,66 @@ export const REASON_TEXT: Record<Exclude<CheckResult, { ok: true }>["reason"], {
   day_cap: { th: "วันนี้ส่งข้อความครบแล้ว พักสายตาหน่อยนะ", en: "You've hit today's message limit. Time for a screen break." },
   closed: { th: "ห้องแชตนี้ปิดแล้ว", en: "This chat has closed." },
 };
+
+// ------------------------------------------------------- circle extras --
+// Group chats for a circle hangout get two more things: photos from the day
+// and quick polls ("which Sunday?"). Both stay inside the circle.
+
+export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+/** Photos each person may share in one circle chat per day. */
+export const PHOTOS_PER_DAY = 10;
+export const POLL_MIN = 2;
+export const POLL_MAX = 4;
+export const POLL_Q_MAX = 120;
+export const POLL_OPT_MAX = 60;
+
+/**
+ * Photos are for circles only, and only once the hangout has started: they
+ * are photos from the day, not a way to share images with strangers.
+ */
+export function checkPhoto(
+  file: { type: string; size: number } | null,
+  ctx: { kind: ThreadKind; met: boolean; open: boolean; sentToday: number },
+): { ok: true } | { ok: false; reason: "closed" | "not_circle" | "not_yet" | "type" | "size" | "photo_cap" } {
+  if (!ctx.open) return { ok: false, reason: "closed" };
+  if (ctx.kind !== "circle") return { ok: false, reason: "not_circle" };
+  if (!ctx.met) return { ok: false, reason: "not_yet" };
+  if (!file || !(PHOTO_TYPES as readonly string[]).includes(file.type)) return { ok: false, reason: "type" };
+  if (file.size <= 0 || file.size > PHOTO_MAX_BYTES) return { ok: false, reason: "size" };
+  if (ctx.sentToday >= PHOTOS_PER_DAY) return { ok: false, reason: "photo_cap" };
+  return { ok: true };
+}
+
+/** A poll: a short question and 2 to 4 distinct options. */
+export function checkPoll(
+  question: string,
+  options: string[],
+  ctx: { kind: ThreadKind; open: boolean },
+): { ok: true; question: string; options: string[] } | { ok: false; reason: "closed" | "not_circle" | "question" | "options" } {
+  if (!ctx.open) return { ok: false, reason: "closed" };
+  if (ctx.kind !== "circle") return { ok: false, reason: "not_circle" };
+  const q = question.replace(/\s+/g, " ").trim();
+  if (!q || q.length > POLL_Q_MAX) return { ok: false, reason: "question" };
+  const opts = [...new Set(options.map((o) => o.replace(/\s+/g, " ").trim()).filter(Boolean))];
+  if (opts.length < POLL_MIN || opts.length > POLL_MAX || opts.some((o) => o.length > POLL_OPT_MAX)) return { ok: false, reason: "options" };
+  return { ok: true, question: q, options: opts };
+}
+
+/** Votes per option (index), from one row per voter. */
+export function tally(optionCount: number, votes: { option: number }[]): number[] {
+  const out = new Array(optionCount).fill(0);
+  for (const v of votes) if (v.option >= 0 && v.option < optionCount) out[v.option]++;
+  return out;
+}
+
+export const EXTRA_TEXT: Record<string, { th: string; en: string }> = {
+  closed: { th: "ห้องแชตนี้ปิดแล้ว", en: "This chat has closed." },
+  not_circle: { th: "รูปและโพลใช้ได้ในแชตวงเท่านั้น", en: "Photos and polls are for circle chats." },
+  not_yet: { th: "แชร์รูปได้เมื่อแฮงเอาต์เริ่มแล้ว", en: "You can share photos once the hangout has started." },
+  type: { th: "รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", en: "Photos must be JPG, PNG or WebP." },
+  size: { th: "รูปต้องมีขนาดไม่เกิน 5 MB", en: "Photos must be 5 MB or smaller." },
+  photo_cap: { th: `วันนี้แชร์รูปในวงนี้ครบ ${PHOTOS_PER_DAY} รูปแล้ว`, en: `That's ${PHOTOS_PER_DAY} photos in this circle today.` },
+  question: { th: `คำถามยาวได้ไม่เกิน ${POLL_Q_MAX} ตัวอักษร`, en: `Questions can be up to ${POLL_Q_MAX} characters.` },
+  options: { th: `ใส่ตัวเลือก ${POLL_MIN} ถึง ${POLL_MAX} ข้อ ไม่ซ้ำกัน`, en: `Add ${POLL_MIN} to ${POLL_MAX} different options.` },
+};

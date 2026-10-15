@@ -280,6 +280,24 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chat-msgs .inline{display:inline}
 .linkish{background:none;border:0;padding:0;color:var(--ink-3);text-decoration:underline;font:inherit;cursor:pointer}
 .chat-warn{margin:0 0 4px;padding:8px 12px;border-radius:12px;background:var(--sun-soft,#fff4dc);color:var(--warn,#8a5a00);font-size:.85rem;font-weight:600}
+.chat-photo{margin:0;border-radius:18px;overflow:hidden;background:var(--surface-2);max-width:280px;box-shadow:var(--shadow)}
+.chat-photo img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover}
+.chat-photo figcaption{padding:8px 12px;font-size:.9rem}
+.host-badge{margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--gold-soft);color:#7a4a00;font-size:.72rem;font-weight:700}
+.chat-poll{min-width:260px;max-width:320px;padding:12px;border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.chat-poll .q{margin:0 0 2px;font-weight:700}
+.chat-poll form{margin:0}
+.chat-poll .opt{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:inherit;text-align:left;cursor:pointer;overflow:hidden}
+.chat-poll .opt i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--brand) 18%,transparent);transition:width .4s ease}
+.chat-poll .opt span,.chat-poll .opt b{position:relative}
+.chat-poll .opt.mine{border-color:var(--brand);font-weight:700}
+.chat-extras{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px}
+.chat-photo-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chat-photo-form label.chip{position:relative;cursor:pointer;min-height:44px;display:inline-flex;align-items:center}
+.chat-photo-form input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.chat-photo-form input[name=caption]{flex:1;min-width:160px}
+.chat-poll-new form{display:grid;gap:8px;margin-top:8px}
+@media (prefers-reduced-motion:reduce){.chat-poll .opt i{transition:none}}
 .chat-send{position:sticky;bottom:calc(104px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;padding:8px 0;background:linear-gradient(to top,var(--bg) 80%,transparent)}
 .chat-send>.chat-starters,.chat-send>.notice{grid-column:1/-1}
 .chat-send textarea{min-height:46px;resize:none}

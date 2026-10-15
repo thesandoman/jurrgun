@@ -70,9 +70,17 @@ type Ctx = Context<AppEnv>;
 type Db = ReturnType<typeof getDb>;
 
 const CHOICE_SET = new Set<string>(["friend", "activity", "again", "romance", "none"]);
+/** Wherever people already talk: Jurrgun gets you to meet, then hands you over to your own app. */
 const CONTACT_METHODS = [
   { value: "line", th: "LINE", en: "LINE" },
   { value: "instagram", th: "Instagram", en: "Instagram" },
+  { value: "tiktok", th: "TikTok", en: "TikTok" },
+  { value: "whatsapp", th: "WhatsApp", en: "WhatsApp" },
+  { value: "messenger", th: "Messenger", en: "Messenger" },
+  { value: "wechat", th: "WeChat", en: "WeChat" },
+  { value: "telegram", th: "Telegram", en: "Telegram" },
+  { value: "kakaotalk", th: "KakaoTalk", en: "KakaoTalk" },
+  { value: "phone", th: "เบอร์โทร (iMessage / SMS)", en: "Phone (iMessage / SMS)" },
   { value: "other", th: "อื่น ๆ", en: "Other" },
 ];
 

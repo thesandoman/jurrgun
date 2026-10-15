@@ -32,6 +32,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, notExists, or, sql 
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
 import { audit } from "../lib/records";
+import { deleteObject, type StorageEnv } from "../storage";
 import {
   accounts,
   auditLog,
@@ -101,6 +102,14 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   const endedBefore = (cutoff: Date) => db.select({ id: events.id }).from(events).where(lte(events.endsAt, cutoff));
 
   // 1. Time-based cleanups, as one batch. `returning` gives the counts.
+  // Chat photos go with their messages: collect the files before the rows are deleted (bounded).
+  const oldPhotos = await db
+    .select({ key: chatMessages.photoKey })
+    .from(chatMessages)
+    .where(and(lt(chatMessages.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY)), isNotNull(chatMessages.photoKey)))
+    .limit(500);
+  await dropFiles(env, oldPhotos.map((p) => p.key!));
+
   const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld] = await batch(env, [
     db
       .update(registrations)
@@ -155,6 +164,10 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .orderBy(accounts.deactivatedAt)
     .limit(ACCOUNT_BATCH + 1);
   const ids = due.slice(0, ACCOUNT_BATCH).map((r) => r.id);
+  if (ids.length) {
+    const theirPhotos = await db.select({ key: chatMessages.photoKey }).from(chatMessages).where(and(inArray(chatMessages.sender, ids), isNotNull(chatMessages.photoKey))).limit(2000);
+    await dropFiles(env, theirPhotos.map((p) => p.key!));
+  }
 
   const counts: RetentionCounts = {
     signalsCleared: signals.length,
@@ -227,4 +240,11 @@ export async function retentionIfDue(env: DatabaseEnv, actor: string, now: Date 
   if (last && now.getTime() - last.at.getTime() < RETENTION_INTERVAL_MS) return last;
   const counts = await runRetention(env, now, actor);
   return { at: now, counts, actor };
+}
+
+/** Delete stored files when this environment has file storage; never fails retention. */
+async function dropFiles(env: DatabaseEnv, keys: string[]) {
+  const st = env as unknown as StorageEnv;
+  if (!keys.length || (!st.FILES && !st.BUCKET)) return;
+  await deleteObject(st, keys).catch(() => {});
 }

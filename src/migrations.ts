@@ -208,5 +208,15 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"social_profiles\" ADD COLUMN \"gender\" text;",
       "ALTER TABLE \"social_profiles\" ADD COLUMN \"women_only\" boolean DEFAULT false NOT NULL;"
     ]
+  },
+  {
+    "id": "0016_wild_nekra",
+    "statements": [
+      "CREATE TABLE \"social_chat_votes\" (\n\t\"message_id\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"option\" integer NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_chat_messages\" ADD COLUMN \"kind\" text DEFAULT 'text' NOT NULL;",
+      "ALTER TABLE \"social_chat_messages\" ADD COLUMN \"photo_key\" text;",
+      "ALTER TABLE \"social_chat_messages\" ADD COLUMN \"poll_options\" jsonb;",
+      "CREATE UNIQUE INDEX \"social_chat_votes_pk\" ON \"social_chat_votes\" (\"message_id\",\"account_id\");"
+    ]
   }
 ];

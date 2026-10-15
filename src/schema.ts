@@ -740,6 +740,12 @@ export const chatMessages = pgTable(
     body: text("body").notNull(),
     /** Asked for money or a transfer: the receiver sees a scam warning. */
     moneyFlag: boolean("money_flag").notNull().default(false),
+    /** text | photo | poll. Photos and polls are for circle chats only. */
+    kind: text("kind").notNull().default("text"),
+    /** Photo messages: the private storage key (served only to thread members). */
+    photoKey: text("photo_key"),
+    /** Poll messages: the options; `body` is the question. */
+    pollOptions: jsonb("poll_options").$type<string[]>(),
     /** Hidden by moderation (or the sender's block); the text is kept for review only. */
     hiddenAt: ts("hidden_at"),
     createdAt: created(),
@@ -748,6 +754,18 @@ export const chatMessages = pgTable(
 );
 
 /** Where each member last read a thread. Private: never shown to the other side (no read receipts). */
+/** One vote per member per poll; changing your vote replaces it. */
+export const chatVotes = pgTable(
+  "social_chat_votes",
+  {
+    messageId: text("message_id").notNull(),
+    accountId: text("account_id").notNull(),
+    option: integer("option").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_chat_votes_pk").on(t.messageId, t.accountId)],
+);
+
 export const chatReads = pgTable(
   "social_chat_reads",
   {

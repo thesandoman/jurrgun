@@ -5,6 +5,10 @@
  *   GET  /chat/:thread                 one thread (buddy:<id>, conn:<id>, circle:<eventId>)
  *   POST /chat/:thread                 send
  *   POST /chat/:thread/report/:msgId   report a message (goes to the moderation queue)
+ *   POST /chat/:thread/photo           circle chats: share a photo from the day
+ *   GET  /chat/:thread/photo/:msgId    the photo, only for members of the thread
+ *   POST /chat/:thread/poll            circle chats: start a quick poll
+ *   POST /chat/:thread/vote/:msgId     vote (or change your vote)
  *
  *   GET  /chat/:thread/live            receive-only live connection: the page hears
  *                                      "chat.changed" after a new message (no polling)
@@ -17,13 +21,14 @@
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { getDb } from "../db";
-import { HANGOUT_OPEN_DAYS, checkMessage, notifyAt, parseThread, REASON_TEXT, shouldNudge, threadKey } from "../domain/chat";
+import { EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate, L } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, connections, events, notifications, profiles, registrations, reports } from "../schema";
+import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, chatVotes, circleHeadRequests, connections, events, notifications, profiles, registrations, reports } from "../schema";
+import { getObject, getObjectUrl, putObject } from "../storage";
 import { PROMPT_BANK } from "../content/profile";
 import { getStatefulObject } from "../state";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
@@ -36,7 +41,7 @@ const DAY = 86_400_000;
 type Db = ReturnType<typeof getDb>;
 type C = Context<AppEnv>;
 
-export type Thread = { key: string; members: string[]; open: boolean; met: boolean; title: { th: string; en: string }; back: string };
+export type Thread = { key: string; members: string[]; open: boolean; met: boolean; title: { th: string; en: string }; back: string; host?: string };
 
 async function blockedBetween(db: Db, me: string, others: string[]): Promise<Set<string>> {
   if (!others.length) return new Set();
@@ -90,6 +95,7 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     met: now.getTime() >= e.startsAt.getTime(),
     title: { th: e.title, en: e.titleEn ?? e.title },
     back: `/events/${e.id}`,
+    host: e.hostAccountId ?? e.createdBy,
   };
 }
 
@@ -137,7 +143,7 @@ chatRoutes.get("/chat", async (c) => {
   const [names, lasts, reads] = await Promise.all([
     others.length ? db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, others)).limit(others.length) : [],
     keys.length
-      ? db.select({ thread: chatMessages.thread, body: chatMessages.body, createdAt: chatMessages.createdAt, sender: chatMessages.sender }).from(chatMessages).where(and(inArray(chatMessages.thread, keys), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(500)
+      ? db.select({ thread: chatMessages.thread, body: chatMessages.body, kind: chatMessages.kind, createdAt: chatMessages.createdAt, sender: chatMessages.sender }).from(chatMessages).where(and(inArray(chatMessages.thread, keys), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(500)
       : [],
     db.select().from(chatReads).where(eq(chatReads.accountId, me)).limit(200),
   ]);
@@ -167,7 +173,7 @@ chatRoutes.get("/chat", async (c) => {
                   <b aria-hidden="true">{th.key.startsWith("buddy") ? "🤝" : th.key.startsWith("circle") ? "👥" : "💬"}</b>
                   <span>
                     <strong>{th.key.startsWith("circle") ? L(lang, th.title) : who.join(", ")}</strong>
-                    <small>{last ? last.body.slice(0, 70) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
+                    <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
                   </span>
                   {!th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : unread ? <i class="dot" aria-label={t("ใหม่", "New")} /> : null}
                 </a>
@@ -179,6 +185,74 @@ chatRoutes.get("/chat", async (c) => {
     </>,
   );
 });
+
+type Msg = typeof chatMessages.$inferSelect;
+
+/** The chat list's one-line preview of the latest message. */
+function preview(m: Pick<Msg, "kind" | "body">, t: View["t"]): string {
+  if (m.kind === "photo") return `📷 ${m.body || t("รูป", "Photo")}`.slice(0, 70);
+  if (m.kind === "poll") return `📊 ${m.body}`.slice(0, 70);
+  return m.body.slice(0, 70);
+}
+
+/** A poll: tap an option to vote (tap another to change it). Totals only, never who voted what. */
+function Poll(props: { v: View; k: string; m: Msg; votes: { accountId: string; option: number }[]; me: string; open: boolean }) {
+  const { t } = props.v;
+  const opts = props.m.pollOptions ?? [];
+  const counts = tally(opts.length, props.votes);
+  const total = props.votes.length;
+  const mine = props.votes.find((x) => x.accountId === props.me)?.option;
+  return (
+    <div class="chat-poll">
+      <p class="q">📊 {props.m.body}</p>
+      {opts.map((o, i) => {
+        const pct = total ? Math.round((counts[i] / total) * 100) : 0;
+        return (
+          <form method="post" action={`/chat/${props.k}/vote/${props.m.id}`}>
+            <input type="hidden" name="option" value={String(i)} />
+            <button class={mine === i ? "opt mine" : "opt"} disabled={!props.open} aria-pressed={mine === i ? "true" : "false"}>
+              <i style={`width:${pct}%`} aria-hidden="true" />
+              <span>{mine === i ? "✓ " : ""}{o}</span>
+              <b>{counts[i]}</b>
+            </button>
+          </form>
+        );
+      })}
+      <small class="muted">{t(`โหวตแล้ว ${total} คน · ไม่แสดงว่าใครเลือกอะไร`, `${total} ${total === 1 ? "vote" : "votes"} · nobody sees who picked what`)}</small>
+    </div>
+  );
+}
+
+/** Circle chats: share a photo from the day, or start a quick poll. */
+function CircleExtras(props: { v: View; k: string; met: boolean }) {
+  const { t } = props.v;
+  return (
+    <div class="chat-extras">
+      {props.met ? (
+        <form method="post" action={`/chat/${props.k}/photo`} enctype="multipart/form-data" class="chat-photo-form">
+          <label class="chip">
+            📷 {t("แชร์รูปจากวันนี้", "Share a photo from today")}
+            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required />
+          </label>
+          <input type="text" name="caption" maxlength={140} placeholder={t("คำบรรยาย (ไม่บังคับ)", "Caption (optional)")} aria-label={t("คำบรรยาย", "Caption")} />
+          <Button kind="ghost">{t("ส่งรูป", "Send photo")}</Button>
+        </form>
+      ) : (
+        <p class="muted">📷 {t("แชร์รูปได้เมื่อแฮงเอาต์เริ่มแล้ว", "Photos open once the hangout starts.")}</p>
+      )}
+      <details class="chat-poll-new">
+        <summary>📊 {t("สร้างโพล", "Start a poll")}</summary>
+        <form method="post" action={`/chat/${props.k}/poll`}>
+          <input type="text" name="question" maxlength={120} required placeholder={t("เช่น วันไหนดี?", "e.g. Which Sunday works?")} aria-label={t("คำถาม", "Question")} />
+          {Array.from({ length: POLL_MAX }, (_, i) => (
+            <input type="text" name="options" maxlength={60} required={i < 2} placeholder={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} aria-label={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} />
+          ))}
+          <Button kind="ghost">{t("ส่งโพล", "Post poll")}</Button>
+        </form>
+      </details>
+    </div>
+  );
+}
 
 /** Three conversation starters, the same for everyone in a thread on a given day. */
 function starters(key: string, now: Date) {
@@ -204,6 +278,15 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
   ]);
   const visible = msgs.filter((m) => !hide.has(m.sender)).reverse();
   const nameOf = new Map(names.map((n) => [n.id, n.nickname]));
+  const pollIds = visible.filter((m) => m.kind === "poll").map((m) => m.id);
+  const [votes, headOf] = await Promise.all([
+    pollIds.length ? db.select().from(chatVotes).where(inArray(chatVotes.messageId, pollIds)).limit(5000) : Promise.resolve([]),
+    th.host
+      ? db.select({ name: circleHeadRequests.circleName }).from(circleHeadRequests).where(and(eq(circleHeadRequests.accountId, th.host), eq(circleHeadRequests.status, "approved"))).orderBy(desc(circleHeadRequests.createdAt)).limit(1)
+      : Promise.resolve([]),
+  ]);
+  const isCircle = th.key.startsWith("circle");
+  const hostLabel = headOf[0]?.name ? `👑 ${headOf[0].name}` : t("👑 ผู้จัด", "👑 Host");
   await db
     .insert(chatReads)
     .values({ thread: key, accountId: me, lastReadAt: now })
@@ -238,11 +321,25 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       <ol class="chat-msgs" id="msgs">
         {visible.map((m) => (
           <li class={m.sender === me ? "mine" : undefined}>
-            {m.sender !== me && th.members.length > 2 ? <small class="who">{nameOf.get(m.sender) ?? "?"}</small> : null}
+            {m.sender !== me && th.members.length > 2 ? (
+              <small class="who">
+                {nameOf.get(m.sender) ?? "?"}
+                {isCircle && m.sender === th.host ? <span class="host-badge">{hostLabel}</span> : null}
+              </small>
+            ) : null}
             {m.moneyFlag && m.sender !== me ? (
               <p class="chat-warn">⚠️ {t("ข้อความนี้พูดถึงเงิน อย่าโอนเงินให้คนที่เพิ่งรู้จัก", "This mentions money. Never send money to someone you've just met.")}</p>
             ) : null}
-            <p class="bubble">{m.body}</p>
+            {m.kind === "photo" ? (
+              <figure class="chat-photo">
+                <img src={`/chat/${key}/photo/${m.id}`} alt={m.body || t("รูปจากวง", "A photo from the circle")} loading="lazy" />
+                {m.body ? <figcaption>{m.body}</figcaption> : null}
+              </figure>
+            ) : m.kind === "poll" ? (
+              <Poll v={v} k={key} m={m} votes={votes.filter((x) => x.messageId === m.id)} me={me} open={th.open} />
+            ) : (
+              <p class="bubble">{m.body}</p>
+            )}
             <small class="when">
               {fmtDate(m.createdAt, lang)}
               {m.sender !== me ? (
@@ -270,7 +367,9 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
           <textarea name="body" rows={1} maxlength={500} required aria-label={t("ข้อความ", "Message")} placeholder={t("พิมพ์ข้อความ…", "Write a message…")} />
           <Button>{t("ส่ง", "Send")}</Button>
         </form>
-      ) : (
+      ) : null}
+      {th.open && isCircle ? <CircleExtras v={v} k={key} met={th.met} /> : null}
+      {th.open ? null : (
         <Notice kind="info">{t("แชตนี้ปิดแล้ว อ่านย้อนหลังได้", "This chat has closed. You can still read it.")}</Notice>
       )}
       <script dangerouslySetInnerHTML={{ __html: CHAT_JS }} />
@@ -345,6 +444,86 @@ chatRoutes.post("/chat/:thread", async (c) => {
   return c.redirect(`/chat/${key}#msgs`);
 });
 
+/** Tell open pages in this thread to refetch. Never fails the request. */
+async function ping(c: C, key: string) {
+  try {
+    const feed = await getStatefulObject(c.env, `chat:${key}`);
+    await feed.publish({ type: "chat.changed" }).catch(() => {});
+  } catch {
+    /* local dev: no live objects */
+  }
+}
+
+chatRoutes.post("/chat/:thread/photo", async (c) => {
+  const key = c.req.param("thread");
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const now = new Date();
+  const th = await resolveThread(db, key, me, now);
+  if (!th) return c.text("Not found", 404);
+  const body = await c.req.parseBody();
+  const file = body.photo instanceof File ? body.photo : null;
+  const sent = await db
+    .select({ id: chatMessages.id })
+    .from(chatMessages)
+    .where(and(eq(chatMessages.thread, key), eq(chatMessages.sender, me), eq(chatMessages.kind, "photo"), gte(chatMessages.createdAt, new Date(now.getTime() - DAY))))
+    .limit(50);
+  const res = checkPhoto(file ? { type: file.type, size: file.size } : null, { kind: parseThread(key)!.kind, met: th.met, open: th.open, sentToday: sent.length });
+  if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400);
+  const photoKey = `chat/${key.replace(":", "-")}/${crypto.randomUUID()}`;
+  await putObject(c.env, photoKey, await file!.arrayBuffer(), { contentType: file!.type });
+  const caption = str(body.caption).replace(/\s+/g, " ").trim().slice(0, 140);
+  await db.insert(chatMessages).values({ id: newId(), thread: key, sender: me, body: caption, kind: "photo", photoKey, createdAt: now });
+  await ping(c, key);
+  return c.redirect(`/chat/${key}#msgs`);
+});
+
+/** A photo, only for members of its thread (checked on every request). Deployed: a short-lived signed URL. */
+chatRoutes.get("/chat/:thread/photo/:msgId", async (c) => {
+  const key = c.req.param("thread");
+  const db = getDb(c.env);
+  const th = await resolveThread(db, key, c.var.user!.account.id);
+  if (!th) return c.notFound();
+  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), eq(chatMessages.thread, key), isNull(chatMessages.hiddenAt))).limit(1);
+  if (!m || m.kind !== "photo" || !m.photoKey) return c.notFound();
+  if (c.env.FILES) {
+    return new Response(null, { status: 302, headers: { location: await getObjectUrl(c.env, m.photoKey), "cache-control": "private, max-age=60" } });
+  }
+  const obj = await getObject(c.env, m.photoKey).catch(() => null);
+  if (!obj) return c.notFound();
+  return new Response(obj.body, { headers: { "content-type": obj.metadata.contentType ?? "application/octet-stream", "cache-control": "private, max-age=60" } });
+});
+
+chatRoutes.post("/chat/:thread/poll", async (c) => {
+  const key = c.req.param("thread");
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const th = await resolveThread(db, key, me);
+  if (!th) return c.text("Not found", 404);
+  const body = await c.req.parseBody({ all: true });
+  const opts = (Array.isArray(body.options) ? body.options : [body.options]).map((x) => str(x));
+  const res = checkPoll(str(body.question), opts, { kind: parseThread(key)!.kind, open: th.open });
+  if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400);
+  await db.insert(chatMessages).values({ id: newId(), thread: key, sender: me, body: res.question, kind: "poll", pollOptions: res.options });
+  await ping(c, key);
+  return c.redirect(`/chat/${key}#msgs`);
+});
+
+chatRoutes.post("/chat/:thread/vote/:msgId", async (c) => {
+  const key = c.req.param("thread");
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const th = await resolveThread(db, key, me);
+  if (!th) return c.text("Not found", 404);
+  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), eq(chatMessages.thread, key), isNull(chatMessages.hiddenAt))).limit(1);
+  if (!m || m.kind !== "poll" || !th.open) return c.redirect(`/chat/${key}`);
+  const option = Math.trunc(Number(str((await c.req.parseBody()).option)));
+  if (!(option >= 0 && option < (m.pollOptions?.length ?? 0))) return c.redirect(`/chat/${key}`);
+  await db.insert(chatVotes).values({ messageId: m.id, accountId: me, option }).onConflictDoUpdate({ target: [chatVotes.messageId, chatVotes.accountId], set: { option } });
+  await ping(c, key);
+  return c.redirect(`/chat/${key}#msgs`);
+});
+
 chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
   const key = c.req.param("thread");
   const db = getDb(c.env);
@@ -360,7 +539,7 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
     targetAccount: m.sender,
     targetMessage: m.id,
     reason: m.moneyFlag ? "spam_scam" : "harassment",
-    details: `Chat message: ${m.body.slice(0, 500)}`,
+    details: m.kind === "photo" ? `Chat photo (caption: ${m.body.slice(0, 200)})` : m.kind === "poll" ? `Chat poll: ${m.body.slice(0, 500)}` : `Chat message: ${m.body.slice(0, 500)}`,
     severity: m.moneyFlag ? "critical" : "standard",
   });
   await audit(db, me, "chat.report", { type: "report", id });
