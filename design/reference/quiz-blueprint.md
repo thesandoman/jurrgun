@@ -140,33 +140,36 @@ Across the bank, each type's answers must look like a person, not a postcode.
 
 ### 3.2 Checklist (every new scenario must pass all of it)
 
+These follow the owner's quiz review (`design/reference/quiz-review.md`), which every quiz chat writes to so the quiz reads as one voice: **sense first; show a letter through a detail, never name it; 6 to 12 words; places that fit the moment; Thai written first.**
+
 **Automatic** (`npx vite-node scripts/check-bank.ts <file> <EXPORT>` and `npm test`; the rule lives in `src/vibe/bank-rules.ts`):
 
 | # | Rule | Error or hint |
 |---|---|---|
 | A1 | All 16 type codes, unique id, valid kind, context, tone, mood, months, audience, set | error |
 | A2 | Prompt ends with "?", ":" or "…" in both languages | error |
-| A3 | Answer is 6 to 24 words in English (aim for 8 to 18), written as the action, no "I" | error |
+| A3 | Answer is 6 to 12 words in English, written as the action, no "I". Scenarios on the legacy list (written before the review) may run to 24 until rewritten | error |
 | A4 | No dashes, gendered words, alcohol, politics, religious practice | error |
 | A5 | No retired names: "circle", "dating mode", "Made with the BMA"; no "วง" for a group; no หาคู่ or โหมดเดต | error |
 | A6 | Thai glossary spellings (เดต, แชต, เช็กอิน, ลิงก์, แมตช์…) and no polite particles | error |
-| A7 | A D answer says it is new to you in words; an F answer says it is your usual | error |
+| A7 | At most 3 of the 16 answers (one in five) use "usual", "regular", "never" or "new"; show the letter through a detail instead | error (not for legacy scenarios) |
 | A8 | A D answer does not read as a habit; an F answer does not read as a first | error |
 | A9 | A rhythm answer makes the time obvious; a plan answer makes planned or spontaneous obvious | error |
 | A10 | Opposite types lean opposite ways on rhythm and plan (so 8 and 8) | error |
 | A11 | Every place on the checker's place list that is named in English is named in Thai too, and every baht amount matches | error |
-| A12 | Real district key; every district used at least once per file; twin points back | error |
+| A12 | Real district key; twin points back. The 50 districts are covered across the whole bank (each at least 6 answers, none over 8%), not per file | error |
 | A13 | No answer text repeats one anywhere else in the bank | error |
 | A14 | Nothing in the English shows B, C, M, S, N or H | hint (printed as WARN) |
 
-The letter checks look for words, so they are generous on purpose. If an answer truly fits and still fails, add the word to the list in `bank-rules.ts` rather than bending the answer.
+The letter hints (A14) look for words, so they are generous on purpose and never fail a file. Whether a letter really shows is the sense check's job, not a word list's. When you rewrite a legacy scenario to these rules, delete its id from `LEGACY_IDS` in `bank-rules.ts`; never add one.
 
-**The sense check** (by a person, for every answer; write the scenario, then do this with fresh eyes or in a second chat):
+**The sense check** (by a person, for every answer; write the scenario, then do this with fresh eyes or in a second chat). **It comes first:** if a type has no believable answer to the scenario, the scenario is wrong for the bank; change the scenario, not the answer.
 
-1. **Letter by letter.** Read the four letters aloud against the answer. B: is it with a group or a busy place? C: alone or one or two people? D: new to you? F: your usual? M: are you moving (walking, riding, dancing, playing, making something)? Sitting on a boat, watching a show or floating a krathong is not M. S: sitting, eating, talking, watching? N: modern, creative, a new venue? H: old Bangkok (temples, old markets, canals, shophouses, old recipes, traditional crafts)? A mall food court is not H. A plain park is weak N and weak H; give it a detail that says which.
+0. **Does the moment work for all 16 types?** A solo scenario has no group walk; an anniversary is not a crowd at a random stall; a parents' visit is not "a café nobody has posted". If one type can only answer by bending the situation, rewrite the prompt.
+1. **Letter by letter, through a detail.** Each letter shows through something you can picture, not a stock word. "Tai chi at Lumphini at 6am. The aunties already know your name" (F, H), not "same spot, same small group". "That stall on Suk Sawat everyone keeps posting. Finally" (D), not "a stall none of you has tried". Then read the four letters against it. B: is it with a group or a busy place? C: alone or one or two people? D: new to you? F: your usual? M: are you moving (walking, riding, dancing, playing, making something)? Sitting on a boat, watching a show or floating a krathong is not M. S: sitting, eating, talking, watching? N: modern, creative, a new venue? H: old Bangkok (temples, old markets, canals, shophouses, old recipes, traditional crafts)? A mall food court is not H. A plain park is weak N and weak H; give it a detail that says which.
 2. **Would a real person do this?** Right time of day for the dish (no dim sum at midnight), the place is open then (museums close in the late afternoon), it is the right season, it costs what the answer says, and the thing is possible there (no seats on an orchid farm, check whether bikes are allowed).
-3. **Is the place real and in that district?** Check the district key against where the place actually is, not the name of the nearest station (Benjasiri Park is in Khlong Toei, not Watthana; Krung Thep Aphiwat is in Chatuchak, not Bang Sue). If unsure, use a landmark from `landmarks.ts` or add it with `verify: true` and list it for the owner. Do not call somewhere "new" if it opened more than a year ago.
-4. **Do the Thai and English say the same thing?** Same place, same people, same time, same numbers. The Thai is written Thai first (thai-voice.md), short and spoken, not a translation.
+3. **Does the place fit the moment, and is it real and in that district?** Use a famous place where the scenario needs one and an outer district where it is genuinely the best fit, with a detail that makes it vivid; never a place picked to fill the map. Check the district key against where the place actually is, not the name of the nearest station (Benjasiri Park is in Khlong Toei, not Watthana; Krung Thep Aphiwat is in Chatuchak, not Bang Sue). If unsure, use a landmark from `landmarks.ts` or add it with `verify: true` and list it for the owner. Do not call somewhere "new" if it opened more than a year ago.
+4. **Thai written first, in its own voice** (thai-voice.md), then the English. They say the same thing (same place, people, time, numbers) without following each other word for word.
 5. **Who is it for?** Works for any gender, age 23 to 32 and up, no assumption that the member has children or a partner (say "your young cousin", not "your kid"), works on a small budget, and someone new to the city can picture it.
 6. **Is it fresh?** Not the same idea or place this type already has too often (P4 to P6). Read the type's other answers before writing.
 

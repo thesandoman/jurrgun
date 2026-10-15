@@ -11,6 +11,8 @@
 - **Biggest gaps** (for the blueprint): nothing written for newcomers or international members, the launch audience (D6); no funny scenarios; only 3 coworker and 3 meetup core scenarios although meeting new people matters most; a few types lean on one place (the Team Player plays badminton at the Thai-Japanese Sports Centre in 13 of 47 answers).
 - **Automatic checks added** to `src/vibe/bank-rules.ts`: letters said in words (D, F), rhythm time and plan wording, contradictions (a D answer that reads as a habit, an F answer that reads as a first), the same place named in both languages, baht amounts in both languages, retired names, Thai glossary spellings, polite particles, prompt punctuation, answer length, and the new `mood`, `months` and `audience` fields. Soft hints for B, C, M, S, N and H print as warnings in `scripts/check-bank.ts`.
 
+> **Later the same day: the owner's quiz review** (`quiz-review.md`) set the house style: show a letter through a detail, never name it, and keep answers to 6 to 12 words. Many of the D and F fixes below did the opposite (they added "new to you both" or "your usual"). They fixed real letter gaps, but the wording will be redone when each legacy scenario is rewritten to the new rules (`LEGACY_IDS` in `bank-rules.ts`).
+
 ## 1. Coverage
 
 ### Scenarios by context and kind

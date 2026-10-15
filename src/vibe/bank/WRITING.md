@@ -30,26 +30,25 @@ CFMH Park Regular · CFSN Cosy Creative · CFSH Neighbourhood Keeper
 Check every answer letter by letter: a BFSN answer must be **with people** (B),
 somewhere **familiar** (F), **seated/slow** (S) and **modern/creative** (N).
 
-**Say D and F in words** (the checker enforces it): a D answer says it is new
-to you ("new", "never", "first", "none of you know", "just opened"); an F
-answer says it is your usual ("usual", "regular", "every week", "same",
-"favourite"). A D answer must not read as a habit, and an F answer must not
-read as a first. Do the same for the other letters even though only a hint
-checks them: riding a boat, watching a show or floating a krathong is not M; a
-mall food court is not H; a plain park needs a detail that says N or H.
+**Show each letter through a detail, never name it** (owner's quiz review,
+`design/reference/quiz-review.md`). "Tai chi at Lumphini at 6am. The aunties
+already know your name", not "same spot, same small group". At most 3 of the
+16 answers may use "usual", "regular", "never" or "new" (the checker counts).
+A D answer must not read as a habit, nor an F answer as a first. Riding a boat,
+watching a show or floating a krathong is not M; a mall food court is not H.
+**Sense first:** if one type has no believable answer, change the scenario.
 
 ## Places: all of Bangkok
 
-- Every answer names a **real place** and carries its `district` key. Use
+- Every answer carries a `district` key, and any place it names is **real**. Name a place when it adds flavour, not to fill the map. Use
   `src/vibe/landmarks.ts` (landmarks for all 50 districts, plus modern venues
   like EmSphere, ICONSIAM, Siam Square, the RCA clubs, Silom Soi 4,
   Rajamangala Stadium). You may also use other real Bangkok places you are
   sure of, with the right district key from `src/lib/constants.ts`.
-- **Your file must use every one of the 50 districts at least once** (the
-  checker enforces it), and no single district more than 6 times. Outer
-  districts (Nong Chok, Lat Krabang, Bang Khun Thian, Khlong Sam Wa, Thawi
-  Watthana, Bang Bon, ...) belong in answers too: rice fields, canal markets,
-  mangroves, fishing parks, old markets, orchid farms, local malls.
+- **The 50 districts are covered across the whole bank**, not per file (each
+  district at least 6 answers, none over 8%, checked by `npm test`). Pick the
+  place that fits the moment: a famous one where the scenario needs it, an
+  outer district where it is genuinely the best fit, with a vivid detail.
 - If you are unsure a place exists or is in that district, use a landmark from
   `landmarks.ts` instead. Do not invent places.
 
@@ -77,10 +76,10 @@ mall food court is not H; a plain park needs a detail that says N or H.
 ## Style
 
 - Prompt: short, second person, a real moment. Ends with "?" or ":" or "…".
-- Answer: one line, about 8 to 18 words, concrete (a place + what you do).
+- Answer: one line, **6 to 12 words**, one picture in your head; put the place last, and only if it adds flavour.
   No "I". Write it as the action: "Bike the Khlong Ong Ang canal path, then a
   café nobody has posted yet".
-- Thai: natural, casual-polite, not a word-for-word translation. Same meaning.
+- Thai: **write it first**, in its own voice (thai-voice.md), then the English. Same meaning, not word for word.
 - Icon: one emoji per answer that fits it; one emoji for the scenario.
 - `tone`: "dawn" | "morning" | "afternoon" | "evening" | "night" | "rain" (the postcard sky).
 - `mood`: "everyday" | "landmark" | "seasonal" | "funny" | "personality" (what kind of moment it is).

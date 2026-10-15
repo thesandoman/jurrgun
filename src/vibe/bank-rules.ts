@@ -40,13 +40,28 @@ export const SPELLING_TH = /เดท|แชท|เช็คอิน|ลิ้?
 export const POLITE_TH = /คะ(?=\s|$|[?!…])|จ้ะ|จ้า(?=\s|$)/;
 
 /**
- * Words that show a letter. Every answer has to say its D or F (and a
- * rhythm or plan answer its time or plan) in words, so a reader sees it
- * without knowing the type. The list is generous on purpose; if an answer
- * really fits and still fails, add the word here.
+ * The quiz review (design/reference/quiz-review.md, rule 1): show a letter
+ * through a detail, never by naming it. At most one answer in five per
+ * scenario may lean on these words (3 of 16).
  */
-export const DISCOVER_EN = /\b(new|newest|newly|never|first|firsts|first-ever|none|neither|nobody|haven't|hasn't|just (?:opened|found|spotted|launched|met)|just-opened|brand[- ]new|stumbled|don't know|know nothing|unknown|random|whatever|whichever|meaning to|meant to|curious|different|opening|this week|last (?:week|month)|surprise|on the spot|unplanned|impulse|on a whim|sight unseen|no map|no reviews|spotted|strangers|pop-ups?|tour|explor\w*|discover\w*|hunt\w*)\b/i;
-export const FAMILIAR_EN = /\b(usual|regular|regulars|always|every (?:week|year|time|month|sunday|saturday|day|april|birthday|holiday|visit|long weekend|kite season|school holiday)|each week|same|favourite|ritual|yearly|for years|since|again|know(?:s)? (?:your|you)|tradition|standing|weekly|monthly|grew up|loved|one more|one last|last time|last year|back to|like every|as always|like always|known|know well|daily|old friend|neighbourhood|local|never (?:skip|miss))\b/i;
+export const STOCK_WORDS_EN = /\b(usual|regular|regulars|never|new)\b/i;
+export const MAX_STOCK_ANSWERS = 3;
+/** Review rule 2: 6 to 12 words, one picture in your head. */
+export const MIN_WORDS = 6;
+export const MAX_WORDS = 12;
+/**
+ * Scenarios written before the review (2026-10-15). Until each is rewritten
+ * they keep the old limits: up to 24 words and no cap on stock words. When you
+ * rewrite one to the new rules, delete its id here; never add one.
+ */
+export const LEGACY_IDS: ReadonlySet<string> = new Set([
+  "saturday", "visitor", "friday", "sunday", "photo", "rain", "story", "newfriend", "familylunch", "parentsvisit",
+  "grandparent-birthday", "kids-day", "siblings", "chosen-family", "firstdate", "seconddate", "anniversary", "budget-date",
+  "rainy-date", "sunset-date", "birthday-host", "countdown", "farewell", "good-news", "stranger-dinner", "new-group",
+  "know-one", "team-outing", "new-coworker", "after-work", "longweekend", "cheer-up", "group-chat", "toohot",
+  "weekday-off", "best-hours", "meetup-slot", "date-time", "family-outing-time", "friends-time", "party-time",
+  "free-evening", "meetup-signup", "date-plan", "family-trip", "friends-weekend", "party-plan",
+]);
 /** A D answer that reads as a habit, or an F answer that reads as a first. */
 export const CONTRA_D_EN = /\b(usual|regular|as always|like every|for years|like always|same (?:route|loop|table|stall|spot|order|seat))\b/i;
 export const CONTRA_F_EN = /\b(never(?! skip| miss)|none of you|neither of you|haven't|you've never|just opened|just-opened|brand[- ]new|first visit|first time)\b/i;
@@ -93,9 +108,10 @@ const PLACE_PAIRS: [RegExp, string][] = [
   [/Thepleela/, "เทพลีลา"], [/Gateway at Bangsue/, "เกตเวย์"], [/Rama VII\b/, "พระราม 7"],
 ];
 
-export type BankCheck = { errors: string[]; warnings: string[]; districts: { counts: Map<string, number>; missing: string[] } };
+export type BankCheck = { errors: string[]; warnings: string[]; districts: { counts: Map<string, number> } };
 
-export function checkScenarios(list: Scenario[], opts: { requireEveryDistrict?: boolean } = {}): BankCheck {
+/** `oneFile`: checking one bank file on its own, so a twin may live in another file. */
+export function checkScenarios(list: Scenario[], opts: { oneFile?: boolean } = {}): BankCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
   const ids = new Set<string>();
@@ -159,7 +175,7 @@ export function checkScenarios(list: Scenario[], opts: { requireEveryDistrict?: 
       const key = a.en?.toLowerCase().trim();
       if (seenEn.has(key)) errors.push(`${aw}: duplicate answer text`);
       seenEn.add(key);
-      errors.push(...answerSense(aw, code, sc.kind, a.en, a.th));
+      errors.push(...answerSense(aw, code, sc.kind, a.en, a.th, LEGACY_IDS.has(sc.id)));
       // Alone or as a pair is the whole point of a solo or date scenario, so C needs no word there.
       for (const L of code) if (HINT_EN[L] && !(L === "C" && (sc.context === "solo" || sc.context === "date")) && !HINT_EN[L].test(a.en ?? "")) warnings.push(`${aw}: nothing in the English shows ${L}: ${a.en}`);
       if (sc.kind === "core" && a.flavour !== undefined) errors.push(`${aw}: core answers have no flavour`);
@@ -171,26 +187,29 @@ export function checkScenarios(list: Scenario[], opts: { requireEveryDistrict?: 
     }
   }
   for (const sc of list) {
-    if (sc.twin && !list.some((x) => x.id === sc.twin) && opts.requireEveryDistrict === undefined) errors.push(`scenario ${sc.id}: twin ${sc.twin} not found`);
+    if (LEGACY_IDS.has(sc.id)) continue;
+    const stock = CODES.filter((c) => STOCK_WORDS_EN.test(sc.answers?.[c as keyof typeof sc.answers]?.en ?? ""));
+    if (stock.length > MAX_STOCK_ANSWERS) errors.push(`scenario ${sc.id}: ${stock.length} answers say usual, regular, never or new (${stock.join(", ")}); show it through a detail instead, at most ${MAX_STOCK_ANSWERS}`);
   }
-  const missing = opts.requireEveryDistrict ? [...DISTRICT_KEYS].filter((d) => !counts.has(d)) : [];
-  return { errors, warnings, districts: { counts, missing } };
+  for (const sc of list) {
+    if (sc.twin && !list.some((x) => x.id === sc.twin) && !opts.oneFile) errors.push(`scenario ${sc.id}: twin ${sc.twin} not found`);
+  }
+  return { errors, warnings, districts: { counts } };
 }
 
 /** The sense rules one answer can be checked for without a human (quiz-blueprint.md, "Checklist"). */
-export function answerSense(where: string, code: string, kind: string, en: string, th: string): string[] {
+export function answerSense(where: string, code: string, kind: string, en: string, th: string, legacy = false): string[] {
   const out: string[] = [];
   if (!en || !th) return out;
   const words = en.trim().split(/\s+/).length;
-  if (words < 6 || words > 24) out.push(`${where}: ${words} words; keep answers to 6 to 24 (aim for 8 to 18)`);
+  const max = legacy ? 24 : MAX_WORDS;
+  if (words < MIN_WORDS || words > max) out.push(`${where}: ${words} words; keep answers to ${MIN_WORDS} to ${max}`);
   if (/^I\b|\bI'm\b|\bmy\b/.test(en)) out.push(`${where}: write the action, not "I": ${en}`);
   if (code[1] === "D") {
-    if (!DISCOVER_EN.test(en)) out.push(`${where}: a D answer must say it is new to you (new, never, first, none of you...): ${en}`);
     const m = CONTRA_D_EN.exec(en);
     if (m) out.push(`${where}: a D answer reads as a habit ("${m[0]}"): ${en}`);
   }
   if (code[1] === "F") {
-    if (!FAMILIAR_EN.test(en)) out.push(`${where}: an F answer must say it is your usual (usual, regular, every week, same...): ${en}`);
     const m = CONTRA_F_EN.exec(en);
     if (m) out.push(`${where}: an F answer reads as a first ("${m[0]}"): ${en}`);
   }
