@@ -9,6 +9,17 @@
 - **Conflicts:** if two chats touch the same thing (films, the same files, production), stop and raise it in Branding.
 - **Owner decisions:** recorded below with the date and the chat they were given in. The newest decision wins. Where two conflict, the conflict is listed under Open and waits for the owner.
 
+## Machine load: one heavy job at a time (owner, 10-15)
+
+All chats share one Mac. Running renders and test suites at the same time pushed load past 100, which made tests time out and skip.
+- **Heavy jobs:** film renders (ffmpeg, headless Chrome), full `npm test`, and share-card renders. **Only one runs at a time**, in this order:
+  1. the film re-render (running now);
+  2. then the quiz chats in D14 order, one at a time;
+  3. then Branding's agents one at a time: Regular Tables, then admin partners and measurement.
+- **Tests while waiting:** run only the files you changed, `npx vitest run <files> --poolOptions.threads.maxThreads=2 --testTimeout=30000`. Run the full suite only when it's your turn to push.
+- **Light work is fine anytime:** reading, writing and editing.
+- **When a chat finishes its heavy step,** it tells Branding, and Branding starts the next one.
+
 ## Decisions in force
 
 | # | Decision | Given in | Date |
