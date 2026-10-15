@@ -30,6 +30,8 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     expect(html.split(`href="/people/${them.id}"`).length - 1).toBe(1);
     expect(html).toContain("Also met at: Board games night");
     expect(html).not.toContain("nothing yet");
+    // Me counts people, not meetings.
+    expect(await (await req("/settings?lang=en", { cookie: me.cookie })).text()).toMatch(/tint-teal"><span class="me-stat-emoji" aria-hidden="true">🤝<\/span><b>1</);
     const id = html.match(/action="\/connections\/([^/]+)\/remove"/)![1];
     await req(`/connections/${id}/remove`, { cookie: me.cookie, method: "POST", form: { go: "1" } });
     const left = await db()

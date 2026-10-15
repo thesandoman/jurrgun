@@ -26,7 +26,7 @@ import { cleanPrefs, EXIT_REASONS } from "../content/dating";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { isPasswordless, passwordProblem } from "../domain/rules";
 import { DISTRICTS, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values, districtsAZ } from "../lib/constants";
@@ -173,7 +173,8 @@ settingsRoutes.get("/settings", async (c) => {
       .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now), ne(events.status, "cancelled"))),
     // A crew = the people I met at one event; the circle is all of them.
     db
-      .select({ n: count(), crews: countDistinct(connections.eventId) })
+      // People, not meetings: someone met at three events is one person (as on My people).
+      .select({ n: countDistinct(sql`case when ${connections.aAccount} = ${user.account.id} then ${connections.bAccount} else ${connections.aAccount} end`), crews: countDistinct(connections.eventId) })
       .from(connections)
       .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
     // People can sit at several regular tables; the count gets its own tile.
