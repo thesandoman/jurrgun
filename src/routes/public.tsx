@@ -28,7 +28,7 @@ publicRoutes.get("/", (c) => {
         <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
           <Pill dot>{t("กรุงเทพฯ · กลุ่มเล็ก", "Bangkok · small groups")}</Pill>
           <h2>{t("เจอเพื่อนใหม่ ในเมืองที่คุณรัก", "Make friends in the city you love")}</h2>
-          <small>{t("ไม่ต้องปัด เจอกันจริง", "No swiping. Real places.")}</small>
+          <small>{t("ไม่ต้องปัดไม่รู้จบ เจอกันจริง", "No endless swiping. Real places.")}</small>
         </Tile>
         <Tile href="/buddy" tone="deep" size="tall">
           <span class="go" aria-hidden="true">↗</span>

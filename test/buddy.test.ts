@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   buddyPreferences,
   clearBuddies,
+  deckFor,
   pairScore,
   paretoImprove,
   pickQuest,
@@ -205,5 +206,34 @@ describe("dating only", () => {
   it("'dating' counts as open to more for the romance gate", () => {
     expect(romanceUnlocked({ intents: ["dating", "open"], eligible: [true, true], compatible: true, finishedQuests: 2 })).toBe(true);
     expect(romanceUnlocked({ intents: ["dating", "friends"], eligible: [true, true], compatible: true, finishedQuests: 2 })).toBe(false);
+  });
+});
+
+describe("the buddy deck and dating preferences", () => {
+  it("keen ranks someone first and gets past the waiting bar; pass is handled as an exclusion", () => {
+    // Different districts and no click: a weak pair, below a newcomer's bar.
+    const a = member("a", "BDSH", { district: "bang_rak" });
+    const b = member("b", "CFMN", { district: "min_buri" });
+    expect(buddyPreferences([a, b], "s").get("a")).toEqual([]);
+    const keen = member("a", "BDSH", { district: "bang_rak", keen: new Set(["b"]) });
+    expect(buddyPreferences([keen, b], "s").get("a")).toEqual(["b"]);
+  });
+
+  it("dating members: clashing kids answers never pair; the same goal ranks higher", () => {
+    const d = (id: string, prefs: object) => member(id, "BDSH", { datingPrefs: prefs });
+    const me = d("me", { goal: "long_term", kids: "want" });
+    const clash = d("x", { goal: "long_term", kids: "no" });
+    const same = d("y", { goal: "long_term", kids: "open" });
+    const other = d("z", { goal: "see" });
+    const prefs = buddyPreferences([me, clash, same, other], "s").get("me")!;
+    expect(prefs).not.toContain("x");
+    expect(prefs[0]).toBe("y");
+  });
+
+  it("the deck leaves out people already flicked and people who can't be paired", () => {
+    const me = member("me", "BDSH");
+    const pool = [me, member("p1", "BDSH"), member("p2", "CDSH"), member("p3", "BDSH", { languages: ["ja"] })];
+    const deck = deckFor(me, pool, new Set(["p1"]), "2026-10-15");
+    expect(deck).toEqual(["p2"]);
   });
 });

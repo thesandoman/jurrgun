@@ -31,7 +31,21 @@ import { newId } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import type { Lang } from "../lib/i18n";
 import { consents, datingIntents, profiles, wellbeing } from "../schema";
-import { CHALLENGE_ANSWERS, DATING_CHALLENGES, DATING_REASONS, isMode, MAX_REASONS, MODE_OPTS } from "../content/dating";
+import {
+  CHALLENGE_ANSWERS,
+  cleanPrefs,
+  DATING_CHALLENGES,
+  DATING_DISTANCE,
+  DATING_FIRST,
+  DATING_GOALS,
+  DATING_KIDS,
+  DATING_PACE,
+  DATING_REASONS,
+  isMode,
+  MAX_FIRST,
+  MAX_REASONS,
+  MODE_OPTS,
+} from "../content/dating";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
@@ -160,6 +174,38 @@ onboarding.post("/welcome", async (c) => {
 });
 
 const pick = (keys: string[], allowed: { value: string }[]) => [...new Set(keys)].filter((k) => allowed.some((o) => o.value === k));
+const prefOpts = (list: { value: string; emoji: string; label: { th: string; en: string } }[]) => list.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }));
+
+/** The private dating preference steps, shared by onboarding and /settings/dating. */
+export function DatingPrefSteps(props: { t: (th: string, en: string) => string; lang: Lang; prefs?: ReturnType<typeof cleanPrefs> }) {
+  const { t, lang } = props;
+  const p = props.prefs ?? {};
+  const one = (v?: string) => (v ? [v] : []);
+  return (
+    <>
+      <FlowStep emoji="🎯" title={t("กำลังมองหาอะไร", "What are you looking for?")} hint={t("เป็นความลับ ใช้จับคู่เท่านั้น", "Private. Only used for matching.")}>
+        <Pills name="goal" type="radio" options={prefOpts(DATING_GOALS)} values={one(p.goal)} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="👶" title={t("เรื่องลูก", "Kids")} hint={t("ไม่ตอบก็ได้", "Skip if you'd rather not say.")}>
+        <Pills name="kids" type="radio" options={prefOpts(DATING_KIDS)} values={one(p.kids)} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="🐢" title={t("จังหวะที่สบายใจ", "Your pace")}>
+        <Pills name="pace" type="radio" options={prefOpts(DATING_PACE)} values={one(p.pace)} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="☕" title={t("เดทแรกในฝัน", "Ideal first date")} hint={t(`เลือกได้สูงสุด ${MAX_FIRST}`, `Pick up to ${MAX_FIRST}.`)}>
+        <Pills name="firstDate" options={prefOpts(DATING_FIRST)} values={p.firstDate} lang={lang} />
+      </FlowStep>
+      <FlowStep emoji="🚇" title={t("ไปเจอได้ไกลแค่ไหน", "How far would you go?")}>
+        <Pills name="distance" type="radio" options={prefOpts(DATING_DISTANCE)} values={one(p.distance)} lang={lang} />
+      </FlowStep>
+    </>
+  );
+}
+
+export function prefsFromBody(body: Record<string, unknown>) {
+  const list1 = (v: unknown) => (Array.isArray(v) ? v : v === undefined ? [] : [v]).filter((x): x is string => typeof x === "string");
+  return cleanPrefs({ goal: body.goal, kids: body.kids, pace: body.pace, distance: body.distance, firstDate: list1(body.firstDate) });
+}
 
 /** Two quick questions for dating members: why, and what makes it hard. */
 onboarding.get("/dating", (c) => {
@@ -180,6 +226,7 @@ onboarding.get("/dating", (c) => {
       <FlowStep emoji="🏙️" title={t("อะไรทำให้การเดทในกรุงเทพฯ ยาก?", "What makes dating in Bangkok hard?")} hint={t("เลือกได้หลายข้อ", "Pick any.")}>
         <Pills name="challenges" options={DATING_CHALLENGES.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
       </FlowStep>
+      <DatingPrefSteps t={t} lang={lang} />
     </Flow>,
   );
 });
@@ -189,12 +236,13 @@ onboarding.post("/dating", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const reasons = pick(list(body.reasons), DATING_REASONS).slice(0, MAX_REASONS);
   const challenges = pick(list(body.challenges), DATING_CHALLENGES);
+  const prefs = prefsFromBody(body);
   const me = c.var.user!.account.id;
   const mode = getCookie(c, INTENT_COOKIE);
   await getDb(c.env)
     .insert(datingIntents)
-    .values({ accountId: me, mode: isMode(mode ?? "") ? mode! : "dating", reasons, challenges, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: datingIntents.accountId, set: { reasons, challenges, updatedAt: new Date() } });
+    .values({ accountId: me, mode: isMode(mode ?? "") ? mode! : "dating", reasons, challenges, prefs, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: datingIntents.accountId, set: { reasons, challenges, prefs, updatedAt: new Date() } });
   // Answer what they told us, briefly.
   const answers = challenges.map((ch) => ({ emoji: DATING_CHALLENGES.find((o) => o.value === ch)!.emoji, text: CHALLENGE_ANSWERS[ch] })).filter((a) => a.text);
   return page(

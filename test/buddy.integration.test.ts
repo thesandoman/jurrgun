@@ -10,7 +10,7 @@ import { roundIfDue } from "../src/routes/buddy";
 import { dayKey } from "../src/domain/buddy";
 import { monthKey, seasonQuestFor } from "../src/domain/seasons";
 import { randomToken } from "../src/lib/crypto";
-import { accounts, blocks, datingIntents, notifications, buddyMatches, buddyOptins, buddyQuests, buddyRounds, circleShares, connections, events, passportStamps, profiles, vibes } from "../src/schema";
+import { accounts, blocks, buddySwipes, datingIntents, notifications, buddyMatches, buddyOptins, buddyQuests, buddyRounds, circleShares, connections, events, passportStamps, profiles, vibes } from "../src/schema";
 import type { AppEnv } from "../src/lib/env";
 
 const env = ENV as unknown as AppEnv["Bindings"];
@@ -466,5 +466,27 @@ describe.skipIf(!HAS_DB)("Safety net and the Buddy tab", () => {
     const me = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
     expect(me).toContain('href="/learn"');
     expect(me).toContain('href="/safety"');
+  });
+});
+
+describe.skipIf(!HAS_DB)("Buddy deck", () => {
+  it("while waiting, flick through the pool: keen is stored privately and only for people in your deck", async () => {
+    const a = await createMember({ nickname: "Deckie" });
+    const b = await createMember({ nickname: "Flickable" });
+    await withType2(a, "BDSH");
+    await withType2(b, "CDSH");
+    await req("/buddy/optin", { cookie: a.cookie, form: { intent: "friends" } });
+    await req("/buddy/optin", { cookie: b.cookie, form: { intent: "friends" } });
+    await only2(a, b);
+    const html = await (await req("/buddy/deck?lang=en", { cookie: a.cookie })).text();
+    expect(html).toContain("Flickable");
+    expect(html).toContain("left today");
+    // Someone not in the deck is ignored.
+    await req("/buddy/deck", { cookie: a.cookie, form: { target: "nobody", choice: "keen" } });
+    await req("/buddy/deck", { cookie: a.cookie, form: { target: b.id, choice: "keen" } });
+    const rows = await db().select().from(buddySwipes).where(eq(buddySwipes.accountId, a.id));
+    expect(rows.map((r) => [r.targetId, r.choice])).toEqual([[b.id, "keen"]]);
+    // b never sees it.
+    expect(await (await req("/buddy?lang=en", { cookie: b.cookie })).text()).not.toContain("Deckie");
   });
 });

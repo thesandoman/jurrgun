@@ -28,6 +28,8 @@
  *    shared a contact (they moved off the app), or after a kind wrap-up note
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
+import { cleanPrefs } from "../content/dating";
+import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
@@ -40,6 +42,7 @@ import {
   clearBuddies,
   clickReason,
   dayKey,
+  deckFor,
   isBuddyIntent,
   isWrapNote,
   pickQuest,
@@ -57,7 +60,7 @@ import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, buddySwipes, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
 import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View } from "../ui/kit";
 import { AvatarStack, Bento, Big, Pill, PostcardFan, Ring, Stamps, Tile, artFor } from "../ui/visual";
 import type { Child } from "hono/jsx";
@@ -153,10 +156,31 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
       ),
     ]);
   }
+  const pool = await loadPool(db, now);
+  if (pool.length < 2) return;
+  const result = clearBuddies(pool, round);
+  const writes: Write[] = [db.update(buddyRounds).set({ method: result.method, pool: pool.length, pairs: result.pairs.length }).where(eq(buddyRounds.week, round))];
+  for (const [a, b] of result.pairs) {
+    writes.push(
+      db.insert(buddyMatches).values({ id: newId(), aAccount: a, bAccount: b, week, state: "proposed", createdAt: now }),
+      notify(db, a, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
+      notify(db, b, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
+    );
+  }
+  writes.push(audit(db, "system", "buddy.round", { type: "buddy_round", id: round }));
+  await batch(env, writes);
+}
+
+/**
+ * Everyone available for a buddy right now (opted in, no current buddy, an
+ * active onboarded account with a Bangkok Type), with what they told us:
+ * blocks and past buddies, deck flicks, intents and private dating prefs.
+ */
+async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
   const optins = await db.select().from(buddyOptins).where(eq(buddyOptins.active, true)).orderBy(desc(buddyOptins.updatedAt)).limit(POOL_LIMIT);
-  let ids = optins.map((o) => o.accountId);
-  if (ids.length < 2) return;
-  const [history, blockRows, people, types] = await Promise.all([
+  const ids = optins.map((o) => o.accountId);
+  if (ids.length < 2) return [];
+  const [history, blockRows, people, types, swipes, prefsRows] = await Promise.all([
     db
       .select({ a: buddyMatches.aAccount, b: buddyMatches.bAccount, state: buddyMatches.state, endedAt: buddyMatches.endedAt })
       .from(buddyMatches)
@@ -169,6 +193,8 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
       .limit(10_000),
     db.select({ account: accounts, profile: profiles }).from(accounts).innerJoin(profiles, eq(profiles.accountId, accounts.id)).where(inArray(accounts.id, ids)).limit(ids.length),
     typeOfAccount(db, ids),
+    db.select({ accountId: buddySwipes.accountId, targetId: buddySwipes.targetId, choice: buddySwipes.choice }).from(buddySwipes).where(inArray(buddySwipes.accountId, ids)).limit(50_000),
+    db.select({ accountId: datingIntents.accountId, prefs: datingIntents.prefs }).from(datingIntents).where(inArray(datingIntents.accountId, ids)).limit(ids.length),
   ]);
   const busy = new Set(history.filter((m) => m.state !== "ended").flatMap((m) => [m.a, m.b]));
   const excluded = new Map<string, Set<string>>(ids.map((id) => [id, new Set<string>()]));
@@ -178,6 +204,16 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
     excluded.get(m.b)?.add(m.a);
     if (m.endedAt) for (const x of [m.a, m.b]) lastEnded.set(x, Math.max(lastEnded.get(x) ?? 0, m.endedAt.getTime()));
   }
+  // The deck: a pass rules someone out; a keen flick ranks them higher.
+  const keen = new Map<string, Set<string>>();
+  for (const sw of swipes) {
+    if (sw.choice === "pass") excluded.get(sw.accountId)?.add(sw.targetId);
+    else if (sw.choice === "keen") {
+      if (!keen.has(sw.accountId)) keen.set(sw.accountId, new Set());
+      keen.get(sw.accountId)!.add(sw.targetId);
+    }
+  }
+  const prefsOf = new Map(prefsRows.map((r) => [r.accountId, cleanPrefs(r.prefs)]));
   for (const b of blockRows) {
     excluded.get(b.blocker)?.add(b.blocked);
     excluded.get(b.blocked)?.add(b.blocker);
@@ -213,20 +249,11 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
       excluded: excluded.get(account.id) ?? new Set(),
       weeksWaiting: Math.floor((now.getTime() - availableFrom) / WEEK_MS),
       datesWith: datesWith(account.id),
+      keen: keen.get(account.id),
+      datingPrefs: DATING_INTENTS.includes(intentOf.get(account.id) ?? "") ? prefsOf.get(account.id) : undefined,
     });
   }
-  ids = pool.map((p) => p.accountId);
-  const result = clearBuddies(pool, round);
-  const writes: Write[] = [db.update(buddyRounds).set({ method: result.method, pool: pool.length, pairs: result.pairs.length }).where(eq(buddyRounds.week, round))];
-  for (const [a, b] of result.pairs) {
-    writes.push(
-      db.insert(buddyMatches).values({ id: newId(), aAccount: a, bAccount: b, week, state: "proposed", createdAt: now }),
-      notify(db, a, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
-      notify(db, b, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
-    );
-  }
-  writes.push(audit(db, "system", "buddy.round", { type: "buddy_round", id: round }));
-  await batch(env, writes);
+  return pool;
 }
 
 /** This week's quest for an active match, created on first view. */
@@ -603,6 +630,9 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
             <AvatarStack items={[{ label: "You", emoji: "🙂", seed: "you" }, { label: "?", emoji: "⏳", seed: "q" }]} size={54} />
             <h2>{t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
             <small>{t("เราจะแจ้งเตือนคุณ", "We'll notify you")}</small>
+            <span class="acts">
+              <a class="glass-btn" href="/buddy/deck">🃏 {t("ปัดดูคนที่อาจเป็นบัดดี้", "Flick through people")}</a>
+            </span>
           </Tile>
         </div>
       ) : match.state === "proposed" ? (
@@ -874,3 +904,143 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
   await batch(c.env, writes);
   return c.redirect("/buddy?notice=stamped");
 });
+
+// ------------------------------------------------------------- the deck --
+//
+// While someone waits for a buddy they can flick through people in the pool:
+// keen or pass. It is a stated preference for the next daily round, never a
+// match on its own, and the other person never sees it. No photos: people
+// choose on vibe. A short daily deck, so it never becomes endless swiping.
+
+export const DECK_PER_DAY = 15;
+
+async function deckState(c: Ctx) {
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const now = new Date();
+  const [[optin], match] = await Promise.all([db.select().from(buddyOptins).where(eq(buddyOptins.accountId, me)).limit(1), currentMatch(db, me)]);
+  if (!optin?.active || match) return null;
+  const [pool, mine] = await Promise.all([
+    loadPool(db, now),
+    db.select({ targetId: buddySwipes.targetId, createdAt: buddySwipes.createdAt }).from(buddySwipes).where(eq(buddySwipes.accountId, me)).limit(5000),
+  ]);
+  const self = pool.find((p) => p.accountId === me);
+  const today = dayKey(now);
+  const usedToday = mine.filter((x) => dayKey(x.createdAt) === today).length;
+  const deck = self ? deckFor(self, pool, new Set(mine.map((x) => x.targetId)), today) : [];
+  return { db, me, self, deck, left: Math.max(0, DECK_PER_DAY - usedToday) };
+}
+
+buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const st = await deckState(c);
+  if (!st) return c.redirect("/buddy");
+  const next = st.left > 0 ? st.deck[0] : undefined;
+  let card: Child = null;
+  if (next) {
+    const [[person], types] = await Promise.all([
+      st.db.select().from(profiles).where(eq(profiles.accountId, next)).limit(1),
+      typeOfAccount(st.db, [st.me, next]),
+    ]);
+    const mineP = c.var.user!.profile!;
+    const theirs = types.get(next);
+    const a = theirs ? ARCHETYPES[theirs] : null;
+    const why = theirs && types.get(st.me) ? clickReason(types.get(st.me)!, theirs) : null;
+    const bio = cleanBio(person.bio);
+    const shared = person.interests.filter((i) => mineP.interests.includes(i));
+    const chips = [...shared, ...person.interests.filter((i) => !shared.includes(i))].slice(0, 6);
+    const energy = ENERGY.find((x) => x.value === bio.energy);
+    const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
+    card = (
+      <article class="deck-card" data-deck>
+        <span class="deck-stamp keen" aria-hidden="true">{t("สนใจ", "Keen")}</span>
+        <span class="deck-stamp pass" aria-hidden="true">{t("ผ่าน", "Pass")}</span>
+        <div class="deck-face" aria-hidden="true">{a?.emoji ?? "🙂"}</div>
+        <h2>{person.nickname}</h2>
+        <p class="deck-sub">
+          {a ? L(lang, a.name) : null} · 📍 {DISTRICTS.find((d) => d.value === person.district)?.[lang === "en" ? "en" : "th"]}
+        </p>
+        {why ? <p class="deck-why">🤝 {L(lang, why)}</p> : null}
+        <p class="chips2">
+          {chips.map((i) => {
+            const o = ALL_INTERESTS.find((x) => x.value === i);
+            return o ? <span class={shared.includes(i) ? "on" : undefined}>{o.emoji} {L(lang, o)}</span> : null;
+          })}
+        </p>
+        <p class="chips2">
+          {energy ? <span>{energy.emoji} {L(lang, energy)}</span> : null}
+          {weekend ? <span>{weekend.emoji} {L(lang, weekend)}</span> : null}
+          <span>🗣️ {person.languages.join(" · ").toUpperCase()}</span>
+        </p>
+      </article>
+    );
+  }
+  return page(
+    c,
+    { title: t("ปัดดูบัดดี้", "Buddy deck"), tab: "buddy" },
+    <>
+      <p class="spread">
+        <a href="/buddy">← {t("บัดดี้", "Buddy")}</a>
+        <small class="muted">{t(`วันนี้เหลือ ${st.left}`, `${st.left} left today`)}</small>
+      </p>
+      <h1>🃏 {t("ปัดดูคนที่อาจเป็นบัดดี้", "Flick through people")}</h1>
+      <p class="muted">
+        {t(
+          "สนใจ = ช่วยให้รอบจับคู่ถัดไปเลือกคนนี้ก่อน ไม่ใช่การจับคู่ทันที และอีกฝ่ายจะไม่รู้ ไม่มีรูป เลือกจากตัวตน",
+          "Keen helps the next daily round put this person first. It isn't a match, and they never see it. No photos: pick on vibe.",
+        )}
+      </p>
+      {!st.self ? (
+        <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน แล้วค่อยมาปัดดู", "Take the Bangkok Type quiz first, then come back.")}</Notice>
+      ) : card ? (
+        <>
+          <div class="deck">
+            {card}
+            {st.deck[1] ? <div class="deck-under" aria-hidden="true" /> : null}
+          </div>
+          <div class="deck-acts">
+            <form method="post" action="/buddy/deck" data-choice="pass">
+              <input type="hidden" name="target" value={next} />
+              <input type="hidden" name="choice" value="pass" />
+              <button class="deck-btn pass" aria-label={t("ผ่าน", "Pass")}>✕</button>
+            </form>
+            <form method="post" action="/buddy/deck" data-choice="keen">
+              <input type="hidden" name="target" value={next} />
+              <input type="hidden" name="choice" value="keen" />
+              <button class="deck-btn keen" aria-label={t("สนใจ", "Keen")}>★</button>
+            </form>
+          </div>
+          <script dangerouslySetInnerHTML={{ __html: DECK_JS }} />
+        </>
+      ) : (
+        <Card>
+          <h2 style="margin-top:0">{st.left === 0 ? t("พอแค่นี้สำหรับวันนี้", "That's it for today") : t("ดูครบทุกคนแล้ว", "You've seen everyone for now")}</h2>
+          <p class="muted">{t("รอบจับคู่จะใช้สิ่งที่คุณเลือก เราจะแจ้งเตือนเมื่อเจอบัดดี้", "The next round uses your picks. We'll tell you when you have a buddy.")}</p>
+          <LinkButton href="/buddy">{t("กลับไปหน้าบัดดี้", "Back to Buddy")}</LinkButton>
+        </Card>
+      )}
+    </>,
+  );
+});
+
+buddyRoutes.post("/buddy/deck", requireMember, async (c) => {
+  const body = await c.req.parseBody();
+  const target = str(body.target);
+  const choice = str(body.choice);
+  if (choice !== "keen" && choice !== "pass") return c.redirect("/buddy/deck");
+  const st = await deckState(c);
+  // Only someone actually in your deck today, within the daily limit.
+  if (!st || st.left <= 0 || !st.deck.includes(target)) return c.redirect("/buddy/deck");
+  await st.db.insert(buddySwipes).values({ id: newId(), accountId: st.me, targetId: target, choice }).onConflictDoNothing();
+  return c.redirect("/buddy/deck");
+});
+
+/** Drag the top card left (pass) or right (keen); the buttons do the same without a pointer. */
+const DECK_JS = `(function(){var c=document.querySelector("[data-deck]");if(!c)return;var x0=null,dx=0;
+function send(k){var f=document.querySelector('form[data-choice="'+k+'"]');c.style.transition="transform .25s ease";c.style.transform="translateX("+(k==="keen"?600:-600)+"px) rotate("+(k==="keen"?18:-18)+"deg)";setTimeout(function(){f.submit()},180)}
+c.addEventListener("pointerdown",function(e){x0=e.clientX;dx=0;c.setPointerCapture(e.pointerId);c.style.transition="none"});
+c.addEventListener("pointermove",function(e){if(x0===null)return;dx=e.clientX-x0;c.style.transform="translateX("+dx+"px) rotate("+dx/18+"deg)";c.classList.toggle("is-keen",dx>40);c.classList.toggle("is-pass",dx<-40)});
+function up(){if(x0===null)return;x0=null;if(dx>110)send("keen");else if(dx<-110)send("pass");else{c.style.transition="transform .2s ease";c.style.transform="";c.classList.remove("is-keen","is-pass")}}
+c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
+document.querySelectorAll("form[data-choice]").forEach(function(f){f.addEventListener("submit",function(e){if(f.dataset.sent)return;e.preventDefault();f.dataset.sent="1";send(f.dataset.choice)})})})()`;

@@ -100,7 +100,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>{`${opts.title} · Jurrgun`}</title>
-        <meta name="description" content="Jurrgun (เจอกัน) — เพื่อนใหม่ในกรุงเทพฯ กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา · Meet new friends in Bangkok: small groups, real places, no swiping." />
+        <meta name="description" content="Jurrgun (เจอกัน) — เพื่อนใหม่ในกรุงเทพฯ กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดไม่รู้จบ · Meet new friends in Bangkok: small groups, real places, no endless swiping." />
         <meta name="theme-color" content="#06492a" media="(prefers-color-scheme: light)" data-media="(prefers-color-scheme: light)" data-scheme="light" />
         <meta name="theme-color" content="#06301c" media="(prefers-color-scheme: dark)" data-media="(prefers-color-scheme: dark)" data-scheme="dark" />
         <link rel="manifest" href="/manifest.webmanifest" />

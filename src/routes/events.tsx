@@ -536,7 +536,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     c,
     { title: t("ค้นหากิจกรรม", "Discover"), tab: "events" },
     <>
-      <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง ไม่ต้องปัดหา", "Small groups, real places, no swiping")}</p>
+      <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
       <div class="seg-row">
         <nav class="seg" aria-label={t("เมื่อไหร่", "When")}>

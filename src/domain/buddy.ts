@@ -13,6 +13,7 @@
  *  - Romance only ever surfaces when BOTH privately chose "open to more",
  *    both are romance-eligible and compatible, after two finished quests.
  */
+import { kidsClash, type DatingPrefs } from "../content/dating";
 import { ARCHETYPES, matchLabel, type ArchetypeKey } from "../vibe/archetypes";
 import type { Text } from "../vibe/content";
 import { SCENARIOS, type Scenario, type TypeCode } from "../vibe/scenarios";
@@ -104,7 +105,30 @@ export type PoolMember = BuddyCandidate & {
    * romance-eligible and compatible). Undefined for everyone else.
    */
   datesWith?: ReadonlySet<string>;
+  /** People they flicked "keen" on in the buddy deck (passes go in `excluded`). */
+  keen?: ReadonlySet<string>;
+  /** Private dating preferences, only for members open to dating. */
+  datingPrefs?: DatingPrefs;
 };
+
+/** A keen flick moves someone up your list, and past the waiting bar. */
+export const KEEN_BONUS = 3;
+
+/**
+ * How two dating members' private preferences fit: null when they can't work
+ * (kids answers that clash), otherwise a small bonus for the same goal and,
+ * when either wants to stay near home, for the same district.
+ */
+export function datingFit(a: PoolMember, b: PoolMember): number | null {
+  const pa = a.datingPrefs;
+  const pb = b.datingPrefs;
+  if (!pa || !pb) return 0;
+  if (kidsClash(pa.kids, pb.kids)) return null;
+  let s = 0;
+  if (pa.goal && pa.goal === pb.goal) s += 2;
+  if ((pa.distance === "near" || pb.distance === "near") && a.district === b.district) s += 1;
+  return s;
+}
 
 /** The minimum pairScore someone is offered, by weeks waited. */
 export function reservation(weeksWaiting: number): number {
@@ -120,9 +144,32 @@ function acceptScore(a: PoolMember, b: PoolMember): number | null {
   // Someone here only for dating is only paired with people they can date.
   if (a.datesWith && !a.datesWith.has(b.accountId)) return null;
   if (b.datesWith && !b.datesWith.has(a.accountId)) return null;
-  const s = pairScore(a, b);
-  if (s === null || s < reservation(a.weeksWaiting)) return null;
+  const base = pairScore(a, b);
+  if (base === null) return null;
+  const fit = datingFit(a, b);
+  if (fit === null) return null;
+  const keen = a.keen?.has(b.accountId) ?? false;
+  const s = base + fit + (keen ? KEEN_BONUS : 0);
+  // A keen flick is a stated preference: it counts even before the bar eases.
+  if (!keen && s < reservation(a.weeksWaiting)) return null;
   return s;
+}
+
+/**
+ * The buddy deck for `me`: everyone in the pool they could be paired with
+ * (same hard rules as the round, minus the waiting bar), best fit first,
+ * shuffled within a fit by a per-day hash. Already-flicked people are left out.
+ */
+export function deckFor(me: PoolMember, pool: PoolMember[], seen: ReadonlySet<string>, salt: string): string[] {
+  const scored: { id: string; s: number; h: number }[] = [];
+  for (const b of pool) {
+    if (seen.has(b.accountId)) continue;
+    const open = { ...me, weeksWaiting: 99, keen: undefined };
+    const s = acceptScore(open, { ...b, weeksWaiting: 99 });
+    if (s !== null) scored.push({ id: b.accountId, s, h: hashString(`${salt}|deck|${me.accountId}|${b.accountId}`) });
+  }
+  scored.sort((x, y) => y.s - x.s || x.h - y.h);
+  return scored.map((x) => x.id);
 }
 
 /** Everyone's acceptable list, best first. */

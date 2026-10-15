@@ -71,6 +71,13 @@
       "when": 1792040911164,
       "tag": "0009_rainy_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792041537173,
+      "tag": "0010_worthless_thor",
+      "breakpoints": true
     }
   ]
 }

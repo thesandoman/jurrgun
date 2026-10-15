@@ -16,6 +16,10 @@
  *   POST /settings/password
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
+import { DatingPrefSteps, prefsFromBody } from "./onboarding";
+import { Flow } from "../ui/flow";
+import { cleanPrefs } from "../content/dating";
+import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
@@ -63,6 +67,7 @@ import {
   accounts,
   connectionChoices,
   connections,
+  datingIntents,
   consents,
   contactShares,
   events,
@@ -153,6 +158,8 @@ settingsRoutes.get("/settings", async (c) => {
       .from(connections)
       .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
   ]);
+  const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, user.account.id)).limit(1);
+  const dates = dating?.mode === "dating" || dating?.mode === "dating_only";
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
   const crews = Number(circle?.crews ?? 0);
   const bio = cleanBio(p.bio);
@@ -235,7 +242,12 @@ settingsRoutes.get("/settings", async (c) => {
       links={[
         { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky" },
         { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint" },
-        { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("เสนอกิจกรรมของคุณเอง ฟรีหรือจ่ายที่สถานที่", "Propose your own event, free or pay at the venue"), tint: "lime" },
+        canHost(user.account, true)
+          ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const }
+          : { href: "/circles/lead", emoji: "👑", title: t("นำวงของคุณเอง", "Lead a circle"), hint: t("ขอเป็นหัวหน้าวงเพื่อจัดแฮงเอาต์", "Ask to lead a circle and host hangouts"), tint: "lime" as const },
+        ...(dates
+          ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดทแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const }]
+          : []),
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },
         { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
@@ -1156,3 +1168,28 @@ settingsRoutes.post("/settings/password", async (c) => {
   return c.redirect("/settings?notice=password_changed");
 });
 
+
+// ------------------------------------------------------------- dating --
+
+settingsRoutes.get("/settings/dating", async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const [row] = await getDb(c.env).select().from(datingIntents).where(eq(datingIntents.accountId, me(c).account.id)).limit(1);
+  if (!row || row.mode === "friends") return c.redirect("/settings");
+  return page(
+    c,
+    { title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), bare: true },
+    <Flow v={v} action="/settings/dating" submit={t("บันทึก", "Save")} close="/settings">
+      <DatingPrefSteps t={t} lang={lang} prefs={cleanPrefs(row.prefs)} />
+    </Flow>,
+  );
+});
+
+settingsRoutes.post("/settings/dating", async (c) => {
+  const prefs = prefsFromBody(await c.req.parseBody({ all: true }));
+  await getDb(c.env)
+    .update(datingIntents)
+    .set({ prefs, updatedAt: new Date() })
+    .where(eq(datingIntents.accountId, me(c).account.id));
+  return c.redirect("/settings?notice=saved");
+});

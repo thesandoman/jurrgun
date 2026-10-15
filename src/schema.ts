@@ -619,6 +619,24 @@ export const buddyMatches = pgTable(
   (t) => [index("social_buddy_matches_a_idx").on(t.aAccount, t.state), index("social_buddy_matches_b_idx").on(t.bAccount, t.state)],
 );
 
+/**
+ * The buddy deck: who a member flicked "keen" or "pass" on. Private, never
+ * shown to the other person. It only feeds the daily clearinghouse round
+ * (domain/buddy.ts): keen ranks someone higher, pass rules them out.
+ */
+export const buddySwipes = pgTable(
+  "social_buddy_swipes",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    targetId: text("target_id").notNull(),
+    /** keen | pass */
+    choice: text("choice").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_buddy_swipes_pair_idx").on(t.accountId, t.targetId), index("social_buddy_swipes_target_idx").on(t.targetId)],
+);
+
 export const buddyQuests = pgTable(
   "social_buddy_quests",
   {
@@ -662,6 +680,8 @@ export const datingIntents = pgTable("social_dating_intents", {
   reasons: jsonb("reasons").$type<string[]>().notNull().default([]),
   /** What makes dating in Bangkok hard for them (DATING_CHALLENGES keys). */
   challenges: jsonb("challenges").$type<string[]>().notNull().default([]),
+  /** Goal, kids, pace, first-date ideas, distance (content/dating.ts DatingPrefs). Private: matching only. */
+  prefs: jsonb("prefs").$type<Record<string, unknown>>().notNull().default({}),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 

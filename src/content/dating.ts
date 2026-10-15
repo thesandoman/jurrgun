@@ -19,7 +19,7 @@ export const MODE_OPTS: { value: Mode; emoji: string; label: Text }[] = [
 /** "Why are you here for dating?" Pick up to three. */
 export const DATING_REASONS: { value: string; emoji: string; label: Text }[] = [
   { value: "long_term", emoji: "💞", label: t("A long-term relationship", "หาความสัมพันธ์ระยะยาว") },
-  { value: "slow", emoji: "🐢", label: t("Dating slowly, no swiping", "ค่อย ๆ ทำความรู้จัก ไม่ต้องปัด") },
+  { value: "slow", emoji: "🐢", label: t("Dating slowly, no endless swiping", "ค่อย ๆ ทำความรู้จัก ไม่ต้องปัดไม่รู้จบ") },
   { value: "real_things", emoji: "🗺️", label: t("Dates doing real things", "เดทแบบได้ทำกิจกรรมจริง") },
   { value: "new_city", emoji: "🧳", label: t("New to Bangkok", "เพิ่งมาอยู่กรุงเทพฯ") },
   { value: "back", emoji: "🔄", label: t("Back to dating after a while", "กลับมาเดทอีกครั้ง") },
@@ -41,9 +41,75 @@ export const DATING_CHALLENGES: { value: string; emoji: string; label: Text }[] 
 
 export const MAX_REASONS = 3;
 
+// ------------------------------------------------------ dating preferences --
+// Private, like the reasons above: never shown to anyone. They only shape who
+// a dating member is paired with (domain/buddy.ts datingFit) and the deck order.
+
+type Pref = { value: string; emoji: string; label: Text };
+export type DatingPrefs = { goal?: string; kids?: string; pace?: string; firstDate?: string[]; distance?: string };
+
+export const DATING_GOALS: Pref[] = [
+  { value: "long_term", emoji: "💞", label: t("A long-term partner", "แฟนระยะยาว") },
+  { value: "marriage", emoji: "💍", label: t("Partner for life, marriage minded", "คนที่จะอยู่ด้วยกันยาว ๆ คิดถึงการแต่งงาน") },
+  { value: "see", emoji: "✨", label: t("Open, seeing where it goes", "เปิดใจ ดูว่าจะไปทางไหน") },
+  { value: "companion", emoji: "🫶", label: t("Companionship first", "อยากมีเพื่อนคู่ใจก่อน") },
+];
+export const DATING_KIDS: Pref[] = [
+  { value: "want", emoji: "👶", label: t("I'd like kids someday", "อยากมีลูกสักวัน") },
+  { value: "have_more", emoji: "👨‍👧", label: t("Have kids, open to more", "มีลูกแล้ว อยากมีเพิ่ม") },
+  { value: "have_done", emoji: "👨‍👦", label: t("Have kids, not planning more", "มีลูกแล้ว ไม่วางแผนมีเพิ่ม") },
+  { value: "no", emoji: "🙅", label: t("Don't want kids", "ไม่อยากมีลูก") },
+  { value: "open", emoji: "🤷", label: t("Not sure yet", "ยังไม่แน่ใจ") },
+];
+/** Kids answers that can't work together. */
+const KIDS_YES = ["want", "have_more"];
+const KIDS_NO = ["no", "have_done"];
+export const kidsClash = (a?: string, b?: string) => !!a && !!b && ((KIDS_YES.includes(a) && KIDS_NO.includes(b)) || (KIDS_NO.includes(a) && KIDS_YES.includes(b)));
+
+export const DATING_PACE: Pref[] = [
+  { value: "group_first", emoji: "👥", label: t("Meet in a group a few times first", "เจอกันเป็นกลุ่มสักพักก่อน") },
+  { value: "steady", emoji: "🚶", label: t("Steady, one step at a time", "ค่อยเป็นค่อยไป") },
+  { value: "soon", emoji: "☕", label: t("Happy to meet one to one soon", "พร้อมนัดเจอสองคนเร็ว ๆ") },
+];
+export const DATING_FIRST: Pref[] = [
+  { value: "coffee", emoji: "☕", label: t("Coffee", "กาแฟ") },
+  { value: "walk", emoji: "🌳", label: t("A walk in a park", "เดินเล่นในสวน") },
+  { value: "street_food", emoji: "🍜", label: t("Street food", "สตรีทฟู้ด") },
+  { value: "museum", emoji: "🖼️", label: t("A gallery or museum", "แกลเลอรีหรือพิพิธภัณฑ์") },
+  { value: "activity", emoji: "🧗", label: t("Doing something active", "ทำกิจกรรมแอคทีฟ") },
+  { value: "market", emoji: "🛍️", label: t("A night market", "ตลาดกลางคืน") },
+];
+export const MAX_FIRST = 3;
+export const DATING_DISTANCE: Pref[] = [
+  { value: "near", emoji: "📍", label: t("Near my district", "ใกล้เขตที่อยู่") },
+  { value: "rail", emoji: "🚇", label: t("Anywhere on BTS or MRT", "ที่ไหนก็ได้ที่ BTS หรือ MRT ไปถึง") },
+  { value: "anywhere", emoji: "🗺️", label: t("Anywhere in Bangkok", "ที่ไหนก็ได้ในกรุงเทพฯ") },
+];
+
+/** Keep only known values from a stored or posted prefs object. */
+export function cleanPrefs(raw: unknown): DatingPrefs {
+  if (!raw || typeof raw !== "object") return {};
+  const r = raw as Record<string, unknown>;
+  const one = (v: unknown, list: Pref[]) => (typeof v === "string" && list.some((o) => o.value === v) ? v : undefined);
+  const out: DatingPrefs = {};
+  const goal = one(r.goal, DATING_GOALS);
+  if (goal) out.goal = goal;
+  const kids = one(r.kids, DATING_KIDS);
+  if (kids) out.kids = kids;
+  const pace = one(r.pace, DATING_PACE);
+  if (pace) out.pace = pace;
+  const distance = one(r.distance, DATING_DISTANCE);
+  if (distance) out.distance = distance;
+  if (Array.isArray(r.firstDate)) {
+    const firsts = [...new Set(r.firstDate.filter((x): x is string => typeof x === "string" && DATING_FIRST.some((o) => o.value === x)))].slice(0, MAX_FIRST);
+    if (firsts.length) out.firstDate = firsts;
+  }
+  return out;
+}
+
 /** How Jurrgun answers each challenge, shown right after the questions. */
 export const CHALLENGE_ANSWERS: Record<string, Text> = {
-  swiping: t("No swiping here: small tables and one Bangkok Buddy at a time.", "ที่นี่ไม่มีการปัด มีแต่โต๊ะเล็ก ๆ และบัดดี้ทีละคน"),
+  swiping: t("No endless swiping: a short daily deck, small tables, and one Bangkok Buddy at a time.", "ไม่ต้องปัดไม่รู้จบ วันละไม่กี่คน โต๊ะเล็ก ๆ และบัดดี้ทีละคน"),
   meet: t("Tables of 4 to 6 at real places, every week.", "โต๊ะละ 4 ถึง 6 คน ที่สถานที่จริง ทุกสัปดาห์"),
   time: t("Quests and tables near your district.", "เควสต์และโต๊ะใกล้ย่านของคุณ"),
   safety: t("Public places only, plus a safety net to share your plans.", "นัดในที่สาธารณะเท่านั้น และมีตัวช่วยแชร์แผนให้คนที่ไว้ใจ"),

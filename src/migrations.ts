@@ -142,5 +142,14 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"social_circle_head_requests_status_idx\" ON \"social_circle_head_requests\" (\"status\",\"created_at\");",
       "CREATE INDEX \"social_circle_head_requests_account_idx\" ON \"social_circle_head_requests\" (\"account_id\");"
     ]
+  },
+  {
+    "id": "0010_worthless_thor",
+    "statements": [
+      "CREATE TABLE \"social_buddy_swipes\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"target_id\" text NOT NULL,\n\t\"choice\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_dating_intents\" ADD COLUMN \"prefs\" jsonb DEFAULT '{}'::jsonb NOT NULL;",
+      "CREATE UNIQUE INDEX \"social_buddy_swipes_pair_idx\" ON \"social_buddy_swipes\" (\"account_id\",\"target_id\");",
+      "CREATE INDEX \"social_buddy_swipes_target_idx\" ON \"social_buddy_swipes\" (\"target_id\");"
+    ]
   }
 ];
