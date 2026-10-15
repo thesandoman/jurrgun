@@ -212,7 +212,8 @@ describe("scoring and the margin of error", () => {
 
   it("ignores malformed answers instead of throwing", () => {
     const qs = session("junk");
-    const junk: unknown[] = [NaN, Infinity, -1, 1e9, [], "a", null, 7];
+    // Invalid for every format: 101 is past a slider's 0 to 100 and past any option index.
+    const junk: unknown[] = [NaN, Infinity, -1, 1e9, [], "a", null, 101];
     const answers = Object.fromEntries(qs.map((q, i) => [q.id, junk[i % junk.length]])) as unknown as Answers;
     const r = scoreSession(qs, answers);
     expect(r.answered).toBe(0);
