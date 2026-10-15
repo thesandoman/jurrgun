@@ -52,6 +52,13 @@ import {
   sessions,
   vibes,
   wellbeing,
+  buddyOptins,
+  buddySwipes,
+  chatMessages,
+  chatReads,
+  datingIntents,
+  passportStamps,
+  safeArrivals,
 } from "../schema";
 
 const HOUR = 3_600_000;
@@ -62,6 +69,8 @@ export const DEACTIVATED_RETENTION_DAYS = 30;
 export const LOGIN_ATTEMPT_RETENTION_HOURS = 24;
 export const CHECKIN_RETENTION_DAYS = 365;
 export const RESEARCH_RETENTION_DAYS = 730;
+/** Chat messages are kept this long, then deleted (reported ones stay in the report's details). */
+export const CHAT_RETENTION_DAYS = 180;
 /** Accounts anonymised per run; the rest wait for the next run. */
 export const ACCOUNT_BATCH = 200;
 /** How often the lazy run on /admin may fire. */
@@ -122,6 +131,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     db.delete(buddyPairs).where(inArray(buddyPairs.eventId, endedBefore(checkinCutoff))),
     db.delete(pulseResponses).where(lt(pulseResponses.createdAt, researchCutoff)).returning({ id: pulseResponses.id }),
     db.delete(wellbeing).where(lt(wellbeing.createdAt, researchCutoff)).returning({ id: wellbeing.id }),
+    db.delete(chatMessages).where(lt(chatMessages.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY))),
+    db.delete(safeArrivals).where(lt(safeArrivals.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY))),
   ]);
 
   // 2. Deactivated accounts past 30 days, without a moderation hold. Bounded.
@@ -164,6 +175,13 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(sessions).where(inArray(sessions.accountId, ids)),
       db.delete(notifications).where(inArray(notifications.accountId, ids)),
       db.delete(contactShares).where(inArray(contactShares.accountId, ids)),
+      db.delete(chatMessages).where(inArray(chatMessages.sender, ids)),
+      db.delete(chatReads).where(inArray(chatReads.accountId, ids)),
+      db.delete(safeArrivals).where(inArray(safeArrivals.accountId, ids)),
+      db.delete(buddySwipes).where(or(inArray(buddySwipes.accountId, ids), inArray(buddySwipes.targetId, ids))),
+      db.delete(datingIntents).where(inArray(datingIntents.accountId, ids)),
+      db.delete(buddyOptins).where(inArray(buddyOptins.accountId, ids)),
+      db.delete(passportStamps).where(inArray(passportStamps.accountId, ids)),
       db.delete(consents).where(inArray(consents.accountId, ids)),
       db.update(feedback).set({ comment: "" }).where(inArray(feedback.accountId, ids)),
       // Frees their Google / LINE identity, so they can sign up again later.

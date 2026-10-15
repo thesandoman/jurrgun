@@ -28,6 +28,7 @@
  *    shared a contact (they moved off the app), or after a kind wrap-up note
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
+import { SafeArrivalForm } from "./safety";
 import { cleanPrefs } from "../content/dating";
 import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
 import { canHost } from "../domain/hosting";
@@ -52,7 +53,7 @@ import {
   type PoolMember,
 } from "../domain/buddy";
 import { monthKey, seasonQuestFor } from "../domain/seasons";
-import { ageOn, romanceCompatible, romanceEligible } from "../domain/rules";
+import { ageOn, isPaused, romanceCompatible, romanceEligible } from "../domain/rules";
 import { DATING_INTENTS } from "../domain/buddy";
 import { DISTRICTS, districtsAZ } from "../lib/constants";
 import { newId } from "../lib/crypto";
@@ -235,7 +236,7 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
   const pool: PoolMember[] = [];
   for (const { account, profile } of people) {
     const code = types.get(account.id);
-    if (!code || busy.has(account.id) || !isActiveAccount(account, now) || !profile.onboardedAt) continue;
+    if (!code || busy.has(account.id) || !isActiveAccount(account, now) || !profile.onboardedAt || isPaused(profile, now)) continue;
     const availableFrom = Math.max(since.get(account.id) ?? now.getTime(), lastEnded.get(account.id) ?? 0);
     // The reservation bar eases weekly (domain/buddy.ts reservation), even though rounds are daily.
     pool.push({
@@ -657,12 +658,17 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
           <BuddyCard v={v} eyebrow={t("บัดดี้ของคุณ", "Your buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)}>
             <span class="acts">
               <a class="glass-btn" href={`/people/${otherId}`}>👤 {t("โปรไฟล์", "Card")}</a>
-              <a class="glass-btn" href="/connections">💬 {t("แชร์ช่องทางติดต่อ", "Share contact")}</a>
+              <a class="glass-btn" href={`/chat/buddy:${match.id}`}>💬 {t("แชต", "Chat")}</a>
             </span>
           </BuddyCard>
           {quest ? <QuestCard v={v} m={match} q={quest} me={me} buddyName={buddyName} types={types} /> : null}
           {bigQuest ? <QuestCard v={v} m={match} q={bigQuest} me={me} buddyName={buddyName} types={types} /> : null}
           {SAFETY(v)}
+          <Card class="first-meet">
+            <h3 style="margin-top:0">🛡️ {t("ก่อนเจอกัน", "Before you meet")}</h3>
+            <p class="muted">{t("นัดในที่สาธารณะตอนกลางวัน บอกเพื่อนว่าไปไหน และตั้งให้เราถามว่าถึงบ้านปลอดภัยไหม", "Meet in public, in daylight. Tell a friend, and let us ask if you got home safe.")}</p>
+            <SafeArrivalForm v={v} context={`buddy:${match.id}`} />
+          </Card>
           <WrapUp v={v} m={match} me={me} offApp={offApp} />
           <div class="row">
             <a href={`/report?account=${otherId}`}>{t("รายงาน", "Report")}</a>

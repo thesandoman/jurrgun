@@ -20,6 +20,9 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
+import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING } from "../domain/rules";
+import { weekKey } from "../domain/buddy";
+import { cleanBio } from "../content/profile";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, sql } from "drizzle-orm";
@@ -1249,7 +1252,33 @@ export async function rsvpGate(
       );
     }
   }
+  // Nobody holds more than MAX_UPCOMING seats at once.
+  const upcoming = await db
+    .select({ id: registrations.id })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, [...ACTIVE]), ne(registrations.eventId, event.id), ne(events.status, "cancelled"), gt(events.endsAt, now)))
+    .limit(MAX_UPCOMING);
+  if (upcoming.length >= MAX_UPCOMING) {
+    return no(
+      `จองล่วงหน้าได้ครั้งละ ${MAX_UPCOMING} กิจกรรม ให้ที่นั่งได้ไปถึงคนอื่นด้วยนะ`,
+      `You can hold up to ${MAX_UPCOMING} upcoming RSVPs at once, so seats reach others too.`,
+      409,
+    );
+  }
   return { refusal: null, existing, active: false };
+}
+
+/** RSVPs already in the Bangkok week of `event`, for the weekly rhythm check. */
+async function plansThatWeek(db: Db, accountId: string, event: Event): Promise<number> {
+  const wk = weekKey(event.startsAt);
+  const rows = await db
+    .select({ startsAt: events.startsAt })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(and(eq(registrations.accountId, accountId), inArray(registrations.status, [...ACTIVE]), ne(registrations.eventId, event.id), ne(events.status, "cancelled")))
+    .limit(50);
+  return rows.filter((r) => weekKey(r.startsAt) === wk).length;
 }
 
 /**
@@ -1354,6 +1383,36 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
   if (gate.active) return c.redirect(`/events/${id}`);
 
   const body = await c.req.parseBody();
+  // The member's own weekly rhythm: a gentle check, never a block.
+  const rhythm = cleanBio(user.profile.bio).rhythm ?? DEFAULT_RHYTHM;
+  if (str(body.rhythmOk) !== "1" && (await plansThatWeek(db, user.account.id, event)) >= rhythm) {
+    const { lang } = view(c);
+    return page(
+      c,
+      { title: t("เช็กจังหวะของคุณ", "Check your rhythm"), tab: "events" },
+      <>
+        <h1>🌿 {t("สัปดาห์นี้มีนัดครบแล้ว", "Your week is already full")}</h1>
+        <p>
+          {t(
+            `คุณตั้งไว้ว่าสัปดาห์ละ ${rhythm} นัด และมีครบแล้ว ยังอยากไปอันนี้อยู่ไหม? เว้นที่ว่างให้ตัวเองบ้างก็ดีนะ`,
+            `You set ${rhythm} plans a week and you already have ${rhythm}. Still want this one? Leaving room to rest is good too.`,
+          )}
+        </p>
+        <form method="post" action={`/events/${id}/rsvp`} class="row">
+          <input type="hidden" name="rhythmOk" value="1" />
+          {str(body.wantsBuddy) ? <input type="hidden" name="wantsBuddy" value={str(body.wantsBuddy)} /> : null}
+          {str(body.plusOneUsername) ? <input type="hidden" name="plusOneUsername" value={str(body.plusOneUsername)} /> : null}
+          <Button>{t("ใช่ ไปด้วย", "Yes, count me in")}</Button>
+          <LinkButton href={`/events/${id}`} kind="ghost">{t("ไว้คราวหน้า", "Maybe next week")}</LinkButton>
+        </form>
+        <p class="muted">
+          <a href="/settings/habits">{lang === "en" ? "Change my weekly rhythm" : "เปลี่ยนจังหวะต่อสัปดาห์"}</a>
+        </p>
+      </>,
+    );
+  }
+  // Taking a seat ends a pause.
+  if (isPaused(user.profile, now)) await db.update(profiles).set({ pausedUntil: null }).where(eq(profiles.accountId, user.account.id));
   const wantsBuddy = event.buddyEnabled && str(body.wantsBuddy) === "1";
   let plusOneUsername: string | null = null;
   let plusOnePartner: { regId: string; accountId: string } | null = null;

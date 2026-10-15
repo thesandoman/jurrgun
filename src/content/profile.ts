@@ -1196,6 +1196,8 @@ export type Bio = {
   spice?: string;
   pets?: string;
   punctual?: string;
+  /** Social plans a week the member is happy with (1 to 4). */
+  rhythm?: number;
   deck?: string[];
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
@@ -1304,6 +1306,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.spice)) out.spice = s(b.spice);
   if (s(b.pets)) out.pets = s(b.pets);
   if (s(b.punctual)) out.punctual = s(b.punctual);
+  if (typeof b.rhythm === "number" && [1, 2, 3, 4].includes(b.rhythm)) out.rhythm = b.rhythm;
   if (strs(b.deck)) out.deck = strs(b.deck);
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;

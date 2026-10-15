@@ -15,6 +15,7 @@
  * in src/domain/hosting.ts. Money never passes through Jurrgun: the host says
  * whether it's free or paid at the venue, and may link their own payment page.
  */
+import { lateOrLong } from "../domain/rules";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
@@ -381,13 +382,15 @@ hostRoutes.post("/host/new", async (c) => {
   const v = view(c);
   const me = c.var.user!.account;
   const d = inputFromBody(await c.req.parseBody({ all: true }));
-  const direct = publishesDirectly(me, d.visibility);
+  let direct = publishesDirectly(me, d.visibility);
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   const msgs = errors.map((e) => v.t(e.th, e.en));
   if (!direct && (await pendingCount(c, me.id)) >= MAX_PENDING) {
     msgs.push(v.t(`มีกิจกรรมรอตรวจได้ครั้งละ ${MAX_PENDING} รายการ`, `You can have up to ${MAX_PENDING} events waiting for review at once.`));
   }
   if (!vals || msgs.length) return formPage(c, { v, d, action: "/host/new", errors: msgs, editing: false, direct }, 400);
+  // Late-night and very long events always get a second pair of eyes.
+  if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
 
   const db = getDb(c.env);
   const id = newId();
@@ -429,9 +432,10 @@ hostRoutes.post("/host/:id/edit", async (c) => {
   const e = await ownEditable(c);
   if (!e) return c.redirect("/host");
   const d = inputFromBody(await c.req.parseBody({ all: true }));
-  const direct = publishesDirectly(me, d.visibility);
+  let direct = publishesDirectly(me, d.visibility);
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   if (!vals) return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct }, 400);
+  if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
   const db = getDb(c.env);
   await batch(c.env, [
     db

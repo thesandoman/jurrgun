@@ -151,5 +151,19 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_buddy_swipes_pair_idx\" ON \"social_buddy_swipes\" (\"account_id\",\"target_id\");",
       "CREATE INDEX \"social_buddy_swipes_target_idx\" ON \"social_buddy_swipes\" (\"target_id\");"
     ]
+  },
+  {
+    "id": "0011_eminent_husk",
+    "statements": [
+      "CREATE TABLE \"social_chat_messages\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"thread\" text NOT NULL,\n\t\"sender\" text NOT NULL,\n\t\"body\" text NOT NULL,\n\t\"money_flag\" boolean DEFAULT false NOT NULL,\n\t\"hidden_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_chat_reads\" (\n\t\"thread\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"last_read_at\" timestamp with time zone NOT NULL\n);",
+      "CREATE TABLE \"social_safe_arrivals\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"context\" text NOT NULL,\n\t\"back_by\" timestamp with time zone NOT NULL,\n\t\"answer\" text,\n\t\"answered_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"paused_until\" timestamp with time zone;",
+      "ALTER TABLE \"social_reports\" ADD COLUMN \"target_message\" text;",
+      "CREATE INDEX \"social_chat_messages_thread_idx\" ON \"social_chat_messages\" (\"thread\",\"created_at\");",
+      "CREATE INDEX \"social_chat_messages_sender_idx\" ON \"social_chat_messages\" (\"sender\",\"created_at\");",
+      "CREATE UNIQUE INDEX \"social_chat_reads_idx\" ON \"social_chat_reads\" (\"thread\",\"account_id\");",
+      "CREATE INDEX \"social_safe_arrivals_account_idx\" ON \"social_safe_arrivals\" (\"account_id\",\"back_by\");"
+    ]
   }
 ];

@@ -14,9 +14,10 @@
  * `use("*")`, because this sub-app is mounted at "/" and a wildcard would
  * wrap every page in the app.
  */
+import { MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
-import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   ageOn,
@@ -666,6 +667,10 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
   const method = (m: string) => label(CONTACT_METHODS, m, lang);
   return (
     <>
+      <p class="spread">
+        <span />
+        <a href="/chat">💬 {t("แชต", "Chats")}</a>
+      </p>
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My Bangkok circle")}</h1>
       <p class="muted">
         {t("คนที่เลือกกันและกัน บัดดี้ และแฮงเอาต์กลุ่ม", "People you chose each other with, your buddy, and group hangouts.")}
@@ -703,13 +708,16 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
             <p class="muted">
               {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : r.buddy ? t("🤝 บัดดี้กรุงเทพฯ", "🤝 Bangkok Buddy") : ""} · {label(CHOICE_LABELS, r.level, lang)}
             </p>
-            <dl>
-              <dt>{t("ช่องทางที่คุณแชร์", "What you shared")}</dt>
-              <dd>{r.mine ? `${method(r.mine.method)}: ${r.mine.value}` : t("ยังไม่ได้แชร์", "Nothing yet")}</dd>
-              <dt>{t("ช่องทางที่เขาแชร์", "What they shared")}</dt>
-              <dd>{r.theirs ? `${method(r.theirs.method)}: ${r.theirs.value}` : t("ยังไม่ได้แชร์", "Nothing yet")}</dd>
-            </dl>
+            <p class="acts">
+              <a class="btn primary" href={`/chat/conn:${r.id}`}>💬 {t("แชต", "Chat")}</a>
+            </p>
+            <p class="chips2">
+              <span>{t("คุณแชร์", "You shared")}: {r.mine ? `${method(r.mine.method)} ${r.mine.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
+              <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
+            </p>
             {props.error?.id === r.id ? <Notice kind="error">{props.error.text}</Notice> : null}
+            <details class="how" open={props.error?.id === r.id}>
+              <summary>{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</summary>
             <form method="post" action={`/connections/${r.id}/share`}>
               <Select label={t("ช่องทาง", "Method")} name="method" options={CONTACT_METHODS} value={r.mine?.method ?? "line"} lang={lang} required />
               <Field
@@ -722,6 +730,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
               />
               <Button kind="ghost">{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</Button>
             </form>
+            </details>
             <div class="row">
               <form method="post" action={`/connections/${r.id}/remove`}>
                 <Button kind="ghost">{t("ลบออกจากคนรู้จัก", "Remove connection")}</Button>
@@ -770,6 +779,20 @@ peopleRoutes.post("/connections/:id/share", requireMember, async (c) => {
     );
   }
   const db = getDb(c.env);
+  // A daily cap on handing out contacts: sharing should be deliberate.
+  const today = await db
+    .select({ id: contactShares.id })
+    .from(contactShares)
+    .where(and(eq(contactShares.accountId, found.me), gte(contactShares.createdAt, new Date(Date.now() - 86_400_000))))
+    .limit(MAX_SHARES_PER_DAY);
+  if (today.length >= MAX_SHARES_PER_DAY) {
+    const { rows, myVibe } = await loadCircle(c);
+    return page(
+      c,
+      { title: v.t("คนรู้จัก", "My Bangkok circle"), tab: "connections", status: 400 },
+      <Circle v={v} rows={rows} myVibe={myVibe} error={{ id: found.row.id, text: v.t(`วันนี้แชร์ช่องทางติดต่อครบ ${MAX_SHARES_PER_DAY} ครั้งแล้ว พรุ่งนี้ค่อยแชร์ต่อนะ`, `You've shared ${MAX_SHARES_PER_DAY} contacts today. Try again tomorrow.`) }} />,
+    );
+  }
   const nick = c.var.user!.profile!.nickname;
   await batch(c.env, [
     db
@@ -1034,7 +1057,7 @@ peopleRoutes.get("/notifications/panel", requireMember, async (c) => {
   const { t, lang } = view(c);
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
-  const rows = await db.select().from(notifications).where(eq(notifications.accountId, me)).orderBy(desc(notifications.createdAt)).limit(12);
+  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(12);
   // Only what the dropdown actually shows becomes read; older unread ones keep the badge.
   const shown = rows.filter((r) => !r.readAt).map((r) => r.id);
   if (shown.length) {
@@ -1049,9 +1072,9 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
   const { t, lang } = v;
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
-  const rows = await db.select().from(notifications).where(eq(notifications.accountId, me)).orderBy(desc(notifications.createdAt)).limit(50);
+  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(50);
   if (rows.some((r) => !r.readAt)) {
-    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), isNull(notifications.readAt)));
+    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), isNull(notifications.readAt), lte(notifications.createdAt, new Date())));
   }
   return page(
     c,

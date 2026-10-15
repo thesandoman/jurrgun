@@ -165,6 +165,8 @@ export const profiles = pgTable(
     newcomer: boolean("newcomer").notNull().default(false),
     locale: text("locale").notNull().default("th"),
     onboardedAt: ts("onboarded_at"),
+    /** "Pause Jurrgun": out of buddy rounds, the deck and new tables until then. Circle and chats stay. */
+    pausedUntil: ts("paused_until"),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
   (t) => [index("social_profiles_district_idx").on(t.district)],
@@ -376,6 +378,8 @@ export const reports = pgTable(
     reporter: text("reporter").notNull(),
     targetAccount: text("target_account"),
     targetEvent: text("target_event"),
+    /** A reported chat message (social_chat_messages.id). */
+    targetMessage: text("target_message"),
     reason: text("reason").notNull(),
     details: text("details").notNull().default(""),
     /** standard | critical */
@@ -684,6 +688,55 @@ export const datingIntents = pgTable("social_dating_intents", {
   prefs: jsonb("prefs").$type<Record<string, unknown>>().notNull().default({}),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
+
+// -------------------------------------------------------------------- chat --
+// Chat with limits (src/domain/chat.ts). Threads are not stored: a thread key
+// (buddy:<matchId>, conn:<connectionId>, circle:<eventId>) is checked against
+// the pairing, connection or hangout on every request.
+
+export const chatMessages = pgTable(
+  "social_chat_messages",
+  {
+    id: text("id").primaryKey(),
+    thread: text("thread").notNull(),
+    sender: text("sender").notNull(),
+    body: text("body").notNull(),
+    /** Asked for money or a transfer: the receiver sees a scam warning. */
+    moneyFlag: boolean("money_flag").notNull().default(false),
+    /** Hidden by moderation (or the sender's block); the text is kept for review only. */
+    hiddenAt: ts("hidden_at"),
+    createdAt: created(),
+  },
+  (t) => [index("social_chat_messages_thread_idx").on(t.thread, t.createdAt), index("social_chat_messages_sender_idx").on(t.sender, t.createdAt)],
+);
+
+/** Where each member last read a thread. Private: never shown to the other side (no read receipts). */
+export const chatReads = pgTable(
+  "social_chat_reads",
+  {
+    thread: text("thread").notNull(),
+    accountId: text("account_id").notNull(),
+    lastReadAt: ts("last_read_at").notNull(),
+  },
+  (t) => [uniqueIndex("social_chat_reads_idx").on(t.thread, t.accountId)],
+);
+
+/** Opt-in "home safe?" check after a first meet. */
+export const safeArrivals = pgTable(
+  "social_safe_arrivals",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    /** What it's about, e.g. buddy:<matchId>, event:<id>. */
+    context: text("context").notNull(),
+    backBy: ts("back_by").notNull(),
+    /** safe | help */
+    answer: text("answer"),
+    answeredAt: ts("answered_at"),
+    createdAt: created(),
+  },
+  (t) => [index("social_safe_arrivals_account_idx").on(t.accountId, t.backBy)],
+);
 
 /** A member asking to lead a circle (and so host its hangouts). Reviewed in /admin/review. */
 export const circleHeadRequests = pgTable(

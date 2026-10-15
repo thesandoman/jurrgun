@@ -54,7 +54,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
         account: accounts,
         profile: profiles,
         // Unread count for the bell, in the same trip (no extra query per page).
-        unread: sql<number>`(select count(*) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null)`.mapWith(Number),
+        unread: sql<number>`(select count(*) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now())`.mapWith(Number),
       })
       .from(sessions)
       .innerJoin(accounts, eq(accounts.id, sessions.accountId))

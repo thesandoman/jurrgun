@@ -16,6 +16,7 @@
  *   POST /settings/password
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
+import { DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS } from "../domain/rules";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
 import { Flow } from "../ui/flow";
 import { cleanPrefs } from "../content/dating";
@@ -92,7 +93,7 @@ import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, s
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch } from "./onboarding";
 import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
-import { L } from "../lib/i18n";
+import { fmtDate, L } from "../lib/i18n";
 import { releaseUpcomingSeats } from "../services/events";
 
 export const settingsRoutes = new Hono<AppEnv>();
@@ -248,6 +249,7 @@ settingsRoutes.get("/settings", async (c) => {
         ...(dates
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดทแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const }]
           : []),
+        { href: "/settings/habits", emoji: "🌿", title: t("นิสัยดี ๆ และการพัก", "Healthy habits"), hint: isPaused(p, now) ? t("กำลังพักอยู่", "On a break") : t("นัดต่อสัปดาห์ พัก Jurrgun", "Plans a week, take a break"), tint: "mint" },
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
@@ -1192,4 +1194,81 @@ settingsRoutes.post("/settings/dating", async (c) => {
     .set({ prefs, updatedAt: new Date() })
     .where(eq(datingIntents.accountId, me(c).account.id));
   return c.redirect("/settings?notice=saved");
+});
+
+// ------------------------------------------------------------ habits --
+
+settingsRoutes.get("/settings/habits", async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const p = me(c).profile!;
+  const rhythm = cleanBio(p.bio).rhythm ?? DEFAULT_RHYTHM;
+  const paused = isPaused(p);
+  return page(
+    c,
+    { title: t("นิสัยดี ๆ", "Healthy habits"), tab: "me" },
+    <>
+      <p class="spread">
+        <a href="/settings">← {t("ฉัน", "Me")}</a>
+      </p>
+      <h1>🌿 {t("นิสัยดี ๆ และการพัก", "Healthy habits")}</h1>
+      <p class="muted">{t("Jurrgun อยากให้คุณใช้แอปน้อยลง และเจอคนจริงมากขึ้น", "Jurrgun wants you on the app less, and with people more.")}</p>
+      {c.req.query("notice") === "saved" ? <Notice kind="ok">{t("บันทึกแล้ว", "Saved")}</Notice> : null}
+      <Card>
+        <h2 style="margin-top:0">🗓️ {t("นัดกี่ครั้งต่อสัปดาห์กำลังดี", "How many plans a week feel right?")}</h2>
+        <p class="muted">{t("ถ้าเกินนี้ เราจะถามก่อนหนึ่งครั้ง ไม่ได้ห้าม", "Past this, we'll check with you once. Never a block.")}</p>
+        <form method="post" action="/settings/habits">
+          <div class="pills">
+            {RHYTHMS.map((n) => (
+              <label class="pill">
+                <input type="radio" name="rhythm" value={String(n)} checked={n === rhythm} />
+                <span>{lang === "en" ? `${n} a week` : `สัปดาห์ละ ${n}`}</span>
+              </label>
+            ))}
+          </div>
+          <Button>{t("บันทึก", "Save")}</Button>
+        </form>
+      </Card>
+      <Card>
+        <h2 style="margin-top:0">⏸️ {t("พัก Jurrgun", "Take a break")}</h2>
+        {paused ? (
+          <>
+            <p>{t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)} ไม่มีการจับคู่บัดดี้ใหม่ระหว่างนี้ วงและแชตยังอยู่`, `On a break until ${fmtDate(p.pausedUntil!, lang)}. No new buddy matches meanwhile; your circle and chats stay.`)}</p>
+            <form method="post" action="/settings/habits">
+              <input type="hidden" name="pause" value="0" />
+              <Button>{t("กลับมาแล้ว", "I'm back")}</Button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p class="muted">{t("หยุดจับคู่บัดดี้และการปัดดูชั่วคราว วงและแชตยังอยู่ จองกิจกรรมเมื่อไหร่ก็กลับมาเอง", "Pauses buddy matching and the deck. Your circle and chats stay. RSVP anytime to come back.")}</p>
+            <form method="post" action="/settings/habits" class="row">
+              {PAUSE_WEEKS.map((w) => (
+                <button class="btn ghost" name="pause" value={String(w)}>
+                  {lang === "en" ? `${w} week${w > 1 ? "s" : ""}` : `${w} สัปดาห์`}
+                </button>
+              ))}
+            </form>
+          </>
+        )}
+      </Card>
+    </>,
+  );
+});
+
+settingsRoutes.post("/settings/habits", async (c) => {
+  const user = me(c);
+  const body = await c.req.parseBody();
+  const db = getDb(c.env);
+  const rhythm = Number(str(body.rhythm));
+  if ((RHYTHMS as readonly number[]).includes(rhythm)) {
+    const bio = { ...cleanBio(user.profile!.bio), rhythm };
+    await db.update(profiles).set({ bio, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+  }
+  const pause = str(body.pause);
+  if (pause === "0") await db.update(profiles).set({ pausedUntil: null }).where(eq(profiles.accountId, user.account.id));
+  else if ((PAUSE_WEEKS as readonly number[]).includes(Number(pause))) {
+    await db.update(profiles).set({ pausedUntil: new Date(Date.now() + Number(pause) * 7 * 86_400_000) }).where(eq(profiles.accountId, user.account.id));
+  }
+  return c.redirect("/settings/habits?notice=saved");
 });

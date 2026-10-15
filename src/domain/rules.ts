@@ -283,3 +283,30 @@ export function removalAllowed(p: { rule: string | null; flags: number }): boole
 export function flagLimitReached(flagsBefore: number): boolean {
   return flagsBefore + 1 === FLAGS_TO_REMOVE;
 }
+
+// --------------------------------------------------- healthy limits --
+//
+// Gentle by design: a weekly rhythm the member chooses (a confirm, never a
+// block), a hard cap on upcoming RSVPs so nobody hoards seats, a daily cap on
+// contact sharing, and "pause Jurrgun" for a break.
+
+/** Upcoming RSVPs held at once. */
+export const MAX_UPCOMING = 5;
+/** Social plans a week the member is happy with (bio.rhythm, 1 to 4). */
+export const DEFAULT_RHYTHM = 3;
+export const RHYTHMS = [1, 2, 3, 4] as const;
+/** Contact shares a day. */
+export const MAX_SHARES_PER_DAY = 10;
+/** Pause lengths offered, in weeks. */
+export const PAUSE_WEEKS = [1, 2, 4] as const;
+
+export const isPaused = (p: { pausedUntil?: Date | null }, now = new Date()) => !!p.pausedUntil && p.pausedUntil.getTime() > now.getTime();
+
+/**
+ * Late-night or very long events always go to review, even for hosts who
+ * normally publish directly: they start 22:00 to 06:00 Bangkok, or run over 5 hours.
+ */
+export function lateOrLong(startsAt: Date, endsAt: Date): boolean {
+  const h = new Date(startsAt.getTime() + 7 * HOUR).getUTCHours();
+  return h >= 22 || h < 6 || endsAt.getTime() - startsAt.getTime() > 5 * HOUR;
+}
