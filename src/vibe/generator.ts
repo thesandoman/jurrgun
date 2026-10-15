@@ -210,14 +210,21 @@ export function generateSession(options: SessionOptions): Question[] {
     preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && !(options.friendsOnly && s.context === "date")), seenScenarios).slice(0, FLAVOUR_ITEMS);
   const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, options.personal?.district, options.friendsOnly), ...flavour("rhythm"), ...flavour("plan")]);
   const pairs = pairsPerQuestion(rng, scenarios);
-  // Home district: in up to two questions, swap in the pair whose answer is set near home.
+  // Home district: in up to two questions, bring in the pair whose answer is set near home.
+  // The pair is traded with another question, not just swapped in, so every type is
+  // still offered 7 or 8 times (test/quiz-balance.test.ts checks this).
   const home = options.personal?.district;
   if (home) {
     let swapped = 0;
     for (let i = 0; i < scenarios.length && swapped < 2; i++) {
       const code = TYPE_CODES.find((c) => scenarios[i].answers[c].district === home);
       if (!code || scenarios[i].twin || pairs[i].some((p) => p.includes(code))) continue;
-      pairs[i] = [TYPE_PAIRS.find((p) => p.includes(code))!, ...pairs[i].slice(1)];
+      const want = TYPE_PAIRS.find((p) => p.includes(code))!;
+      const give = pairs[i][0];
+      const j = pairs.findIndex((ps, k) => k !== i && !scenarios[k].twin && ps.includes(want) && !ps.includes(give));
+      if (j < 0) continue;
+      pairs[j] = pairs[j].map((p) => (p === want ? give : p));
+      pairs[i] = [want, ...pairs[i].slice(1)];
       swapped += 1;
     }
   }
