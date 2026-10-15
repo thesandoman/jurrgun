@@ -21,7 +21,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { isPasswordless, passwordProblem } from "../domain/rules";
-import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
+import { DISTRICTS, EVENT_STYLES, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values, districtsAZ } from "../lib/constants";
 import {
   cleanBio,
   COMM_STYLES,
@@ -322,7 +322,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
 
         <Section emoji="👋" title={t("ข้อมูลพื้นฐาน", "The basics")}>
           <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} />
-          <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={DISTRICTS} value={vals.district} lang={lang} required />
+          <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={districtsAZ(lang)} value={vals.district} lang={lang} required />
           <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
           <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมากรุงเทพฯ", "I'm new to Bangkok")} checked={vals.newcomer} />
           <Select

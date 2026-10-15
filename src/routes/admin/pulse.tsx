@@ -17,7 +17,7 @@ import type { Context } from "hono";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { safeCount } from "../../domain/rules";
-import { DISTRICTS, label } from "../../lib/constants";
+import { DISTRICTS, label, districtsAZ } from "../../lib/constants";
 import { newId } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate, type Lang, type T } from "../../lib/i18n";
@@ -250,7 +250,7 @@ function QuestionForm(props: { action: string; values: FormValues; lang: Lang; t
           "One per line: value|ไทย|English (value is a-z, 0-9, _). Required for single/multi choice; for area, leave empty to use every district.",
         )}
       />
-      <Choices legend={t("กลุ่มเป้าหมาย: เขต (ว่าง = ทุกเขต)", "Target districts (none = everyone)")} name="districts" options={DISTRICTS} values={v.districts} lang={lang} />
+      <Choices legend={t("กลุ่มเป้าหมาย: เขต (ว่าง = ทุกเขต)", "Target districts (none = everyone)")} name="districts" options={districtsAZ(lang)} values={v.districts} lang={lang} />
       <Choices legend={t("กลุ่มเป้าหมาย: ช่วงอายุ (ว่าง = ทุกวัย)", "Target age bands (none = everyone)")} name="ageBands" options={AGE_OPTS} values={v.ageBands} lang={lang} />
       <div class="grid2">
         <Field label={t("เริ่ม (เวลากรุงเทพฯ)", "Active from (Bangkok time)")} name="activeFrom" type="datetime-local" value={v.activeFrom} />

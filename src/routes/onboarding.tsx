@@ -25,6 +25,7 @@ import {
   RELATIONSHIP,
   SOCIAL_STYLES,
   values,
+  districtsAZ,
 } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
@@ -269,7 +270,7 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
         <Field label={t("วันเกิด", "Date of birth")} name="birthDate" type="date" value={val.birthDate ?? p?.birthDate} required />
       </FlowStep>
       <FlowStep emoji="📍" title={t("ส่วนใหญ่อยู่เขตไหน?", "Where do you spend your week?")}>
-        <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={val.district ?? p?.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
+        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={val.district ?? p?.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
       </FlowStep>
       <FlowStep
         emoji="🏙️"

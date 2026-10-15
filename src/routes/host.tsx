@@ -17,7 +17,7 @@ import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { canHost, checkProposal, memberCanEdit, ownsEvent, publishesDirectly, toBangkokInput, type ProposalInput } from "../domain/hosting";
-import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values } from "../lib/constants";
+import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values, districtsAZ } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
@@ -294,7 +294,7 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <Field label={t("สถานที่", "Venue")} name="venueName" value={d.venueName} required maxlength={200} />
         <Field label={t("ที่อยู่", "Address")} name="venueAddress" value={d.venueAddress} maxlength={400} />
         <Field label={t("ลิงก์แผนที่ (ไม่บังคับ)", "Map link (optional)")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
-        <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
+        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
       </Card>
       <Card>
         <h2>{t("ใครมาได้", "Who it's for")}</h2>

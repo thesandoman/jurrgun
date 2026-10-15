@@ -12,7 +12,7 @@ import { Hono, type Context } from "hono";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, gt, lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { ageBand, ageOn } from "../domain/rules";
-import { DISTRICTS, values } from "../lib/constants";
+import { DISTRICTS, values, districtsAZ } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { L } from "../lib/i18n";
@@ -125,7 +125,7 @@ function QuestionCard(props: { v: View; q: Question }) {
       input = <TextArea label={prompt} name="answer" rows={3} maxlength={TEXT_MAX} required hint={t(`ไม่เกิน ${TEXT_MAX} ตัวอักษร — อย่าใส่ข้อมูลส่วนตัว`, `Up to ${TEXT_MAX} characters. Please don't include personal details.`)} />;
       break;
     case "area":
-      input = <Select label={prompt} name="answer" options={DISTRICTS} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />;
+      input = <Select label={prompt} name="answer" options={districtsAZ(lang)} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />;
       break;
     default:
       return null;

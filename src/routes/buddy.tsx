@@ -50,7 +50,7 @@ import {
 import { monthKey, seasonQuestFor } from "../domain/seasons";
 import { ageOn, romanceCompatible, romanceEligible } from "../domain/rules";
 import { DATING_INTENTS } from "../domain/buddy";
-import { DISTRICTS } from "../lib/constants";
+import { DISTRICTS, districtsAZ } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
@@ -449,7 +449,7 @@ const shortName = (en: string) => {
 
 function Passport(props: { v: View; stamped: Set<string>; compact?: boolean; badges?: { key: string; icon: string; theme: { en: string; th: string } }[] }) {
   const { t, lang } = props.v;
-  const items = DISTRICTS.map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value) }));
+  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value) }));
   // Stamped first in the compact view, so progress is visible at a glance.
   const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on)].slice(0, 12);
   return (

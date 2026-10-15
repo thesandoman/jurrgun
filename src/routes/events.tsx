@@ -39,7 +39,7 @@ import {
   PEOPLE_WINDOW_HOURS,
   type StrikeStanding,
 } from "../domain/rules";
-import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUTES, label, values } from "../lib/constants";
+import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import { fmtDate, fmtParts, type Lang, type T } from "../lib/i18n";
@@ -455,7 +455,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       {mapView ? null : <input type="hidden" name="view" value="list" />}
       {q.text ? <input type="hidden" name="q" value={q.text} /> : null}
       <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
-      <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
+      <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={q.district} lang={lang} blank={t("ทุกเขต", "Any district")} />
       <Select label={t("หมวด", "Category")} name="tag" options={EVENT_TAGS} value={q.tag} lang={lang} blank={t("ทุกหมวด", "Any category")} />
       <Select label={t("ภาษา", "Language")} name="language" options={LANGUAGES} value={q.language} lang={lang} blank={t("ทุกภาษา", "Any language")} />
       <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />

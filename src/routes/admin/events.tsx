@@ -21,7 +21,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql, t
 import { batch, getDb } from "../../db";
 import { suggestGroups } from "../../domain/matching";
 import { checkInOpen, strikeExpiry } from "../../domain/rules";
-import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label, values } from "../../lib/constants";
+import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../../lib/constants";
 import { newId, randomToken } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
@@ -745,7 +745,7 @@ function EventForm(props: {
             "Paste a full Google Maps link (with @lat,lng) to pin the exact place on the Discover map; without one it shows at district level",
           )}
         />
-        <Select label={t("เขต", "District")} name="district" options={DISTRICTS} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
+        <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("— เลือกเขต —", "— Choose —")} />
       </Card>
       <Card>
         <h2>{t("ผู้เข้าร่วม", "Who it's for")}</h2>

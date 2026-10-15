@@ -58,6 +58,16 @@ export const DISTRICTS: Opt[] = [
   o("bang_bon", "บางบอน", "Bang Bon"),
 ];
 
+const AZ = { en: new Intl.Collator("en"), th: new Intl.Collator("th") };
+const DISTRICTS_AZ = {
+  en: [...DISTRICTS].sort((a, b) => AZ.en.compare(a.en, b.en)),
+  th: [...DISTRICTS].sort((a, b) => AZ.th.compare(a.th, b.th)),
+};
+/** The 50 districts in A–Z order of their name in this language (ก–ฮ in Thai). */
+export function districtsAZ(lang: "th" | "en"): Opt[] {
+  return DISTRICTS_AZ[lang];
+}
+
 export const INTERESTS: Opt[] = [
   o("food", "อาหาร", "Food"),
   o("running", "วิ่ง", "Running"),
