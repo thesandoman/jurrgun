@@ -40,7 +40,9 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(answerNames(html).size).toBe(20);
     expect(seedIn(html)).toBe(quizSeed(m.id, null));
     expect(html).toContain("Tap the answer that");
-    expect(html).toContain("No wrong answers");
+    expect(html).toContain("Go with your gut");
+    expect(html).toContain("None of these are me");
+    expect(html).not.toContain("groupmates");
     expect(html).not.toContain("data-budget");
     // The interactive formats, each as a plain form field first.
     const shown = new Set(quizQuestions(seedIn(html), null, MEMBER).map((q) => q.format));
@@ -50,11 +52,12 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     // Personalised: the page is the session for this member's home district.
     const qs = quizQuestions(seedIn(html), null, MEMBER);
     for (const q of qs) expect(html).toContain(q.prompt.en.replace(/'/g, "&#39;").replace(/"/g, "&quot;").slice(0, 20));
-    // One radio per answer; a slider is one range; rank is one value field (plus a number select per answer).
+    // One radio per answer; a slider is one range; rank is one value field (plus a number select per answer); then "None of these are me".
     for (const q of qs) {
       const i = qs.indexOf(q);
       const fields = (html.match(new RegExp(`name="a${i}"`, "g")) ?? []).length;
-      expect(fields, `${i} ${q.format}`).toBe(q.format === "slider" || q.format === "rank" ? 1 : q.options.length);
+      expect(fields, `${i} ${q.format}`).toBe((q.format === "slider" || q.format === "rank" ? 1 : q.options.length) + 1);
+      expect(html).toContain(`name="a${i}" value="none"`);
       if (q.format === "rank") expect((html.match(new RegExp(`name="a${i}_\\d"`, "g")) ?? []).length).toBe(q.options.length);
     }
     expect(qs.map((q) => q.id)).not.toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
@@ -145,6 +148,19 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(await db().select().from(vibes).where(eq(vibes.accountId, m.id))).toHaveLength(0);
     // Leaving one question blank just skips it.
     expect((await req("/quiz", { cookie: m.cookie, form: { ...good, [`a${c}`]: "" } })).status).toBe(302);
+  });
+
+  it('takes "None of these are me" as no vote', async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    const good = form(seed, qs);
+    const three = { ...good, a1: "none", a2: "none", a3: "none" };
+    expect((await req("/quiz", { cookie: m.cookie, form: three })).status).toBe(302);
+    const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    // Scored as if those three were never answered.
+    const without = Object.fromEntries(Object.entries(answersOf(good, qs)).filter(([id]) => ![1, 2, 3].some((i) => qs[i].id === id)));
+    expect(row.vector).toEqual(scoreSession(typeQuestions(qs), without).vector);
   });
 
   it("scores, saves the type, shows it, and retakes with fresh questions", async () => {

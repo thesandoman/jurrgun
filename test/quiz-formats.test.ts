@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FORMATS,
+  NONE,
   NON_CHOICE_MAX,
   QUIZ_LENGTH,
   RANK_PICKS,
@@ -125,7 +126,7 @@ describe("scoring, format by format", () => {
     for (const f of ["choice", "map", "photo", "sentence"] as const) {
       const q = first(f);
       for (let j = 0; j < q.options.length; j++) close(letters(q, j), poles(q.options[j].type));
-      for (const bad of [6, -1, 1.5, "2", [1], null]) expect(itemScore(q, bad), `${f} ${String(bad)}`).toBeNull();
+      for (const bad of [6, -2, 1.5, "2", [1], null]) expect(itemScore(q, bad), `${f} ${String(bad)}`).toBeNull();
     }
   });
 
@@ -134,7 +135,7 @@ describe("scoring, format by format", () => {
     close(letters(q, 0), poles(q.options[0].type));
     close(letters(q, 1), poles(q.options[1].type));
     close(letters(q, 0), letters(q, 1).map((x) => -x));
-    for (const bad of [2, 5, -1, [0]]) expect(itemScore(q, bad)).toBeNull();
+    for (const bad of [2, 5, -2, [0]]) expect(itemScore(q, bad)).toBeNull();
     // The weight shows next to a full pick-one vote: a pick-one plus a this-or-that against it leans to the pick-one.
     const against = oppositeCode(q.options[0].type);
     const c = sessions(50, "against").flat().find((x) => x.format === "choice" && x.options.some((o) => o.type === against))!;
@@ -160,7 +161,7 @@ describe("scoring, format by format", () => {
     close(letters(q, 25), only(end0 * 0.5));
     expect(sliderLean(95)).toBe(1);
     expect(sliderLean(5)).toBe(-1);
-    for (const bad of [-1, 101, 2.5, "50", [50], null]) expect(itemScore(q, bad)).toBeNull();
+    for (const bad of [-2, 101, 2.5, "50", [50], null]) expect(itemScore(q, bad)).toBeNull();
   });
 
   it("slider: the type votes follow the position", () => {
@@ -312,5 +313,37 @@ describe("form answers per format", () => {
     expect(parseAnswers({ [`a${s}`]: "101" }, qs).invalid).toEqual([s]);
     const t = at("this-or-that");
     expect(parseAnswers({ [`a${t}`]: "2" }, qs).invalid).toEqual([t]);
+  });
+
+  it('"None of these are me" posts a{i}=none in every format, counts as answered on the form and casts no vote', () => {
+    for (const f of FORMATS) {
+      const i = at(f);
+      const { answers, invalid, none } = parseAnswers({ [`a${i}`]: "none" }, qs);
+      expect(invalid, f).toEqual([]);
+      expect(none, f).toEqual([i]);
+      expect(answers, f).toEqual({});
+      // NONE is a valid answer that scores like an unanswered question.
+      expect(itemScore(qs[i], NONE), f).toBe(0);
+      expect(votesFor(qs[i], NONE), f).toBeNull();
+    }
+    // Rank: "none" wins over its no-JavaScript selects, and a slider's own position, since it posts last.
+    const r = at("rank");
+    expect(parseAnswers({ [`a${r}`]: "none", [`a${r}_0`]: "1" }, qs).none).toEqual([r]);
+    const picks = answersAs(qs, "BFMH");
+    const withNone = { ...picks, [qs[0].id]: NONE, [qs[1].id]: NONE };
+    const without = Object.fromEntries(Object.entries(picks).filter(([k]) => k !== qs[0].id && k !== qs[1].id));
+    const a = scoreSession(qs, withNone);
+    const b = scoreSession(qs, without);
+    expect(a).toEqual(b);
+    expect(a.answered).toBe(qs.length - 2);
+  });
+
+  it('"None of these are me" has no limit: every question can say it (D29)', () => {
+    const all = Object.fromEntries(qs.map((_, i) => [`a${i}`, "none"]));
+    const { answers, invalid, none } = parseAnswers(all, qs);
+    expect(invalid).toEqual([]);
+    expect(none).toEqual(qs.map((_, i) => i));
+    expect(answers).toEqual({});
+    expect(scoreSession(qs, Object.fromEntries(qs.map((q) => [q.id, NONE]))).answered).toBe(0);
   });
 });

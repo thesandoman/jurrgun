@@ -12,7 +12,7 @@
  * numbers.
  */
 import { typeOf } from "../src/vibe/archetypes";
-import { generateSession, scoreSession, RANK_PICKS, type Answer, type Answers, type Personal, type Question } from "../src/vibe/generator";
+import { generateSession, scoreSession, NONE, RANK_PICKS, type Answer, type Answers, type Personal, type Question } from "../src/vibe/generator";
 import { createRng, type Rng } from "../src/vibe/rng";
 import { oppositeCode, SCENARIOS, TYPE_CODES, type TypeCode } from "../src/vibe/scenarios";
 import { DISTRICTS } from "../src/lib/constants";
@@ -23,9 +23,10 @@ const shared = (a: string, b: string) => [0, 1, 2, 3].filter((i) => a[i] === b[i
 
 /**
  * How a simulated person answers one question: the index of the option they
- * pick. `i` is the question's position, `n` the quiz length.
+ * pick, or NONE ("None of these are me") when `canPass` and nothing fits.
+ * `i` is the question's position, `n` the quiz length.
  */
-export type Answerer = (q: Question, rng: Rng, i: number, n: number) => number;
+export type Answerer = (q: Question, rng: Rng, i: number, n: number, canPass?: boolean) => number;
 
 /** Picks any option, with no preference: the baseline for fairness. */
 export const randomAnswerer: Answerer = (q, rng) => Math.floor(rng() * q.options.length);
@@ -50,15 +51,27 @@ function neighbour(q: Question, code: TypeCode, rng: Rng, skip: number): number 
 }
 
 /**
+ * Below this many letters shared with the best answer, nothing fits and a
+ * real person passes. At 2 (the best answer gets at most one letter right) a
+ * pass costs nothing; passing whenever their own type is missing is the picky
+ * person below, who gives up some votes that still had right letters in them.
+ */
+const FITS = 2;
+
+/**
  * A person who really is `code`: with probability `p` they pick what fits
  * them best (their own type, or the closest answer when it isn't offered);
  * otherwise a neighbouring answer, like a real person having an off moment.
+ * When even the best answer shares fewer than FITS letters with them, they say
+ * "None of these are me".
  */
 export const personaAnswerer =
-  (code: TypeCode, p: number): Answerer =>
-  (q, rng) => {
+  (code: TypeCode, p: number, fits = FITS): Answerer =>
+  (q, rng, _i, _n, canPass) => {
     const best = closest(q, code, rng);
-    return rng() < p ? best : neighbour(q, code, rng, best);
+    const pick = rng() < p ? best : neighbour(q, code, rng, best);
+    // Decided after the same draws, so passing changes nothing else in the run.
+    return canPass && shared(q.options[best].type, code) < fits ? NONE : pick;
   };
 
 /** Answers as `code` for the first half and as its opposite for the second: should come out unsure, not confident. */
@@ -90,26 +103,36 @@ export function outcomeOf(questions: Question[], answers: Answers): Outcome {
  * random answerer drops it anywhere); rank asks the same person again over
  * the answers left, three times.
  */
-export function answerOne(q: Question, who: Answerer, rng: Rng, i: number, n: number): Answer {
-  if (q.format === "slider") return who === randomAnswerer ? Math.floor(rng() * 101) : who(q, rng, i, n) === 0 ? 0 : 100;
+export function answerOne(q: Question, who: Answerer, rng: Rng, i: number, n: number, canPass = false): Answer {
+  if (q.format === "slider") {
+    if (who === randomAnswerer) return Math.floor(rng() * 101);
+    const end = who(q, rng, i, n, canPass);
+    return end === NONE ? NONE : end === 0 ? 0 : 100;
+  }
   if (q.format === "rank") {
     const left = q.options.map((_, j) => j);
     const order: number[] = [];
     while (order.length < RANK_PICKS) {
-      const k = who({ ...q, options: left.map((j) => q.options[j]) }, rng, i, n);
+      // Only the first pick can pass: "none" is about the whole question.
+      const k = who({ ...q, options: left.map((j) => q.options[j]) }, rng, i, n, canPass && order.length === 0);
+      if (k === NONE) return NONE;
       order.push(left[k]);
       left.splice(k, 1);
     }
     return order;
   }
-  return who(q, rng, i, n);
+  return who(q, rng, i, n, canPass);
 }
 
+/** A whole quiz. "None of these are me" has no limit (D29), so anyone may pass on any question. */
 export function answerAll(questions: Question[], who: Answerer, rng: Rng): Answers {
   const answers: Answers = {};
-  questions.forEach((q, i) => (answers[q.id] = answerOne(q, who, rng, i, questions.length)));
+  questions.forEach((q, i) => (answers[q.id] = answerOne(q, who, rng, i, questions.length, true)));
   return answers;
 }
+
+/** How many "None of these are me" a set of answers used. */
+export const passesIn = (answers: Answers) => Object.values(answers).filter((a) => a === NONE).length;
 
 // ------------------------------------------------------------ sessions --
 
@@ -151,9 +174,11 @@ export type SimReport = {
     positionSpread: number;
   };
   random: { counts: Record<TypeCode, number>; maxDeviation: number; letterShare: Record<string, number> };
-  persona: { p: number; recovered: Record<TypeCode, number>; overall: number; withinRange: number; meanConsistency: number };
+  persona: { p: number; recovered: Record<TypeCode, number>; overall: number; withinRange: number; meanConsistency: number; meanPasses: number; maxPasses: number };
   perfect: { recovered: number; meanConsistency: number };
   noisy: { p: number; overall: number };
+  /** A real person who says "None of these are me" whenever their own type isn't offered. */
+  picky: { overall: number; meanPasses: number; maxPasses: number };
   contradictory: { confident: number; meanUnsureLetters: number };
   scenariosUsed: number;
   scenariosInBank: number;
@@ -179,6 +204,11 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
   let personaInRange = 0;
   let personaCons = 0;
   let personaConsN = 0;
+  let personaPasses = 0;
+  let pickyHit = 0;
+  let pickyPasses = 0;
+  let pickyMaxPasses = 0;
+  let personaMaxPasses = 0;
   let perfectHit = 0;
   let perfectCons = 0;
   let perfectConsN = 0;
@@ -229,7 +259,10 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
 
     // A real person of a known type (cycled so every type gets equal runs).
     const truth = TYPE_CODES[k % 16];
-    const pr = outcomeOf(qs, answerAll(qs, personaAnswerer(truth, personaP), rng));
+    const personaAnswers = answerAll(qs, personaAnswerer(truth, personaP), rng);
+    personaPasses += passesIn(personaAnswers);
+    personaMaxPasses = Math.max(personaMaxPasses, passesIn(personaAnswers));
+    const pr = outcomeOf(qs, personaAnswers);
     personaRuns[truth] += 1;
     if (pr.type === truth) personaHit[truth] += 1;
     if (pr.range.includes(truth)) personaInRange += 1;
@@ -245,6 +278,12 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
       perfectCons += pf.consistency;
       perfectConsN += 1;
     }
+
+    // A picky person: passes whenever their own type isn't there (own stream, so the others' numbers don't move).
+    const pickyAnswers = answerAll(qs, personaAnswerer(truth, personaP, 4), createRng(`picky:${opts.seed ?? "v1"}:${k}`));
+    if (outcomeOf(qs, pickyAnswers).type === truth) pickyHit += 1;
+    pickyPasses += passesIn(pickyAnswers);
+    pickyMaxPasses = Math.max(pickyMaxPasses, passesIn(pickyAnswers));
 
     // A noisy person, and one who contradicts themselves halfway.
     if (outcomeOf(qs, answerAll(qs, personaAnswerer(truth, noisyP), rng)).type === truth) noisyHit += 1;
@@ -271,9 +310,12 @@ export function simulate(sessions: number, opts: { personaP?: number; noisyP?: n
       overall: TYPE_CODES.reduce((t, c) => t + personaHit[c], 0) / sessions,
       withinRange: personaInRange / sessions,
       meanConsistency: personaConsN ? personaCons / personaConsN : 0,
+      meanPasses: personaPasses / sessions,
+      maxPasses: personaMaxPasses,
     },
     perfect: { recovered: perfectHit / sessions, meanConsistency: perfectConsN ? perfectCons / perfectConsN : 0 },
     noisy: { p: noisyP, overall: noisyHit / sessions },
+    picky: { overall: pickyHit / sessions, meanPasses: pickyPasses / sessions, maxPasses: pickyMaxPasses },
     contradictory: { confident: contraConfident / sessions, meanUnsureLetters: contraUnsure / sessions },
     scenariosUsed: scenariosUsed.size,
     scenariosInBank: SCENARIOS.length,

@@ -142,7 +142,7 @@ describe("scoring and the margin of error", () => {
     expect(q.format).toBe("choice");
     expect(itemScore(q, 0)).toBe(1);
     expect(itemScore(q, 5)).toBe(1);
-    for (const bad of [6, -1, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
+    for (const bad of [6, -2, 1.5, NaN, "2", [1], null]) expect(itemScore(q, bad)).toBeNull();
   });
 
   it("someone answering consistently as a type gets exactly that type, every letter clear", () => {

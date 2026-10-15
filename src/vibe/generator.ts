@@ -564,8 +564,12 @@ export function toPublic(q: AnyQuestion): PublicQuestion {
  * choice, this-or-that, map, photo, sentence: the index of the picked option.
  * slider: 0..100, from the first option (0) to the second (100).
  * rank: RANK_PICKS distinct option indices, favourite first.
+ * Any format: NONE, "None of these are me" (quiz-review 7).
  */
 export type Answer = number | number[];
+
+/** "None of these are me": a valid answer that casts no vote, like an unanswered question. */
+export const NONE = -1;
 export type Answers = Record<string, Answer>;
 
 export type Strength = "strong" | "leans" | "balanced";
@@ -630,8 +634,9 @@ export function pickedOption<O>(q: { options: O[] }, answer: unknown): O | null 
   return isInt(answer) && answer >= 0 && answer < q.options.length ? q.options[answer] : null;
 }
 
-/** 1 for a valid answer, null otherwise (kept for form validation). */
+/** 1 for a valid answer, 0 for NONE (valid, no vote), null otherwise (kept for form validation). */
 export function itemScore(q: { options: unknown[]; format?: string }, answer: unknown): number | null {
+  if (answer === NONE) return 0;
   if (q.format === "slider" || q.format === "rank") return votesFor(q as Question, answer) ? 1 : null;
   return pickedOption(q, answer) ? 1 : null;
 }
@@ -665,6 +670,7 @@ export function scoreSession(questions: Question[], answers: Answers): VibeResul
   const pickByScenario = new Map<string, TypeCode>();
   let answered = 0;
   for (const q of questions) {
+    // Unanswered and NONE both cast no vote (votesFor is null for them).
     const votes = votesFor(q, answers[q.id]);
     if (!votes) continue;
     answered += 1;

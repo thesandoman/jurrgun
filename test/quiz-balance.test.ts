@@ -45,6 +45,14 @@ describe("Bangkok Type quiz balance (5,000 simulated sessions)", () => {
     expect(r.perfect.meanConsistency).toBeGreaterThan(0.8); // a consistent person answers the twin questions alike
   });
 
+  it('"None of these are me" casts no vote and still finds people', () => {
+    // Real people pass only when nothing fits; that costs no accuracy (checked above with it on).
+    expect(r.persona.meanPasses).toBeGreaterThan(0);
+    // Someone who passes whenever their own type isn't there passes on most questions, and still mostly gets their type.
+    expect(r.picky.meanPasses).toBeGreaterThan(8);
+    expect(r.picky.overall).toBeGreaterThan(0.78);
+  });
+
   it("doesn't sound confident about someone who contradicts themselves", () => {
     expect(r.contradictory.confident).toBeLessThan(0.05);
     expect(r.contradictory.meanUnsureLetters).toBeGreaterThan(2.5);

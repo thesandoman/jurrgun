@@ -137,7 +137,7 @@ function Rank(props: FieldProps) {
       data-more={t("ต่อไปคืออันดับ {n}", "Now your number {n}")}
       data-done={t(`ครบ ${n} อันดับแล้ว กดต่อไปได้เลย หรือแตะเพื่อเปลี่ยน`, `Top ${n} set. Tap Next, or untick one to change it`)}
       data-full={t(`เลือกครบ ${n} แล้ว แตะอันที่เลือกไว้เพื่อเอาออกก่อน`, `You have ${n} already. Untick one first`)}
-      data-need={t(`เลือกให้ครบ ${n} หรือไม่เลือกเลยเพื่อข้าม`, `Pick ${n}, or none to skip`)}
+      data-need={t(`เลือกให้ครบ ${n} อันดับ หรือแตะ "ไม่มีข้อไหนเป็นฉันเลย"`, `Pick your top ${n}, or tap "None of these are me"`)}
       data-ranked={t("อันดับ {n}", "number {n}")}
     >
       <input type="hidden" name={`a${i}`} value="" class="qf-rank-value" />
@@ -435,12 +435,13 @@ each("[data-slider]",function(w){
 
 /* rank: tick your top N in order; badges number them; partial picks block Next */
 each("[data-rank]",function(w){
-  var d=w.dataset,n=+d.pick||3,boxes=[].slice.call(w.querySelectorAll(".qf-rank-box")),out=w.querySelector(".qf-rank-value"),undo=w.querySelector(".qf-rank-undo"),st=w.querySelector(".qf-rank-status"),order=[],msg="";
+  var d=w.dataset,n=+d.pick||3,boxes=[].slice.call(w.querySelectorAll(".qf-rank-box")),out=w.querySelector(".qf-rank-value"),undo=w.querySelector(".qf-rank-undo"),st=w.querySelector(".qf-rank-status"),order=[],msg="",nb=w.closest(".flow-step").querySelector(".q-none input");
   function draw(){
     boxes.forEach(function(b,j){var k=order.indexOf(j),item=b.closest(".qf-rank-item");b.checked=k>=0;item.classList.toggle("on",k>=0);
       item.querySelector(".qf-rank-badge").textContent=k<0?"":String(k+1);item.querySelector(".qf-rank-sr").textContent=k<0?"":", "+d.ranked.replace("{n}",k+1)});
     out.value=order.length===n?order.join(","):"";
-    var partial=order.length>0&&order.length<n;boxes[0].setCustomValidity(partial?d.need:"");
+    /* With a "None of these are me" in the step (quiz-moments.tsx), an empty rank needs it ticked. */
+    var partial=order.length>0&&order.length<n,empty=!order.length&&nb&&!nb.checked;boxes[0].setCustomValidity(partial||empty?d.need:"");
     undo.disabled=!order.length;
     st.textContent=msg||(order.length===n?d.done:(order.length?d.more.replace("{n}",order.length+1):d.start));msg="";
   }
@@ -448,6 +449,7 @@ each("[data-rank]",function(w){
     if(k>=0)order.splice(k,1);else if(order.length<n)order.push(j);else msg=d.full;
     if(order.length===n&&k<0&&M)M.tick();draw()})});
   undo.addEventListener("click",function(){order.pop();draw()});
+  if(nb)nb.addEventListener("change",function(){if(nb.checked)order=[];draw()});
   draw();
 });
 
