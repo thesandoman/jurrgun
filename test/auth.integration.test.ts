@@ -2,9 +2,9 @@
  * Sign-up → onboarding → member pages, against local Postgres.
  */
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { HAS_DB, db, req } from "./helpers";
-import { accounts, profiles } from "../src/schema";
+import { accounts, consents, profiles } from "../src/schema";
 import { randomToken } from "../src/lib/crypto";
 
 const cookieFrom = (res: Response) => (res.headers.get("set-cookie") ?? "").split(";")[0];
@@ -55,7 +55,16 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
     expect(prof.genderIdentity).toBeNull();
 
     r = await req("/onboarding/wellbeing", { cookie, form: { q1: "2", q2: "1", q3: "1" } });
+    // New members see the one-time guide, then Discover.
+    expect(r.headers.get("location")).toBe("/guide");
+    const guide = await req("/guide", { cookie: `${cookie}; lang=en` });
+    expect(await guide.text()).toContain("Accountability");
+    r = await req("/guide", { cookie, form: { agree: "0" } });
+    expect(r.headers.get("location")).toBe("/guide");
+    r = await req("/guide", { cookie, form: { agree: "1" } });
     expect(r.headers.get("location")).toBe("/events?notice=welcome");
+    const seen = await db().select().from(consents).where(and(eq(consents.accountId, acct.id), eq(consents.category, "guide")));
+    expect(seen).toHaveLength(1);
   });
 
   it("rejects a wrong password with the same message as an unknown user", async () => {

@@ -707,7 +707,8 @@ onboarding.get("/wellbeing", async (c) => {
   if (missing) return c.redirect(`/onboarding/${missing}`);
   if (!(await hasResearchConsent(c.env, user.account.id))) {
     await finish(c, user.account.id);
-    return c.redirect("/events?notice=welcome");
+    // New members see the one-time guide first.
+  return c.redirect("/guide");
   }
   const { t, lang } = v;
   return page(
@@ -758,5 +759,6 @@ onboarding.post("/wellbeing", async (c) => {
     }
   }
   await finish(c, user.account.id);
-  return c.redirect("/events?notice=welcome");
+  // New members see the one-time guide first.
+  return c.redirect("/guide");
 });

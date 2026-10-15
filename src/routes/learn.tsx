@@ -131,6 +131,10 @@ learnRoutes.get("/learn", (c) => {
         <summary>{t("Jurrgun คืออะไร", "What is Jurrgun")}</summary>
         <p style="margin:8px 0 0">{L(lang, ABOUT)}</p>
       </details>
+      <a href="/guide" class="feature" style="margin:10px 0">
+        <b aria-hidden="true">👋</b>
+        <strong>{t("เริ่มต้นใช้งาน: ความปลอดภัย การสื่อสาร และความรับผิดชอบ", "Getting started: safety, communication and accountability")}</strong>
+      </a>
       <a href="/safety" class="feature" style="margin:10px 0">
         <b aria-hidden="true">🛡️</b>
         <strong>{t("ตัวช่วยความปลอดภัย: สายด่วนและแชร์แผนนัด", "Safety net: helplines and share your plans")}</strong>

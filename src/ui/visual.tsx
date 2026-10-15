@@ -238,6 +238,11 @@ a.tile2:active{transform:scale(.98)}
 @media (min-width:720px){.facts4{grid-template-columns:repeat(4,1fr)}}
 .facts4 .fact span{font-weight:700}
 details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
+.guide-tips{list-style:none;padding:0;margin:8px 0 12px;display:grid;gap:10px}
+.guide-tips li{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:var(--surface);border:1px solid var(--line);line-height:1.35}
+.guide-tips li b{flex:none;font-size:1.5rem;width:36px;text-align:center}
+.guide-promise{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:var(--brand-soft);font-weight:600;line-height:1.4}
+.guide-promise input{width:22px;height:22px;flex:none;margin-top:2px}
 .chips2 span{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:999px;background:var(--surface-2);font-size:.82rem;font-weight:600}
 @media (prefers-reduced-motion:reduce){.pill2-dot{animation:none}.fan-card,.tile2{transition:none}}
 `;
