@@ -42,7 +42,10 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(html).toContain("No wrong answers");
     expect(html).not.toContain("data-budget");
     // The interactive formats, each as a plain form field first.
-    for (const marker of ["data-tot", "data-slider", 'type="range"', "data-rank", "data-map", "qf-photos", "data-sentence"]) expect(html).toContain(marker);
+    const shown = new Set(quizQuestions(seedIn(html), null, MEMBER).map((q) => q.format));
+    const markers: Record<string, string[]> = { "this-or-that": ["data-tot"], slider: ["data-slider", 'type="range"'], rank: ["data-rank"], map: ["data-map"], photo: ["qf-photos"], sentence: ["data-sentence"] };
+    // Each format this session uses is on the page (the shared script names every format, so absence isn't checked).
+    for (const [format, list] of Object.entries(markers)) if (shown.has(format as never)) for (const marker of list) expect(html).toContain(marker);
     // Personalised: the page is the session for this member's home district.
     const qs = quizQuestions(seedIn(html), null, MEMBER);
     for (const q of qs) expect(html).toContain(q.prompt.en.replace(/'/g, "&#39;").replace(/"/g, "&quot;").slice(0, 20));
@@ -127,9 +130,9 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const t = qs.findIndex((q) => q.format === "this-or-that");
     const bad: Record<string, string>[] = [
       ...["6", "9", "-1", "abc", "1.5"].map((v) => ({ [`a${c}`]: v })),
-      { [`a${s}`]: "101" },
-      { [`a${k}`]: "0,0,1" },
-      { [`a${k}`]: "0,1" },
+      ...(s >= 0 ? [{ [`a${s}`]: "101" }] : []),
+      { [`a${k}`]: "0,0" },
+      { [`a${k}`]: "0" },
       { [`a${t}`]: "2" },
     ];
     for (const b of bad) {
