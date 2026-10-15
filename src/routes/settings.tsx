@@ -239,6 +239,7 @@ settingsRoutes.get("/settings", async (c) => {
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
         <QuickSwitch
           k="romance"
+          love
           on={romanceEligible(p)}
           emoji="💘"
           title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")}
@@ -305,12 +306,12 @@ settingsRoutes.get("/settings", async (c) => {
 });
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
-function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string }) {
+function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean }) {
   return (
     <form method="post" action="/settings/quick">
       <input type="hidden" name="key" value={props.k} />
       <input type="hidden" name="on" value={props.on ? "0" : "1"} />
-      <button type="submit" class="qs" aria-pressed={props.on ? "true" : "false"}>
+      <button type="submit" class={props.love ? "qs love" : "qs"} aria-pressed={props.on ? "true" : "false"}>
         <span aria-hidden="true">{props.emoji}</span>
         <span>
           <b>{props.title}</b>
@@ -918,7 +919,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
   }
   if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id));
   if (result.patch.relationship !== p.relationship) {
-    queries.push(audit(db, user.account.id, "profile.relationship_changed", { type: "account", id: user.account.id }));
+    queries.push(audit(db, user.account.id, "profile.private_updated", { type: "account", id: user.account.id }));
   }
   await batch(c.env, queries);
   return c.redirect("/settings/connections?notice=saved");
@@ -968,7 +969,7 @@ async function romanceQuick(c: C, on: boolean) {
       .where(eq(profiles.accountId, id)),
   );
   queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: true, version: CONSENT_VERSION }));
-  if (toSingle) queries.push(audit(db, id, "profile.relationship_changed", { type: "account", id }));
+  if (toSingle) queries.push(audit(db, id, "profile.private_updated", { type: "account", id }));
   await batch(c.env, queries);
   return c.redirect("/settings?notice=romance_on");
 }
@@ -1440,10 +1441,10 @@ settingsRoutes.get("/settings/habits", async (c) => {
       <p class="muted">{t("Jurrgun อยากให้คุณใช้แอปน้อยลง และเจอคนจริงมากขึ้น", "Jurrgun wants you on the app less, and with people more.")}</p>
       {c.req.query("notice") === "saved" ? <Notice kind="ok">{t("บันทึกแล้ว", "Saved")}</Notice> : null}
       <Card>
-        <h2 style="margin-top:0">🗓️ {t("นัดกี่ครั้งต่อสัปดาห์กำลังดี", "How many plans a week feel right?")}</h2>
+        <h2 style="margin-top:0" id="rhythm-h">🗓️ {t("นัดกี่ครั้งต่อสัปดาห์กำลังดี", "How many plans a week feel right?")}</h2>
         <p class="muted">{t("ถ้าเกินนี้ เราจะถามคุณก่อน 1 ครั้ง แต่ไม่ได้ห้าม", "Past this, we'll check with you once. Never a block.")}</p>
         <form method="post" action="/settings/habits">
-          <div class="pills">
+          <div class="pills" role="radiogroup" aria-labelledby="rhythm-h">
             {RHYTHMS.map((n) => (
               <label class="pill">
                 <input type="radio" name="rhythm" value={String(n)} checked={n === rhythm} />

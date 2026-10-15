@@ -135,7 +135,7 @@ publicRoutes.get("/intro", (c) => {
             <div class="intro-art" aria-hidden="true">
               {sl.art === "mark" ? <span class="intro-mark" dangerouslySetInnerHTML={{ __html: MARK_SVG }} /> : <b>{sl.art}</b>}
             </div>
-            <h1>{sl.title}</h1>
+            {i === 0 ? <h1>{sl.title}</h1> : <h2>{sl.title}</h2>}
             <p>{sl.body}</p>
             {sl.foot ? <p class="intro-foot">🏛️ {sl.foot}</p> : null}
             {i === slides.length - 1 ? (

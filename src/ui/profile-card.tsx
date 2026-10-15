@@ -36,6 +36,7 @@ import {
 import { DISTRICTS, GENDER_IDENTITIES, INTENTS, LANGUAGES, ORIENTATIONS, label } from "../lib/constants";
 import { romanceCompatible, romanceEligible, type RomanceSide } from "../domain/rules";
 import type { View } from "./kit";
+import { styleLines } from "../vibe/styles";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
 
@@ -147,6 +148,8 @@ export function ProfileCard(props: {
     const a = bio.answers?.[id];
     if (q && a && hasValue(a)) datingAnswered.push({ q, a });
   }
+  // "How you date" from the quiz. bio only carries it when the viewer may see dating (cardPerson strips it otherwise).
+  const dateStyle = (p.datingDeck ?? []).length ? styleLines("open-to-more", bio.dateStyle, lang) : [];
   const legacy = Object.entries(p.legacy ?? {}).filter(([k, val]) => LEGACY[k] && val);
   const cards: Child[] = [
     ...answered.map(({ q, a }) => <PromptCard v={props.v} q={q} a={a} photo={q.kind === "photo" && a.photoKey ? props.promptPhoto(q.id) : null} />),
@@ -238,9 +241,24 @@ export function ProfileCard(props: {
           </div>
         </section>
       ) : null}
-      {datingAnswered.length ? (
+      {datingAnswered.length || dateStyle.length ? (
         <section class="pc-dating" aria-label={t("คำถามเรื่องเดต", "Dating prompts")}>
           <p class="eyebrow">💘 {t("เปิดใจมากกว่าเพื่อน", "Open to something more")}</p>
+          {dateStyle.length ? (
+            <div class="pc-datestyle">
+              <h2>{t("สไตล์การเดตของฉัน", "How I date")}</h2>
+              <dl class="pc-facts">
+                {dateStyle.map((x) => (
+                  <div>
+                    <dt>
+                      <span aria-hidden="true">{x.emoji}</span> {x.title}
+                    </dt>
+                    <dd>{x.label}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
           {datingAnswered.map(({ q, a }) => (
             <PromptCard v={props.v} q={q} a={a} photo={null} />
           ))}
@@ -461,8 +479,11 @@ export const PROFILE_CSS = `
 .pc-badges{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pc-badges .type-spark small{margin-top:6px}
 .pc-lines{display:grid;gap:10px}
-.pc-dating{display:grid;gap:12px;padding:14px;border-radius:var(--radius);background:color-mix(in srgb,var(--coral,#ff7a5c) 12%,var(--surface))}
-.pc-dating .eyebrow{margin:0;color:var(--ink-2)}
+.pc-dating{display:grid;gap:12px;padding:14px;border-radius:var(--radius);background:var(--love-soft);border:1px solid color-mix(in srgb,var(--love) 30%,transparent)}
+.pc-dating .eyebrow{margin:0;color:var(--love-ink)}
+.pc-datestyle{background:var(--surface);border-radius:var(--radius);padding:14px 16px}
+.pc-datestyle h2{margin:0 0 8px;font-size:1.05rem}
+.pc-datestyle .pc-facts{margin:0}
 .pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
 .pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
 .pc-actions{display:flex;gap:10px;flex-wrap:wrap}

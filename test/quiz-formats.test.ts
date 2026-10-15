@@ -9,6 +9,8 @@ import {
   NON_CHOICE_MAX,
   QUIZ_LENGTH,
   RANK_PICKS,
+  SLIDER_SESSIONS,
+  THIS_OR_THAT_WEIGHT,
   SLIDER_MARGIN,
   generateSession,
   itemScore,
@@ -45,16 +47,22 @@ const poles = (code: string) => code.split("").map((ch) => LETTERS[ch].pole);
 const mirrorIndex = (q: Question, j: number) => q.options.findIndex((o) => o.type === oppositeCode(q.options[j].type));
 
 describe("the format mix", () => {
-  it("7 or 8 interactive questions per session (at most 40%), every format in every session", () => {
-    for (const qs of sessions(400, "mix")) {
+  it("7 or 8 interactive questions per session (at most 40%), every format but the slider in every session", () => {
+    let withSliders = 0;
+    const all = sessions(800, "mix");
+    for (const qs of all) {
       const others = qs.filter((q) => q.format !== "choice");
       expect(others.length).toBeGreaterThanOrEqual(7);
       expect(others.length).toBeLessThanOrEqual(NON_CHOICE_MAX);
       expect(others.length / QUIZ_LENGTH).toBeLessThanOrEqual(0.4);
-      for (const f of FORMATS) expect(qs.some((q) => q.format === f), f).toBe(true);
-      expect(qs.filter((q) => q.format === "slider")).toHaveLength(2);
+      for (const f of FORMATS) if (f !== "slider") expect(qs.some((q) => q.format === f), f).toBe(true);
+      expect([0, 2]).toContain(qs.filter((q) => q.format === "slider").length);
       expect(qs.filter((q) => q.format === "rank")).toHaveLength(1);
+      if (qs.some((q) => q.format === "slider")) withSliders += 1;
     }
+    // A slider measures one letter instead of four, so only some sessions get the pair.
+    expect(withSliders / all.length).toBeGreaterThan(SLIDER_SESSIONS - 0.07);
+    expect(withSliders / all.length).toBeLessThan(SLIDER_SESSIONS + 0.07);
   });
 
   it("the first question is a plain pick-one, and twin questions always are", () => {
@@ -88,6 +96,7 @@ describe("opposite-pair balance per format", () => {
   it("a slider's two ends differ in exactly its one letter, and the two sliders mirror each other", () => {
     for (const qs of sessions(300, "sl")) {
       const [a, b] = qs.filter((q) => q.format === "slider");
+      if (!a) continue;
       for (const q of [a, b]) {
         const [x, y] = q.options.map((o) => o.type);
         const diff = [0, 1, 2, 3].filter((k) => x[k] !== y[k]);
@@ -120,12 +129,18 @@ describe("scoring, format by format", () => {
     }
   });
 
-  it("this-or-that: either side is a full vote; only 0 and 1 are answers", () => {
+  it("this-or-that: either side moves all four letters, at 0.75 weight; only 0 and 1 are answers", () => {
     const q = first("this-or-that");
     close(letters(q, 0), poles(q.options[0].type));
     close(letters(q, 1), poles(q.options[1].type));
     close(letters(q, 0), letters(q, 1).map((x) => -x));
     for (const bad of [2, 5, -1, [0]]) expect(itemScore(q, bad)).toBeNull();
+    // The weight shows next to a full pick-one vote: a pick-one plus a this-or-that against it leans to the pick-one.
+    const against = oppositeCode(q.options[0].type);
+    const c = sessions(50, "against").flat().find((x) => x.format === "choice" && x.options.some((o) => o.type === against))!;
+    const r = scoreSession([c, q], { [c.id]: c.options.findIndex((o) => o.type === against), [q.id]: 0 });
+    expect(THIS_OR_THAT_WEIGHT).toBe(0.75);
+    for (const cat of CODE_CATS) expect(Math.abs(r.vector[cat])).toBeCloseTo(0.25 / 1.75, 9);
   });
 
   it("slider: scores only its one letter, by position, with a dead zone in the middle", () => {
@@ -155,19 +170,19 @@ describe("scoring, format by format", () => {
     expect(scoreSession([q], { [q.id]: 50 }).affinity).toEqual({ [x]: 0.5, [y]: 0.5 });
   });
 
-  it("rank: top 3 weighted 3/2/1 for the letters, full, two-thirds and one-third for the type votes", () => {
+  it("rank: first and second choice of four, weighted 1 and 0.5 for the letters and the type votes", () => {
     const q = first("rank");
-    const pick = [4, 0, 2];
-    const want = [0, 1, 2, 3].map((k) => pick.reduce((t, j, r) => t + ([3, 2, 1][r] / 6) * poles(q.options[j].type)[k], 0));
+    expect(q.options).toHaveLength(4);
+    const pick = [3, 0];
+    const want = [0, 1, 2, 3].map((k) => (poles(q.options[3].type)[k] + 0.5 * poles(q.options[0].type)[k]) / 1.5);
     close(letters(q, pick), want);
     const aff = scoreSession([q], { [q.id]: pick }).affinity;
-    expect(aff[q.options[4].type]).toBeCloseTo(1, 9);
-    expect(aff[q.options[0].type]).toBeCloseTo(2 / 3, 9);
-    expect(aff[q.options[2].type]).toBeCloseTo(1 / 3, 9);
+    expect(aff[q.options[3].type]).toBe(1);
+    expect(aff[q.options[0].type]).toBe(0.5);
     expect(aff[q.options[1].type]).toBe(0);
-    expect(votesFor(q, pick)!.reduce((t, v) => t + v.share, 0)).toBeCloseTo(1, 9);
-    for (const bad of [[0, 1], [0, 1, 2, 3], [0, 0, 1], [0, 1, 6], [0, 1, -1], [0, 1, 1.5], 0, "0,1,2", null]) expect(itemScore(q, bad), JSON.stringify(bad)).toBeNull();
-    expect(RANK_PICKS).toBe(3);
+    expect(votesFor(q, pick)!.map((v) => v.share)).toEqual([1, 0.5]);
+    for (const bad of [[0], [0, 1, 2], [0, 0], [0, 4], [0, -1], [0, 1.5], 0, "0,1", null]) expect(itemScore(q, bad), JSON.stringify(bad)).toBeNull();
+    expect(RANK_PICKS).toBe(2);
   });
 
   it("every format is symmetric: the mirror answer scores the exact opposite", () => {
@@ -176,7 +191,7 @@ describe("scoring, format by format", () => {
       if (f === "slider") {
         for (const v of [0, 20, 35, 50, 70, 100]) close(letters(q, v), letters(q, 100 - v).map((x) => -x));
       } else if (f === "rank") {
-        const pick = [1, 3, 5];
+        const pick = [1, 3];
         close(letters(q, pick), letters(q, pick.map((j) => mirrorIndex(q, j))).map((x) => -x));
       } else {
         for (let j = 0; j < q.options.length; j++) close(letters(q, j), letters(q, mirrorIndex(q, j)).map((x) => -x));
@@ -187,7 +202,7 @@ describe("scoring, format by format", () => {
   it("no format favours a side: averaged over every possible answer, each letter scores 0", () => {
     const perms = (n: number) => {
       const out: number[][] = [];
-      for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) for (let c = 0; c < n; c++) if (a !== b && b !== c && a !== c) out.push([a, b, c]);
+      for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) if (a !== b) out.push([a, b]);
       return out;
     };
     for (const f of FORMATS) {
@@ -267,7 +282,8 @@ describe("format extras", () => {
 });
 
 describe("form answers per format", () => {
-  const qs = generateSession({ seed: "form" });
+  // A session with every format, sliders included.
+  const qs = Array.from({ length: 50 }, (_, i) => generateSession({ seed: `form${i}` })).find((x) => FORMATS.every((f) => x.some((q) => q.format === f)))!;
   const at = (f: Format) => qs.findIndex((q) => q.format === f);
 
   it("every format's answer posts and parses back to itself", () => {
@@ -278,12 +294,12 @@ describe("form answers per format", () => {
     expect(answers).toEqual(picks);
   });
 
-  it("rank without JavaScript: 1, 2, 3 in the per-answer selects", () => {
+  it("rank without JavaScript: 1 and 2 in the per-answer selects", () => {
     const i = at("rank");
     const q = qs[i];
-    expect(parseAnswers({ [`a${i}`]: "", [`a${i}_2`]: "1", [`a${i}_5`]: "2", [`a${i}_0`]: "3" }, qs).answers[q.id]).toEqual([2, 5, 0]);
-    // Two numbered, a duplicate, or a 4: needs another look.
-    for (const bad of [{ [`a${i}_2`]: "1", [`a${i}_5`]: "2" }, { [`a${i}_2`]: "1", [`a${i}_5`]: "1", [`a${i}_0`]: "2" }, { [`a${i}_2`]: "4" }]) {
+    expect(parseAnswers({ [`a${i}`]: "", [`a${i}_2`]: "1", [`a${i}_3`]: "2" }, qs).answers[q.id]).toEqual([2, 3]);
+    // Only one numbered, a duplicate, or a 3: needs another look.
+    for (const bad of [{ [`a${i}_2`]: "1" }, { [`a${i}_2`]: "1", [`a${i}_3`]: "1" }, { [`a${i}_2`]: "3" }]) {
       expect(parseAnswers(bad, qs).invalid).toEqual([i]);
     }
     // Nothing numbered: skipped.

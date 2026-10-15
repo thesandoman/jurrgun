@@ -591,6 +591,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
         <summary>{t("ตัวกรอง", "Filters")}</summary>
         {filtersForm}
       </details>
+      <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>
       <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
         {cards}
       </section>
@@ -971,7 +972,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
           <SpotsTag e={event} taken={state.taken} t={t} />
           {event.tags.map((tag) => (
-            <Tag tone="muted">{label(EVENT_TAGS, tag, lang)}</Tag>
+            <Tag tone={tag === OPEN_TO_MORE_TAG ? "love" : "muted"}>{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
         </div>
         {description(event, lang).length > 220 ? (
@@ -1078,7 +1079,33 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           {canInvite(event, reg, now) ? <InviteBox event={event} url={inviteUrl} v={v} /> : null}
         </Card>
       )}
+      {event.status === "published" && !started && (!reg || reg.status === "cancelled" || reg.status === "late_cancelled") ? (
+        <StickyRsvp t={t} left={left} />
+      ) : null}
     </>,
+  );
+}
+
+/**
+ * The main action, always in reach: a bar above the tab bar that jumps to the
+ * RSVP form. It hides while the form itself is on screen.
+ */
+function StickyRsvp(props: { t: T; left: number }) {
+  const { t, left } = props;
+  return (
+    <div class="sticky-cta" id="sticky-rsvp">
+      <span class="sticky-cta-note">
+        {left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว ต่อคิวสำรองได้", "Full, join the waitlist")}
+      </span>
+      <a href="#rsvp" class="btn primary">
+        {left > 0 ? t("ลงทะเบียนเข้าร่วม", "RSVP") : t("ต่อคิวสำรอง", "Join the waitlist")}
+      </a>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var b=document.getElementById("sticky-rsvp"),f=document.getElementById("rsvp");if(!b||!f)return;if("IntersectionObserver" in window)new IntersectionObserver(function(e){b.classList.toggle("is-off",e[0].isIntersecting)}).observe(f);b.querySelector("a").addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("input:not([type=hidden]),button");if(c)c.focus({preventScroll:true})},350)})})()`,
+        }}
+      />
+    </div>
   );
 }
 
@@ -1228,7 +1255,7 @@ function RegistrationBox(props: {
           {t(`คุณมี ${props.standing.active} strike จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `You have ${props.standing.active} strikes, so you can RSVP again after ${fmtDate(props.standing.blockedUntil, lang)}`)}
         </Notice>
       ) : null}
-      <form method="post" action={`${base}/rsvp`}>
+      <form method="post" action={`${base}/rsvp`} id="rsvp">
         {event.freeSeats > 0 && event.costThb > 0 ? (
           <Toggle
             name="freeSeat"

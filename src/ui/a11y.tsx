@@ -122,3 +122,10 @@ export function A11yMenu(props: { t: T; class?: string }) {
     </details>
   );
 }
+
+/**
+ * When the browser refuses a form (required, pattern, min/max), mark each
+ * failing field aria-invalid so screen readers say so, and clear the mark as
+ * soon as the value is fixed (WCAG 3.3.1).
+ */
+export const A11Y_FORM_JS = `(function(){document.addEventListener("invalid",function(e){var f=e.target;if(f&&f.setAttribute)f.setAttribute("aria-invalid","true")},true);document.addEventListener("input",function(e){var f=e.target;if(f&&f.getAttribute&&f.getAttribute("aria-invalid")==="true"&&f.checkValidity&&f.checkValidity())f.removeAttribute("aria-invalid")},true)})()`;

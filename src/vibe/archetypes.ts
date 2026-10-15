@@ -464,7 +464,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
     hangouts: [
       h("🧵", "ratchathewi", "Ban Khrua weaving community", "ชุมชนทอผ้าบ้านครัว", "Silk weaving and family stories by the canal.", "ผ้าไหมทอมือและเรื่องเล่าครอบครัวริมคลอง"),
       h("🚣", "bangkok_noi", "The Royal Barges National Museum", "พิพิธภัณฑสถานแห่งชาติ เรือพระราชพิธี", "Every barge has a story worth hearing.", "เรือทุกลำมีเรื่องเล่าที่น่าฟัง"),
-      h("🖌️", "yan_nawa", "The murals of Wat Chong Nonsi", "จิตรกรรมฝาผนังวัดช่องนนทรี", "Old paintings you can study slowly.", "ภาพเขียนเก่าที่ค่อย ๆ ดูได้นาน ๆ"),
+      h("🖌️", "bang_kho_laem", "The murals of Wat Chong Nonsi", "จิตรกรรมฝาผนังวัดช่องนนทรี", "Old paintings you can study slowly.", "ภาพเขียนเก่าที่ค่อย ๆ ดูได้นาน ๆ"),
     ],
   },
   CFMN: {
@@ -474,7 +474,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
       c("CDMN", "They show you a new route once in a while.", "นาน ๆ ทีเขาก็พาไปลองเส้นทางใหม่"),
     ],
     hangouts: [
-      h("🌳", "watthana", "Benjasiri Park", "สวนเบญจสิริ", "A small modern park for the same loop every day.", "สวนเล็กดีไซน์ทันสมัย วิ่งรอบเดิมได้ทุกวัน"),
+      h("🌳", "khlong_toei", "Benjasiri Park", "สวนเบญจสิริ", "A small modern park for the same loop every day.", "สวนเล็กดีไซน์ทันสมัย วิ่งรอบเดิมได้ทุกวัน"),
       h("🌸", "prawet", "Suan Luang Rama IX", "สวนหลวง ร.9", "Bangkok's biggest park, with room for any routine.", "สวนใหญ่ที่สุดในกรุงเทพฯ มีพื้นที่ให้ทุกกิจวัตร"),
       h("🚴", "chatuchak", "Rot Fai Park", "สวนรถไฟ", "Shady bike paths for your weekly ride.", "ทางจักรยานร่มรื่นสำหรับปั่นประจำสัปดาห์"),
     ],

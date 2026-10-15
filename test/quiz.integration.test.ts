@@ -5,10 +5,11 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { vibes } from "../src/schema";
+import { accounts, profiles, vibes } from "../src/schema";
+import { cleanBio } from "../src/content/profile";
 import { randomToken } from "../src/lib/crypto";
 import { parseAnswers, personalOf, quizQuestions, quizSeed, typeSlug } from "../src/routes/quiz";
-import { scoreSession, type Question } from "../src/vibe/generator";
+import { scoreSession, typeQuestions, type AnyQuestion } from "../src/vibe/generator";
 import { answersAs, formValue } from "./quiz-helpers";
 import { ARCHETYPES, displayName, typeOf, type ArchetypeKey } from "../src/vibe/archetypes";
 
@@ -17,17 +18,17 @@ const seedIn = (html: string) => /name="seed" value="([^"]+)"/.exec(html)?.[1] ?
 const answerNames = (html: string) => new Set([...html.matchAll(/name="a(\d+)(?:_\d+)?"/g)].map((m) => m[1]));
 
 /** createMember()'s default profile, which personalises the /quiz session. */
-const MEMBER = personalOf({ district: "bang_rak", interests: ["food", "art"] });
+const MEMBER = personalOf({ district: "bang_rak", interests: ["food", "art"], languages: ["th", "en"], relationship: "single" });
 
 /** Answers as a Food Hunter (BDSH) would; `count` answers. */
-function form(seed: string, questions: Question[], count = questions.length): Record<string, string> {
+function form(seed: string, questions: AnyQuestion[], count = questions.length): Record<string, string> {
   const f: Record<string, string> = { seed };
-  const picks = answersAs(questions, "BDSH");
-  questions.slice(0, count).forEach((q, i) => (f[`a${i}`] = formValue(picks[q.id])));
+  const picks = answersAs(typeQuestions(questions), "BDSH");
+  questions.slice(0, count).forEach((q, i) => (f[`a${i}`] = formValue(picks[q.id] ?? 0)));
   return f;
 }
 
-const answersOf = (f: Record<string, string>, questions: Question[]) => parseAnswers(f, questions).answers;
+const answersOf = (f: Record<string, string>, questions: AnyQuestion[]) => parseAnswers(f, questions).answers;
 
 describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
   it("renders 20 questions for a member, each in its format", async () => {
@@ -50,9 +51,52 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
       const i = qs.indexOf(q);
       const fields = (html.match(new RegExp(`name="a${i}"`, "g")) ?? []).length;
       expect(fields, `${i} ${q.format}`).toBe(q.format === "slider" || q.format === "rank" ? 1 : q.options.length);
-      if (q.format === "rank") expect((html.match(new RegExp(`name="a${i}_\\d"`, "g")) ?? []).length).toBe(6);
+      if (q.format === "rank") expect((html.match(new RegExp(`name="a${i}_\\d"`, "g")) ?? []).length).toBe(q.options.length);
     }
     expect(qs.map((q) => q.id)).not.toEqual(quizQuestions(seedIn(html), null).map((q) => q.id));
+  });
+
+  it("shows each member only the sets that fit them, and saves the style cards without changing the type", async () => {
+    // Friends only (romance off): the 20, no romance anywhere.
+    const plain = await createMember();
+    const plainHtml = await (await req("/quiz?lang=en", { cookie: plain.cookie })).text();
+    expect(answerNames(plainHtml).size).toBe(20);
+    expect(plainHtml).not.toContain("Open to something more");
+    expect(quizQuestions(quizSeed(plain.id, null), null, MEMBER).some((q) => q.kind !== "style" && q.context === "date")).toBe(false);
+
+    // Open to something more: 20 + 4 "how you date", saved to the dating profile.
+    const dater = await createMember({ romanceOn: true, relationship: "single", romanceOpenTo: "everyone" });
+    const [dp] = await db().select().from(profiles).where(eq(profiles.accountId, dater.id));
+    const daterPersonal = personalOf(dp);
+    expect(daterPersonal?.openToMore).toBe(true);
+    const dHtml = await (await req("/quiz?lang=en", { cookie: dater.cookie })).text();
+    expect(answerNames(dHtml).size).toBe(24);
+    expect(dHtml).toContain("Open to something more · doesn");
+    const dSeed = seedIn(dHtml);
+    const dQs = quizQuestions(dSeed, null, daterPersonal);
+    expect((await req("/quiz", { cookie: dater.cookie, form: form(dSeed, dQs) })).status).toBe(302);
+    const [dRow] = await db().select().from(vibes).where(eq(vibes.accountId, dater.id));
+    expect(dRow.archetype).toBe("BDSH");
+    expect(dRow.seen).toHaveLength(24);
+    const dBio = cleanBio((await db().select().from(profiles).where(eq(profiles.accountId, dater.id)))[0].bio);
+    expect(Object.keys(dBio.dateStyle ?? {})).toHaveLength(4);
+    expect(dBio.hostStyle).toBeUndefined();
+    expect(await (await req("/me/profile?lang=en", { cookie: dater.cookie })).text()).toContain("How I date");
+
+    // Table Host: 20 + 2 "how you host", shown on their result.
+    const host = await createMember({ role: "circle_head" });
+    const [hp] = await db().select().from(profiles).where(eq(profiles.accountId, host.id));
+    const [ha] = await db().select().from(accounts).where(eq(accounts.id, host.id));
+    const hHtml = await (await req("/quiz?lang=en", { cookie: host.cookie })).text();
+    expect(answerNames(hHtml).size).toBe(22);
+    expect(hHtml).not.toContain("Open to something more");
+    const hSeed = seedIn(hHtml);
+    const hQs = quizQuestions(hSeed, null, personalOf(hp, ha.role));
+    expect((await req("/quiz", { cookie: host.cookie, form: form(hSeed, hQs) })).status).toBe(302);
+    const hBio = cleanBio((await db().select().from(profiles).where(eq(profiles.accountId, host.id)))[0].bio);
+    expect(Object.keys(hBio.hostStyle ?? {})).toHaveLength(2);
+    expect(hBio.dateStyle).toBeUndefined();
+    expect(await (await req("/quiz/result?lang=en", { cookie: host.cookie })).text()).toContain("How you host");
   });
 
   it("requires sign-in", async () => {
@@ -107,7 +151,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(r.status).toBe(302);
     expect(r.headers.get("location")).toBe("/quiz/result?new=1");
 
-    const scored = scoreSession(qs, answersOf(f, qs));
+    const scored = scoreSession(typeQuestions(qs), answersOf(f, qs));
     expect(scored.answered).toBe(20);
     const expected = typeOf(scored.vector, scored.affinity, scored.unsure);
     const [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));

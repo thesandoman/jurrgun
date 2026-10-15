@@ -68,6 +68,19 @@ export function codePoles(code: string): { category: Category; pole: Pole }[] {
 export type Context = "friends" | "family" | "date" | "solo" | "coworkers" | "party" | "meetup";
 /** core: types only; rhythm / plan: each answer also leans night owl or early riser, spontaneous or planner. */
 export type Kind = "core" | "rhythm" | "plan";
+/**
+ * What kind of moment the scenario is (the bank's mix target lives in
+ * design/reference/quiz-blueprint.md). Not `tone`: that is the postcard sky.
+ */
+export type Mood = "everyday" | "landmark" | "seasonal" | "funny" | "personality";
+/** The member's Bangkok story (src/domain/segment.ts). */
+export type Audience = "local" | "newcomer" | "international";
+/**
+ * A set only some members are offered: "open-to-more" for members who switched
+ * on Open to something more (D4), "table-host" for Table Hosts. Absent means
+ * the core quiz everyone gets, which has no romance.
+ */
+export type ScenarioSet = "open-to-more" | "table-host";
 
 export type Answer = Text & {
   icon: string;
@@ -86,6 +99,13 @@ export type Scenario = {
   prompt: Text;
   icon: string;
   tone: Tone;
+  mood: Mood;
+  /** Months (1 to 12) the scenario fits, for seasonal ones only; absent means all year. */
+  months?: number[];
+  /** Written for these members only; absent means everyone. */
+  audience?: Audience[];
+  /** Offered only to members in this set (see ScenarioSet); absent means the core quiz. */
+  set?: ScenarioSet;
   answers: Record<TypeCode, Answer>;
 };
 

@@ -9,6 +9,18 @@
 - **Conflicts:** if two chats touch the same thing (films, the same files, production), stop and raise it in Branding.
 - **Owner decisions:** recorded below with the date and the chat they were given in. The newest decision wins. Where two conflict, the conflict is listed under Open and waits for the owner.
 
+## Machine load: one heavy job at a time (owner, 10-15)
+
+All chats share one Mac. Running renders and test suites at the same time pushed load past 100, which made tests time out and skip.
+- **Heavy jobs:** film renders (ffmpeg, headless Chrome), full `npm test`, and share-card renders. **Only one runs at a time**, in this order:
+  1. the film re-render (running now);
+  2. then the quiz chats in D14 order, one at a time;
+  3. then Branding's agents one at a time: Regular Tables, then admin partners and measurement.
+- **Full suite on your turn:** `npx vitest run --maxWorkers=1` (all 475 pass that way).
+- **Tests while waiting:** run only the files you changed, `npx vitest run <files> --poolOptions.threads.maxThreads=2 --testTimeout=30000`. Run the full suite only when it's your turn to push.
+- **Light work is fine anytime:** reading, writing and editing.
+- **When a chat finishes its heavy step,** it tells Branding, and Branding starts the next one.
+
 ## Decisions in force
 
 | # | Decision | Given in | Date |
@@ -25,8 +37,14 @@
 | D9 | Film 02 is re-cut as the feature film for Open to something more: **love red `#e23744`** (text `#c0222f`, tint `#fde3e5`), used only on the opt-in moments beside green on cream. Coral was dropped (owner, in the re-render chat after 18:00: "orange doesn't make sense"). Also: a Thai/English chat, real app profiles, graduating to another app. It goes **on BMA channels** | quiz-fork | 10-15 10:56 |
 | D10 | Romance appears in the public films, but within the brand rules: never the lead | quiz-fork | 10-15 10:56 |
 | D11 | Show a person in the films (a single lead) even before real users exist | film-review | 10-15 |
-| D12 | Detecting Thai or English and tailoring the question bank for everyone is **Task 10**. The owner will send skills and subtasks; don't start it | Branding | 10-15 |
+| D12 | **Task 10** (owner: no skills needed, consolidate with Q5): language detection is done in Branding (`langFromHeader`: Thai if Thai is anywhere in Accept-Language, else English; a chosen language wins). Language-tailored quiz scenarios are folded into Q5, same types and scoring, only flavour changes. **Done, landed with Q5:** members who don't list Thai, or are international, get local words explained in English (`src/vibe/bank/plain-english.ts`: GLOSSES, EXPAT_PROMPTS); Thai text never changes and language stays out of the seed | Branding | 10-15 |
+| D15 | Sign-up area: **Bangkok and surrounding areas** (Nonthaburi, Samut Prakan, Pathum Thani…), as the FAQ, Terms and onboarding already say | Branding | 10-15 |
+| D16 | **Regular Tables become real groups** that members join (worktree in progress in Branding) | Branding | 10-15 |
+| D17 | **Dating partner programme is admin only:** partner kinds (events, dating, venue, community); a dating partner's events are auto-tagged open_to_more. Nothing in the member app names it. Measurement (north-star trend, segment split, placement source) is admin/BMA only | Branding | 10-15 |
+| D18 | **Love red** `#e23744` (ink `#c0222f`, tint `#fde3e5`) for Open to something more moments in the app and film 02 only: the profile dating section, dating prompts, the one-tap switch, the 💘 event tag. Coral stays as general warmth | Branding | 10-15 |
+| D19 | **Regular Tables (owner review):** up to 30 members per table; large events have no fixed cap (organiser sets it); anyone joins with the invite link or a confirmed seat at a started hangout; a block between two members is resolved by the Table Host (keep both apart, ask one to step back, or send to moderators), and the host is never told who blocked whom; women-only applies to new joins; existing Table Hosts get a table auto-created; a member can be "Regular at" many tables (shown on profile cards); each meetup is a Hangout (แฮงเอาต์) | Branding | 10-15 |
 | D13 | Task 6 (brand kit in Blender) is **postponed until the owner says go** | Branding | 10-15 |
+| D14 | **Quiz chats merge in this order** (owner, 18:50, in Branding): (1) "Audit the quiz bank and write its blueprint" lands first; (2) Q5 "Make the quiz fit each member's profile and mode" rebases on it and lands; (3) "Write 100 new Bangkok scenarios" and "Add funny and personality scenarios" rebase and fill the new structure. "Add interactive question formats" can land any time if it stays out of `src/vibe/bank` and `generator.ts`, otherwise after (2). Q5 is then folded into Task 10 and deployed. Each chat rebases on `main` before pushing, and only one quiz chat pushes at a time. **(1) and (2) done:** Q5 + Task 10 landed; the content chats are next and fill `set`, `audience`, `bank/segment-prompts.ts` and `bank/plain-english.ts` | Branding | 10-15 18:50 |
 
 ## Resolved by the owner (2026-10-15 18:30, in Branding)
 
@@ -50,9 +68,18 @@ None right now. New questions go to the Branding chat.
 | **quiz-fork** | Film edits | paused | handing over to the re-render chat; captured 27 Thai screens in `~/jurgun-films/screens2/` |
 | **Re-render the five films** | Films G1 to G12 per `design/reference/film-revisions.md` | running | has D5 and O1 to O3 (sent 18:30); uses `screens2/` |
 | **film-review** | Film review and brief | done | |
-| **UI/UX** | Accessibility and UX audit (light, dark, 320 px, large text) in worktree `.claude/worktrees/a11y` (branch `a11y-pass`) | running | branched at `ae24ac6`, so it must rebase on `31ecc25` (new names, segments, women-only, /international) before fixing |
+| **UI/UX** | Accessibility and UX pass (WCAG 2.1 AA, 56 pages, light, dark, 320 px, large text): field edges, brand green #11763f, skip link, focus ring, hint and error wiring, radio group labels, switch off state, heading order, friendly 404 and 500 pages, 12 px text floor, 24 px taps, /new hero CTA, denser Discover cards, sticky RSVP, Me tiles | merged | owner-approved per change (10-15); styles in `src/ui/a11y-css.ts` load last |
 | **2.0** | Admins (sandosit, pjj, aey) | idle | |
+| Quiz: audit and blueprint | Bank audit and blueprint | done, landed 637eb30 | places to verify: Krung Thep Aphiwat (probably Chatuchak), Chokchai 4 (probably Lat Phrao), Brown Sugar's address, whether Jodd Fairs Ratchada is open |
+| Quiz: Q5 profile and mode | Profile-aware question sets + Task 10 language flavour (worktree dreamy-leavitt) | done, landed | date scenarios are the open-to-more set; generator offers by set and audience; "how you date" (20) and "how you host" (10) style sets never move the type |
+| Quiz: 100 Bangkok scenarios | Content (worktree amazing-bhabha) | running | merges after Q5 (D14) |
+| Quiz: funny scenarios | Content (worktree funny-lamarr) | running | merges after Q5 (D14) |
+| Quiz: interactive formats | UI formats (worktree amazing-ardinghelli) | running | any time if outside the bank and generator, else after Q5 (D14) |
 | worktree `jurgun-map` (`discover-map`) | merged into main 6 days ago | stale | safe to remove |
+
+## Reference documents (not schedules)
+
+- `design/reference/pilot-launch-plan.md`: a stock pilot launch playbook. Its dates are examples, and no launch is scheduled (owner, 10-15).
 
 ## Proposed next tasks (waiting for approval)
 
