@@ -165,7 +165,7 @@ settingsRoutes.get("/settings", async (c) => {
   const bio = cleanBio(p.bio);
   const steps: MeStep[] = [
     { done: !!p.photoKey, label: t("ใส่รูป", "Add a photo"), href: "/settings/profile#photo" },
-    { done: !!vibeKey, label: t("ค้นหาไทป์ของคุณ", "Find your type"), href: "/quiz" },
+    { done: !!vibeKey, label: t("หาไทป์ของคุณ", "Find your type"), href: "/quiz" },
     { done: p.interests.length >= 3, label: t("ความสนใจอีกนิด", "A few more interests"), href: "/settings/profile#interests" },
     { done: !!bio.occupation, label: t("บอกว่าทำงานอะไร", "What you do"), href: "/settings/profile#facts" },
     { done: !!bio.story, label: t("เรื่องของคุณกับกรุงเทพฯ", "Your Bangkok story"), href: "/settings/profile#bangkok" },
@@ -196,7 +196,7 @@ settingsRoutes.get("/settings", async (c) => {
       <a href="/quiz" class="teaser">
         <b class="big" aria-hidden="true">🧭</b>
         <span>
-          <strong>{t("ค้นหาไทป์กรุงเทพฯ ของคุณ", "Find your Bangkok Type")}</strong>
+          <strong>{t("หาไทป์กรุงเทพฯ ของคุณ", "Find your Bangkok Type")}</strong>
           <small class="muted">{t("แตะเลือก 18 ข้อ ราว 3 นาที", "18 quick taps, about 3 minutes")}</small>
         </span>
       </a>
@@ -206,7 +206,7 @@ settingsRoutes.get("/settings", async (c) => {
       <form method="post" action="/settings/badge" class="card inline-toggle">
         <label class="toggle" style="margin:0">
           <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
-          <span>🏅 {t("แสดงตราผู้อยู่อาศัยที่ลงทะเบียนในกรุงเทพฯ", "Show my Bangkok Registered Resident badge")}</span>
+          <span>🏅 {t("แสดงตราผู้มีทะเบียนบ้าน กทม.", "Show my Bangkok Registered Resident badge")}</span>
         </label>
         <noscript>
           <button type="submit" class="btn ghost">{t("บันทึก", "Save")}</button>
@@ -249,8 +249,8 @@ settingsRoutes.get("/settings", async (c) => {
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดท", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดทแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const }]
           : []),
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green" },
-        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },
-        { href: "/settings/connections", emoji: "💞", title: t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
+        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky" },
+        { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal" },
         { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint" },
         // Google / LINE accounts have no password to change.
         ...(isPasswordless(user.account.username)
@@ -393,7 +393,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; photo:
             <OptRadios v={props.v} name="energy" options={ENERGY} value={bio.energy} />
           </fieldset>
           <fieldset class="choices">
-            <legend>{t("จังหวะวันหยุดของฉัน", "My weekend rhythm")}</legend>
+            <legend>{t("วันหยุดสไตล์ฉัน", "My weekend rhythm")}</legend>
             <OptRadios v={props.v} name="weekendRhythm" options={WEEKEND_RHYTHM} value={bio.weekend} />
           </fieldset>
         </Section>
@@ -597,7 +597,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
       const positions: Record<string, string> = {};
       for (const o of q.options ?? []) positions[o.value] = str(body[`r_${id}_${o.value}`]);
       const order = rankFromPositions(q, positions);
-      if (order === "partial") return fail(`${title}: ให้อันดับไม่ซ้ำกันครบทุกข้อ`, `${title}: give every item a different place.`);
+      if (order === "partial") return fail(`${title}: เรียงอันดับให้ครบทุกข้อ ห้ามซ้ำกัน`, `${title}: give every item a different place.`);
       raw = order;
     } else {
       raw = list(body[`a_${id}`]);
@@ -733,7 +733,7 @@ function ConnectionsPage(props: { v: View; error?: [string, string] }) {
       <p>
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
-      <h1>{t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences")}</h1>
+      <h1>{t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences")}</h1>
       <p class="muted">
         {t(
           "ข้อมูลในหน้านี้เป็นความลับ ไม่แสดงต่อผู้อื่นและเจ้าหน้าที่ เปลี่ยนจาก 'โสด' จะปิดโหมดเปิดใจทันที เปลี่ยนเป็น 'โสด' ได้ไม่เกิน 1 ครั้งใน 30 วัน",
@@ -749,7 +749,7 @@ function ConnectionsPage(props: { v: View; error?: [string, string] }) {
   );
 }
 
-settingsRoutes.get("/settings/connections", (c) => page(c, { title: view(c).t("การเชื่อมต่อ", "Connections"), tab: "me" }, <ConnectionsPage v={view(c)} />));
+settingsRoutes.get("/settings/connections", (c) => page(c, { title: view(c).t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connections"), tab: "me" }, <ConnectionsPage v={view(c)} />));
 
 settingsRoutes.post("/settings/connections", async (c) => {
   const v = view(c);
@@ -758,7 +758,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const result = await connectionsPatch(body, p);
   if ("error" in result) {
-    return page(c, { title: v.t("การเชื่อมต่อ", "Connections"), tab: "me", status: 400 }, <ConnectionsPage v={v} error={result.error} />);
+    return page(c, { title: v.t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connections"), tab: "me", status: 400 }, <ConnectionsPage v={v} error={result.error} />);
   }
   const db = getDb(c.env);
   const intents = p.intents.filter((i) => i !== "romance");
@@ -802,9 +802,9 @@ const CATEGORIES: { key: string; required: boolean; th: string; en: string; hint
   { key: "service", required: true, th: "บัญชีและบริการกิจกรรม", en: "Account and event service", hintTh: "จำเป็นเพื่อให้แอปทำงาน ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Needed for the app to work. Withdrawn only by deactivating your account." },
   { key: "safety", required: true, th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation", hintTh: "ใช้ตรวจสอบรายงานและป้องกันการคุกคาม ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Used to review reports and prevent harassment. Withdrawn only by deactivating your account." },
   { key: "personalization", required: false, th: "จัดกลุ่มและแนะนำกิจกรรมตามความสนใจ", en: "Personalised groups and suggestions", hintTh: "ใช้ความสนใจและภาษาของคุณในการจัดโต๊ะ", hintEn: "Uses your interests and languages to seat you well." },
-  { key: "research", required: false, th: "City Pulse — ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse — anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people." },
+  { key: "research", required: false, th: "City Pulse: ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse — anonymous city research", hintTh: "คำตอบเก็บแยกด้วยรหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people." },
   { key: "notifications", required: false, th: "การแจ้งเตือนกิจกรรม", en: "Event notifications", hintTh: "เตือนก่อนงานและแจ้งเมื่อมีที่ว่าง", hintEn: "Reminders and waitlist updates." },
-  { key: "romance_data", required: false, th: "ข้อมูลโหมดเปิดใจ (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและ 'เปิดใจที่จะพบ' — ถอนแล้วจะปิดโหมดและลบข้อมูลทันที", hintEn: "Gender identity and 'open to meeting' — withdrawing switches romance mode off and deletes them at once." },
+  { key: "romance_data", required: false, th: "ข้อมูลโหมดเปิดใจ (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและคนที่อยากเจอ ถ้าถอนความยินยอม จะปิดโหมดและลบข้อมูลทันที", hintEn: "Gender identity and 'open to meeting' — withdrawing switches romance mode off and deletes them at once." },
 ];
 const OPTIONAL = ["personalization", "research", "notifications"];
 
@@ -813,13 +813,13 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
   const cur = props.current;
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
-    ["👥 ข้อมูลการใช้งาน", "👥 Social store", "ชื่อเล่น รูป ความสนใจ กิจกรรมที่ลงทะเบียน การเชื่อมต่อ และการตั้งค่าส่วนตัว", "Nickname, photo, interests, events, connections and your private preferences."],
-    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse เก็บด้วยรหัสวิจัยแทนตัวตน เมื่อปิดบัญชี ความเชื่อมโยงจะถูกตัดและข้อมูลกลายเป็นนิรนาม", "City Pulse answers, stored under a research code instead of your identity. When you deactivate, the link is cut and the rows become anonymous."],
+    ["👥 ข้อมูลการใช้งาน", "👥 Social store", "ชื่อเล่น รูป ความสนใจ กิจกรรมที่ลงทะเบียน คนรู้จัก และการตั้งค่าส่วนตัว", "Nickname, photo, interests, events, connections and your private preferences."],
+    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse เก็บด้วยรหัสวิจัยแทนตัวตน เมื่อปิดบัญชี เราจะตัดการเชื่อมโยงกับตัวคุณ ข้อมูลจะไม่ระบุตัวตน", "City Pulse answers, stored under a research code instead of your identity. When you deactivate, the link is cut and the rows become anonymous."],
   ];
   const retention: [string, string, string, string][] = [
     ["ข้อมูลโหมดเปิดใจ", "Romance-mode details", "ลบทันทีเมื่อปิดโหมด", "Deleted as soon as you switch it off"],
     ["ตัวเลือกหลังกิจกรรมที่ไม่ตรงกัน", "Non-mutual post-event choices", "ลบเมื่อครบ 72 ชม.", "Deleted when the 72-hour window closes"],
-    ["การเชื่อมต่อและช่องทางติดต่อที่แชร์", "Connections and shared contacts", "จนกว่าฝ่ายใดฝ่ายหนึ่งจะลบหรือปิดบัญชี", "Until either person removes it or deletes their account"],
+    ["คนรู้จักและช่องทางติดต่อที่แชร์", "Connections and shared contacts", "จนกว่าฝ่ายใดฝ่ายหนึ่งจะลบหรือปิดบัญชี", "Until either person removes it or deletes their account"],
     ["บันทึกการเช็กอินและกลุ่ม", "Check-in and group records", "12 เดือน แล้วเหลือเป็นภาพรวม", "12 months, then aggregated"],
     ["คำตอบ City Pulse", "City Pulse answers", "24 เดือน ภายใต้รหัสวิจัย", "24 months under the research code"],
     ["บัญชีที่ปิดแล้ว", "Deactivated accounts", "ซ่อนโปรไฟล์ทันที ลบถาวรหลัง 30 วัน", "Profile hidden at once, deleted after 30 days"],
@@ -830,7 +830,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</h1>
-      <p class="muted">{t("คุณเลือกเองว่าจะให้ใช้ข้อมูลอะไร ทุกการเปลี่ยนแปลงถูกบันทึกเป็นประวัติ", "You decide how your data is used. Every change is kept as a dated record.")}</p>
+      <p class="muted">{t("คุณเลือกเองว่าจะให้ใช้ข้อมูลอะไร ทุกครั้งที่เปลี่ยนจะบันทึกเป็นประวัติไว้", "You decide how your data is used. Every change is kept as a dated record.")}</p>
       <Card>
         <h2>{t("ความยินยอม", "Your consents")}</h2>
         <form method="post">
@@ -853,7 +853,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
                   <span>
                     {t(cat.th, cat.en)} <Tag tone="muted">{t("ปิดอยู่", "Off")}</Tag>
                     <small>
-                      {t("เปิดได้ที่หน้า", "Switch on from")} <a href="/settings/connections">{t("การเชื่อมต่อหลังกิจกรรม", "Connection preferences")}</a>
+                      {t("เปิดได้ที่หน้า", "Switch on from")} <a href="/settings/connections">{t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences")}</a>
                     </small>
                   </span>
                 </div>
@@ -897,7 +897,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
         <h2>{t("ปิดบัญชี", "Deactivate account")}</h2>
         <p>
           {t(
-            "โปรไฟล์ของคุณจะถูกซ่อนทันที ออกจากระบบทุกอุปกรณ์ รูปถูกลบ และตัดความเชื่อมโยงกับข้อมูลวิจัย บัญชีจะถูกลบถาวรหลัง 30 วัน",
+            "เราจะซ่อนโปรไฟล์ของคุณทันที ออกจากระบบทุกเครื่อง ลบรูป และตัดการเชื่อมโยงกับข้อมูลวิจัย จากนั้นลบบัญชีถาวรหลัง 30 วัน",
             "Your profile is hidden at once, you're signed out everywhere, your photo is deleted and the link to your research answers is cut. The account is permanently deleted after 30 days.",
           )}
         </p>

@@ -48,7 +48,7 @@ publicRoutes.get("/", (c) => {
         <Tile href="/safety" tone="gold">
           <span class="ico" aria-hidden="true">🛡️</span>
           <h3>{t("ปลอดภัยไว้ก่อน", "Safety first")}</h3>
-          <small>{t("รู้เมื่อเลือกตรงกันเท่านั้น", "You only hear when it's mutual")}</small>
+          <small>{t("รู้ผลก็ต่อเมื่อเลือกตรงกัน", "You only hear when it's mutual")}</small>
         </Tile>
       </Bento>
       <div class="row">
@@ -88,7 +88,7 @@ publicRoutes.get("/intro", (c) => {
       art: "mark",
       tone: "s1",
       title: t("เจอกัน 👋", "Jurrgun 👋"),
-      body: t("“เจอกัน” แปลว่า แล้วเจอกันนะ ที่นี่คือที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่จริง ๆ", "“Jurrgun” (เจอกัน) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
+      body: t("ที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ แล้วเจอกันนะ!", "“Jurrgun” (เจอกัน) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
     },
     {
       art: "🗺️",
@@ -99,7 +99,7 @@ publicRoutes.get("/intro", (c) => {
     {
       art: "💚",
       tone: "s3",
-      title: t("ไม่มีใครถูกปฏิเสธ", "Nobody gets rejected"),
+      title: t("ไม่มีใครต้องโดนปฏิเสธ", "Nobody gets rejected"),
       body: t("หลังกิจกรรม คุณเลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "After an event you choose quietly who you'd like to see again. You only hear when it's mutual."),
     },
     {
@@ -180,7 +180,7 @@ publicRoutes.get("/privacy", (c) => {
       <p>{t("Jurrgun เป็นแอปต้นแบบสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ เราเก็บข้อมูลเท่าที่จำเป็นและแยกเก็บเป็น 3 ส่วน", "Jurrgun is a prototype social meetup app for Bangkok. We collect only what's needed and keep it in three separate stores:")}</p>
       <ul>
         <li>{t("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัส) สถานะบัญชี", "Account: username, password (hashed), account status.")}</li>
-        <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม การเชื่อมต่อ", "Social: nickname, interests, events attended, connections.")}</li>
+        <li>{t("ข้อมูลกิจกรรม: ชื่อเล่น ความสนใจ กิจกรรมที่เข้าร่วม คนรู้จัก", "Social: nickname, interests, events attended, connections.")}</li>
         <li>{t("ข้อมูลวิจัยเมือง (City Pulse): ใช้รหัสแฝง แสดงผลเฉพาะภาพรวมที่มีอย่างน้อย 10 คน", "City research (City Pulse): pseudonymous id only, and results are only ever shown as totals of 10 or more people.")}</li>
       </ul>
       <p>{t("สถานะความสัมพันธ์ อัตลักษณ์ทางเพศ และ 'เปิดใจให้ใคร' เป็นข้อมูลส่วนตัว ไม่แสดงต่อสาธารณะ และเจ้าหน้าที่ไม่สามารถดูได้", "Relationship status, gender identity and 'open to meeting' are private, never public, and not visible to any staff member.")}</p>
@@ -194,18 +194,18 @@ publicRoutes.get("/code-of-conduct", (c) => {
   const { t } = view(c);
   const rules: [string, string][] = [
     ["เคารพทุกคน ไม่ว่าเพศ อัตลักษณ์ เชื้อชาติ ศาสนา อายุ หรือความพิการ", "Respect everyone, whatever their gender, identity, nationality, religion, age or disability."],
-    ["ไม่คุกคาม ไม่กดดัน ไม่ตามตื๊อ — 'ไม่' คือ 'ไม่'", "No harassment, pressure or persistence — no means no."],
-    ["บอกสถานะความสัมพันธ์ตามจริงหากใช้ฟีเจอร์เชิงโรแมนติก", "Be truthful about your relationship status if you use romance features."],
+    ["ไม่คุกคาม ไม่กดดัน ไม่ตามตื๊อ 'ไม่' คือ 'ไม่'", "No harassment, pressure or persistence — no means no."],
+    ["บอกสถานะความสัมพันธ์ตามจริงถ้าใช้ฟีเจอร์หาเดท", "Be truthful about your relationship status if you use romance features."],
     ["ห้ามเปิดเผยตัวตนหรือข้อมูลของผู้อื่น (รวมถึงอัตลักษณ์ทางเพศ) โดยไม่ได้รับอนุญาต", "Never out anyone or share someone's details (including gender identity) without consent."],
     ["ห้ามขายของ หลอกลวง หรือชักชวนเข้าธุรกิจ", "No selling, scams or recruiting."],
     ["ทำตามคำแนะนำของโฮสต์และแจ้งเหตุไม่ปลอดภัยทันที", "Follow your host and report anything unsafe right away."],
-    ["ไม่ทิ้งเงียบ (ghosting) ดูรายละเอียดด้านล่าง", "No ghosting: see the details below."],
+    ["ไม่หายเงียบ (ghosting) ดูรายละเอียดด้านล่าง", "No ghosting: see the details below."],
   ];
   const ghosting: [string, string][] = [
     ["เมื่อจับคู่กันแล้ว (บัดดี้กรุงเทพฯ หรือเลือกกันและกันหลังกิจกรรม) อย่าหายไปเฉย ๆ", "Once you're matched (a Bangkok Buddy, or a mutual connection after an event), don't just disappear."],
     ["ปิดบัดดี้ได้เมื่อ (1) ตกลงกันทั้งคู่ในแอป หรือ (2) แชร์ช่องทางติดต่อกันแล้วและย้ายไปคุยนอกแอป เช่น LINE หรือ Instagram หรือ (3) ส่งข้อความปิดท้ายอย่างสุภาพในแอป ซึ่งอีกฝ่ายจะได้รับ และจะปิดเองใน 7 วันหากไม่มีคำตอบ", "A buddy pairing ends when (1) you both agree in the app, or (2) you've both shared a contact and moved off the app, for example to LINE or Instagram, or (3) you send a kind wrap-up note in the app, which your buddy receives and which closes on its own after 7 days if they don't reply."],
     ["ถ้าไปไม่ได้ ให้บอกล่วงหน้าเสมอ ยกเลิกกิจกรรมในแอปก่อน 24 ชั่วโมง และบอกบัดดี้ก่อนนัด", "If you can't make it, say so in advance: cancel events in the app 24 hours before, and tell your buddy before a meetup."],
-    ["ความปลอดภัยมาก่อนเสมอ ถ้ารู้สึกไม่ปลอดภัย บล็อกหรือรายงานแล้วออกได้ทันที ไม่นับเป็นการทิ้งเงียบ", "Safety always comes first. If you feel unsafe, block or report and leave at once. That is never ghosting."],
+    ["ความปลอดภัยมาก่อนเสมอ ถ้ารู้สึกไม่ปลอดภัย บล็อกหรือรายงานแล้วออกได้ทันที ไม่นับว่าหายเงียบ", "Safety always comes first. If you feel unsafe, block or report and leave at once. That is never ghosting."],
   ];
   return page(
     c,
@@ -213,7 +213,7 @@ publicRoutes.get("/code-of-conduct", (c) => {
     <>
       <h1>{t("หลักปฏิบัติของชุมชน", "Community code of conduct")}</h1>
       <ol>{rules.map(([th, en]) => <li>{t(th, en)}</li>)}</ol>
-      <h2 id="no-ghosting">{t("ไม่ทิ้งเงียบ", "No ghosting")}</h2>
+      <h2 id="no-ghosting">{t("ไม่หายเงียบ", "No ghosting")}</h2>
       <ul>{ghosting.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
       <h2 id="fair-process">{t("ยุติธรรมและรับผิดชอบ", "Fair and accountable")}</h2>
       <ul>{FAIR_PROCESS.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>

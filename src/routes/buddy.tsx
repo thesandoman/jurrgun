@@ -76,7 +76,7 @@ const INTENT_OPTS = [
   { value: "friends", th: "เพื่อนใหม่", en: "New friends" },
   { value: "activity", th: "เพื่อนทำกิจกรรม", en: "An activity buddy" },
   { value: "open", th: "เปิดใจมากกว่าเพื่อน ถ้าทั้งคู่รู้สึกตรงกัน", en: "Open to more, only if it's mutual" },
-  { value: "dating", th: "หาเดทโดยเฉพาะ", en: "Dating only" },
+  { value: "dating", th: "หาเดทอย่างเดียว", en: "Dating only" },
 ] satisfies { value: (typeof BUDDY_INTENTS)[number]; th: string; en: string }[];
 
 const districtName = (lang: Lang, key: string) => {
@@ -152,7 +152,7 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
         .set({ state: "ended", endReason: "notice", endedAt: now })
         .where(inArray(buddyMatches.id, lapsed.map((m) => m.id))),
       ...lapsed.flatMap((m) =>
-        [m.aAccount, m.bAccount].map((x) => notify(db, x, "buddy_ended", "บัดดี้รอบนี้ปิดลงอย่างเป็นมิตรแล้ว รอบใหม่จะจับคู่ให้เร็ว ๆ นี้", "Your buddy pairing has wrapped up kindly. A new match is coming soon.", "/buddy")),
+        [m.aAccount, m.bAccount].map((x) => notify(db, x, "buddy_ended", "ปิดบัดดี้รอบนี้แบบดี ๆ แล้ว เดี๋ยวจับคู่รอบใหม่ให้เร็ว ๆ นี้", "Your buddy pairing has wrapped up kindly. A new match is coming soon.", "/buddy")),
       ),
     ]);
   }
@@ -326,7 +326,7 @@ const SAFETY = (v: View) => (
       <li>{v.t("นัดเจอในที่สาธารณะเสมอ ทุกเควสต์อยู่ในที่สาธารณะ", "Always meet in public places. Every quest is in one.")}</li>
       <li>{v.t("สองครั้งแรกนัดช่วงกลางวันหรือหัวค่ำ", "Make the first two meetups daytime or early evening.")}</li>
       <li>{v.t("บอกเพื่อนหรือคนในบ้านว่าไปไหน กับใคร ด้วยปุ่มเช็กอินด้านล่าง", "Tell a friend where you're going and with whom, using the check-in button.")}</li>
-      <li>{v.t("รู้สึกไม่สบายใจ ออกจากที่นั่นได้ทันที แล้วรายงานหรือบล็อกได้เสมอ", "If anything feels off, leave. You can always report or block.")}</li>
+      <li>{v.t("ถ้ารู้สึกไม่สบายใจ ออกมาได้ทันที แล้วรายงานหรือบล็อกได้ตลอด", "If anything feels off, leave. You can always report or block.")}</li>
     </ul>
   </details>
 );
@@ -360,7 +360,7 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
         <Card>
           <form method="post" action="/buddy/optin">
             <Choices
-              legend={t("คุณเปิดรับอะไร 🔒", "What you're open to 🔒")}
+              legend={t("มองหาอะไรอยู่ 🔒", "What you're open to 🔒")}
               hint={t("ความลับ บัดดี้ไม่เห็น", "Private: your buddy never sees this")}
               name="intent"
               type="radio"
@@ -370,11 +370,11 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
               lang={lang}
             />
             <details class="how">
-              <summary>{t("ทำงานอย่างไร", "How it works")}</summary>
+              <summary>{t("ใช้งานยังไง", "How it works")}</summary>
               <ul>
                 <li>👀 {t("บัดดี้เห็นชื่อเล่นและไทป์ของคุณ", "Your buddy sees your nickname and type.")}</li>
-                <li>💘 {t("เรื่องหัวใจขึ้นเฉพาะเมื่อทั้งคู่เลือก และทำเควสต์ครบสองครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
-                <li>🤝 {t("ไม่ทิ้งเงียบ: ปิดเมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
+                <li>💘 {t("เรื่องหัวใจจะขึ้นก็ต่อเมื่อเลือกตรงกันทั้งคู่ และทำเควสต์ด้วยกันครบสองครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
+                <li>🤝 {t("ไม่หายเงียบ: ปิดได้เมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
                 <li>🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัย", "Safety net")}</a></li>
               </ul>
             </details>
@@ -445,7 +445,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
         <span>{theirsDone ? "✅" : "⬜"} {props.buddyName}</span>
       </p>
       {mineDone && theirsDone ? (
-        <Notice kind="ok">{t(`สำเร็จ! แสตมป์${place}แล้ว`, `Done! ${place} stamped.`)}</Notice>
+        <Notice kind="ok">{t(`สำเร็จ! ได้แสตมป์${place}แล้ว`, `Done! ${place} stamped.`)}</Notice>
       ) : mineDone ? null : (
         <form method="post" action={`/buddy/${props.m.id}/quest`}>
           <input type="hidden" name="quest" value={props.q.week} />
@@ -458,7 +458,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
         </button>
         {props.v.user && canHost(props.v.user.account, true) ? (
           <LinkButton href={hostHref} kind="ghost">
-            🍽️ {t("ชวนเป็นโต๊ะ", "Make it a table")}
+            🍽️ {t("ชวนคนอื่นมาร่วมโต๊ะ", "Make it a table")}
           </LinkButton>
         ) : null}
       </div>
@@ -488,7 +488,7 @@ function Passport(props: { v: View; stamped: Set<string>; compact?: boolean; bad
         <Ring value={props.stamped.size} max={50} label={t("เขต", "districts")} />
         <div>
           <h2>🛂 {t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport")}</h2>
-          <small class="muted">{t("แสตมป์ทุกเขตด้วยกัน", "Stamp every district together")}</small>
+          <small class="muted">{t("เก็บแสตมป์ให้ครบทุกเขตด้วยกัน", "Stamp every district together")}</small>
         </div>
       </div>
       {props.compact ? (
@@ -533,7 +533,7 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
         <p>
           🌙{" "}
           {t(
-            `คุณขอปิดบัดดี้รอบนี้แล้ว บัดดี้ได้รับข้อความของคุณ จะปิดเองวันที่ ${fmtDay(closes, lang)} หากบัดดี้ไม่ได้ตกลงก่อน`,
+            `คุณขอปิดบัดดี้รอบนี้แล้ว บัดดี้ได้รับข้อความแล้ว ถ้าบัดดี้ยังไม่ตอบตกลง จะปิดเองวันที่ ${fmtDay(closes, lang)}`,
             `You asked to wrap up. Your buddy has your note. It closes on ${fmtDay(closes, lang)} unless they agree sooner.`,
           )}
         </p>
@@ -551,7 +551,7 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
         {note ? <p>💬 “{L(lang, note)}”</p> : null}
         <p class="muted">
           {t(
-            "ตกลงเพื่อปิดอย่างเป็นมิตร หรืออยากคุยกันต่อ แชร์ช่องทางติดต่อในวงคนรู้จักได้เลย ถ้าไม่ตอบ จะปิดเองใน 7 วัน",
+            "กดตกลงเพื่อปิดแบบดี ๆ หรือถ้าอยากคุยกันต่อ แชร์ช่องทางติดต่อในหน้าคนรู้จักได้เลย ถ้าไม่ตอบ จะปิดเองใน 7 วัน",
             "Agree to close it kindly. Want to keep in touch? Share a contact in your circle. If you don't reply, it closes on its own in 7 days.",
           )}
         </p>
@@ -569,7 +569,7 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
         {props.offApp
           ? t("คุณทั้งคู่แชร์ช่องทางติดต่อกันแล้ว จึงปิดในแอปได้ทันที แล้วคุยกันต่อนอกแอป", "You've both shared a contact, so you can close here right away and carry on off the app.")
           : t(
-              "ไม่ทิ้งเงียบ: บัดดี้จะได้รับข้อความของคุณ และปิดเมื่อบัดดี้ตกลง หรือเองใน 7 วัน ถ้ารู้สึกไม่ปลอดภัย บล็อกได้ทันทีด้านล่าง",
+              "ไม่หายเงียบ: บัดดี้จะได้รับข้อความของคุณ แล้วจะปิดเมื่อบัดดี้ตกลง หรือปิดเองใน 7 วัน ถ้ารู้สึกไม่ปลอดภัย บล็อกได้ทันทีด้านล่าง",
               "No ghosting: your buddy gets your note, and it closes when they agree, or on its own after 7 days. If you feel unsafe, block below at once.",
             )}
       </p>
@@ -638,7 +638,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       ) : match.state === "proposed" ? (
         <Card>
           <BuddyCard v={v} eyebrow={t("บัดดี้คนใหม่", "New buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
-          <p class="muted">{t("ทั้งคู่กด 'นัดเจอ' เพื่อเริ่ม", "You both tap 'Meet' to start.")}</p>
+          <p class="muted">{t("กด 'นัดเจอ' ทั้งคู่ถึงจะเริ่มได้", "You both tap 'Meet' to start.")}</p>
           {iSaidMeet ? (
             <Notice kind="info">{t("คุณกดนัดเจอแล้ว รออีกฝ่าย", "You said meet. Waiting for your buddy.")}</Notice>
           ) : (
@@ -863,7 +863,7 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
     .set(mySide === "a" ? { aDoneAt: now } : { bDoneAt: now })
     .where(and(eq(buddyQuests.id, q.id), mySide === "a" ? isNull(buddyQuests.aDoneAt) : isNull(buddyQuests.bDoneAt)));
   if (!theyDone) {
-    await batch(c.env, [mark, notify(db, them, "buddy_quest", "บัดดี้กด 'ไปมาแล้ว' กดยืนยันเพื่อรับแสตมป์", "Your buddy marked the quest done. Confirm to get the stamp.", "/buddy")]);
+    await batch(c.env, [mark, notify(db, them, "buddy_quest", "บัดดี้กด 'ไปมาแล้ว' แล้ว กดยืนยันเพื่อรับแสตมป์ได้เลย", "Your buddy marked the quest done. Confirm to get the stamp.", "/buddy")]);
     return c.redirect("/buddy?notice=saved");
   }
   // Both done: stamp the district for both.

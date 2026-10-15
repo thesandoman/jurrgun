@@ -187,7 +187,7 @@ export function FullDiscover(props: {
             name="q"
             id="fd-q"
             value={props.search}
-            placeholder={t("ค้นหา กิจกรรม สถานที่ เขต…", "Search events, places, districts…")}
+            placeholder={t("ค้นหากิจกรรม สถานที่ หรือเขต…", "Search events, places, districts…")}
             aria-label={t("ค้นหากิจกรรม", "Search events")}
             autocomplete="off"
           />

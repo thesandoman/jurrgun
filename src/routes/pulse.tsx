@@ -122,7 +122,7 @@ function QuestionCard(props: { v: View; q: Question }) {
       break;
     }
     case "text":
-      input = <TextArea label={prompt} name="answer" rows={3} maxlength={TEXT_MAX} required hint={t(`ไม่เกิน ${TEXT_MAX} ตัวอักษร — อย่าใส่ข้อมูลส่วนตัว`, `Up to ${TEXT_MAX} characters. Please don't include personal details.`)} />;
+      input = <TextArea label={prompt} name="answer" rows={3} maxlength={TEXT_MAX} required hint={t(`ไม่เกิน ${TEXT_MAX} ตัวอักษร อย่าใส่ข้อมูลส่วนตัว`, `Up to ${TEXT_MAX} characters. Please don't include personal details.`)} />;
       break;
     case "area":
       input = <Select label={prompt} name="answer" options={districtsAZ(lang)} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />;
@@ -144,8 +144,8 @@ function FollowupCard(props: { v: View }) {
   const { t, lang } = props.v;
   return (
     <Card>
-      <h2>{t("ตอนนี้คุณรู้สึกอย่างไรบ้าง?", "How are you feeling these days?")}</h2>
-      <p class="muted">{t("3 คำถามเดิมจากตอนสมัคร เพื่อดูว่ากิจกรรมช่วยให้เหงาน้อยลงหรือไม่ ไม่บังคับ", "The same 3 questions as when you joined, to see whether events help with loneliness. Optional.")}</p>
+      <h2>{t("ช่วงนี้เป็นยังไงบ้าง?", "How are you feeling these days?")}</h2>
+      <p class="muted">{t("3 คำถามเดิมจากตอนสมัคร เพื่อดูว่ากิจกรรมช่วยให้เหงาน้อยลงจริงไหม ไม่บังคับ", "The same 3 questions as when you joined, to see whether events help with loneliness. Optional.")}</p>
       <form method="post" action="/pulse/wellbeing">
         {UCLA3.map(([th, en], i) => (
           <Choices legend={t(th, en)} name={`q${i + 1}`} options={UCLA_SCALE} lang={lang} type="radio" required />
@@ -176,7 +176,7 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
               "City Pulse asks quick questions about life in Bangkok: safety, getting around, places to sit. Answers are stored under a research code instead of your identity, results are only ever shown as totals from 10+ people, and they help us plan better meetups and pick better places.",
             )}
           </p>
-          <p>{t("คุณยังไม่ได้เปิดความยินยอมด้านการวิจัย", "You haven't switched on research consent.")}</p>
+          <p>{t("คุณยังไม่ได้ให้ความยินยอมด้านการวิจัย", "You haven't switched on research consent.")}</p>
           <LinkButton href="/settings/privacy">{t("ไปที่ศูนย์ความเป็นส่วนตัว", "Go to the Privacy Center")}</LinkButton>
         </Card>
       </>,
@@ -203,7 +203,7 @@ pulseRoutes.post("/pulse/wellbeing", async (c) => {
   const user = c.var.user!;
   const rid = user.account.researchId;
   if (!rid || !(await researchConsent(c, user.account.id))) {
-    return renderPulse(c, { status: 403, error: t("ต้องเปิดความยินยอมด้านการวิจัยก่อน", "Research consent is needed first.") });
+    return renderPulse(c, { status: 403, error: t("ต้องให้ความยินยอมด้านการวิจัยก่อน", "Research consent is needed first.") });
   }
   if (!(await followupDue(c, user.account.id, rid))) {
     return renderPulse(c, { status: 403, error: t("ยังไม่ถึงเวลาตอบคำถามนี้", "This check-in isn't open for you right now.") });
@@ -255,7 +255,7 @@ pulseRoutes.post("/pulse/:id", async (c) => {
   const user = c.var.user!;
   const rid = user.account.researchId;
   if (!rid || !(await researchConsent(c, user.account.id))) {
-    return renderPulse(c, { status: 403, error: t("ต้องเปิดความยินยอมด้านการวิจัยก่อน", "Research consent is needed first.") });
+    return renderPulse(c, { status: 403, error: t("ต้องให้ความยินยอมด้านการวิจัยก่อน", "Research consent is needed first.") });
   }
   const db = getDb(c.env);
   const [q] = await db

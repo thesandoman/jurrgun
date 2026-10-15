@@ -46,26 +46,26 @@ export type PageOpts = {
 const NOTICES: Record<string, [string, string]> = {
   saved: ["บันทึกแล้ว", "Saved"],
   welcome: ["ยินดีต้อนรับสู่ Jurrgun!", "Welcome to Jurrgun!"],
-  rsvp_confirmed: ["ยืนยันที่นั่งแล้ว — บัตรเข้างานอยู่ใน 'กิจกรรมของฉัน'", "You're in — your pass is in My events"],
-  rsvp_waitlisted: ["คุณอยู่ในรายชื่อสำรอง เราจะแจ้งเมื่อมีที่ว่าง", "You're on the waitlist — we'll tell you if a spot opens"],
+  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ใน 'กิจกรรมของฉัน'", "You're in — your pass is in My events"],
+  rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่จะแจ้งทันที", "You're on the waitlist — we'll tell you if a spot opens"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
-  late_cancel: ["ยกเลิกแล้ว — การยกเลิกภายใน 24 ชม. นับเป็น 1 strike", "Cancelled — cancelling within 24h counts as 1 strike"],
+  late_cancel: ["ยกเลิกแล้ว ยกเลิกก่อนงานไม่ถึง 24 ชม. จะนับเป็น 1 strike", "Cancelled — cancelling within 24h counts as 1 strike"],
   offer_accepted: ["รับที่นั่งแล้ว!", "Spot accepted!"],
   checked_in: ["เช็กอินสำเร็จ", "Checked in"],
-  choices_saved: ["บันทึกตัวเลือกแล้ว — จะแจ้งเมื่อเลือกตรงกันเท่านั้น", "Saved — you'll only hear if it's mutual"],
+  choices_saved: ["บันทึกแล้ว จะแจ้งก็ต่อเมื่อเลือกกันทั้งสองฝ่าย", "Saved — you'll only hear if it's mutual"],
   reported: ["ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ", "Report received — our team will review it"],
   blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked — you won't see each other again"],
   thanks: ["ขอบคุณสำหรับความคิดเห็น", "Thanks for your feedback"],
   shared: ["แชร์ช่องทางติดต่อแล้ว", "Contact shared"],
   deactivated: ["ปิดบัญชีแล้ว", "Account deactivated"],
   done: ["เรียบร้อย", "Done"],
-  connected: ["เชื่อมต่อกันแล้ว!", "You're connected!"],
+  connected: ["เป็นคนรู้จักกันแล้ว!", "You're connected!"],
   offered: ["ส่งข้อเสนอที่นั่งให้คิวถัดไปแล้ว", "Offered the spot to the next person"],
   groups_suggested: ["จัดกลุ่มแนะนำแล้ว — ตรวจสอบแล้วกดเผยแพร่", "Groups suggested — review, then publish"],
   groups_published: ["เผยแพร่กลุ่มแล้ว", "Groups published"],
   notice_sent: ["ส่งประกาศแล้ว", "Notice sent"],
   strikes_recorded: ["บันทึกผู้ไม่มาแล้ว", "No-shows recorded"],
-  answered: ["ขอบคุณ! คำตอบของคุณช่วยเมืองได้จริง", "Thanks! Your answer helps the city"],
+  answered: ["ขอบคุณ! คำตอบของคุณช่วยให้กรุงเทพฯ ดีขึ้นได้จริง ๆ", "Thanks! Your answer helps the city"],
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
   vibe_saved: ["บันทึกแล้ว", "Saved"],
@@ -124,7 +124,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
         ) : (
           <>
         <div class="proto-banner">
-          {t("ต้นแบบ (Prototype) — ห้ามใช้ข้อมูลจริง", "Prototype — please don't use real personal data")}
+          {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลจริง", "Prototype — please don't use real personal data")}
         </div>
         <header class="topbar">
           <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">

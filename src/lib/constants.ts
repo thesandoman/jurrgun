@@ -150,7 +150,7 @@ export const EVENT_TAGS: Opt[] = [
   o("queer_friendly", "เป็นมิตรกับ LGBTQ+", "Queer-friendly"),
   o("lgbtq_community", "ชุมชน LGBTQ+", "LGBTQ+ community"),
   o("english_friendly", "ใช้ภาษาอังกฤษได้", "English-friendly"),
-  o("step_free", "ไม่มีขั้นบันได", "Step-free access"),
+  o("step_free", "ไม่ต้องขึ้นบันได", "Step-free access"),
   o("city_quest", "ซิตี้เควสต์", "City Quest"),
   o("festival", "เทศกาล", "Festival go-together"),
   o("daytime", "กลางวัน", "Daytime"),
@@ -158,8 +158,8 @@ export const EVENT_TAGS: Opt[] = [
 
 export const INTENSITY: Opt[] = [
   o("chill", "ชิล", "Chill"),
-  o("social", "โซเชียล", "Social"),
-  o("very_social", "โซเชียลมาก", "Very social"),
+  o("social", "กำลังดี", "Social"),
+  o("very_social", "คึกคัก", "Very social"),
 ];
 
 export const SIGNALS: Opt[] = [

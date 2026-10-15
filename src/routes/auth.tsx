@@ -86,8 +86,8 @@ export async function tooMany(c: Context<AppEnv>, mode: "signup" | "login"): Pro
       <h1>{t("ลองหลายครั้งเกินไป", "Too many attempts")}</h1>
       <Notice kind="error">
         {mode === "login"
-          ? t("ลองหลายครั้งเกินไป โปรดลองใหม่ในอีก 15 นาที", "Too many attempts, try again in 15 minutes.")
-          : t("มีการสมัครจากเครือข่ายนี้มากเกินไป โปรดลองใหม่ในอีก 1 ชั่วโมง", "Too many sign-ups from this network, try again in an hour.")}
+          ? t("ลองหลายครั้งเกินไปแล้ว รออีก 15 นาทีแล้วค่อยลองใหม่นะ", "Too many attempts, try again in 15 minutes.")
+          : t("มีคนสมัครจากเครือข่ายนี้เยอะเกินไป รออีก 1 ชั่วโมงแล้วลองใหม่นะ", "Too many sign-ups from this network, try again in an hour.")}
       </Notice>
       <p class="muted">
         {t("หากต้องการความช่วยเหลือเร่งด่วน โทร ", "If you need urgent help, call ")}
@@ -119,7 +119,7 @@ function AuthForm(props: {
           required
           autocomplete="username"
           maxlength={30}
-          hint={mode === "signup" ? t("a–z, 0–9, _ หรือ . (3–30 ตัว) — ไม่แสดงต่อผู้อื่น", "a–z, 0–9, _ or . (3–30) — never shown to other people") : undefined}
+          hint={mode === "signup" ? t("a–z, 0–9, _ หรือ . (3 ถึง 30 ตัว) ไม่แสดงให้คนอื่นเห็น", "a–z, 0–9, _ or . (3–30) — never shown to other people") : undefined}
         />
         <Field
           label={t("รหัสผ่าน", "Password")}

@@ -299,7 +299,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
     case "text":
       body = (
         <div class="pf-text">
-          <textarea name={name} rows={3} maxlength={TEXT_MAX} data-count={String(TEXT_MAX)} aria-label={L(lang, p)} placeholder={t("ตอบสั้น ๆ ด้วยใจ", "A short, honest answer")}>
+          <textarea name={name} rows={3} maxlength={TEXT_MAX} data-count={String(TEXT_MAX)} aria-label={L(lang, p)} placeholder={t("ตอบสั้น ๆ แบบจริงใจ", "A short, honest answer")}>
             {typeof val === "string" ? val : ""}
           </textarea>
           <small class="pf-counter" aria-live="polite">

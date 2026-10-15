@@ -39,7 +39,7 @@ export const LEGEND: { key: string; icon: string; name: Text; meaning: Text }[] 
   { key: "S", icon: "🍜", name: t("ละเมียด (Savour)", "Savour"), meaning: t("นั่งนาน กินช้า คุยยาว", "Long meals, slow talk") },
   { key: "N", icon: "🎨", name: t("ซีนใหม่ (New-scene)", "New-scene"), meaning: t("แกลเลอรี ดีไซน์ ดนตรีอินดี้", "Galleries, design, indie music") },
   { key: "H", icon: "🛕", name: t("เมืองเก่า (Heritage)", "Heritage"), meaning: t("วัด ตึกเก่า ตลาดดั้งเดิม", "Temples, shophouses, old markets") },
-  { key: "rhythm+", icon: "🌙", name: t("นกฮูกกลางคืน", "Night owl"), meaning: t("คึกคักหลังมืด", "Comes alive after dark") },
+  { key: "rhythm+", icon: "🌙", name: t("นกฮูกกลางคืน", "Night owl"), meaning: t("คึกคักตอนกลางคืน", "Comes alive after dark") },
   { key: "rhythm-", icon: "🌅", name: t("คนตื่นเช้า", "Early riser"), meaning: t("เช้าคือเวลาที่ดีที่สุด", "Mornings are best") },
   { key: "plan+", icon: "🎲", name: t("ไปตามใจ", "Spontaneous"), meaning: t("ไม่มีแพลนคือแพลน", "No plan is the plan") },
   { key: "plan-", icon: "🗓️", name: t("นักวางแผน", "Planner"), meaning: t("แพลนดี วันก็ดี", "A good plan makes a good day") },
@@ -94,7 +94,7 @@ const BASE: Record<ArchetypeKey, Omit<Archetype, keyof Profile | keyof Social>> 
   BDMH: A("BDMH", "🧭", t("นักผจญภัยเมืองเก่า", "The Old-Town Adventurer"), t("ทุกตรอกมีเรื่องเล่า", "Every alley has a story."),
     t("คุณชอบพาแก๊งเดินลุยย่านเก่าที่ไม่เคยไป วัดเล็ก ๆ ตลาดลับ และชุมชนริมคลอง", "You lead the group through old quarters nobody's tried: small temples, hidden markets, canal communities."),
     t("เกาะรัตนโกสินทร์ ถนนทรงวาด คลองฝั่งธนฯ", "Rattanakosin Island, Song Wat Road, Thonburi canals"),
-    t("ย่านเก่าไหนที่คุณอยากพาคนแปลกหน้าไปเดิน?", "Which old neighbourhood would you take a stranger to?")),
+    t("ย่านเก่าไหนที่คุณอยากพาเพื่อนใหม่ไปเดิน?", "Which old neighbourhood would you take a stranger to?")),
   BDSN: A("BDSN", "🥂", t("นักล่าซีนครีเอทีฟ", "The Scene Seeker"), t("เปิดตัวที่ไหน ไปที่นั่น", "If it's opening, you're there."),
     t("คุณชอบงานเปิดแกลเลอรี คาเฟ่ใหม่ และวงคุยยาว ๆ กับคนหลากหลาย", "Gallery openings, new cafés and long conversations with all kinds of people."),
     t("BACC งานบางกอกดีไซน์วีก ถนนเจริญนคร", "BACC, Bangkok Design Week, Charoen Nakhon Road"),
@@ -106,7 +106,7 @@ const BASE: Record<ArchetypeKey, Omit<Archetype, keyof Profile | keyof Social>> 
   BFMN: A("BFMN", "🏸", t("สายทีมเวิร์ก", "The Team Player"), t("มาครบ เล่นครบ", "Shows up, plays every round."),
     t("คุณมีก๊วนประจำ รันคลับ ยิมปีนผา หรือคลาสเต้น เจอหน้าเดิมทุกสัปดาห์ และชอบลองสตูดิโอใหม่ ๆ ไปด้วยกัน", "You have a crew: run club, climbing gym or dance class, the same faces every week, trying the newest studios together."),
     t("รันคลับสวนเบญจกิติ ยิมปีนผา สตูดิโอเต้นย่านเอกมัย", "Benjakitti run clubs, climbing gyms, Ekkamai dance studios"),
-    t("กีฬาอะไรที่คุณอยากชวนคนแปลกหน้ามาเล่นด้วย?", "Which sport would you invite a stranger to play?")),
+    t("กีฬาอะไรที่คุณอยากชวนเพื่อนใหม่มาเล่นด้วย?", "Which sport would you invite a stranger to play?")),
   BFMH: A("BFMH", "🪷", t("ขาประจำงานเทศกาล", "The Festival Regular"), t("ทุกเทศกาลต้องไป", "Never misses a festival."),
     t("ลอยกระทง สงกรานต์ งานวัด คุณไปทุกปี ไปกับแก๊ง และรู้ว่าจุดไหนดีที่สุด", "Loy Krathong, Songkran, temple fairs: you go every year with the gang and know the best spots."),
     t("สนามหลวง งานวัด เทศกาลริมน้ำ", "Sanam Luang, temple fairs, riverside festivals"),
@@ -140,14 +140,14 @@ const BASE: Record<ArchetypeKey, Omit<Archetype, keyof Profile | keyof Social>> 
     t("อุทยาน 100 ปี จุฬาฯ สวนรถไฟ สตูดิโอโยคะประจำ", "Chula Centenary Park, Rot Fai Park, your yoga studio"),
     t("กิจวัตรไหนที่ทำให้สัปดาห์ของคุณดีขึ้น?", "Which routine makes your week better?")),
   CFMH: A("CFMH", "🌳", t("ขาประจำสวนสาธารณะ", "The Park Regular"), t("รอบสวนเดิม คนคุ้นหน้า", "The usual lap, familiar faces."),
-    t("คุณชอบวิ่ง รำไทเก็ก หรือเดินรอบสวนเดิมทุกเช้า และทักทายคนคุ้นหน้า", "Morning laps, tai chi or a walk around your park, greeting the regulars."),
+    t("คุณชอบวิ่ง รำไทเก๊ก หรือเดินรอบสวนเดิมทุกเช้า และทักทายคนคุ้นหน้า", "Morning laps, tai chi or a walk around your park, greeting the regulars."),
     t("สวนลุมพินี สนามหลวง ริมน้ำยามเช้า", "Lumphini Park, Sanam Luang, the riverside at dawn"),
     t("สวนไหนที่คุณรู้จักทุกทางเดิน?", "Which park do you know every path of?")),
   CFSN: A("CFSN", "📚", t("สายครีเอทีฟอบอุ่น", "The Cosy Creative"), t("ร้านโปรด หนังสือดี เพื่อนไม่กี่คน", "Favourite spot, good book, a few friends."),
     t("คุณชอบวงอ่านหนังสือ เวิร์กช็อปเล็ก ๆ และคาเฟ่อินดี้ที่ไปประจำ", "Book circles, small workshops and the indie café you always return to."),
     t("วงอ่านหนังสือ เวิร์กช็อปงานฝีมือ คาเฟ่ประจำ", "Book circles, craft workshops, your regular café"),
     t("หนังสือเล่มไหนที่คุณอยากให้ทุกคนอ่าน?", "Which book do you wish everyone would read?")),
-  CFSH: A("CFSH", "🍵", t("ผู้รักษาย่าน", "The Neighbourhood Keeper"), t("ย่านของฉัน ร้านของฉัน", "My neighbourhood, my shops."),
+  CFSH: A("CFSH", "🍵", t("เจ้าถิ่นประจำย่าน", "The Neighbourhood Keeper"), t("ย่านของฉัน ร้านของฉัน", "My neighbourhood, my shops."),
     t("คุณรู้จักทุกร้านในย่าน ร้านก๋วยเตี๋ยวประจำ ตลาดเช้า และชอบพาเพื่อนมาลอง", "You know every shop in your area, the usual noodle place, the morning market, and love bringing friends."),
     t("ตลาดเช้าใกล้บ้าน ร้านก๋วยเตี๋ยวประจำ ชุมชนริมคลอง", "Your morning market, your noodle shop, canal-side communities"),
     t("ร้านไหนในย่านคุณที่ทุกคนควรลอง?", "Which shop in your neighbourhood should everyone try?")),
@@ -177,7 +177,7 @@ const PROFILES: Record<ArchetypeKey, Profile> = {
     ],
   ),
   BDSN: P(
-    t("อยู่ในที่ที่อะไรใหม่ ๆ กำลังเกิด กับคนที่น่าสนใจ", "To be where something new is happening, among interesting people."),
+    t("ได้อยู่ตรงที่ที่มีอะไรใหม่ ๆ กำลังเกิดขึ้น กับคนที่น่าสนใจ", "To be where something new is happening, among interesting people."),
     t("คืนที่ต้องอยู่บ้านแล้วเห็นคนอื่นไปงานเปิด", "Staying in while everyone posts from the opening."),
     t("ค่ำวันพฤหัสถึงวันศุกร์", "Thursday and Friday evenings"),
     [
@@ -267,7 +267,7 @@ const PROFILES: Record<ArchetypeKey, Profile> = {
     ],
   ),
   CDSH: P(
-    t("เข้าใจว่าแต่ละที่มาเป็นอย่างนี้ได้อย่างไร", "To understand how a place came to be the way it is."),
+    t("ได้รู้ว่าแต่ละที่เป็นแบบนี้มาได้ยังไง", "To understand how a place came to be the way it is."),
     t("การรีบดูให้ครบทุกจุดโดยไม่ได้ฟังเรื่องราว", "Rushing through everything without hearing the story."),
     t("บ่ายวันอาทิตย์", "Sunday afternoons"),
     [
@@ -297,7 +297,7 @@ const PROFILES: Record<ArchetypeKey, Profile> = {
     ],
   ),
   CFSN: P(
-    t("พื้นที่อบอุ่นที่ได้สร้างสรรค์อะไรบางอย่างอย่างสบายใจ", "A cosy place to make something, at ease."),
+    t("พื้นที่อบอุ่นที่ได้ลงมือสร้างอะไรสักอย่างแบบสบายใจ", "A cosy place to make something, at ease."),
     t("งานสังสรรค์ใหญ่ที่ไม่มีใครคุยเรื่องที่สนใจ", "Big parties where nobody talks about what you love."),
     t("บ่ายวันอาทิตย์และค่ำวันธรรมดา", "Sunday afternoons and quiet weeknights"),
     [
@@ -307,7 +307,7 @@ const PROFILES: Record<ArchetypeKey, Profile> = {
     ],
   ),
   CFSH: P(
-    t("รู้สึกเป็นส่วนหนึ่งของย่าน และดูแลมันไว้", "To belong to a neighbourhood and look after it."),
+    t("รู้สึกเป็นส่วนหนึ่งของย่าน และช่วยดูแลย่านไว้", "To belong to a neighbourhood and look after it."),
     t("ร้านเก่าที่ปิดตัวและย่านที่เปลี่ยนเร็วเกินไป", "Old shops closing and neighbourhoods changing too fast."),
     t("เช้าตรู่และมื้อเที่ยงวันธรรมดา", "Early mornings and weekday lunches"),
     [
@@ -362,7 +362,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
   BDSH: {
     clicks: [
       c("BFSH", "They know the best stall; you know the newest one.", "เขารู้ร้านที่ดีที่สุด คุณรู้ร้านใหม่ล่าสุด"),
-      c("CDSH", "They tell the story of the recipe while you order seconds.", "เขาเล่าที่มาของสูตร ขณะที่คุณสั่งจานที่สอง"),
+      c("CDSH", "They tell the story of the recipe while you order seconds.", "เขาเล่าที่มาของสูตร ส่วนคุณสั่งจานที่สองไปแล้ว"),
       c("BDMH", "They walk the old town; you make sure it ends at dinner.", "เขาพาเดินเมืองเก่า คุณพาไปจบที่มื้อเย็น"),
     ],
     hangouts: [
@@ -399,7 +399,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
     clicks: [
       c("BDSN", "They bring the new scene to your table.", "เขาพาซีนใหม่มาที่โต๊ะคุณ"),
       c("BFSH", "Same big table, they just pick the food.", "โต๊ะใหญ่เหมือนกัน แค่เขาเป็นคนเลือกอาหาร"),
-      c("CFSN", "The quiet one who makes your playlist better.", "คนเงียบ ๆ ที่ทำเพลย์ลิสต์ให้คุณดีขึ้น"),
+      c("CFSN", "The quiet one who makes your playlist better.", "คนเงียบ ๆ ที่ช่วยให้เพลย์ลิสต์ของคุณดีขึ้น"),
     ],
     hangouts: [
       h("🪩", "huai_khwang", "The RCA clubs", "คลับย่าน RCA", "Dance floors and live bands for a big group.", "ฟลอร์เต้นและวงดนตรีสดสำหรับกลุ่มใหญ่"),
@@ -433,7 +433,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
   },
   CDMH: {
     clicks: [
-      c("CDSH", "They sit with the stories you walk past.", "เขานั่งฟังเรื่องเล่าที่คุณเดินผ่าน"),
+      c("CDSH", "They sit with the stories you walk past.", "คุณเดินผ่านเรื่องเล่าไป แต่เขาหยุดนั่งฟัง"),
       c("CFMH", "The same calm mornings, in a familiar park.", "เช้าที่สงบเหมือนกัน ในสวนที่คุ้นเคย"),
       c("BDMH", "They turn your quiet route into a group walk.", "เขาเปลี่ยนเส้นทางเงียบของคุณเป็นทริปกลุ่ม"),
     ],
@@ -457,8 +457,8 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
   },
   CDSH: {
     clicks: [
-      c("CDMH", "They walk the route; you know its story.", "เขาเดินเส้นทาง คุณรู้เรื่องราวของมัน"),
-      c("BDSH", "They find the old family shop; you ask how it started.", "เขาเจอร้านเก่าแก่ คุณถามว่ามันเริ่มต้นยังไง"),
+      c("CDMH", "They walk the route; you know its story.", "เขาเดินนำทาง คุณเล่าเรื่องราวของทางนั้น"),
+      c("BDSH", "They find the old family shop; you ask how it started.", "เขาเจอร้านเก่าแก่ คุณถามว่าร้านเริ่มมายังไง"),
       c("CFSH", "They know the neighbourhood's people; you know its past.", "เขารู้จักคนในย่าน คุณรู้อดีตของย่าน"),
     ],
     hangouts: [

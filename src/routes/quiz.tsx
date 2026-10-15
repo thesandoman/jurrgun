@@ -165,7 +165,7 @@ export function QuizFlow(props: {
       {props.questions.map((q, i) => (
         <FlowStep title={L(lang, q.prompt)} auto class="q q-choice">
           <QuestionArt art={q.art} lang={lang} />
-          {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ใช่ที่สุด", "Tap the answer that's most you")}</span> : null}
+          {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ตรงกับคุณที่สุด", "Tap the answer that's most you")}</span> : null}
           <span class="muted q-count">
             {i + 1} / {n}
           </span>
@@ -254,9 +254,9 @@ function Certainty(props: { v: View; res: TypeResult & { range: ArchetypeKey[] }
     <>
       <p class="muted">
         {letters.length === 0
-          ? t("ทุกตัวอักษรชัดเจนเกินระยะความคลาดเคลื่อน", "Every letter is clear beyond the margin of error.")
+          ? t("ทุกตัวอักษรชัดเจน พ้นค่าความคลาดเคลื่อนทั้งหมด", "Every letter is clear beyond the margin of error.")
           : t(
-              `${letters.map((c) => L(lang, POLES[c].name)).join(", ")} ยังอยู่ในระยะความคลาดเคลื่อน คนเรามีหลายมุม ผลจึงแสดงไทป์ที่ใกล้เคียงไว้ด้วย`,
+              `${letters.map((c) => L(lang, POLES[c].name)).join(", ")} ยังก้ำกึ่ง อยู่ในค่าความคลาดเคลื่อน คนเรามีหลายมุม ผลจึงแสดงไทป์ที่ใกล้เคียงไว้ด้วย`,
               `${letters.map((c) => L(lang, POLES[c].name)).join(", ")} ${letters.length === 1 ? "is" : "are"} within the margin of error. People have more than one side, so we show the types you're between.`,
             )}
       </p>
@@ -349,7 +349,7 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
 /** The type, its wing and a third, as three tiles with big percentages. */
 function Blend(props: { v: View; blend: TypeResult["types"] }) {
   const { t, lang } = props.v;
-  const roles = [t("ไทป์หลัก", "Your type"), t("ปีก", "Wing"), t("อีกด้าน", "Also in you")];
+  const roles = [t("ไทป์หลัก", "Your type"), t("ไทป์รอง", "Wing"), t("อีกด้าน", "Also in you")];
   return (
     <>
       <h2>🧬 {t("ส่วนผสมของคุณ", "Your blend")}</h2>
@@ -371,8 +371,8 @@ function TypeFacts(props: { v: View; a: Archetype }) {
   const { t, lang } = props.v;
   const a = props.a;
   const facts: [string, string, { en: string; th: string }][] = [
-    ["🎯", t("แรงขับเคลื่อน", "What drives you"), a.drive],
-    ["🪫", t("สิ่งที่ทำให้หมดพลัง", "What drains you"), a.drain],
+    ["🎯", t("อะไรทำให้คุณมีไฟ", "What drives you"), a.drive],
+    ["🪫", t("อะไรทำให้คุณหมดแรง", "What drains you"), a.drain],
     ["🕰️", t("ช่วงเวลาที่ใช่", "Best time"), a.bestTime],
   ];
   return (
@@ -406,7 +406,7 @@ function TypeSpots(props: { v: View; a: Archetype; mine?: boolean }) {
           </div>
         ))}
       </div>
-      <h3>🏙️ {t("ที่เที่ยวและย่านเฉพาะ", "Hangouts and areas")}</h3>
+      <h3>🏙️ {t("ที่เที่ยวและย่านที่ใช่", "Hangouts and areas")}</h3>
       <div class="rail2">
         {a.hangouts.map((h) => (
           <div class="place-card">
@@ -464,7 +464,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
       <TypeSpots v={props.v} a={a} mine />
       <Clicks v={props.v} a={a} />
       <details class="how card">
-        <summary>🎯 {t("เราแน่ใจแค่ไหน และตัวอักษรของคุณ", "How sure we are, and your letters")}</summary>
+        <summary>🎯 {t("ผลแม่นแค่ไหน และตัวอักษรของคุณ", "How sure we are, and your letters")}</summary>
         <Certainty v={props.v} res={res} />
         <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? res.unsure : undefined} />
       </details>
@@ -526,7 +526,7 @@ quizRoutes.post("/quiz", async (c) => {
     const error =
       bad !== undefined
         ? v.t(
-            `ข้อ ${bad + 1} ยังไม่ได้เลือกคำตอบที่ถูกต้อง`,
+            `ข้อ ${bad + 1} ลองดูอีกที เลือกหนึ่งในคำตอบที่มีให้`,
             `Question ${bad + 1} needs another look: please pick one of the answers.`,
           )
         : v.t(`ตอบอย่างน้อย ${MIN_ANSWERED} ข้อ`, `Please answer at least ${MIN_ANSWERED} questions.`);

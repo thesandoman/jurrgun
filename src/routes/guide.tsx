@@ -24,14 +24,14 @@ type Tip = [emoji: string, th: string, en: string];
 
 const HOW: Tip[] = [
   ["🧭", "หากิจกรรมกลุ่มเล็กใกล้คุณ", "Find small-group events near you"],
-  ["🎟️", "ลงทะเบียนแล้วไป นั่งโต๊ะละ 4–6 คน มีโฮสต์ดูแล", "RSVP and go: tables of 4–6, with a host"],
-  ["🫂", "หลังกิจกรรม เลือกกันและกัน ต้องเลือกทั้งคู่ถึงจะเชื่อมกัน", "Afterwards, choose each other. It only connects if you both do"],
+  ["🎟️", "ลงชื่อแล้วไปเลย นั่งโต๊ะละ 4 ถึง 6 คน มีโฮสต์ดูแล", "RSVP and go: tables of 4–6, with a host"],
+  ["🫂", "หลังกิจกรรม เลือกคนที่อยากเจออีก ต้องเลือกกันทั้งสองฝ่ายถึงจะได้รู้จักกันต่อ", "Afterwards, choose each other. It only connects if you both do"],
   ["🤝", "บัดดี้กรุงเทพฯ: บัดดี้หนึ่งคน เควสต์ทุกสัปดาห์ สะสมแสตมป์ 50 เขต", "Bangkok Buddy: one buddy, weekly quests, 50 district stamps"],
 ];
 const SAFETY: Tip[] = [
   ["📍", "เจอกันครั้งแรกในที่สาธารณะที่มีโฮสต์", "Meet first in public places with a host"],
   ["📲", "บอกแผนให้เพื่อนรู้ ใช้หน้า Safety net ได้", "Tell a friend your plan. The Safety net page helps"],
-  ["🚪", "รู้สึกไม่ปลอดภัย บล็อก รายงาน แล้วออกได้ทันที", "Feel unsafe? Block, report and leave. Any time"],
+  ["🚪", "ถ้ารู้สึกไม่ปลอดภัย บล็อก รายงาน หรือออกมาได้ทันที", "Feel unsafe? Block, report and leave. Any time"],
   ["🆘", "ฉุกเฉิน: ตำรวจ 191 · รถพยาบาล 1669", "Emergency: police 191 · ambulance 1669"],
 ];
 const TALK: Tip[] = [
@@ -43,14 +43,14 @@ const TALK: Tip[] = [
 const RESPONSIBLE: Tip[] = [
   ["🗓️", "มาตามนัด หรือยกเลิกก่อน 24 ชม. ที่นั่งจะได้ไปถึงคนอื่น", "Show up, or cancel 24h ahead so someone else gets the seat"],
   ["🌈", "เคารพทุกคน ทุกเพศ ทุกอัตลักษณ์ ทุกเชื้อชาติ", "Respect everyone: every gender, identity and background"],
-  ["💬", "บอกสถานะความสัมพันธ์ตามจริงถ้าใช้ฟีเจอร์เดต", "Be truthful about your relationship status if you date here"],
+  ["💬", "บอกสถานะความสัมพันธ์ตามจริงถ้าใช้ฟีเจอร์หาเดท", "Be truthful about your relationship status if you date here"],
   ["🤫", "ไม่เปิดเผยข้อมูลหรือตัวตนของใครโดยไม่ได้รับอนุญาต", "Never share anyone's details or identity without consent"],
 ];
 const ACCOUNTABLE: Tip[] = [
-  ["🧑‍⚖️", "ทุกรายงานมีคนในทีมตรวจ รายงานอย่างเดียวไม่ทำให้ใครถูกนำออก", "A person reviews every report. A report alone never removes anyone"],
-  ["🚩", "คำเตือนที่ยืนยันแล้วนับเป็น 1 ธง นับอยู่ 1 ปี", "An upheld warning is a flag. Flags count for a year"],
-  ["⚖️", "ถูกนำออกเฉพาะเมื่อละเมิดกฎชัดเจน หรือมีครบ 3 ธง", "Removal only for a clear rule break, or 3 flags"],
-  ["🎟️", "ไม่มาตามนัดนับเป็น strike พักการลงทะเบียน แต่ไม่ปิดบัญชี", "No-shows are strikes: they pause RSVPs, never close your account"],
+  ["🧑‍⚖️", "ทุกรายงานมีทีมงานตรวจจริง แค่ถูกรายงานอย่างเดียวไม่ทำให้ใครโดนเชิญออก", "A person reviews every report. A report alone never removes anyone"],
+  ["🚩", "คำเตือนที่ยืนยันแล้วนับเป็น 1 ธง และมีผล 1 ปี", "An upheld warning is a flag. Flags count for a year"],
+  ["⚖️", "จะโดนเชิญออกก็ต่อเมื่อทำผิดกฎชัดเจน หรือครบ 3 ธง", "Removal only for a clear rule break, or 3 flags"],
+  ["🎟️", "เบี้ยวนัดนับเป็น strike จะพักสิทธิ์ลงทะเบียนชั่วคราว แต่ไม่ปิดบัญชี", "No-shows are strikes: they pause RSVPs, never close your account"],
 ];
 
 function Tips(props: { tips: Tip[]; t: (th: string, en: string) => string }) {
@@ -73,7 +73,7 @@ guideRoutes.get("/guide", requireMember, (c) => {
     c,
     { title: t("เริ่มต้นใช้งาน", "Getting started"), bare: true },
     <Flow v={v} submit={t("พร้อมแล้ว ไปกันเลย", "I'm in, let's go")} action="/guide" close="/events">
-      <FlowStep emoji="👋" title={t("Jurrgun ทำงานอย่างไร", "How Jurrgun works")} hint={t("เพื่อนใหม่ก่อน เดตเฉพาะเมื่อทั้งคู่เลือก", "Friends first. Dating only if you both choose it.")}>
+      <FlowStep emoji="👋" title={t("Jurrgun ใช้งานยังไง", "How Jurrgun works")} hint={t("เพื่อนใหม่มาก่อน เรื่องเดทจะมีก็ต่อเมื่อเลือกกันทั้งคู่", "Friends first. Dating only if you both choose it.")}>
         <Tips tips={HOW} t={t} />
       </FlowStep>
       <FlowStep emoji="🛡️" title={t("ความปลอดภัย", "Safety")}>

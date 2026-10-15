@@ -146,7 +146,7 @@ onboarding.get("/welcome", (c) => {
         <div class="splash-mark" aria-hidden="true">◐</div>
         <h1>{t("ยินดีต้อนรับสู่ Jurrgun", "Welcome to Jurrgun")}</h1>
       </div>
-      <h2>{t("คุณมาที่นี่เพื่ออะไร?", "What brings you here?")}</h2>
+      <h2>{t("มาหาอะไรที่ Jurrgun?", "What brings you here?")}</h2>
       <div class="answers">
         {MODE_OPTS.map((o, i) => (
           <AnswerCard name="mode" value={o.value} emoji={o.emoji} label={lang === "en" ? o.label.en : o.label.th} checked={chosen ? chosen === o.value : i === 0} />
@@ -251,7 +251,7 @@ onboarding.post("/dating", async (c) => {
     <>
       <div class="splash">
         <div class="splash-mark" aria-hidden="true">💚</div>
-        <h1>{t("เราได้ยินคุณแล้ว", "We hear you")}</h1>
+        <h1>{t("เราเข้าใจนะ", "We hear you")}</h1>
       </div>
       {answers.length ? (
         <ul class="spots">
@@ -314,7 +314,7 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
       <FlowStep emoji="👋" title={t("อยากให้เพื่อนเรียกว่าอะไร?", "What should people call you?")}>
         <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} autocomplete="nickname" />
       </FlowStep>
-      <FlowStep emoji="🎂" title={t("วันเกิดของคุณ", "When's your birthday?")} hint={t("สำหรับ 18+ เท่านั้น ไม่แสดงต่อผู้อื่น", "18+ only. Never shown to others.")}>
+      <FlowStep emoji="🎂" title={t("วันเกิดของคุณ", "When's your birthday?")} hint={t("ใช้เช็กว่าอายุ 18+ ไม่แสดงให้ใครเห็น", "18+ only. Never shown to others.")}>
         <Field label={t("วันเกิด", "Date of birth")} name="birthDate" type="date" value={val.birthDate ?? p?.birthDate} required />
       </FlowStep>
       <FlowStep emoji="📍" title={t("ส่วนใหญ่อยู่เขตไหน?", "Where do you spend your week?")}>
@@ -322,8 +322,8 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
       </FlowStep>
       <FlowStep
         emoji="🏙️"
-        title={t("ตอนนี้คุณกับกรุงเทพฯ", "You and Bangkok right now")}
-        hint={t("ทุกคนที่อยู่ในหรือรอบ ๆ กรุงเทพฯ ร่วมได้ ทะเบียนบ้านอยู่ที่ไหนก็ได้", "Anyone in or around Bangkok can join. Your household registration can be anywhere.")}
+        title={t("ตอนนี้คุณอยู่กรุงเทพฯ แบบไหน", "You and Bangkok right now")}
+        hint={t("ใครอยู่ในหรือรอบ ๆ กรุงเทพฯ ก็มาร่วมได้ ไม่ว่าทะเบียนบ้านจะอยู่ที่ไหน", "Anyone in or around Bangkok can join. Your household registration can be anywhere.")}
       >
         <div class="answers">
           {RESIDENCY.map((o) => (
@@ -358,9 +358,9 @@ onboarding.post("/basics", async (c) => {
   const realDate = /^\d{4}-\d{2}-\d{2}$/.test(vals.birthDate) && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === vals.birthDate;
   if (!realDate) return fail(t("กรอกวันเกิด", "Please add your date of birth."), 1);
   const age = ageOn(vals.birthDate);
-  if (!(age >= MIN_AGE && age < 120)) return fail(t("Jurrgun สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น", "Jurrgun is for adults aged 18 and over."), 1);
+  if (!(age >= MIN_AGE && age < 120)) return fail(t("Jurrgun เปิดให้ใช้เฉพาะคนอายุ 18 ปีขึ้นไป", "Jurrgun is for adults aged 18 and over."), 1);
   if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."), 2);
-  if (!isResidency(vals.residency)) return fail(t("เลือกว่าตอนนี้คุณอยู่กับกรุงเทพฯ แบบไหน", "Please pick how you're in Bangkok right now."), 3);
+  if (!isResidency(vals.residency)) return fail(t("เลือกว่าตอนนี้คุณอยู่กรุงเทพฯ แบบไหน", "Please pick how you're in Bangkok right now."), 3);
 
   const db = getDb(c.env);
   const bio = { ...cleanBio(user.profile?.bio), residency: vals.residency };
@@ -387,7 +387,7 @@ function PrivacyForm(props: { v: View; error?: string }) {
       <FlowStep
         emoji="🤝"
         title={t("สิ่งที่จำเป็น", "The must-haves")}
-        hint={t("ต้องมี 3 ข้อนี้เพื่อใช้งาน", "These three keep the app working and safe.")}
+        hint={t("ต้องยอมรับ 3 ข้อนี้ก่อนเริ่มใช้งาน", "These three keep the app working and safe.")}
         info={
           <>
             <p>
@@ -461,7 +461,7 @@ function YouForm(props: { v: View; error?: string }) {
   return (
     <>
     <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("you")} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
-      <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} need={1} needText={t("เลือกอย่างน้อย 1", "Pick at least one")}>
+      <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} need={1} needText={t("เลือกอย่างน้อย 1 ภาษา", "Pick at least one")}>
         <Pills name="languages" options={LANGUAGES} values={p?.languages.length ? p.languages : [lang]} lang={lang} />
       </FlowStep>
       <FlowStep
@@ -473,7 +473,7 @@ function YouForm(props: { v: View; error?: string }) {
       >
         <InterestPicker v={props.v} values={p?.interests} />
       </FlowStep>
-      <FlowStep emoji="🛺" title={t("คุณกับกรุงเทพฯ", "You and Bangkok")} hint={t("คนกรุงเทพฯ คนต่างจังหวัด หรือคนจากที่ไกล ทุกคนยินดีต้อนรับ ไม่บังคับ", "Locals, people from the provinces, from abroad: everyone's welcome. Optional.")}>
+      <FlowStep emoji="🛺" title={t("คุณกับกรุงเทพฯ", "You and Bangkok")} hint={t("คนกรุงเทพฯ คนต่างจังหวัด หรือมาจากแดนไกล ยินดีต้อนรับทุกคน ไม่บังคับ", "Locals, people from the provinces, from abroad: everyone's welcome. Optional.")}>
         <BangkokStory v={props.v} story={cleanBio(p?.bio).story} time={cleanBio(p?.bio).bkkTime} hometown={cleanBio(p?.bio).hometown} compact />
       </FlowStep>
       <FlowStep emoji="💼" title={t("ทำงานและเรียนอะไร?", "Work and study")} hint={t("ไม่บังคับ ข้ามได้", "Optional. You can skip this.")}>
@@ -563,12 +563,12 @@ export function ConnectionsFields(props: { v: View }) {
         lang={lang}
       />
       <div class="grid2">
-        <Field label={t("อายุต่ำสุดที่สะดวกเชื่อมต่อ", "Youngest you'd like to connect with")} name="ageMin" type="number" min={18} max={99} value={p?.ageMin ?? 18} />
-        <Field label={t("อายุสูงสุดที่สะดวกเชื่อมต่อ", "Oldest you'd like to connect with")} name="ageMax" type="number" min={18} max={99} value={p?.ageMax ?? 99} />
+        <Field label={t("อายุต่ำสุดที่อยากรู้จัก", "Youngest you'd like to connect with")} name="ageMin" type="number" min={18} max={99} value={p?.ageMin ?? 18} />
+        <Field label={t("อายุสูงสุดที่อยากรู้จัก", "Oldest you'd like to connect with")} name="ageMax" type="number" min={18} max={99} value={p?.ageMax ?? 99} />
       </div>
       <small>{t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events, and kept private.")}</small>
       <details open={!!p?.romanceOn}>
-        <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ — เฉพาะคนโสด)", "Open to something more (optional — Single only)")}</summary>
+        <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ เฉพาะคนโสด)", "Open to something more (optional — Single only)")}</summary>
         <p class="muted">{t(ROMANCE_INFO[0], ROMANCE_INFO[1])}</p>
         <RomanceFields v={props.v} openTo={openTo} />
         <Field label={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")} name="pronouns" value={p?.pronouns} maxlength={30} />
@@ -593,7 +593,7 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
       <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={props.on ?? !!p?.romanceOn} />
       <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="—" />
       <Choices
-        legend={t("เปิดใจที่จะพบ…", "Open to meeting…")}
+        legend={t("อยากเจอ…", "Open to meeting…")}
         name="romanceOpenTo"
         options={[{ value: "everyone", th: "ทุกคน", en: "Everyone" }, ...GENDER_IDENTITIES.filter((g) => g.value !== "prefer_not" && g.value !== "self")]}
         values={openTo === "everyone" ? ["everyone"] : Array.isArray(openTo) ? openTo : []}
@@ -661,7 +661,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
           ))}
         </div>
       </FlowStep>
-      <FlowStep emoji="🎈" title={t("อยากเชื่อมต่อกับช่วงอายุไหน?", "Which ages would you like to connect with?")} hint={t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events. Private.")}>
+      <FlowStep emoji="🎈" title={t("อยากรู้จักคนช่วงอายุไหน?", "Which ages would you like to connect with?")} hint={t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events. Private.")}>
         <div class="grid2" style="grid-template-columns:1fr 1fr">
           <Field label={t("ตั้งแต่", "From")} name="ageMin" type="number" min={18} max={99} value={p?.ageMin ?? 18} />
           <Field label={t("ถึง", "To")} name="ageMax" type="number" min={18} max={99} value={p?.ageMax ?? 99} />
@@ -720,7 +720,7 @@ onboarding.post("/connections", async (c) => {
 /** UCLA 3-item loneliness scale (1 hardly ever – 3 often). */
 export const UCLA3: [string, string][] = [
   ["คุณรู้สึกว่าขาดเพื่อนบ่อยแค่ไหน", "How often do you feel that you lack companionship?"],
-  ["คุณรู้สึกถูกทิ้งไว้ข้างหลังบ่อยแค่ไหน", "How often do you feel left out?"],
+  ["คุณรู้สึกเป็นคนนอกบ่อยแค่ไหน", "How often do you feel left out?"],
   ["คุณรู้สึกโดดเดี่ยวจากผู้อื่นบ่อยแค่ไหน", "How often do you feel isolated from others?"],
 ];
 export const UCLA_SCALE = [
@@ -779,7 +779,7 @@ onboarding.get("/wellbeing", async (c) => {
           emoji={i === 0 ? "🌱" : undefined}
           title={t(th, en)}
           hint={i === 0 ? t("ไม่บังคับ คำตอบไม่ผูกกับตัวตนของคุณ", "Optional. Not linked to your identity.") : undefined}
-          info={i === 0 ? t("ช่วยให้เรารู้ว่ากิจกรรมช่วยให้คนเหงาน้อยลงหรือไม่", "Helps us learn whether meetups reduce loneliness.") : undefined}
+          info={i === 0 ? t("ทำให้เรารู้ว่ากิจกรรมช่วยให้คนเหงาน้อยลงจริงไหม", "Helps us learn whether meetups reduce loneliness.") : undefined}
           auto
         >
           <div class="answers">

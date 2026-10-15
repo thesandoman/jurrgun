@@ -175,7 +175,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         <a href={self ? "/settings" : "/connections"}>← {self ? t("ฉัน", "Me") : t("คนรู้จัก", "My circle")}</a>
       </p>
       {self ? (
-        <p class="muted">{t("นี่คือสิ่งที่คนที่เคยเจอกันในกิจกรรมจะเห็น", "This is what people you've met at events will see.")}</p>
+        <p class="muted">{t("คนที่เคยเจอคุณในกิจกรรมจะเห็นโปรไฟล์แบบนี้", "This is what people you've met at events will see.")}</p>
       ) : null}
       <ProfileCard
         v={v}

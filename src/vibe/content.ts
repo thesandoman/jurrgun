@@ -85,7 +85,7 @@ export const POLES: Record<Category, { plus: PoleInfo; minus: PoleInfo; name: Te
     plus: {
       label: { en: "Spontaneous", th: "ไปตามใจ" },
       adjective: { en: "Spontaneous", th: "สายไปตามใจ" },
-      noun: { en: "Wanderer", th: "นักเดินเตร็ด" },
+      noun: { en: "Wanderer", th: "นักเตร็ดเตร่" },
     },
     minus: {
       label: { en: "Planner", th: "วางแผน" },

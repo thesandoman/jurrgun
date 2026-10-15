@@ -113,7 +113,7 @@ export const CHALLENGE_ANSWERS: Record<string, Text> = {
   meet: t("Tables of 4 to 6 at real places, every week.", "โต๊ะละ 4 ถึง 6 คน ที่สถานที่จริง ทุกสัปดาห์"),
   time: t("Quests and tables near your district.", "เควสต์และโต๊ะใกล้ย่านของคุณ"),
   safety: t("Public places only, plus a safety net to share your plans.", "นัดในที่สาธารณะเท่านั้น และมีตัวช่วยแชร์แผนให้คนที่ไว้ใจ"),
-  ghosting: t("No ghosting: every pairing ends kindly.", "ไม่ทิ้งเงียบ ทุกคู่ปิดอย่างเป็นมิตร"),
+  ghosting: t("No ghosting: every pairing ends kindly.", "ไม่มีหายเงียบ ทุกคู่จบกันแบบดี ๆ"),
   fake: t("You meet in person first, in a group.", "เจอตัวจริงก่อน ในกลุ่ม"),
   language: t("Pick tables in your languages.", "เลือกโต๊ะตามภาษาที่คุณใช้"),
   nightlife: t("Daytime quests, cafés, parks and markets.", "เควสต์กลางวัน คาเฟ่ สวน ตลาด"),
@@ -128,5 +128,5 @@ export const SAFETY_TIPS: { emoji: string; text: Text }[] = [
   { emoji: "🎥", text: t("Video call first if you haven't met", "วิดีโอคอลก่อน ถ้ายังไม่เคยเจอ") },
   { emoji: "🥤", text: t("Keep your drink and phone with you", "เก็บเครื่องดื่มและโทรศัพท์ไว้กับตัว") },
   { emoji: "💸", text: t("Never send money or codes", "ห้ามโอนเงินหรือให้รหัสใด ๆ") },
-  { emoji: "🚪", text: t("Feel off? Leave. That's always OK", "รู้สึกไม่ดี ออกมาได้เลยเสมอ") },
+  { emoji: "🚪", text: t("Feel off? Leave. That's always OK", "รู้สึกไม่ดีเมื่อไหร่ ออกมาได้เลย") },
 ];

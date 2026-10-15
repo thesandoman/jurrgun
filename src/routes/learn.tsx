@@ -112,7 +112,7 @@ learnRoutes.get("/faq", (c) => {
       <h1>{t("คำถามที่พบบ่อย", "Frequently asked questions")}</h1>
       <FaqList lang={lang} />
       <p style="margin-top:16px">
-        <a href="/learn">{t("อ่านเพิ่มเติม: เรียนรู้เรื่องการเดตและความปลอดภัย →", "Read more: learn about dating and safety →")}</a>
+        <a href="/learn">{t("อ่านเพิ่มเติม: เรียนรู้เรื่องการเดทและความปลอดภัย →", "Read more: learn about dating and safety →")}</a>
       </p>
     </>,
   );

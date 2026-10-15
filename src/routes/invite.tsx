@@ -155,7 +155,7 @@ inviteRoutes.get("/invite/:token", async (c) => {
         </p>
         <p class="muted">
           {t(
-            "ลิงก์นี้ใช้ได้ครั้งเดียว คุณต้องผ่านเงื่อนไขของกิจกรรมเหมือนทุกคน (อายุ ที่นั่ง) ถ้าที่เต็ม คุณจะอยู่ในรายชื่อสำรอง",
+            "ลิงก์นี้ใช้ได้ครั้งเดียว คุณต้องผ่านเงื่อนไขของกิจกรรมเหมือนทุกคน (อายุ ที่นั่ง) ถ้าที่นั่งเต็ม จะได้อยู่ในคิวสำรอง",
             "This link works once. The event's usual rules still apply (age, seats). If it's full, you'll join the waitlist.",
           )}
         </p>

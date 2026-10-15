@@ -102,7 +102,7 @@ export const INTEREST_GROUPS: InterestGroup[] = [
       o("pottery", "🏺", "ปั้นเซรามิก", "Pottery"),
       o("crafts", "✂️", "งานฝีมือ", "Crafts"),
       o("knitting", "🧶", "ถักไหมพรม", "Knitting"),
-      o("hand_lettering", "✒️", "เขียนตัวอักษรสวย ๆ", "Hand lettering"),
+      o("hand_lettering", "✒️", "เขียนแคลลิกราฟี", "Hand lettering"),
       o("galleries", "🖼️", "เดินแกลเลอรี", "Gallery hopping"),
       o("zines", "📓", "ทำซีน", "Making zines"),
       o("photography", "📷", "ถ่ายรูป", "Photography"),
@@ -898,17 +898,17 @@ export const PROMPT_BANK: Prompt[] = [
   text("dream_city", "🌆", "เมืองในฝันของฉันคือ…", "My dream city is…"),
   text("show_visitor", "📍", "ที่แรกในกรุงเทพฯ ที่จะพาเพื่อนต่างถิ่นไป", "The Bangkok spot I'd show a visitor first"),
   text("small_thing", "🌼", "เรื่องเล็ก ๆ ที่ทำให้สัปดาห์ของฉันดีขึ้น", "A small thing that makes my week"),
-  text("weirdly_good", "🪄", "ฉันเก่งเรื่องนี้แบบแปลก ๆ", "I'm weirdly good at"),
-  text("teach_30s", "⏱️", "ให้ฉันสอนอะไรคุณใน 30 วินาที", "Teach me something in 30 seconds"),
-  text("defend_street_food", "🍢", "สตรีทฟู้ดที่ฉันพร้อมปกป้องตลอดไป", "Street food I'd defend forever"),
+  text("weirdly_good", "🪄", "เรื่องที่ฉันเก่งแบบแปลก ๆ", "I'm weirdly good at"),
+  text("teach_30s", "⏱️", "ขอสอนอะไรสักอย่างใน 30 วินาที", "Teach me something in 30 seconds"),
+  text("defend_street_food", "🍢", "สตรีทฟู้ดที่ใครว่าไม่ได้", "Street food I'd defend forever"),
   text("learning_now", "🌱", "ช่วงนี้กำลังหัดทำ…", "Something I'm learning right now"),
   text("ask_me_about", "🙋", "ถามฉันเรื่องนี้ได้ทั้งวัน", "Ask me about this all day"),
   text("proud_of", "🏅", "เรื่องเล็ก ๆ ที่ภูมิใจเมื่อเร็ว ๆ นี้", "A small win I'm proud of lately"),
-  text("comfort_meal", "🍛", "อาหารปลอบใจของฉันคือ", "My comfort meal is"),
+  text("comfort_meal", "🍛", "เมนูฮีลใจของฉันคือ", "My comfort meal is"),
   text("best_advice", "💡", "คำแนะนำที่ดีที่สุดที่เคยได้รับ", "The best advice I've been given"),
   text("hidden_gem", "💎", "ร้านลับที่อยากให้คนรู้จักมากกว่านี้", "A hidden gem that deserves more love"),
   text("never_bored", "🔁", "ทำซ้ำได้ไม่มีเบื่อ", "Something I could do on repeat"),
-  text("grateful_for", "🙏", "ช่วงนี้รู้สึกขอบคุณเรื่อง", "Lately I'm grateful for"),
+  text("grateful_for", "🙏", "ช่วงนี้รู้สึกโชคดีที่มี", "Lately I'm grateful for"),
   text("green_flag", "💚", "สิ่งที่ทำให้ฉันรู้สึกว่าเพื่อนคนนี้ใช่", "A green flag in a new friend"),
   text("perfect_soi", "🛵", "ซอยที่ฉันรักที่สุดในเมือง", "My favourite soi in the city"),
   text("rainy_day", "🌧️", "วันฝนตกในกรุงเทพฯ ฉันจะ…", "On a rainy Bangkok day I…"),
@@ -922,7 +922,7 @@ export const PROMPT_BANK: Prompt[] = [
   text("five_years", "🔭", "อีก 5 ปี อยากเก่งเรื่องอะไรขึ้น", "In five years I'd love to be better at"),
   text("city_wish", "🏙️", "ถ้าเปลี่ยนกรุงเทพฯ ได้ 1 อย่าง", "One thing I'd change about Bangkok"),
   text("story_in_six", "📝", "เล่าเรื่องตัวเองใน 6 คำ", "My story in six words"),
-  text("kindness_seen", "🫶", "ความใจดีจากคนแปลกหน้าที่จำได้", "A stranger's kindness I still remember"),
+  text("kindness_seen", "🫶", "น้ำใจจากคนแปลกหน้าที่ยังจำได้", "A stranger's kindness I still remember"),
 
   // --- sliders
   slider("spice", "🌶️", "ระดับความเผ็ดที่ไหว", "Spice tolerance", 0, 10, 1, ends("ไม่เผ็ดเลย", "No chilli", "พริก 10 เม็ด", "Ten chillies")),
@@ -938,9 +938,9 @@ export const PROMPT_BANK: Prompt[] = [
   slider("bkk_years", "🏙️", "อยู่กรุงเทพฯ มากี่ปี", "Years I've called Bangkok home", 0, 40, 1, ends("เพิ่งมา", "Just arrived", "ตั้งแต่เกิด", "Since forever")),
 
   // --- scales (1 to 5)
-  scale("chatty_scale", "🗣️", "ในวงสนทนาใหม่ ฉันคุยแค่ไหน", "In a new group I talk", ends("ฟังมากกว่า", "Mostly listen", "เปิดประเด็นเอง", "Start the topic")),
+  scale("chatty_scale", "🗣️", "เจอวงใหม่ ฉันพูดเยอะแค่ไหน", "In a new group I talk", ends("ฟังมากกว่า", "Mostly listen", "เปิดประเด็นเอง", "Start the topic")),
   scale("adventure_food", "🦗", "กล้าลองอาหารแปลกใหม่แค่ไหน", "How adventurous I am with food", ends("ของเดิมดีแล้ว", "My usual, thanks", "ลองหมด", "Try everything")),
-  scale("tidy", "🧺", "ห้องของฉันเรียบร้อยแค่ไหน", "How tidy my room is", ends("วุ่นวายแบบมีระบบ", "Organised chaos", "เป๊ะมาก", "Showroom")),
+  scale("tidy", "🧺", "ห้องของฉันเรียบร้อยแค่ไหน", "How tidy my room is", ends("รกแบบมีระบบ", "Organised chaos", "เป๊ะมาก", "Showroom")),
   scale("karaoke_brave", "🎤", "ความกล้าร้องคาราโอเกะ", "Karaoke courage", ends("ขอเป็นผู้ฟัง", "Audience only", "ขอไมค์", "Hand me the mic")),
   scale("outdoorsy", "🌳", "สายในร่มหรือกลางแจ้ง", "Indoors or outdoors", ends("ห้องแอร์", "Aircon life", "ข้างนอกตลอด", "Always outside")),
   scale("trying_new", "🧭", "ชอบลองอะไรใหม่ ๆ แค่ไหน", "How much I love trying new things", ends("ของเดิมสบายใจ", "Comfort zone", "ไม่เคยลองต้องลอง", "Never tried? Yes")),
@@ -964,7 +964,7 @@ export const PROMPT_BANK: Prompt[] = [
   choice("coffee_order", "☕", "กาแฟแก้วโปรด", "My coffee order", [o("black", "☕", "อเมริกาโน่", "Americano"), o("thai_iced", "🧋", "โอเลี้ยง/กาแฟเย็น", "Thai iced coffee"), o("latte", "🥛", "ลาเต้", "Latte"), o("no_coffee", "🍵", "ไม่ดื่มกาแฟ", "No coffee, thanks")]),
   choice("meet_where", "📍", "เจอกันครั้งแรกที่ไหนดี", "Best first hangout spot", [o("cafe", "☕", "คาเฟ่", "A café"), o("park", "🌳", "สวน", "A park"), o("activity", "🎳", "ทำกิจกรรม", "An activity"), o("food_walk", "🍢", "เดินกิน", "A food walk")]),
   choice("songkran", "💦", "สงกรานต์ ฉัน…", "At Songkran I", [o("splash", "🔫", "ลุยเต็มที่", "Splash all day"), o("temple", "🏮", "รดน้ำดำหัว", "Visit family and temples"), o("escape", "🏝️", "หนีไปพัก", "Escape the city")]),
-  choice("night_in_out", "🌙", "ศุกร์คืนนี้", "This Friday night", [o("out", "🌃", "ออกไปข้างนอก", "Out and about"), o("in", "🛋️", "อยู่บ้านสบาย ๆ", "Cosy night in"), o("both", "🍜", "กินข้าวแล้วกลับ", "Dinner, then home")]),
+  choice("night_in_out", "🌙", "คืนวันศุกร์", "This Friday night", [o("out", "🌃", "ออกไปข้างนอก", "Out and about"), o("in", "🛋️", "อยู่บ้านสบาย ๆ", "Cosy night in"), o("both", "🍜", "กินข้าวแล้วกลับ", "Dinner, then home")]),
 
   // --- pick up to 3
   multi("perfect_weekend", "🧺", "สุดสัปดาห์ในฝัน (เลือกได้ 3)", "My perfect weekend has (pick 3)", [
@@ -977,7 +977,7 @@ export const PROMPT_BANK: Prompt[] = [
     o("cooking", "🍳", "ทำอาหาร", "Cooking"),
     o("friends", "👯", "เจอเพื่อน", "Friends"),
   ]),
-  multi("friend_qualities", "💚", "สิ่งที่ฉันให้ได้ในฐานะเพื่อน", "What I bring as a friend", [
+  multi("friend_qualities", "💚", "ถ้าเป็นเพื่อนกัน ฉันมี…", "What I bring as a friend", [
     o("listener", "👂", "รับฟัง", "A good ear"),
     o("food_recs", "🍜", "ร้านอร่อย", "Food recommendations"),
     o("plans", "📅", "ชวนเที่ยว", "Plans"),
@@ -1006,7 +1006,7 @@ export const PROMPT_BANK: Prompt[] = [
     o("swim", "🏊", "ว่ายน้ำ", "Swimming"),
   ]),
   multi("snack_run", "🏪", "ของติดมือจากเซเว่น", "My 7-Eleven run", [
-    o("toastie", "🥪", "แซนด์วิชอบ", "Toastie"),
+    o("toastie", "🥪", "แซนด์วิชปิ้ง", "Toastie"),
     o("milk", "🥛", "นมเย็น", "Pink milk"),
     o("onigiri", "🍙", "ข้าวปั้น", "Onigiri"),
     o("chips", "🥔", "มันฝรั่ง", "Crisps"),
@@ -1256,7 +1256,7 @@ function validateRank(p: Prompt, vals: string[]): Check<string[] | null> {
   const optValues = (p.options ?? []).map((x) => x.value);
   const uniq = new Set(vals);
   if (vals.length !== optValues.length || uniq.size !== vals.length || vals.some((v) => !optValues.includes(v))) {
-    return bad("ให้อันดับไม่ซ้ำกันครบทุกข้อ", "Give every item a different place.");
+    return bad("เรียงอันดับให้ครบทุกข้อ ห้ามซ้ำกัน", "Give every item a different place.");
   }
   return { ok: true, value: vals };
 }

@@ -12,7 +12,7 @@ export const FAMILY: Scenario[] = [
     icon: "🍲",
     tone: "afternoon",
     answers: {
-      BDMN: a("🛍️", "bang_phlat", "Round up the whole family for Chang Chui's newest pop-up stalls, grazing stall to stall on foot", "ชวนมาทั้งบ้านไปช่างชุ่ย เดินชิมร้านป๊อปอัปใหม่ ๆ ทีละร้าน"),
+      BDMN: a("🛍️", "bang_phlat", "Round up the whole family for Chang Chui's newest pop-up stalls, grazing stall to stall on foot", "ชวนทั้งบ้านไปช่างชุ่ย เดินชิมร้านป๊อปอัปใหม่ ๆ ทีละร้าน"),
       BDMH: a("🛶", "phasi_charoen", "Lead everyone along Khlong Bang Luang to Baan Silapin, lunch at a canal stall none of you know", "พาทุกคนเดินเลียบคลองบางหลวงไปบ้านศิลปิน กินข้าวร้านริมคลองที่ยังไม่มีใครรู้จัก"),
       BDSN: a("🍽️", "pathum_wan", "A big shared table at a restaurant that just opened in One Bangkok, every relative invited", "โต๊ะใหญ่ที่ร้านเพิ่งเปิดใหม่ในวัน แบงค็อก ชวนญาติมาให้ครบ"),
       BDSH: a("🍛", "ratchathewi", "The whole family at a halal khao mok shop in Ban Khrua none of you have tried", "ยกครอบครัวไปร้านข้าวหมกฮาลาลในบ้านครัวที่ยังไม่มีใครเคยลอง"),
@@ -76,7 +76,7 @@ export const FAMILY: Scenario[] = [
       CDMN: a("🚉", "bang_sue", "A flat, easy stroll with your grandparent through Krung Thep Aphiwat station hall, then a café there", "เดินสบาย ๆ ทางเรียบกับตายายในโถงสถานีกลางกรุงเทพอภิวัฒน์ แล้วแวะคาเฟ่ในนั้น"),
       CDMH: a("🧺", "lat_krabang", "A gentle walk with your grandparent around Hua Takhe old market, somewhere neither of you has been", "เดินช้า ๆ กับตายายในตลาดหัวตะเข้ ที่ที่ยังไม่เคยไปทั้งคู่"),
       CDSN: a("🪴", "sai_mai", "Tea and cake with your grandparent at a new garden café by Khlong Lat Phrao in Sai Mai", "จิบชากินเค้กกับตายายที่คาเฟ่สวนเปิดใหม่ริมคลองลาดพร้าว ย่านสายไหม"),
-      CDSH: a("⛵", "bangkok_noi", "The Royal Barges National Museum with your grandparent, a bench, and their own river stories", "พาตายายไปพิพิธภัณฑ์เรือพระราชพิธี นั่งม้านั่ง ฟังเรื่องแม่น้ำของท่าน"),
+      CDSH: a("⛵", "bangkok_noi", "The Royal Barges National Museum with your grandparent, a bench, and their own river stories", "พาตายายไปพิพิธภัณฑ์เรือพระราชพิธี นั่งม้านั่ง ฟังเรื่องแม่น้ำที่ตายายเล่า"),
       CFMN: a("🗿", "watthana", "The slow lap of Benjasiri Park's sculpture garden you and your grandparent always do", "เดินช้า ๆ รอบสวนประติมากรรมในสวนเบญจสิริ เส้นที่คุณกับตายายเดินประจำ"),
       CFMH: a("🌅", "bueng_kum", "Your grandparent's usual morning stroll round Seri Thai Park, you beside them, then their birthday breakfast", "เดินเช้าในสวนเสรีไทยเหมือนทุกวันของตายาย มีคุณเดินข้าง ๆ แล้วไปกินข้าวเช้าวันเกิด"),
       CFSN: a("🎞️", "chatuchak", "A film with your grandparent at Major Cineplex Ratchayothin, your usual seats, then cake in the mall", "ดูหนังกับตายายที่เมเจอร์ ซีนีเพล็กซ์ รัชโยธิน ที่นั่งประจำ แล้วไปกินเค้กในห้าง"),
@@ -139,7 +139,7 @@ export const FAMILY: Scenario[] = [
     id: "chosen-family",
     kind: "core",
     context: "family",
-    prompt: { en: "This holiday, the people you live with or your closest friends are your family. How do you spend it together?", th: "วันหยุดนี้ คนที่อยู่บ้านเดียวกันหรือเพื่อนสนิทคือครอบครัวของคุณ จะใช้เวลาด้วยกันยังไง?" },
+    prompt: { en: "This holiday, the people you live with or your closest friends are your family. How do you spend it together?", th: "วันหยุดนี้ใช้กับครอบครัวที่คุณเลือกเอง ทั้งเพื่อนร่วมบ้านหรือเพื่อนสนิท จะทำอะไรด้วยกันดี?" },
     icon: "🏡",
     tone: "evening",
     answers: {

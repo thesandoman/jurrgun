@@ -361,7 +361,7 @@ const t = (en: string, th: string): Text => ({ en, th });
 
 /** "Curious Night Owl" / "นกฮูกราตรีสายลองของใหม่". */
 export function vibeName(highlights: { category: Category; pole: Pole }[]): Text {
-  if (highlights.length === 0) return t("Bangkok All-Rounder", "สายกลางรอบด้านแห่งกรุงเทพฯ");
+  if (highlights.length === 0) return t("Bangkok All-Rounder", "คนกรุงเทพฯ สายรอบด้าน");
   const main = poleInfo(highlights[0].category, highlights[0].pole);
   if (highlights.length === 1) return t(`Bangkok ${main.noun.en}`, `${main.noun.th}แห่งกรุงเทพฯ`);
   const second = poleInfo(highlights[1].category, highlights[1].pole);

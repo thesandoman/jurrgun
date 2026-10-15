@@ -241,7 +241,7 @@ function PeopleClosed(props: { v: View; state: Exclude<PeopleState, { kind: "ope
         ) : (
           <p>
             {t(
-              "รายชื่อนี้ปิดแล้วหลังกิจกรรมจบ 72 ชั่วโมง ตัวเลือกที่ไม่ตรงกันจะหมดอายุไปเงียบ ๆ",
+              "รายชื่อนี้ปิดแล้ว (เปิดให้เลือกแค่ 72 ชั่วโมงหลังจบงาน) ตัวเลือกที่ไม่ตรงกันจะหายไปเงียบ ๆ",
               "This closed 72 hours after the event. Choices that weren't mutual have quietly expired.",
             )}
           </p>
@@ -266,7 +266,7 @@ function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; min
       </p>
       <Notice kind="info">
         {t(
-          "ตัวเลือกของคุณเป็นความลับ จะเกิดการเชื่อมต่อเมื่อเลือกตรงกันทั้งสองฝ่ายเท่านั้น ไม่มีใครได้รับแจ้งว่าคุณไม่ได้เลือกเขา",
+          "ตัวเลือกของคุณเป็นความลับ จะได้รู้จักกันต่อก็ต่อเมื่อเลือกกันทั้งสองฝ่าย ไม่มีใครได้รับแจ้งว่าคุณไม่ได้เลือกเขา",
           "Your choices are private. Only mutual choices create a connection. Nobody is ever told you didn't choose them.",
         )}
       </Notice>
@@ -611,7 +611,7 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
         ) : (
           <Tile href="/circles/lead" tone="brand">
             <span class="ico" aria-hidden="true">👑</span>
-            <h3>{t("นำวงของคุณเอง", "Lead a circle")}</h3>
+            <h3>{t("ตั้งวงของคุณเอง", "Lead a circle")}</h3>
           </Tile>
         )}
         <Tile href="/events">
@@ -681,7 +681,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         <Card>
           <Empty>
             {t(
-              "ยังไม่มีคนรู้จัก — ไปกิจกรรม แล้วเลือกคนที่อยากเจออีกภายใน 72 ชั่วโมงหลังงาน",
+              "ยังไม่มีคนรู้จัก ลองไปกิจกรรมสักงาน แล้วเลือกคนที่อยากเจออีกภายใน 72 ชั่วโมงหลังจบงาน",
               "No connections yet. Join an event, then choose who you'd like to meet again within 72 hours.",
             )}
           </Empty>
@@ -893,14 +893,14 @@ function ReportForm(props: { v: View; target: { accountId: string | null; eventI
         {t("คุณกำลังรายงาน: ", "You're reporting: ")}
         <strong>{props.target.name}</strong>
       </p>
-      <p class="muted">{t("อีกฝ่ายจะไม่รู้ว่าใครเป็นผู้รายงาน", "They won't be told who reported them.")}</p>
+      <p class="muted">{t("อีกฝ่ายจะไม่รู้ว่าใครรายงาน", "They won't be told who reported them.")}</p>
       {props.error ? <Notice kind="error">{props.error}</Notice> : null}
       <form method="post" action="/report">
         {props.target.accountId ? <input type="hidden" name="account" value={props.target.accountId} /> : null}
         {props.target.eventId ? <input type="hidden" name="event" value={props.target.eventId} /> : null}
         <Choices legend={t("เกิดอะไรขึ้น?", "What happened?")} name="reason" options={REPORT_REASON_LABELS} values={val.reason ? [val.reason] : []} lang={lang} type="radio" required />
         <TextArea label={t("รายละเอียด (ไม่บังคับ)", "Details (optional)")} name="details" value={val.details} rows={4} maxlength={1000} hint={t("ไม่เกิน 1000 ตัวอักษร", "Up to 1000 characters")} />
-        <Toggle name="unsafe" label={t("ฉันรู้สึกไม่ปลอดภัยตอนนี้", "I feel unsafe right now")} checked={val.unsafe === "1"} hint={t("ทีมงานจะเห็นรายงานนี้ก่อน", "Our team will see this first.")} />
+        <Toggle name="unsafe" label={t("ฉันรู้สึกไม่ปลอดภัยตอนนี้", "I feel unsafe right now")} checked={val.unsafe === "1"} hint={t("ทีมงานจะดูรายงานนี้ก่อนเรื่องอื่น", "Our team will see this first.")} />
         <Button kind="danger">{t("ส่งรายงาน", "Send report")}</Button>
       </form>
     </>

@@ -34,7 +34,7 @@ export const HELPLINES: Helpline[] = [
 
 /** What Jurrgun is, in one or two sentences. Shown on top of /learn; reuse it anywhere. */
 export const ABOUT = t(
-  "Jurrgun คือแอปพบปะผู้คนในกรุงเทพฯ ที่ช่วยให้คุณมีเพื่อนใหม่และรู้สึกเป็นส่วนหนึ่งของเมือง ผ่านกิจกรรมกลุ่มเล็ก โต๊ะอาหาร และการแฮงเอาต์ในที่จริง แบบทดสอบสั้น ๆ จะบอก ‘ไทป์กรุงเทพฯ’ ของคุณ เพื่อจัดให้นั่งกับคนที่น่าจะคลิกกัน ส่วนเรื่องหัวใจเป็นทางเลือก และเกิดขึ้นเมื่อทั้งสองฝ่ายต้องการเท่านั้น",
+  "Jurrgun คือแอปพบปะผู้คนในกรุงเทพฯ ที่ช่วยให้คุณมีเพื่อนใหม่และรู้สึกเป็นส่วนหนึ่งของเมือง ผ่านกิจกรรมกลุ่มเล็ก โต๊ะอาหาร และแฮงเอาต์ในสถานที่จริง แบบทดสอบสั้น ๆ จะบอก ‘ไทป์กรุงเทพฯ’ ของคุณ เพื่อจัดให้นั่งกับคนที่น่าจะคลิกกัน ส่วนเรื่องหัวใจเป็นทางเลือก และเกิดขึ้นเมื่อทั้งสองฝ่ายต้องการเท่านั้น",
   "Jurrgun is a social meetup app for Bangkok that helps you make friends and feel at home in the city through small group meetups, shared tables and hangouts. A short quiz gives you your Bangkok Type so we can seat you with people you'll click with; romance is optional, and only when both people want it.",
 );
 
@@ -72,8 +72,8 @@ export const TOPICS: Topic[] = [
   {
     slug: "dating-in-bangkok",
     icon: "🌆",
-    title: t("การเดตในกรุงเทพฯ", "Dating in Bangkok"),
-    summary: t("เมืองใหญ่ คนเยอะ แต่เจอคนที่ใช่ยาก — เคล็ดลับจากชีวิตจริงในกรุงเทพฯ", "A huge city that can still feel lonely — practical tips for meeting people here."),
+    title: t("การเดทในกรุงเทพฯ", "Dating in Bangkok"),
+    summary: t("เมืองใหญ่ คนเยอะ แต่เจอคนที่ใช่ยาก เคล็ดลับจากชีวิตจริงในกรุงเทพฯ", "A huge city that can still feel lonely — practical tips for meeting people here."),
     sections: [
       {
         heading: t("ทำไมเจอคนในกรุงเทพฯ ถึงยาก", "Why meeting people here can be hard"),
@@ -98,7 +98,7 @@ export const TOPICS: Topic[] = [
         heading: t("ความหลากหลายในเมืองของเรา", "A diverse city"),
         blocks: [
           p("กรุงเทพฯ มีผู้คนจากทุกภาค ทุกประเทศ ทุกเพศและทุกรสนิยม ตั้งแต่ 23 มกราคม 2568 ประเทศไทยรับรองการสมรสเท่าเทียม คู่รักทุกเพศอายุ 18 ปีขึ้นไปจดทะเบียนสมรสได้ที่สำนักงานเขต ใน Jurrgun ทุกคนได้รับการเคารพเท่ากัน", "Bangkok is home to people from every region, country, gender and orientation. Since 23 January 2025 Thailand recognises marriage equality — couples of any gender aged 18+ can register at any district office. On Jurrgun everyone gets the same respect."),
-          p("ถ้าคุณมาจากต่างประเทศ: วัฒนธรรมการเดตอาจต่างกัน — คนไทยหลายคนค่อย ๆ ทำความรู้จัก ให้ความสำคัญกับความสุภาพและครอบครัว ถามและฟังกันมากกว่าเดา", "If you're from abroad: dating culture may differ — many Thais take things slowly and value politeness and family. Ask and listen rather than assume."),
+          p("ถ้าคุณมาจากต่างประเทศ: วัฒนธรรมการเดทอาจต่างกัน — คนไทยหลายคนค่อย ๆ ทำความรู้จัก ให้ความสำคัญกับความสุภาพและครอบครัว ถามและฟังกันมากกว่าเดา", "If you're from abroad: dating culture may differ — many Thais take things slowly and value politeness and family. Ask and listen rather than assume."),
           tip("ไม่ต้องรีบ เพื่อนที่ดีหลายคนเริ่มจากการเจอกันในกลุ่มเล็ก ๆ", "No rush — many great relationships start as friends in a small group."),
         ],
       },
@@ -142,7 +142,7 @@ export const TOPICS: Topic[] = [
       {
         heading: t("ความยินยอมใน Jurrgun", "Consent on Jurrgun"),
         blocks: [
-          p("แอปของเราออกแบบบนหลักความยินยอม: คุณจะเชื่อมต่อกับใครได้ก็ต่อเมื่อเลือกตรงกันทั้งสองฝ่าย ไม่มีใครรู้ว่าคุณไม่ได้เลือกเขา และไม่มีการส่งข้อความหาคนแปลกหน้า", "The app is built on consent: you only connect when both people choose each other, nobody learns that you didn't choose them, and there are no cold messages."),
+          p("แอปของเราออกแบบบนหลักความยินยอม: คุณจะได้รู้จักใครต่อก็ต่อเมื่อเลือกตรงกันทั้งสองฝ่าย ไม่มีใครรู้ว่าคุณไม่ได้เลือกเขา และไม่มีการส่งข้อความหาคนแปลกหน้า", "The app is built on consent: you only connect when both people choose each other, nobody learns that you didn't choose them, and there are no cold messages."),
           p("การกดดัน ตามตื๊อ หรือสัมผัสโดยไม่ได้รับอนุญาตในกิจกรรม เป็นการละเมิดหลักปฏิบัติ — กด ‘รายงาน’ ได้ทันที หรือโทร 191 หากอยู่ในอันตราย", "Pressure, persistence or unwanted touching at an event breaks our code of conduct — use Report straight away, or call 191 if you're in danger."),
         ],
       },
@@ -219,7 +219,7 @@ export const TOPICS: Topic[] = [
   {
     slug: "date-responsibly",
     icon: "🛡️",
-    title: t("เดตอย่างปลอดภัยและรับผิดชอบ", "How to date responsibly"),
+    title: t("เดทอย่างปลอดภัยและรับผิดชอบ", "How to date responsibly"),
     summary: t("ดูแลตัวเอง เคารพอีกฝ่าย และรู้ทันมิจฉาชีพ", "Look after yourself, respect the other person, and spot scams."),
     sections: [
       {
@@ -273,7 +273,7 @@ export const TOPICS: Topic[] = [
     slug: "making-friends",
     icon: "👋",
     title: t("หาเพื่อนใหม่และแฮงเอาต์เป็นกลุ่ม", "Making friends in Bangkok"),
-    summary: t("เริ่มจากกลุ่มเล็ก ไปให้ถึง แล้วนัดกันต่อ มิตรภาพเกิดจากการเจอกันซ้ำ ๆ", "Start small, show up, follow up. Friendship grows from seeing people again."),
+    summary: t("เริ่มจากกลุ่มเล็ก ไปตามนัด แล้วนัดกันต่อ มิตรภาพเกิดจากการเจอกันซ้ำ ๆ", "Start small, show up, follow up. Friendship grows from seeing people again."),
     sections: [
       {
         heading: t("เริ่มจากเล็ก ๆ", "Start small"),
@@ -288,12 +288,12 @@ export const TOPICS: Topic[] = [
         ],
       },
       {
-        heading: t("ไปให้ถึง", "Show up"),
+        heading: t("ไปตามนัด", "Show up"),
         blocks: [
           list(
             ["ตื่นเต้นเป็นเรื่องปกติ คนอื่นในโต๊ะก็รู้สึกเหมือนกัน", "Feeling nervous is normal. Others at the table feel it too."],
             ["มาตรงเวลา ทักทาย บอกชื่อ และถามคำถามง่าย ๆ สักข้อ", "Arrive on time, say hello, share your name and ask one easy question."],
-            ["ให้โอกาสสองสามครั้ง ครั้งแรกอาจยังไม่คลิก ซึ่งไม่เป็นไร", "Give it a few tries. The first meetup might not click, and that's fine."],
+            ["ลองไปสักสองสามครั้ง ครั้งแรกอาจยังไม่คลิก ไม่เป็นไรเลย", "Give it a few tries. The first meetup might not click, and that's fine."],
             ["ถ้าไปไม่ได้ ยกเลิกในแอปล่วงหน้าอย่างน้อย 24 ชั่วโมง ที่นั่งจะได้ไปถึงคนอื่น", "If you can't make it, cancel in the app at least 24 hours ahead so someone else can take the seat."],
           ),
         ],
@@ -301,7 +301,7 @@ export const TOPICS: Topic[] = [
       {
         heading: t("นัดกันต่อ", "Follow up"),
         blocks: [
-          p("หลังกิจกรรม คุณมีเวลา 72 ชั่วโมงเลือกคนที่อยากติดต่อต่อแบบเป็นความลับ ถ้าเลือกตรงกันจึงจะเชื่อมต่อกัน", "After a meetup you have 72 hours to privately choose who you'd like to stay in touch with. You connect only if it's mutual."),
+          p("หลังกิจกรรม คุณมีเวลา 72 ชั่วโมงเลือกคนที่อยากติดต่อต่อแบบเป็นความลับ ถ้าเลือกตรงกันถึงจะได้รู้จักกันต่อ", "After a meetup you have 72 hours to privately choose who you'd like to stay in touch with. You connect only if it's mutual."),
           list(
             ["ส่งข้อความสั้น ๆ ภายในวันสองวัน พูดถึงสิ่งที่คุยกัน", "Send a short message within a day or two that mentions something you talked about."],
             ["ชวนแบบเจาะจง เช่น ‘เสาร์นี้ไปตลาดนัดกันไหม’ ง่ายกว่า ‘ว่าง ๆ เจอกันนะ’", "Suggest something specific. “Market on Saturday?” works better than “let's hang out sometime.”"],
@@ -502,11 +502,11 @@ export const TOPICS: Topic[] = [
   {
     slug: "inclusion",
     icon: "🤗",
-    title: t("ทุกคนมีที่นั่ง: ความหลากหลายและการเป็นส่วนหนึ่ง", "Inclusion and belonging"),
+    title: t("มีที่ให้ทุกคน: ความหลากหลายและการเป็นส่วนหนึ่ง", "Inclusion and belonging"),
     summary: t("ทุกเพศ ทุกวัย ทุกพื้นเพ ทุกความสามารถ ทุกศาสนา และทุกภาษา ยินดีต้อนรับ", "Every gender, age, background, ability, faith and language is welcome."),
     sections: [
       {
-        heading: t("ทุกคนยินดีต้อนรับ", "Everyone is welcome"),
+        heading: t("ยินดีต้อนรับทุกคน", "Everyone is welcome"),
         blocks: [
           p("Jurrgun เปิดให้ผู้ใหญ่ทุกคนในกรุงเทพฯ ไม่ว่าเพศ อายุ พื้นเพ ความสามารถ ศาสนา รสนิยม หรือภาษา ทุกคนได้รับความเคารพเท่ากัน และไทป์กรุงเทพฯ ไม่เคยใช้คัดใครออก", "Jurrgun is for every adult in Bangkok, whatever your gender, age, background, ability, faith, orientation or language. Everyone gets the same respect, and Bangkok Types are never used to leave anyone out."),
         ],
@@ -634,7 +634,7 @@ export const TOPICS: Topic[] = [
         heading: t("เรือ", "Boats"),
         blocks: [
           list(
-            ["เรือด่วนเจ้าพระยาแบ่งสายด้วยสีธง เรือธงส้มวิ่งทุกวันและจอดเกือบทุกท่า ธงอื่นส่วนใหญ่วิ่งช่วงเวลาเดินทางของวันธรรมดา ดูสีธงก่อนขึ้นเรือ", "Chao Phraya Express boats are coded by flag colour. The orange flag runs every day and stops at most piers; other flags mostly run at weekday commuting times. Check the flag before you board."],
+            ["เรือด่วนเจ้าพระยาแบ่งสายด้วยสีธง เรือธงส้มวิ่งทุกวันและจอดเกือบทุกท่า ธงอื่นส่วนใหญ่วิ่งเฉพาะชั่วโมงเร่งด่วนวันธรรมดา ดูสีธงก่อนขึ้นเรือ", "Chao Phraya Express boats are coded by flag colour. The orange flag runs every day and stops at most piers; other flags mostly run at weekday commuting times. Check the flag before you board."],
             ["เรือคลองแสนแสบ วิ่งตามแนวถนนเพชรบุรี จากท่าผ่านฟ้าลีลาศใกล้ภูเขาทองไปท่าประตูน้ำ แล้วเปลี่ยนลำต่อไปฝั่งตะวันออก หลบรถติดได้ดี", "The Khlong Saen Saep canal boat runs alongside Phetchaburi Road, from Panfa Leelard pier near the Golden Mount to Pratunam, where you change boats to continue east. A good way to skip traffic."],
             ["ขึ้นลงเรือช้า ๆ จับราวไว้ และเก็บโทรศัพท์ให้ดี", "Step on and off slowly, hold the rail and keep your phone secure."],
           ),
@@ -715,7 +715,7 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("นี่คือแอปหาคู่หรือเปล่า?", "Is this a dating app?"),
-    a: t("ไม่ใช่ เราเน้นเพื่อนใหม่เป็นหลัก โหมด ‘เปิดใจมากกว่าเพื่อน’ เป็นทางเลือกสำหรับคนโสดเท่านั้น และจะเชื่อมต่อก็ต่อเมื่อทั้งสองฝ่ายเลือกตรงกัน", "No — it's friends first. 'Open to something more' is optional, only for people who are single, and only connects you when both people choose it."),
+    a: t("ไม่ใช่ เราเน้นเพื่อนใหม่เป็นหลัก โหมด ‘เปิดใจมากกว่าเพื่อน’ เป็นทางเลือกสำหรับคนโสดเท่านั้น และจะได้รู้จักกันต่อก็ต่อเมื่อทั้งสองฝ่ายเลือกตรงกัน", "No — it's friends first. 'Open to something more' is optional, only for people who are single, and only connects you when both people choose it."),
   },
   {
     q: t("ใครใช้ได้บ้าง?", "Who can join?"),
@@ -731,7 +731,7 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("หลังกิจกรรมเกิดอะไรขึ้น?", "What happens after an event?"),
-    a: t("ภายใน 72 ชั่วโมง คุณเลือกได้ว่าอยากเป็นเพื่อนกับใครในกลุ่ม ถ้าเลือกตรงกันจะเชื่อมต่อกันและแลกช่องทางติดต่อได้ ถ้าไม่ตรงกัน จะไม่มีใครรู้", "For 72 hours you can privately choose who in your group you'd like to stay in touch with. If it's mutual you connect and can swap contacts. If not, nobody ever knows."),
+    a: t("ภายใน 72 ชั่วโมง คุณเลือกได้ว่าอยากเป็นเพื่อนกับใครในกลุ่ม ถ้าเลือกตรงกันจะได้เป็นคนรู้จักกันและแลกช่องทางติดต่อได้ ถ้าไม่ตรงกัน จะไม่มีใครรู้", "For 72 hours you can privately choose who in your group you'd like to stay in touch with. If it's mutual you connect and can swap contacts. If not, nobody ever knows."),
   },
   {
     q: t("มีแฟนหรือแต่งงานแล้ว ใช้ได้ไหม?", "I'm in a relationship — can I still join?"),
@@ -739,7 +739,7 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("พาเพื่อนไปด้วยได้ไหม?", "Can I bring a friend?"),
-    a: t("กิจกรรมที่ติดป้าย +1 ชวนเพื่อนได้ 1 คน เพื่อนต้องสมัครและ RSVP เอง แล้วเราจะจัดให้นั่งด้วยกัน", "Events marked +1 let you bring one friend. They sign up and RSVP too, and we'll seat you together."),
+    a: t("กิจกรรมที่ติดป้าย +1 ชวนเพื่อนได้ 1 คน เพื่อนต้องสมัครและลงทะเบียนเอง แล้วเราจะจัดให้นั่งด้วยกัน", "Events marked +1 let you bring one friend. They sign up and RSVP too, and we'll seat you together."),
   },
   {
     q: t("ถ้าไปไม่ได้ต้องทำอย่างไร?", "What if I can't make it?"),

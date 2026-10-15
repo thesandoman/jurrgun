@@ -249,7 +249,7 @@ hostRoutes.get("/host", async (c) => {
             </div>
             {e.status === "published" ? (
               <p class="muted" style="margin:6px 0 0">
-                {t("ต้องการแก้ไขหรือยกเลิกกิจกรรมที่เผยแพร่แล้ว ติดต่อทีมงาน", "To change or cancel a live event, contact the team.")}
+                {t("ถ้าอยากแก้ไขหรือยกเลิกกิจกรรมที่เผยแพร่แล้ว ติดต่อทีมงานได้เลย", "To change or cancel a live event, contact the team.")}
               </p>
             ) : null}
           </Card>
@@ -266,8 +266,8 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
   const { t, lang } = v;
   const tags = EVENT_TAGS.filter((x) => x.value !== "city_quest");
   const visOpts = [
-    { value: "public", th: "สาธารณะ — แสดงบนหน้าค้นหา", en: "Public — listed on Discover" },
-    { value: "private", th: "ส่วนตัว — เฉพาะคนที่มีลิงก์", en: "Private — only people with the link" },
+    { value: "public", th: "สาธารณะ: แสดงบนหน้าค้นหา", en: "Public — listed on Discover" },
+    { value: "private", th: "ส่วนตัว: เฉพาะคนที่มีลิงก์", en: "Private — only people with the link" },
   ];
   return (
     <form method="post" action={props.action}>
@@ -329,7 +329,7 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <TextArea label={t("จุดนัดพบและความปลอดภัย", "Meeting point and safety")} name="safetyInfo" value={d.safetyInfo} maxlength={1000} />
       </Card>
       <p class="muted">
-        {t("โดยการส่ง คุณยืนยันว่าจะดูแลผู้เข้าร่วมตาม", "By sending this you agree to look after your guests in line with the")} <a href="/code-of-conduct">{t("หลักปฏิบัติของชุมชน", "code of conduct")}</a>.
+        {t("เมื่อกดส่ง ถือว่าคุณยืนยันว่าจะดูแลผู้เข้าร่วมตาม", "By sending this you agree to look after your guests in line with the")} <a href="/code-of-conduct">{t("หลักปฏิบัติของชุมชน", "code of conduct")}</a>.
       </p>
       <div class="row end">
         <LinkButton href="/host" kind="ghost">

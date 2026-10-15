@@ -84,7 +84,7 @@ safetyRoutes.get("/safety", (c) => {
             <button type="button" class="btn ghost" data-act="line">LINE</button>
             <button type="button" class="btn ghost" data-act="sms">SMS</button>
           </div>
-          <small class="muted">🔒 {t("แผนนี้ไม่ถูกบันทึกในระบบ", "This plan is never saved on our side.")}</small>
+          <small class="muted">🔒 {t("เราไม่เก็บแผนนี้ไว้ในระบบ", "This plan is never saved on our side.")}</small>
         </form>
         <script dangerouslySetInnerHTML={{ __html: SHARE_JS }} />
       </Card>

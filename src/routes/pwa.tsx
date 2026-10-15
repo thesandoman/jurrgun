@@ -80,7 +80,7 @@ pwaRoutes.get("/offline", (c) => {
     <>
       <h1>{t("คุณออฟไลน์อยู่", "You're offline")}</h1>
       <p class="muted">
-        {t("ไม่มีการเชื่อมต่ออินเทอร์เน็ต ลองใหม่อีกครั้งเมื่อกลับมาออนไลน์", "There's no internet connection. Try again when you're back online.")}
+        {t("ไม่มีอินเทอร์เน็ต ต่อเน็ตได้แล้วค่อยลองใหม่นะ", "There's no internet connection. Try again when you're back online.")}
       </p>
       <p>
         <LinkButton href="/">{t("ลองใหม่", "Try again")}</LinkButton>

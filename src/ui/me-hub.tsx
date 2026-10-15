@@ -74,13 +74,13 @@ export function MeHub(props: {
       {pct < 100 ? (
         <section class="me-grow">
           <div class="me-grow-head">
-            <strong>{t(`โปรไฟล์ของคุณพร้อมแล้ว ${pct}%`, `Your profile is ${pct}% there`)}</strong>
+            <strong>{t(`โปรไฟล์ครบแล้ว ${pct}%`, `Your profile is ${pct}% there`)}</strong>
             <span aria-hidden="true">{pct < 50 ? "🌱" : "🌿"}</span>
           </div>
           <div class="me-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <i style={`width:${Math.max(pct, 6)}%`} />
           </div>
-          <p class="muted">{t("โปรไฟล์ที่ครบช่วยให้เราจัดโต๊ะให้คุณได้ดีขึ้น", "A fuller profile helps us seat you with the right people.")}</p>
+          <p class="muted">{t("ยิ่งโปรไฟล์ครบ เรายิ่งจัดโต๊ะให้เข้ากับคุณได้ดี", "A fuller profile helps us seat you with the right people.")}</p>
           <div class="me-todo">
             {todo.map((s) => (
               <a href={s.href}>+ {s.label}</a>
