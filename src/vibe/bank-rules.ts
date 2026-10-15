@@ -22,7 +22,7 @@ export const DISTRICT_KEYS = new Set(DISTRICTS.map((d) => d.value));
 
 /** Civic, political and religious-practice words (same list as the old quiz). */
 export const BANNED_EN =
-  /policy|policies|government|politic|vote|voting|election|ballot|budget|tax\b|taxes|rules?\b|regulat|law\b|cctv|surveillance|police|security guard|expert|resident|public money|subsid|campaign|party (?:member|leader|line|politics)|ideolog|religio|worship|monk|alms|merit|pray|LGBT|gender|income|salary|protest|candidate|parliament|minister|governor|BMA\b/i;
+  /policy|policies|government|politic|vote|voting|election|ballot|budget|tax\b|taxes|rules?\b|regulat|law\b|cctv|surveillance|police|security guard|expert|resident|public money|subsid|campaign|party (?:member|leader|line|politics)|ideolog|religio|worship|monk|alms|merit|pray(?:s|ed|ing|ers?)?\b|LGBT|gender|income|salary|protest|candidate|parliament|minister|governor|BMA\b/i;
 export const BANNED_TH = /การเมือง|เลือกตั้ง|โหวต|ลงคะแนน|ภาษี(?!เจริญ)|งบประมาณ|ตำรวจ|กล้องวงจรปิด|ศาสนา|ไหว้พระ|ตักบาตร|ทำบุญ|พรรค|รัฐบาล|นโยบาย|กฎหมาย|ผู้ว่า|ประท้วง|รายได้|เงินเดือน/;
 /** Gendered words: every answer has to work for anyone. */
 export const GENDERED_EN = /\b(he|she|him|her|his|hers|himself|herself|boyfriend|girlfriend|husband|wife|guys|girls|boys|ladies|gentlemen|mom|dad|mum)\b/i;
@@ -46,7 +46,7 @@ export const ROMANCE_TH = /เดต|(?<!กา)แฟน|คู่รัก|ค
 export const ROMANCE_ICONS = /💘|💞|💕|💖|💗|💓|❤️|❤|💍|🌹|💋|😍|🥰/u;
 
 /** Polite particles: the app has no gender, so none at all (ครับ and ค่ะ are in GENDERED_TH). */
-export const POLITE_TH = /คะ(?=\s|$|[?!…])|จ้ะ|จ้า(?=\s|$)/;
+export const POLITE_TH = /(?<!โย)คะ(?=\s|$|[?!…])|จ้ะ|จ้า(?=\s|$)/;
 
 /**
  * The quiz review (design/reference/quiz-review.md, rule 1): show a letter

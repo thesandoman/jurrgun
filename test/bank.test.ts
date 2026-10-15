@@ -90,6 +90,14 @@ describe("quiz bank", () => {
     expect(answerSense("x", "CFSH", "core", "Your stool at a stall you've never tried", "x").join()).toContain("F answer reads as a first");
   });
 
+  it("no false alarms on yoga or Wat Prayun, while the real words still fail", async () => {
+    const { BANNED_EN, POLITE_TH } = await import("../src/vibe/bank-rules");
+    expect(POLITE_TH.test("โยคะ ริมสวนเบญจกิติ")).toBe(false);
+    expect(POLITE_TH.test("ไปด้วยกันไหมคะ ")).toBe(true);
+    expect(BANNED_EN.test("The turtle mound garden at Wat Prayun")).toBe(false);
+    for (const en of ["pray", "praying at the shrine", "a prayer"]) expect(BANNED_EN.test(en), en).toBe(true);
+  });
+
   it("the letter hints see the word café", async () => {
     const { HINT_EN } = await import("../src/vibe/bank-rules");
     for (const L of ["S", "N"]) expect(HINT_EN[L].test("A quiet café by the canal"), L).toBe(true);
