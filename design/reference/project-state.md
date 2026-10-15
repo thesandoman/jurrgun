@@ -21,6 +21,10 @@ All chats share one Mac. Running renders and test suites at the same time pushed
 - **Light work is fine anytime:** reading, writing and editing.
 - **When a chat finishes its heavy step,** it tells Branding, and Branding starts the next one.
 
+## Routing rule (owner, 10-15)
+
+Every website, UI or UX issue any chat finds goes to the **UI/UX chat** (local_d46a0791), not Branding. Branding keeps the quiz queue, the other tasks and coordination.
+
 ## Decisions in force
 
 | # | Decision | Given in | Date |
