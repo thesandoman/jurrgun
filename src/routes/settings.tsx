@@ -107,6 +107,7 @@ import {
 } from "../schema";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
 import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
+import { myTables } from "../services/regular-tables";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, withGenderSelf } from "./onboarding";
 import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
@@ -161,7 +162,7 @@ settingsRoutes.get("/settings", async (c) => {
   const p = user.profile!;
   const db = getDb(c.env);
   const now = new Date();
-  const [src, vibe, [been], [upcoming], [circle]] = await Promise.all([
+  const [src, vibe, [been], [upcoming], [circle], tables] = await Promise.all([
     photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
     db.select({ n: count() }).from(registrations).where(and(eq(registrations.accountId, user.account.id), isNotNull(registrations.checkedInAt))),
@@ -175,6 +176,8 @@ settingsRoutes.get("/settings", async (c) => {
       .select({ n: count(), crews: countDistinct(connections.eventId) })
       .from(connections)
       .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
+    // People can sit at several regular tables; the count gets its own tile.
+    myTables(db, user.account.id),
   ]);
   const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, user.account.id)).limit(1);
   const dates = dating?.mode === "dating" || dating?.mode === "dating_only";
@@ -281,6 +284,7 @@ settingsRoutes.get("/settings", async (c) => {
           href: "/connections",
           tint: "teal",
         },
+        { emoji: "🪑", n: tables.length, label: t("โต๊ะประจำ", tables.length === 1 ? "Table" : "Tables"), href: "/tables", tint: "sky" },
         { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events", tint: "lime" },
       ]}
       steps={steps}
@@ -293,7 +297,6 @@ settingsRoutes.get("/settings", async (c) => {
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
           : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table"), hint: t("ขอเป็นเจ้าภาพโต๊ะเพื่อจัดแฮงเอาต์", "Ask to become a Table Host and run hangouts"), tint: "lime" as const, group: gOut },
-        { href: "/tables", emoji: "🪑", title: t("โต๊ะประจำของฉัน", "My regular tables"), hint: t("กลุ่มเล็ก ๆ ที่นัดเจอกันบ่อย ๆ", "Small groups that keep meeting"), tint: "teal" as const, group: gOut },
         ...(dates
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดตแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),

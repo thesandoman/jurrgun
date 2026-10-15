@@ -181,7 +181,9 @@ export function ProfileCard(props: {
   // "Lives in Bangkok" is the default; the others are worth knowing at a table.
   const res = RESIDENCY.find((x) => x.value === bio.residency && x.value !== "lives");
   if (res) facts.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
-  if (props.regularAt?.length) facts.push(["🪑", t("ขาประจำที่", "Regular at"), props.regularAt.join(", ")]);
+  // Several tables read better as a count and one chip each than as a long comma line.
+  const tableCount = props.regularAt?.length ?? 0;
+  if (tableCount === 1) facts.push(["🪑", t("ขาประจำที่", "Regular at"), props.regularAt![0]]);
   if (bio.hometown) facts.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
   facts.push(...reflectionFacts(bio.reflections, lang, t));
   if (bio.guide) facts.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
@@ -244,7 +246,7 @@ export function ProfileCard(props: {
 
       {slot()}
 
-      {intents.length || facts.length ? (
+      {intents.length || facts.length || tableCount > 1 ? (
         <section class="pc-sec">
           {intents.length ? (
             <>
@@ -267,6 +269,18 @@ export function ProfileCard(props: {
                 </div>
               ))}
             </dl>
+          ) : null}
+          {tableCount > 1 ? (
+            <>
+              <h2 class="pc-tables-h">
+                <span aria-hidden="true">🪑</span> {t(`ขาประจำ ${tableCount} โต๊ะ`, `Regular at ${tableCount} tables`)}
+              </h2>
+              <div class="pc-chips">
+                {props.regularAt!.map((name) => (
+                  <span class="pc-chip">{name}</span>
+                ))}
+              </div>
+            </>
           ) : null}
         </section>
       ) : null}

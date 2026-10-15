@@ -476,7 +476,30 @@ type CircleRow = {
   graduated?: boolean;
   /** I've already sent this person a thank-you note for this connection. */
   iThanked?: boolean;
+  /** Other events where we chose each other: one card per person, not per meeting. */
+  alsoMet?: { id: string; title: string; startsAt: Date }[];
 };
+
+/**
+ * One card per person (owner: no repeats). Rows come newest first, so the
+ * newest meeting leads; earlier ones are listed under "Also met at", and a
+ * contact shared at any of them carries over.
+ */
+function onePerPerson(rows: CircleRow[]): CircleRow[] {
+  const byPerson = new Map<string, CircleRow>();
+  for (const r of rows) {
+    const first = byPerson.get(r.other.id);
+    if (!first) {
+      byPerson.set(r.other.id, { ...r, alsoMet: [] });
+      continue;
+    }
+    if (r.event) first.alsoMet!.push(r.event);
+    first.mine ??= r.mine;
+    first.theirs ??= r.theirs;
+    first.graduated ||= r.graduated;
+  }
+  return [...byPerson.values()];
+}
 
 async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInfo }> {
   const db = getDb(c.env);
@@ -537,7 +560,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
     });
   }
   await markGraduations(c, out);
-  return { rows: out, myVibe: vibeMap.get(me) };
+  return { rows: onePerPerson(out), myVibe: vibeMap.get(me) };
 }
 
 /** Meets with someone: shared events (one connection row each) plus buddy quests finished together. */
@@ -808,6 +831,11 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
             <p class="muted">
               {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : r.buddy ? t("🤝 บัดดี้กรุงเทพฯ", "🤝 Bangkok Buddy") : ""} · {label(CHOICE_LABELS, r.level, lang)}
             </p>
+            {r.alsoMet?.length ? (
+              <p class="muted">
+                {t("เจอกันที่", "Also met at")}: {r.alsoMet.map((e) => `${e.title} · ${fmtDay(e.startsAt, lang)}`).join(", ")}
+              </p>
+            ) : null}
             {r.graduated ? (
               <p class="grad">🎓 {t("คุณสองคนไม่ต้องพึ่งเราแล้ว ยินดีด้วย!", "You two don't need us anymore. Congrats!")}</p>
             ) : null}
@@ -832,10 +860,13 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
                 </form>
               </details>
             )}
-            <p class="chips2">
-              <span>{t("คุณแชร์", "You shared")}: {r.mine ? `${method(r.mine.method)} ${r.mine.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
-              <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
-            </p>
+            {/* Only once something is shared: "nothing yet" twice on every card was noise. */}
+            {r.mine || r.theirs ? (
+              <p class="chips2">
+                <span>{t("คุณแชร์", "You shared")}: {r.mine ? `${method(r.mine.method)} ${r.mine.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
+                <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
+              </p>
+            ) : null}
             {props.error?.id === r.id ? <Notice kind="error">{props.error.text}</Notice> : null}
             <details class="how" open={props.error?.id === r.id}>
               <summary>{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</summary>
@@ -935,18 +966,26 @@ peopleRoutes.post("/connections/:id/remove", requireMember, async (c) => {
   const found = await myConnection(c, c.req.param("id"));
   if (!found) return c.text("Not found", 404);
   const db = getDb(c.env);
-  const { row, me, other } = found;
+  const { me, other } = found;
+  // One card per person, so Remove removes every connection with them.
+  const all = await db
+    .select({ id: connections.id, eventId: connections.eventId })
+    .from(connections)
+    .where(and(or(and(eq(connections.aAccount, me), eq(connections.bAccount, other)), and(eq(connections.aAccount, other), eq(connections.bAccount, me))), isNull(connections.removedAt)))
+    .limit(50);
   await batch(c.env, [
-    db.update(connections).set({ removedAt: new Date() }).where(and(eq(connections.id, row.id), isNull(connections.removedAt))),
+    db.update(connections).set({ removedAt: new Date() }).where(and(inArray(connections.id, all.map((x) => x.id)), isNull(connections.removedAt))),
     // My choice becomes "none", so a later save by the other person can't quietly bring it back.
-    db
-      .insert(connectionChoices)
-      .values({ id: newId(), eventId: row.eventId, fromAccount: me, toAccount: other, choice: "none" })
-      .onConflictDoUpdate({
-        target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount],
-        set: { choice: "none" },
-      }),
-    audit(db, me, "connection.remove", { type: "connection", id: row.id }),
+    ...all.map((x) =>
+      db
+        .insert(connectionChoices)
+        .values({ id: newId(), eventId: x.eventId, fromAccount: me, toAccount: other, choice: "none" })
+        .onConflictDoUpdate({
+          target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount],
+          set: { choice: "none" },
+        }),
+    ),
+    ...all.map((x) => audit(db, me, "connection.remove", { type: "connection", id: x.id })),
   ]);
   return c.redirect("/connections?notice=done");
 });

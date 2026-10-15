@@ -148,6 +148,9 @@ main details.more-menu{position:relative;margin:0;padding:0;border:0;background:
 .pf-clear input{width:22px;height:22px;margin:0}
 /* Me: the stat tiles line up (the playful offset read as broken). */
 .me-stat:nth-child(2){transform:none}
+/* Four tiles (events, people, tables, coming up): 2 by 2 on phones, one row on wider screens. */
+main nav.me-stats{grid-template-columns:repeat(2,1fr)}
+@media (min-width:680px){main nav.me-stats{grid-template-columns:repeat(4,1fr)}}
 /* Public profile on laptops: three wider fact columns instead of five narrow ones. */
 @media (min-width:900px){.pc-facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
