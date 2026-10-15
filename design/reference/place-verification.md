@@ -77,3 +77,68 @@ Checked in the worktrees and OK: Lumpinee Boxing Stadium on Ram Inthra → `bang
 **Well-known geography, district correct, not individually searched:** Phra Nakhon: Santichaiprakarn Park, Khlong Ong Ang, Pak Khlong Talat, Sanam Luang, Khao San/Rambuttri, Phahurat/Little India, Phraeng Phuthon, Museum Siam, Loha Prasat, Bang Lamphu, Giant Swing. Dusit: Wat Benchamabophit. Pom Prap: Nang Loeng Market, Golden Mount and its fair, Rajadamnern Stadium, Bobae. Bang Rak: Charoenkrung galleries, TCDC Grand Postal Building, Silom Soi 4, MahaNakhon SkyWalk. Pathum Wan: Lumphini, BACC, Chula Centenary Park, Siam Square, Samyan Mitrtown, CentralWorld, One Bangkok, Jim Thompson House, Banthat Thong. Samphanthawong: Yaowarat, Talat Noi, Song Wat, Sampeng, Wat Mangkon. Phaya Thai: Ari, Saphan Khwai. Ratchathewi: Victory Monument boat noodles, Pratunam, Ban Khrua, Santiphap Park. Thon Buri: Talat Phlu, Kudi Chin. Bangkok Yai: Wat Arun riverside, Khlong Bangkok Yai. Bangkok Noi: Wang Lang, Royal Barges Museum. Khlong San: ICONSIAM/SookSiam, Lhong 1919, The Jam Factory, Charoen Nakhon. Taling Chan: floating market, Khlong Lat Mayom. Phasi Charoen: Baan Silapin and Khlong Bang Luang. Bang Phlat: Chang Chui, Rama VIII Thonburi end. Huai Khwang: Thailand Cultural Centre, RCA, Huai Khwang night market. Din Daeng: flats street food. Bueng Kum: Seri Thai Park. Sathon: Wat Yannawa, Chong Nonsi Canal Park, rooftops. Chatuchak: Krung Thep Aphiwat, Chatuchak Market, Rot Fai Park, Major Ratchayothin/Blu-O, Union Mall. Bang Sue: Bang Pho, Rama VII riverside. Bang Kho Laem: Asiatique, Charoen Krung 103. Prawet: Suan Luang Rama IX, Seacon Square, Ramkhamhaeng 2. Khlong Toei: Benjakitti, Benjasiri, Khlong Toei Market, EmSphere. Watthana: EmQuartier, The Commons, Terminal 21 Asok, Thonglor/Ekkamai. Suan Luang: Wat Mahabut/Mae Nak, On Nut canal. Chom Thong: Wat Ratchaorasaram, Bang Mot orchards. Don Mueang: RTAF Museum. Lak Si: Wat Lak Si, IT Square. Khan Na Yao: Siam Amazing Park, Fashion Island/The Promenade. Khlong Sam Wa: Safari World. Bang Na: BITEC, Udom Suk. Thung Khru: KMUTT Bang Mot. Bang Kapi: Rajamangala, Ramkhamhaeng University, The Mall Bang Kapi, Saen Saep pier. Nong Chok: Bangkok Arena, Khlong Sip Si farms. Min Buri: old market, Saen Saep communities. Lat Krabang: Hua Takhe. Bang Khae: Bang Khae market. Rat Burana: Wat Bang Pakok, Suk Sawat. Phra Khanong: True Digital Park, Wat Thammamongkhon. Bang Khun Thian: mangrove path. Bang Khen: Wat Phra Si Mahathat. Archetype spots outside Bangkok are labelled correctly: Bang Krachao is in Samut Prakan, and Chao Phraya Sky Park spans Phra Nakhon and Khlong San.
 
 **Seeds** (`scripts/seed*.ts`): all OK. MRT Wat Mangkon Exit 1 / Samphanthawong, MRT Sanam Chai / Phra Nakhon, BTS Ari / Phaya Thai, TCDC and Charoen Krung Soi 32 / Bang Rak, Benjakitti / Khlong Toei, BACC and Lumphini / Pathum Wan, BTS Victory Monument / Ratchathewi. **constants.ts VISITBANGKOK_ROUTES**: all OK. The Charoenkrung–Talat Noi route spans Bang Rak and Samphanthawong, and `bang_rak` is acceptable.
+
+---
+
+## Follow-up 1: Wang Thonglang places (added 2026-10-15)
+
+Background: Wat Thepleela is in Hua Mak, Bang Kapi (M1), so Wang Thonglang currently has no correctly keyed answers. Wang Thonglang has few sights. These are the places I could confirm with an address inside the district.
+
+| # | Thai / English | Where (official address) | Open? | Fits these moments | Conf. | Source |
+|---|---|---|---|---|---|---|
+| WT1 | พิพิธภัณฑ์เจ้าพระยาบดินทรเดชา (สิงห์ สิงหเสนี) / Chao Phraya Bodindecha (Sing Singhaseni) Museum | Inside Bodindecha (Sing Singhaseni) School, 40 Soi Ramkhamhaeng 43/1, Phlapphla, **Wang Thonglang** 10310 | Listed daily 09:00–16:00, free. **Call ahead (02-514-1403), because it's inside a working school.** One article wrongly gives the subdistrict as "ทรายกองดิน"; I went with the listing above. | Heritage: a quiet visit, teak Thai houses and a garden, taking a visiting friend or a grandparent. Not a late-night spot. | high (district), medium (walk-in access) | [Love Thailand listing](https://www.lovethailand.org/travel/en/17-Bangkok/893-Chao-Phraya-Bodindecha-(Sing-Singhaseni)-Museum.html), [Thai Holiday Guide](https://www.thaiholidayguide.com/attraction/chao-phraya-bodindecha-sing-singhaseni-museum/) |
+| WT2 | ถนนศรีวรา ย่านทาวน์อินทาวน์ / Sriwara Road, Town in Town | Sriwara Rd, Phlapphla, **Wang Thonglang** (e.g. 1213/567 Sriwara Rd) | A living neighbourhood strip of boat-noodle, family seafood, grill, salad and dessert shops, plus The Scene and Park Town in Town (Lotus's) community malls | Food (noodles, seafood, jim jum, grill), a regular table, meeting a friend, a team lunch, an early jok, a new café | high | [Wongnai: Golden Boat Noodles, Sriwara Rd, Phlapphla, Wang Thonglang](https://www.wongnai.com/restaurants/184578wM-%E0%B8%81%E0%B9%8B%E0%B8%A7%E0%B8%A2%E0%B9%80%E0%B8%95%E0%B8%B5%E0%B9%8B%E0%B8%A2%E0%B8%A7%E0%B9%80%E0%B8%A3%E0%B8%B7%E0%B8%AD%E0%B8%97%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B8%B3%E0%B8%A1%E0%B8%B2-%E0%B8%97%E0%B8%B2%E0%B8%A7%E0%B8%99%E0%B9%8C%E0%B8%AD%E0%B8%B4%E0%B8%99%E0%B8%97%E0%B8%B2%E0%B8%A7%E0%B8%99%E0%B9%8C%E0%B8%8B%E0%B8%AD%E0%B8%A2-11), [Wongnai: Town in Town Seafood](https://www.wongnai.com/restaurants/townintownseafood/reviews) |
+| WT3 | สวนสาธารณะวังทอง 1 / Wang Thong 1 Public Park | Between Soi Lat Phrao 71 and 73, **Wang Thonglang** (district office 02-538-5350) | Daily 05:00–19:00 | A calm walk or jog, a dawn or dusk loop, a slow stroll with a parent | medium (only one listing found) | [Love Thailand](https://www.lovethailand.org/travel/en/17-Bangkok/4703-Wang-Thong1-Public-Park.html) |
+| WT4 | ศูนย์การเรียนรู้การจัดการด้านสิ่งแวดล้อมที่ยั่งยืน เขตวังทองหลาง / Wang Thonglang environmental learning centre garden (7 rai) | Soi Ramkhamhaeng 43/1, **Wang Thonglang**, next to WT1 | Open to the public for exercise and rest | A short quiet walk. Pairs with WT1. | medium | [Daily News](https://www.dailynews.co.th/news/1892520/) |
+| WT5 | ร้านกาแฟย่านลาดพร้าว 87 / cafés on Lat Phrao Soi 87 (e.g. Zen Cafe by Zen No.14) | Lat Phrao 87, Phlapphla, **Wang Thonglang** | A single shophouse café, so it could close. Write "a café on Lat Phrao 87", not the shop's name. | A café, meeting one friend | medium | [Wongnai](https://www.wongnai.com/restaurants/190116gQ-zen-cafe-by-zen-no-14-%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%A7-87) |
+
+What I could not find:
+- **A named market.** I found no verified market inside Wang Thonglang. Don't move Chokchai 4 back here: the owner keyed it Lat Phrao and its address is unconfirmed.
+- **Lat Phrao 101** is a **border road** between Wang Thonglang and Bang Kapi (official district map). The main bank keys it `bang_kapi`, which is defensible, so leave it.
+- The **Liab Duan Ekkamai–Ram Inthra** strip may be in Bueng Kum, so don't use it.
+
+## Follow-up 2: replacing the Khlong Phasi Charoen boat (added 2026-10-15)
+
+No public scheduled boat runs on Khlong Phasi Charoen today (M4). Here is what does run in that part of Thonburi:
+
+| # | Thai / English | District | Runs today? | Fits | Conf. | Source |
+|---|---|---|---|---|---|---|
+| PC1 | บ้านศิลปิน คลองบางหลวง / Baan Silapin (Artist's House), Khlong Bang Luang | 309 Soi Phetkasem 28, Khuha Sawan, **Phasi Charoen** | Yes. Free Kham Nai puppet show; check show days on its Facebook. Busiest at weekends, when the **weekend floating market at Wat Kamphaeng** is on. Private long-tails still use the canal. | Discovery with kids or cousins (BDMH), heritage, a canal walk | high | [Time Out](https://www.timeout.com/bangkok/th/attractions/บ้านศิลปินคลองบางหลวง), [Naewna](https://www.naewna.com/lady/765713) |
+| PC2 | MRT บางไผ่ → ซอยเพชรเกษม 20 → คลองบางหลวง / MRT Bang Phai to the Khlong Bang Luang lanes | **Phasi Charoen** | Yes. Blue Line Bang Phai Exit 4, then Soi Phetkasem 20 on foot or by motorbike taxi | "Getting there" framing for the canal-lane answers, replacing "hop off a long-tail" | medium-high | [TrueID](https://travel.trueid.net/detail/0NgPqKoGBAbJ) |
+| PC3 | เรือด่วนเจ้าพระยา / Chao Phraya Express Boat | river piers in Bangkok Noi and Thon Buri (e.g. Wang Lang/Prannok), not in Phasi Charoen | Yes. Since 30 March 2026 the **orange flag runs weekdays only**, and the yellow flag covers daytime and weekends. Use "the river boat", not a flag colour. | Only for Bangkok Noi or Thon Buri answers. It doesn't reach Phasi Charoen. | medium-high | [Little Big Red Dot](https://littlebigreddot.com/chao-phraya-express-boat-routes-fares/), [THAIest](https://thaiest.com/thailand/bangkok/orange-flag-boat) |
+| PC4 | สวนบางแคภิรมย์ / Bang Khae Phirom Park | **Bang Khae** | It exists and is a BMA park; I didn't find its hours | A replacement Bang Khae landmark: a calm walk | medium | [Research article, Burapha Univ. journal](https://so01.tci-thaijo.org/index.php/humanjubru/article/view/270412) |
+
+Note: the BMA's planned school-boat and taxi-boat pilot (Bang Wa BTS → Wat Paknam Phasi Charoen → Talat Phlu → Khlong Bang Luang) has **no launch date** as of July 2026. Don't write it in as running.
+
+## Exact replacements, line by line
+
+These are suggested texts. The quiz owner should run `scripts/check-bank.ts` after pasting them. The new names may need entries in `PLACE_PAIRS` in `bank-rules.ts`: `[/Sriwara|Town in Town/, "ศรีวรา|ทาวน์อินทาวน์"]`, `[/Bodindecha/, "บดินทรเดชา"]`, `[/Wat Kamphaeng/, "วัดกำแพง"]`, `[/Bang Phai/, "บางไผ่"]`, `[/Bang Khae Phirom/, "บางแคภิรมย์"]`. Remove `[/Thepleela/, …]` if no answer uses it any more.
+
+**The 3 boat lines**
+1. `src/vibe/landmarks.ts:107` →
+   `l("bang_khae", "Bang Khae Phirom Park", "สวนบางแคภิรมย์"),`
+2. `src/vibe/bank/family.ts:99` (BDMH, phasi_charoen) →
+   `a("🎭", "phasi_charoen", "A gang of cousins at the weekend market by Wat Kamphaeng on Khlong Bang Luang, then the puppet show at Baan Silapin, new to all of you", "แก๊งลูกพี่ลูกน้องเดินตลาดวันหยุดริมคลองบางหลวงแถววัดกำแพง แล้วไปดูหุ่นละครเล็กที่บ้านศิลปิน ที่ใหม่สำหรับทุกคน")`
+3. `src/vibe/bank/friends-solo.ts:100` (BDMH, phasi_charoen) →
+   `a("🛶", "phasi_charoen", "Hop off the MRT at Bang Phai and walk the shady Khlong Bang Luang lanes to Wat Kamphaeng, chatting with whoever comes along", "ลง MRT บางไผ่ แล้วเดินซอยร่ม ๆ ริมคลองบางหลวงไปวัดกำแพง คุยกับใครก็ได้ที่เดินไปด้วย")`
+
+**Wang Thonglang** (each keeps its type letters and `wang_thonglang`)
+4. `src/vibe/landmarks.ts:102` →
+   `l("wang_thonglang", "the Sriwara Road food shops in Town in Town", "ร้านอาหารถนนศรีวรา ย่านทาวน์อินทาวน์"),`
+   Optionally add `l("bang_kapi", "Wat Thepleela and its Khlong Saen Saep pier", "วัดเทพลีลาและท่าเรือคลองแสนแสบ"),` and drop `verify`.
+   Also add `l("wang_thonglang", "Wang Thong 1 Public Park", "สวนสาธารณะวังทอง 1"),`
+5. `src/vibe/bank/classic.ts:58` (CFSH, visiting friend) →
+   `a("🏛️", "wang_thonglang", "A quiet look round the Chao Phraya Bodindecha house museum, then lunch at your usual old noodle shop on Sriwara Road", "เดินชมพิพิธภัณฑ์บ้านเจ้าพระยาบดินทรเดชาเงียบ ๆ แล้วไปกินมื้อเที่ยงที่ร้านก๋วยเตี๋ยวเก่าเจ้าประจำบนถนนศรีวรา")`
+   (The museum is in a school, so this suits a weekday visit; the answer doesn't name a day.)
+6. `src/vibe/bank/classic.ts:160` (BFSH, cool evening after a storm) →
+   `a("🍲", "wang_thonglang", "The usual crowd at the Sriwara Road seafood tables in Town in Town, a big pot of jim jum for the table", "ร้านประจำคนแน่นริมถนนศรีวรา ย่านทาวน์อินทาวน์ สั่งจิ้มจุ่มหม้อใหญ่มาแบ่งกันทั้งโต๊ะ")`
+7. `src/vibe/bank/family.ts:132` (BFSH, siblings' weekend) →
+   `a("🔥", "wang_thonglang", "The whole sibling crew at the usual grill shop on Sriwara Road, same big table, same grilled dishes", "พี่น้องทั้งแก๊งไปร้านปิ้งย่างประจำบนถนนศรีวรา โต๊ะใหญ่เดิม ของปิ้งย่างเดิม")`
+8. `src/vibe/bank/friends-solo.ts:80` (CDSN, weekend plan) →
+   `a("🪴", "wang_thonglang", "A just-opened café on Lat Phrao 87, only a couple of you and a long talk", "คาเฟ่เพิ่งเปิดในซอยลาดพร้าว 87 ไปกันแค่สองสามคน คุยกันยาว ๆ")`
+9. `src/vibe/bank/rhythm.ts:139` (CFSH, flavour −1, mornings) →
+   `a("🥣", "wang_thonglang", "Your usual 7 am jok with one old friend at the same stall on Sriwara Road, then a slow lap of Wang Thong 1 park", "โจ๊ก 7 โมงเช้ากับเพื่อนเก่าคนหนึ่งที่ร้านเจ้าประจำบนถนนศรีวรา แล้วเดินช้า ๆ รอบสวนวังทอง 1", -1)`
+10. `src/vibe/bank/party-meetup-work.ts:244` (BFSH, new coworker's lunch) →
+   `a("🍲", "wang_thonglang", "The team's regular table at an old shop on Sriwara Road, everyone ordering the usual", "โต๊ะประจำของทีมที่ร้านเก่าบนถนนศรีวรา ทุกคนสั่งเมนูเดิม")`
+
+Wang Thonglang goes back to 6 answers. Five lean on Sriwara Road, which is the district's real food strip. If the quiz chat wants more variety, swap one of them for WT3 (park) or WT4 (garden walk).
