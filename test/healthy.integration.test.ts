@@ -102,7 +102,11 @@ describe.skipIf(!HAS_DB)("healthy limits", () => {
     const m = await createMember();
     // Rhythm 1: the second RSVP in a week asks first.
     await req("/settings/habits", { cookie: m.cookie, form: { rhythm: "1" } });
-    const base = Date.now() + 10 * DAY;
+    // A Wednesday at noon Bangkok time, at least 10 days out, so both hangouts fall in the same week whatever day the test runs.
+    const wed = new Date(Date.now() + 10 * DAY);
+    wed.setUTCHours(5, 0, 0, 0);
+    wed.setUTCDate(wed.getUTCDate() + ((3 - wed.getUTCDay() + 7) % 7));
+    const base = wed.getTime();
     const e1 = await event({ startsAt: new Date(base) });
     const e2 = await event({ startsAt: new Date(base + 3600_000 * 3) });
     expect((await req(`/events/${e1}/rsvp`, { cookie: m.cookie, form: { go: "1" } })).status).toBe(302);
