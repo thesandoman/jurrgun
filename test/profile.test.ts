@@ -5,6 +5,7 @@
 import { ADULT_EN, ADULT_TH, GENDERED_EN, GENDERED_TH } from "../src/vibe/bank-rules";
 import { describe, expect, it } from "vitest";
 import {
+  cleanBio,
   ALL_INTERESTS,
   COMM_STYLES,
   deckFor,
@@ -365,5 +366,13 @@ describe("validateAnswer", () => {
     const p = firstOf("photo");
     expect(validateAnswer(p, "Soi 38 at dusk")).toEqual({ ok: true, value: "Soi 38 at dusk" });
     expect(validateAnswer(p, "x".repeat(81)).ok).toBe(false);
+  });
+});
+
+describe("cleanBio", () => {
+  it("reads a bio stored as a JSON string as well as an object", () => {
+    expect(cleanBio('{"story":"local","comm":["texter"]}')).toEqual({ story: "local", comm: ["texter"] });
+    expect(cleanBio({ story: "local" })).toEqual({ story: "local" });
+    expect(cleanBio("not json")).toEqual({});
   });
 });

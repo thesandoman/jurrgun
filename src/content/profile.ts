@@ -1433,6 +1433,14 @@ export function rankFromPositions(p: Prompt, positions: Record<string, string>):
 
 /** Keep only well-formed fields of a stored bio (jsonb from the database). */
 export function cleanBio(raw: unknown): Bio {
+  // Some drivers hand jsonb back as a JSON string (seen with local wrangler dev); read it rather than lose the bio.
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
   if (!raw || typeof raw !== "object") return {};
   const b = raw as Record<string, unknown>;
   const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : undefined);
