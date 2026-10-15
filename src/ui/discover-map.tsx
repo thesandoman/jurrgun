@@ -379,7 +379,76 @@ if (query) applySearch();
 
 // Status card and "skip the map" open the events sheet.
 const sheet = document.getElementById("discover-sheet");
-for (const a of document.querySelectorAll('a[href="#discover-sheet"]')) a.addEventListener("click", (e) => { e.preventDefault(); sheet.open = true; sheet.querySelector("summary").focus(); });
+for (const a of document.querySelectorAll('a[href="#discover-sheet"]')) a.addEventListener("click", (e) => { e.preventDefault(); openSheet(); sheet.querySelector("summary").focus(); });
+
+/*
+ * The sheet moves like a physical drawer (src/ui/spring.ts, Apple's fluid
+ * interface rules): drag the handle and it follows 1:1, rubber-banding past
+ * the top; let go and the flick is projected forward to choose open or
+ * closed, with the finger's velocity handed to the spring. A tap springs it
+ * open or shut, and a sheet in motion can be grabbed again. Phones only; on
+ * a laptop it is a side panel. Reduced motion: it simply opens and closes.
+ */
+const M = window.jgMotion;
+const sum = sheet.querySelector("summary");
+const body = sheet.querySelector(".fd-sheet-body");
+const wide = () => matchMedia("(min-width: 1024px)").matches;
+let sy = 0, sAnim = null, sTo = 0, sDrag = null, swallow = false;
+const sTr = M.tracker();
+const H = () => body.offsetHeight || 1;
+const sPaint = () => { sheet.style.transform = sy ? "translate3d(0," + sy + "px,0)" : ""; };
+function settle(to, v, damping) {
+  sTo = to;
+  const done = () => { if (to > 0) { sheet.open = false; sy = 0; sPaint(); } };
+  sAnim?.stop();
+  if (M.still()) { sy = to; done(); return; }
+  sAnim = M.spring({ from: sy, to, velocity: v, damping, response: 0.3, onUpdate: (n) => { sy = n; sPaint(); }, onDone: done });
+}
+function liveV() { if (sAnim?.live) { const s = sAnim.stop(); sy = s.x; return s.v; } return 0; }
+function openSheet() { if (wide()) { sheet.open = true; return; } const v = liveV(); if (!sheet.open) { sheet.open = true; sy = H(); sPaint(); } settle(0, v, 1); }
+function closeSheet() { const v = liveV(); settle(H(), v, 1); }
+sum.addEventListener("click", (e) => {
+  if (wide()) return;
+  e.preventDefault();
+  if (swallow) { swallow = false; return; }
+  const opening = !sheet.open || (sAnim?.live && sTo > 0);
+  opening ? openSheet() : closeSheet();
+});
+sum.addEventListener("pointerdown", (e) => {
+  if (wide() || e.button > 0) return;
+  liveV();
+  sDrag = { id: e.pointerId, y: e.clientY, y0: sy, on: false };
+  sTr.reset();
+});
+sum.addEventListener("pointermove", (e) => {
+  if (!sDrag || e.pointerId !== sDrag.id) return;
+  const dy = e.clientY - sDrag.y;
+  if (!sDrag.on) {
+    if (Math.abs(dy) < 8) return;
+    sDrag.on = true;
+    try { sum.setPointerCapture(e.pointerId); } catch {}
+    if (!sheet.open) { sheet.open = true; sDrag.y0 = H(); }
+  }
+  let next = sDrag.y0 + dy;
+  if (next < 0) next = M.rubberband(next, H());
+  else if (next > H()) next = H() + M.rubberband(next - H(), 120);
+  sy = next;
+  sTr.add(sy);
+  sPaint();
+});
+function sUp() {
+  if (!sDrag) return;
+  const was = sDrag.on;
+  sDrag = null;
+  if (!was) return;
+  swallow = true;
+  setTimeout(() => { swallow = false; }, 60);
+  const v = sTr.velocity();
+  const end = sy + M.project(v, 0.99);
+  settle(end > H() / 2 ? H() : 0, v, 0.8);
+}
+sum.addEventListener("pointerup", sUp);
+sum.addEventListener("pointercancel", sUp);
 
 // Right-hand buttons.
 document.getElementById("fd-me").addEventListener("click", () => box.querySelector(".svm-me")?.click());
@@ -468,7 +537,10 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-rail-btn b{font-size:1.2rem;line-height:1.1}
 .fd-rail-btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 /* events sheet */
-.fd-sheet{margin:0;padding:0;position:fixed;z-index:10;left:0;right:0;bottom:var(--tab-h);background:var(--surface);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+.fd-sheet{margin:0;padding:0;position:fixed;z-index:10;left:0;right:0;bottom:var(--tab-h);background:color-mix(in srgb,var(--surface) 84%,transparent);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);border-top:1px solid color-mix(in srgb,#fff 18%,var(--line));border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);will-change:transform}
+.fd-sheet>summary{touch-action:none}
+@media (prefers-reduced-transparency:reduce){.fd-sheet{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}}
+html.a11y-contrast .fd-sheet{background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none}
 .fd-sheet>summary{list-style:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:var(--sheet-h);padding:8px 16px;cursor:pointer;font-weight:600}
 .fd-sheet>summary::-webkit-details-marker{display:none}
 .fd-grab{width:40px;height:4px;border-radius:2px;background:var(--line)}

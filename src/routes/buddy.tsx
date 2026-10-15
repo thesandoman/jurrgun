@@ -1062,14 +1062,36 @@ buddyRoutes.post("/buddy/deck", requireMember, async (c) => {
   return c.redirect("/buddy/deck");
 });
 
-/** Drag the top card left (pass) or right (keen); the buttons do the same without a pointer. */
-const DECK_JS = `(function(){var c=document.querySelector("[data-deck]");if(!c)return;var x0=null,dx=0;
-function send(k){var f=document.querySelector('form[data-choice="'+k+'"]');c.style.transition="transform .25s ease";c.style.transform="translateX("+(k==="keen"?600:-600)+"px) rotate("+(k==="keen"?18:-18)+"deg)";setTimeout(function(){f.submit()},180)}
-c.addEventListener("pointerdown",function(e){x0=e.clientX;dx=0;c.setPointerCapture(e.pointerId);c.style.transition="none"});
-c.addEventListener("pointermove",function(e){if(x0===null)return;dx=e.clientX-x0;c.style.transform="translateX("+dx+"px) rotate("+dx/18+"deg)";c.classList.toggle("is-keen",dx>40);c.classList.toggle("is-pass",dx<-40)});
-function up(){if(x0===null)return;x0=null;if(dx>110)send("keen");else if(dx<-110)send("pass");else{c.style.transition="transform .2s ease";c.style.transform="";c.classList.remove("is-keen","is-pass")}}
+/**
+ * Drag the top card left (pass) or right (keen); the buttons do the same
+ * without a pointer. Fluid, after Apple's "Designing Fluid Interfaces"
+ * (src/ui/spring.ts): the card tracks the finger 1:1 from where it was
+ * grabbed, after ~8px of slop so vertical scrolling still works; stamps fade
+ * in with the distance; the card underneath rises as the top one leaves.
+ * On release the flick is projected forward: past the line it flies off at
+ * the finger's speed, otherwise it springs home with a little bounce. A card
+ * in motion can be grabbed again. Reduced motion: a short cross-fade.
+ */
+const DECK_JS = `(function(){var c=document.querySelector("[data-deck]");if(!c)return;var M=window.jgMotion,under=document.querySelector(".deck-under");
+var x=0,anim=null,drag=null,tr=M.tracker(),gone=false,LINE=110;
+var sK=c.querySelector(".deck-stamp.keen"),sP=c.querySelector(".deck-stamp.pass");
+function paint(){c.style.transform="translate3d("+x+"px,0,0) rotate("+(x/20)+"deg)";var p=Math.min(1,Math.abs(x)/LINE);
+if(sK)sK.style.opacity=x>0?p:0;if(sP)sP.style.opacity=x<0?p:0;
+if(under)under.style.transform="scale("+(0.95+0.05*p)+") translateY("+(10*(1-p))+"px)"}
+function fly(k,v){if(gone)return;gone=true;var f=document.querySelector('form[data-choice="'+k+'"]');M.tick();
+if(M.still()){c.style.transition="opacity .18s ease";c.style.opacity="0";setTimeout(function(){f.submit()},180);return}
+var to=(k==="keen"?1:-1)*(innerWidth+c.offsetWidth);if(anim)anim.stop();setTimeout(function(){if(!f.dataset.go){f.dataset.go="1";f.submit()}},700);
+anim=M.spring({from:x,to:to,velocity:v||(k==="keen"?1800:-1800),damping:1,response:0.35,onUpdate:function(n){x=n;paint();if(Math.abs(x)>innerWidth*0.7&&!f.dataset.go){f.dataset.go="1";f.submit()}}})}
+function home(v){if(anim)anim.stop();anim=M.spring({from:x,to:0,velocity:v,damping:0.8,response:0.35,onUpdate:function(n){x=n;paint()}})}
+c.addEventListener("pointerdown",function(e){if(gone)return;if(anim){x=anim.stop().x}drag={id:e.pointerId,sx:e.clientX,sy:e.clientY,x0:x,on:false};tr.reset();tr.add(x)});
+c.addEventListener("pointermove",function(e){if(!drag||e.pointerId!==drag.id)return;var dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
+if(!drag.on){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dy)>Math.abs(dx)){drag=null;return}drag.on=true;try{c.setPointerCapture(e.pointerId)}catch(_){};c.classList.add("dragging")}
+x=drag.x0+dx;tr.add(x);paint()});
+function up(e){if(!drag)return;var was=drag.on;drag=null;c.classList.remove("dragging");if(!was)return;
+var v=tr.velocity(),end=x+M.project(v,0.99);if(end>LINE)fly("keen",v);else if(end<-LINE)fly("pass",v);else home(v)}
 c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
-document.querySelectorAll("form[data-choice]").forEach(function(f){f.addEventListener("submit",function(e){if(f.dataset.sent)return;e.preventDefault();f.dataset.sent="1";send(f.dataset.choice)})})})()`;
+document.querySelectorAll("form[data-choice]").forEach(function(f){f.addEventListener("submit",function(e){e.preventDefault();e.stopImmediatePropagation();fly(f.dataset.choice,0)},true)});
+addEventListener("pageshow",function(ev){if(ev.persisted){gone=false;x=0;paint();c.style.opacity="";document.querySelectorAll("form[data-go]").forEach(function(f){delete f.dataset.go})}})})()`;
 
 // ------------------------------------------------------ meet feedback --
 //

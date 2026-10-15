@@ -14,6 +14,7 @@ import { QUESTION_ART_CSS } from "./question-art";
 import { LAYOUT_CSS } from "./layout";
 import { NATIVE_CSS } from "./native";
 import { ALIVE_CSS, ALIVE_JS } from "./alive";
+import { SPRING_JS } from "./spring";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
@@ -125,6 +126,7 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
             __html: A11Y_HEAD_JS,
           }}
         />
+        <script dangerouslySetInnerHTML={{ __html: SPRING_JS }} />
       </head>
       <body class={[opts.admin && "admin", opts.bare && "bare", opts.fullscreen && "fullmap-body"].filter(Boolean).join(" ") || undefined}>
         {opts.fullscreen ? (
