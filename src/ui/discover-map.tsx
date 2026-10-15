@@ -252,6 +252,7 @@ export function FullDiscover(props: {
           </span>
         </summary>
         <section id="discover-list" class="discover-list fd-sheet-body" aria-label={t("รายการกิจกรรม", "Event list")}>
+          <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>
 
           <p class="muted fd-nomatch" id="fd-nomatch" hidden>
             {cfg.words.noMatch}

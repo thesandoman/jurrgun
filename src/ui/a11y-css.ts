@@ -38,6 +38,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .notif-dot{color:#1e2b22;font-size:.75rem;min-width:20px;height:20px;line-height:20px}
 .fullmap .svm-k.highlight{color:#1e2b22}
 
+/* Grey notes on the pale love-red panel: 5.2:1 in light (dark already passes). */
+#dating-prompts{--ink-3:#56635a}
+@media (prefers-color-scheme:dark){#dating-prompts{--ink-3:#8aa896}}
+
 /* Nothing under 12px (readability). */
 .proto-banner{font-size:.78rem}
 .tabbar a,.tabbar a.center{font-size:.76rem}
