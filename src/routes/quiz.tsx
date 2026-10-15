@@ -13,6 +13,7 @@
  * hidden seed field only proves the form is the current one.
  */
 import type { AssetPath } from "../assets";
+import { FirstTable, firstTable } from "./newcomers";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
@@ -610,9 +611,12 @@ quizRoutes.get("/quiz/result", async (c) => {
   const row = await loadVibe(c.env, user.account.id);
   if (!row) return c.redirect(user.profile?.onboardedAt ? "/quiz" : "/onboarding");
   const member = !!user.profile?.onboardedAt;
+  const pick = member ? await firstTable(c.env, user.profile!) : null;
   return page(
     c,
     { title: v.t("ไทป์กรุงเทพฯ ของฉัน", "My Bangkok Type"), tab: "me" },
+    <>
+    {pick ? <FirstTable v={v} pick={pick} /> : null}
     <ResultView
       v={v}
       row={row}
@@ -621,7 +625,8 @@ quizRoutes.get("/quiz/result", async (c) => {
       continueLabel={member ? v.t("เสร็จ", "Done") : v.t("ต่อไป", "Continue")}
       visibilityNext="/quiz/result"
       retake={member}
-    />,
+    />
+    </>,
   );
 });
 

@@ -8,15 +8,15 @@
  */
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
-import { and, asc, eq, gt, ne, or, sql, type AnyColumn } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, lt, ne, or, sql, type AnyColumn } from "drizzle-orm";
 import { getDb } from "../db";
 import type { AppEnv } from "../lib/env";
 import { DISTRICTS, label } from "../lib/constants";
 import { fmtDate, L } from "../lib/i18n";
-import { OPEN_TO_MORE_TAG } from "../domain/rules";
-import { events } from "../schema";
+import { OPEN_TO_MORE_TAG, romanceEventOk, womenOnlyEventOk } from "../domain/rules";
+import { events, registrations, type Profile } from "../schema";
 import { BRAND } from "../ui/brand";
-import { Empty, LinkButton, page, view } from "../ui/kit";
+import { Empty, LinkButton, page, view, type View } from "../ui/kit";
 import { Bento, Big, Pill, Tile } from "../ui/visual";
 
 export const newcomerRoutes = new Hono<AppEnv>();
@@ -128,3 +128,40 @@ newcomerRoutes.get("/new", async (c) => {
     </>,
   );
 });
+
+type Pick = { id: string; title: string; titleEn: string | null; startsAt: Date; district: string; costThb: number };
+
+/**
+ * "Your first table": for a member with no RSVPs yet, one upcoming public
+ * table in the next two weeks, in their district first, then newcomer-friendly
+ * ones, then the soonest. Never dating-only or private, and only one they may
+ * join (women-only and open_to_more rules).
+ */
+export async function firstTable(env: AppEnv["Bindings"], p: Profile, now = new Date()): Promise<Pick | null> {
+  const db = getDb(env);
+  const [mine] = await db.select({ n: count() }).from(registrations).where(eq(registrations.accountId, p.accountId));
+  if (Number(mine?.n ?? 0) > 0) return null;
+  const rows = await db
+    .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district, costThb: events.costThb, tags: events.tags })
+    .from(events)
+    .where(and(eq(events.status, "published"), ne(events.visibility, "private"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * 86_400_000))))
+    .orderBy(desc(sql`${events.district} = ${p.district}`), desc(or(...NEWCOMER_TAGS.map((tag) => has(events.tags, tag)))!), asc(events.startsAt))
+    .limit(10);
+  const ok = rows.find((e) => romanceEventOk(e.tags, p) && womenOnlyEventOk(e.tags, p));
+  return ok ? { id: ok.id, title: ok.title, titleEn: ok.titleEn, startsAt: ok.startsAt, district: ok.district, costThb: ok.costThb } : null;
+}
+
+export function FirstTable(props: { v: View; pick: Pick }) {
+  const { t, lang } = props.v;
+  const e = props.pick;
+  return (
+    <a class="card first-table" href={`/events/${e.id}`} style="display:grid;gap:4px;text-decoration:none;color:inherit;margin-bottom:16px;border:2px solid var(--brand)">
+      <small class="eyebrow">🍽️ {t("โต๊ะแรกของคุณ", "Your first table")}</small>
+      <strong>{lang === "en" && e.titleEn ? e.titleEn : e.title}</strong>
+      <small class="muted">
+        🗓️ {fmtDate(e.startsAt, lang)} · 📍 {label(DISTRICTS, e.district, lang)} · {e.costThb ? t(`${e.costThb} บาท`, `${e.costThb} THB`) : t("ฟรี", "Free")}
+      </small>
+      <small>{t("มาคนเดียวได้ ทุกคนก็มาคนเดียว", "Come alone, everyone does.")} →</small>
+    </a>
+  );
+}

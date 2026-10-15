@@ -50,6 +50,7 @@ import {
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
+import { NEWCOMER_COOKIE } from "./newcomers";
 import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation, withoutDating } from "../content/profile";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
 import { loadVibe, isFriendsOnly, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
@@ -337,7 +338,10 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
   );
 }
 
-onboarding.get("/basics", (c) => page(c, { title: TITLE, bare: true }, <BasicsForm v={view(c)} />));
+// Came in through /new (the newcomer front door): "I'm new in town" starts ticked.
+onboarding.get("/basics", (c) =>
+  page(c, { title: TITLE, bare: true }, <BasicsForm v={view(c)} values={getCookie(c, NEWCOMER_COOKIE) === "1" ? { newcomer: "1" } : undefined} />),
+);
 
 onboarding.post("/basics", async (c) => {
   const v = view(c);

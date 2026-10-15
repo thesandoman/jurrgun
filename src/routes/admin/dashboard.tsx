@@ -20,7 +20,8 @@ import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
 import { requireRole } from "../../lib/session";
 import { retentionIfDue, runRetention, type RetentionRun } from "../../services/retention";
-import { events, registrations, reports } from "../../schema";
+import { alias } from "drizzle-orm/pg-core";
+import { connections, events, registrations, reports } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
 
 export const adminDashboard = new Hono<AppEnv>();
@@ -128,6 +129,7 @@ adminDashboard.get("/", async (c) => {
                 or(eq(registrations.status, "confirmed"), sql`${registrations.checkedInAt} is not null`),
               ),
             ),
+          weeklyReconnected(db, d7),
         ])
       : Promise.resolve(null),
     showMod
@@ -150,6 +152,7 @@ adminDashboard.get("/", async (c) => {
   ]);
 
   const upcoming = adminStats?.[0][0]?.n ?? 0;
+  const reconnected = adminStats?.[3] ?? 0;
   const regs = adminStats?.[1][0];
   const att = adminStats?.[2][0];
   const rate = att && att.expected > 0 ? `${Math.round(((att.checkedIn ?? 0) / att.expected) * 100)}%` : "—";
@@ -165,6 +168,11 @@ adminDashboard.get("/", async (c) => {
       {isAdmin ? (
         <>
           <div class="stats">
+            <Stat
+              label={t("⭐ สมาชิกที่ได้เจอคนรู้จักอีกครั้ง 7 วัน", "⭐ Weekly Reconnected Members")}
+              value={reconnected}
+              hint={t("ตัวชี้วัดหลัก: นั่งโต๊ะเดียวกับคนที่เคยเจอกันที่ Jurrgun", "North star: sat at a table with someone they'd met here before")}
+            />
             <Stat label={t("กิจกรรมที่จะมาถึง (เผยแพร่แล้ว)", "Upcoming published events")} value={upcoming} />
             <Stat label={t("การลงทะเบียน 7 วันล่าสุด", "Registrations, last 7 days")} value={regs?.recent ?? 0} />
             <Stat label={t("รายงานที่ค้างอยู่", "Open reports")} value={openReports} hint={critical ? t(`ด่วน ${critical}`, `${critical} critical`) : undefined} />
@@ -223,3 +231,28 @@ adminDashboard.get("/", async (c) => {
     </>,
   );
 });
+
+/**
+ * The north star (design/reference/customer-profile.md): members who checked in
+ * this week at an event where someone else who checked in was already a
+ * connection of theirs (connected before that event started, not removed).
+ */
+export async function weeklyReconnected(db: ReturnType<typeof getDb>, since: Date): Promise<number> {
+  const r1 = alias(registrations, "r1");
+  const r2 = alias(registrations, "r2");
+  const [row] = await db
+    .select({ n: sql<number>`count(distinct ${r1.accountId})`.mapWith(Number) })
+    .from(r1)
+    .innerJoin(events, eq(events.id, r1.eventId))
+    .innerJoin(r2, and(eq(r2.eventId, r1.eventId), sql`${r2.accountId} <> ${r1.accountId}`, sql`${r2.checkedInAt} is not null`))
+    .innerJoin(
+      connections,
+      and(
+        sql`${connections.removedAt} is null`,
+        sql`${connections.createdAt} < ${events.startsAt}`,
+        or(and(eq(connections.aAccount, r1.accountId), eq(connections.bAccount, r2.accountId)), and(eq(connections.aAccount, r2.accountId), eq(connections.bAccount, r1.accountId))),
+      ),
+    )
+    .where(sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`);
+  return row?.n ?? 0;
+}
