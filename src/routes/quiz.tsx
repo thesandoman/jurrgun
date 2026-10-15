@@ -44,6 +44,7 @@ import {
   flavourBadges,
   normalizeType,
   suggestedMatches,
+  nearestFree,
   typeOf,
   type Archetype,
   type ArchetypeKey,
@@ -485,7 +486,7 @@ function Clicks(props: { v: View; a: Archetype }) {
   );
 }
 
-function Matches(props: { v: View; archetype: ArchetypeKey }) {
+function Matches(props: { v: View; archetype: ArchetypeKey; /** Types already on the page (Your blend): not shown again. */ shown?: ArchetypeKey[] }) {
   const { t, lang } = props.v;
   const m = suggestedMatches(props.archetype);
   type Kind = "natural" | "complementary" | "interesting";
@@ -494,7 +495,23 @@ function Matches(props: { v: View; archetype: ArchetypeKey }) {
     ["complementary", m.complementary],
     ["interesting", m.interesting],
   ];
-  const rows = all.filter((r): r is [Kind, ArchetypeKey] => r[1] !== null);
+  const taken = new Set<string>(props.shown ?? []);
+  const rows: [Kind, ArchetypeKey][] = [];
+  for (const [kind, key] of all) {
+    if (!key) continue;
+    if (!taken.has(key)) {
+      rows.push([kind, key]);
+      taken.add(key);
+      continue;
+    }
+    // Your own type is already "Closest right now"; any other repeat gives way to the nearest type not shown yet.
+    if (kind === "natural") continue;
+    const alt = nearestFree(key, taken);
+    if (alt) {
+      rows.push([kind, alt]);
+      taken.add(alt);
+    }
+  }
   return (
     <>
       <h2>{t("ใครชวนคุยสนุก", "Fun to chat with")}</h2>
@@ -683,7 +700,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         <Certainty v={props.v} res={{ ...res, unsure: close }} />
         <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? close : undefined} />
       </details>
-      <Matches v={props.v} archetype={key} />
+      <Matches v={props.v} archetype={key} shown={res.types.map((x) => x.key)} />
       <ShareType v={props.v} archetype={key} />
       <VisibilityToggle v={props.v} visible={props.row.visible} next={props.visibilityNext} />
       <div class="flow-bar">

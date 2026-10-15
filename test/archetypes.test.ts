@@ -153,3 +153,12 @@ describe("reachability through the real quiz", () => {
     }
   });
 });
+
+describe("result page: no type twice", () => {
+  it("nearestFree skips types already shown", async () => {
+    const { nearestFree } = await import("../src/vibe/archetypes");
+    expect(nearestFree("BDMN", new Set())).toBe("BDSN");
+    expect(nearestFree("BDMN", new Set(["BDSN"]))).not.toBe("BDSN");
+    expect(nearestFree("BDMN", new Set(["BDSN"]))).not.toBe("BDMN");
+  });
+});

@@ -19,7 +19,7 @@
  * week past. No read receipts, typing indicators or online status.
  */
 import { Hono, type Context } from "hono";
-import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
 import { newId } from "../lib/crypto";
@@ -44,7 +44,18 @@ const isGroup = (key: string) => key.startsWith("circle:") || key.startsWith("ta
 type Db = ReturnType<typeof getDb>;
 type C = Context<AppEnv>;
 
-export type Thread = { key: string; members: string[]; open: boolean; met: boolean; title: { th: string; en: string }; back: string; host?: string };
+export type Thread = {
+  key: string;
+  members: string[];
+  open: boolean;
+  met: boolean;
+  title: { th: string; en: string };
+  back: string;
+  host?: string;
+  /** Every thread key whose messages belong here: one chat per person (owner), so for someone met at several events, all those meetings' threads. */
+  keys?: string[];
+};
+export const keysOf = (th: Thread) => th.keys ?? [th.key];
 
 async function blockedBetween(db: Db, me: string, others: string[]): Promise<Set<string>> {
   if (!others.length) return new Set();
@@ -62,6 +73,35 @@ async function buddiesMet(db: Db, matchId: string): Promise<boolean> {
   return qs.some((q) => !!q.a && !!q.b);
 }
 
+/** Every connection between two people, newest first. */
+async function pairConnections(db: Db, x: string, y: string) {
+  return db
+    .select()
+    .from(connections)
+    .where(or(and(eq(connections.aAccount, x), eq(connections.bAccount, y)), and(eq(connections.aAccount, y), eq(connections.bAccount, x))))
+    .orderBy(desc(connections.createdAt))
+    .limit(20);
+}
+
+/** The active buddy pairing between two people, if any: while it runs, their one chat is the buddy chat. */
+async function activeBuddy(db: Db, x: string, y: string) {
+  const [m] = await db
+    .select({ id: buddyMatches.id })
+    .from(buddyMatches)
+    .where(and(or(and(eq(buddyMatches.aAccount, x), eq(buddyMatches.bAccount, y)), and(eq(buddyMatches.aAccount, y), eq(buddyMatches.bAccount, x))), eq(buddyMatches.state, "active")))
+    .limit(1);
+  return m ?? null;
+}
+
+/** Ended buddy pairings between two people (their chats now live with the person). */
+async function pastBuddies(db: Db, x: string, y: string) {
+  return db
+    .select({ id: buddyMatches.id })
+    .from(buddyMatches)
+    .where(and(or(and(eq(buddyMatches.aAccount, x), eq(buddyMatches.bAccount, y)), and(eq(buddyMatches.aAccount, y), eq(buddyMatches.bAccount, x))), ne(buddyMatches.state, "active"), ne(buddyMatches.state, "proposed")))
+    .limit(10);
+}
+
 /** The thread, if `me` belongs in it; null otherwise (so nobody can probe ids). */
 export async function resolveThread(db: Db, key: string, me: string, now = new Date()): Promise<Thread | null> {
   const t = parseThread(key);
@@ -71,16 +111,32 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     if (!m || (m.aAccount !== me && m.bAccount !== me) || m.state === "proposed") return null;
     const other = m.aAccount === me ? m.bAccount : m.aAccount;
     if ((await blockedBetween(db, me, [other])).size) return null;
-    return { key, members: [m.aAccount, m.bAccount], open: m.state === "active", met: await buddiesMet(db, m.id), title: { th: "บัดดี้กรุงเทพฯ", en: "Bangkok Buddy" }, back: "/buddy" };
+    // One chat per person: while the pairing runs, their My people chats show here too.
+    const pair = m.state === "active" ? await pairConnections(db, m.aAccount, m.bAccount) : [];
+    return { key, keys: [key, ...pair.map((x) => `conn:${x.id}`)], members: [m.aAccount, m.bAccount], open: m.state === "active", met: await buddiesMet(db, m.id), title: { th: "บัดดี้กรุงเทพฯ", en: "Bangkok Buddy" }, back: "/buddy" };
   }
   if (t.kind === "conn") {
     const [cn] = await db.select().from(connections).where(eq(connections.id, t.ref)).limit(1);
     if (!cn || (cn.aAccount !== me && cn.bAccount !== me)) return null;
     const other = cn.aAccount === me ? cn.bAccount : cn.aAccount;
     if ((await blockedBetween(db, me, [other])).size) return null;
+    // One chat per person: every connection with them, the newest open one leading (its key is the thread's).
+    const [pair, buddy] = await Promise.all([pairConnections(db, cn.aAccount, cn.bAccount), activeBuddy(db, cn.aAccount, cn.bAccount)]);
+    const lead = pair.find((x) => !x.removedAt) ?? cn;
+    // Paired as buddies right now: the buddy chat is their one chat.
+    if (buddy) return resolveThread(db, `buddy:${buddy.id}`, me, now);
     // Connections from an event: you met there. From a buddy pairing: met once a quest is done together.
-    const met = cn.eventId.startsWith("buddy:") ? await buddiesMet(db, cn.eventId.slice(6)) : true;
-    return { key, members: [cn.aAccount, cn.bAccount], open: !cn.removedAt, met, title: { th: "คนรู้จัก", en: "My people" }, back: "/connections" };
+    const met = pair.some((x) => !x.eventId.startsWith("buddy:")) || (await buddiesMet(db, lead.eventId.slice(6)));
+    return {
+      key: `conn:${lead.id}`,
+      // Past buddy pairings between them too, so the buddy chat's history stays with the person.
+      keys: [...pair.map((x) => `conn:${x.id}`), ...(await pastBuddies(db, cn.aAccount, cn.bAccount)).map((b) => `buddy:${b.id}`)],
+      members: [cn.aAccount, cn.bAccount],
+      open: !lead.removedAt,
+      met,
+      title: { th: "คนรู้จัก", en: "My people" },
+      back: "/connections",
+    };
   }
   if (t.kind === "table") {
     // A regular table's chat: the host and current members only (a block with the host puts you outside it).
@@ -160,18 +216,25 @@ chatRoutes.get("/chat", async (c) => {
   const me = c.var.user!.account.id;
   const now = new Date();
   const keys = await myThreads(db, me, now);
-  const threads = (await Promise.all(keys.map((k) => resolveThread(db, k, me, now)))).filter((x): x is Thread => !!x);
+  // Someone met at several events resolves to one thread (the newest meeting's): list it once.
+  const seen = new Set<string>();
+  const threads = (await Promise.all(keys.map((k) => resolveThread(db, k, me, now)))).filter((x): x is Thread => !!x && !seen.has(x.key) && !!seen.add(x.key));
+  const allKeys = threads.flatMap(keysOf);
+  const leadOf = new Map(threads.flatMap((th) => keysOf(th).map((k) => [k, th.key] as const)));
   const others = [...new Set(threads.flatMap((th) => th.members).filter((x) => x !== me))];
   const [names, lasts, reads] = await Promise.all([
     others.length ? db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, others)).limit(others.length) : [],
-    keys.length
-      ? db.select({ thread: chatMessages.thread, body: chatMessages.body, kind: chatMessages.kind, createdAt: chatMessages.createdAt, sender: chatMessages.sender }).from(chatMessages).where(and(inArray(chatMessages.thread, keys), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(500)
+    allKeys.length
+      ? db.select({ thread: chatMessages.thread, body: chatMessages.body, kind: chatMessages.kind, createdAt: chatMessages.createdAt, sender: chatMessages.sender }).from(chatMessages).where(and(inArray(chatMessages.thread, allKeys), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(500)
       : [],
     db.select().from(chatReads).where(eq(chatReads.accountId, me)).limit(200),
   ]);
   const nameOf = new Map(names.map((n) => [n.id, n.nickname]));
   const lastOf = new Map<string, (typeof lasts)[number]>();
-  for (const m of lasts) if (!lastOf.has(m.thread)) lastOf.set(m.thread, m);
+  for (const m of lasts) {
+    const lead = leadOf.get(m.thread) ?? m.thread;
+    if (!lastOf.has(lead)) lastOf.set(lead, m);
+  }
   const readOf = new Map(reads.map((r) => [r.thread, r.lastReadAt.getTime()]));
   const rows = threads
     .map((th) => ({ th, last: lastOf.get(th.key) }))
@@ -292,10 +355,12 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
   const now = new Date();
   const th = await resolveThread(db, key, me, now);
   if (!th) return c.text("Not found", 404);
+  // An earlier meeting's chat opens as the person's one chat.
+  if (th.key !== key) return c.redirect(`/chat/${th.key}`);
   const others = th.members.filter((x) => x !== me);
   const hide = await blockedBetween(db, me, others);
   const [msgs, names] = await Promise.all([
-    db.select().from(chatMessages).where(and(eq(chatMessages.thread, key), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(120),
+    db.select().from(chatMessages).where(and(inArray(chatMessages.thread, keysOf(th)), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(120),
     db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, th.members)).limit(th.members.length),
   ]);
   const visible = msgs.filter((m) => !hide.has(m.sender)).reverse();
@@ -428,9 +493,9 @@ chatRoutes.post("/chat/:thread", async (c) => {
   if (!th) return c.text("Not found", 404);
   const dayStart = new Date(now.getTime() - DAY);
   const [mineToday, mineAllToday, mineInThread] = await Promise.all([
-    db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.thread, key), eq(chatMessages.sender, me), gte(chatMessages.createdAt, dayStart))).limit(200),
+    db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.thread, th.key), eq(chatMessages.sender, me), gte(chatMessages.createdAt, dayStart))).limit(200),
     db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.sender, me), gte(chatMessages.createdAt, dayStart))).limit(500),
-    db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.thread, key), eq(chatMessages.sender, me))).limit(200),
+    db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.thread, th.key), eq(chatMessages.sender, me))).limit(200),
   ]);
   const res = checkMessage(str((await c.req.parseBody()).body), {
     met: th.met,
@@ -440,7 +505,7 @@ chatRoutes.post("/chat/:thread", async (c) => {
     sentInThread: mineInThread.length,
   });
   if (!res.ok) return renderThread(c, key, REASON_TEXT[res.reason], 400);
-  await db.insert(chatMessages).values({ id: newId(), thread: key, sender: me, body: res.body, moneyFlag: res.moneyFlag, createdAt: now });
+  await db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: me, body: res.body, moneyFlag: res.moneyFlag, createdAt: now });
   // One waiting notification per thread per person; it appears after quiet hours.
   const others = th.members.filter((x) => x !== me);
   const link = `/chat/${threadKey(parseThread(key)!)}`;
@@ -455,7 +520,7 @@ chatRoutes.post("/chat/:thread", async (c) => {
   if (fresh.length) {
     await db.insert(notifications).values(fresh.map((accountId) => ({ id: newId(), accountId, kind: "chat", titleTh: "มีข้อความใหม่", titleEn: "New message", link, createdAt: due })));
   }
-  await db.insert(chatReads).values({ thread: key, accountId: me, lastReadAt: now }).onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } });
+  await db.insert(chatReads).values({ thread: th.key, accountId: me, lastReadAt: now }).onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } });
   // Tell open pages in this thread to refetch. Never fail the send over it.
   try {
     const feed = await getStatefulObject(c.env, `chat:${th.key}`);
@@ -488,14 +553,14 @@ chatRoutes.post("/chat/:thread/photo", async (c) => {
   const sent = await db
     .select({ id: chatMessages.id })
     .from(chatMessages)
-    .where(and(eq(chatMessages.thread, key), eq(chatMessages.sender, me), eq(chatMessages.kind, "photo"), gte(chatMessages.createdAt, new Date(now.getTime() - DAY))))
+    .where(and(eq(chatMessages.thread, th.key), eq(chatMessages.sender, me), eq(chatMessages.kind, "photo"), gte(chatMessages.createdAt, new Date(now.getTime() - DAY))))
     .limit(50);
   const res = checkPhoto(file ? { type: file.type, size: file.size } : null, { kind: parseThread(key)!.kind, met: th.met, open: th.open, sentToday: sent.length });
   if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400);
   const photoKey = `chat/${key.replace(":", "-")}/${crypto.randomUUID()}`;
   await putObject(c.env, photoKey, await file!.arrayBuffer(), { contentType: file!.type });
   const caption = str(body.caption).replace(/\s+/g, " ").trim().slice(0, 140);
-  await db.insert(chatMessages).values({ id: newId(), thread: key, sender: me, body: caption, kind: "photo", photoKey, createdAt: now });
+  await db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: me, body: caption, kind: "photo", photoKey, createdAt: now });
   await ping(c, key);
   return c.redirect(`/chat/${key}#msgs`);
 });
@@ -506,7 +571,7 @@ chatRoutes.get("/chat/:thread/photo/:msgId", async (c) => {
   const db = getDb(c.env);
   const th = await resolveThread(db, key, c.var.user!.account.id);
   if (!th) return c.notFound();
-  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), eq(chatMessages.thread, key), isNull(chatMessages.hiddenAt))).limit(1);
+  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), inArray(chatMessages.thread, keysOf(th)), isNull(chatMessages.hiddenAt))).limit(1);
   if (!m || m.kind !== "photo" || !m.photoKey) return c.notFound();
   if (c.env.FILES) {
     return new Response(null, { status: 302, headers: { location: await getObjectUrl(c.env, m.photoKey), "cache-control": "private, max-age=60" } });
@@ -526,7 +591,7 @@ chatRoutes.post("/chat/:thread/poll", async (c) => {
   const opts = (Array.isArray(body.options) ? body.options : [body.options]).map((x) => str(x));
   const res = checkPoll(str(body.question), opts, { kind: parseThread(key)!.kind, open: th.open });
   if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400);
-  await db.insert(chatMessages).values({ id: newId(), thread: key, sender: me, body: res.question, kind: "poll", pollOptions: res.options });
+  await db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: me, body: res.question, kind: "poll", pollOptions: res.options });
   await ping(c, key);
   return c.redirect(`/chat/${key}#msgs`);
 });
@@ -537,7 +602,7 @@ chatRoutes.post("/chat/:thread/vote/:msgId", async (c) => {
   const me = c.var.user!.account.id;
   const th = await resolveThread(db, key, me);
   if (!th) return c.text("Not found", 404);
-  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), eq(chatMessages.thread, key), isNull(chatMessages.hiddenAt))).limit(1);
+  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), inArray(chatMessages.thread, keysOf(th)), isNull(chatMessages.hiddenAt))).limit(1);
   if (!m || m.kind !== "poll" || !th.open) return c.redirect(`/chat/${key}`);
   const option = Math.trunc(Number(str((await c.req.parseBody()).option)));
   if (!(option >= 0 && option < (m.pollOptions?.length ?? 0))) return c.redirect(`/chat/${key}`);
@@ -552,7 +617,7 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
   const me = c.var.user!.account.id;
   const th = await resolveThread(db, key, me);
   if (!th) return c.text("Not found", 404);
-  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), eq(chatMessages.thread, key))).limit(1);
+  const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), inArray(chatMessages.thread, keysOf(th)))).limit(1);
   if (!m || m.sender === me) return c.redirect(`/chat/${key}`);
   const id = newId();
   await db.insert(reports).values({

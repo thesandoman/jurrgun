@@ -67,6 +67,7 @@ import {
   vibes,
   type Event,
   type Registration,
+  weeklyPlans,
 } from "../schema";
 import { refreshWaitlist, runBuddyRound, seatState, SEAT_STATUSES } from "../services/events";
 import { getObject, getObjectUrl } from "../storage";
@@ -326,7 +327,7 @@ function Seats(props: { capacity: number; taken: number }) {
   );
 }
 
-function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null; feat?: boolean }) {
+function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null; feat?: boolean; pick?: boolean }) {
   const { e, v } = props;
   const { t, lang } = v;
   const quest = questLabel(e, lang);
@@ -346,6 +347,7 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
         </p>
         <Seats capacity={e.capacity} taken={props.taken} />
         <div class="tags">
+          {props.pick ? <Tag tone="ok">⭐ {t("เลือกให้คุณ", "Your pick")}</Tag> : null}
           <SpotsTag e={e} taken={props.taken} t={t} />
           {quest ? <Tag tone="accent">🧭 City Quest</Tag> : null}
           {e.plusOneAllowed ? <Tag>{t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</Tag> : null}
@@ -487,7 +489,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(100);
   const ids = list.map((e) => e.id);
   const hintHidden = getCookie(c, QUIZ_HINT_COOKIE) === "hide";
-  const [taken, mine, myVibe, coverPairs, weather] = await Promise.all([
+  const [taken, mine, myVibe, coverPairs, weather, [plan]] = await Promise.all([
     takenCounts(db, ids),
     ids.length
       ? db
@@ -499,7 +501,10 @@ eventRoutes.get("/events", requireMember, async (c) => {
     hintHidden ? Promise.resolve([{ id: "hidden" }]) : db.select({ id: vibes.accountId }).from(vibes).where(eq(vibes.accountId, user.account.id)).limit(1),
     Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(c.env, e)] as const)),
     mapView ? bangkokWeather(c.env).catch(() => null) : Promise.resolve(null),
+    // This week's plan, if it's been made: its picks get a tag in the list rather than looking like separate events.
+    db.select({ picks: weeklyPlans.picks }).from(weeklyPlans).where(and(eq(weeklyPlans.accountId, user.account.id), eq(weeklyPlans.week, weekKey(new Date())))).limit(1),
   ]);
+  const picked = new Set(((plan?.picks ?? []) as { kind: string; ref: string }[]).filter((x) => x.kind === "event").map((x) => x.ref));
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
   const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
@@ -548,7 +553,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       ) : (
         list.map((e, i) => (
           <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
-            <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} feat={!mapView && i === 0} />
+            <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} feat={!mapView && i === 0} pick={picked.has(e.id)} />
           </div>
         ))
       )}
@@ -1882,7 +1887,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         </Card>
       ) : null}
 
-      <h2>{t("กำลังจะมาถึง", "Upcoming")}</h2>
+      <h2 id="upcoming">{t("กำลังจะมาถึง", "Upcoming")}</h2>
       {upcoming.length === 0 ? (
         <Empty>
           {t("ยังไม่ได้จองกิจกรรมไหน", "Nothing booked yet.")} <a href="/events">{t("ค้นหากิจกรรม", "Find something to do")}</a>
@@ -1916,7 +1921,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         ))
       )}
 
-      <h2>{t("ที่ผ่านมา", "Past")}</h2>
+      <h2 id="past">{t("ที่ผ่านมา", "Past")}</h2>
       {past.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ผ่านมา", "No past events yet.")}</Empty>
       ) : (

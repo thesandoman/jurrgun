@@ -691,6 +691,19 @@ function flip(code: ArchetypeKey, index: number): ArchetypeKey {
   return (code.slice(0, index) + ch + code.slice(index + 1)) as ArchetypeKey;
 }
 
+/**
+ * The nearest type to `a` that isn't in `taken`: one letter apart first (activity letter first),
+ * then two, then three. Used so a result page never shows the same type twice.
+ */
+export function nearestFree(a: ArchetypeKey, taken: Set<string>): ArchetypeKey | null {
+  const orders = [[2], [0], [1], [3], [0, 2], [1, 2], [2, 3], [0, 1], [0, 3], [1, 3], [0, 1, 2], [0, 2, 3], [1, 2, 3], [0, 1, 3], [0, 1, 2, 3]];
+  for (const idx of orders) {
+    const k = idx.reduce<ArchetypeKey>((c, i) => flip(c, i), a);
+    if (!taken.has(k)) return k;
+  }
+  return null;
+}
+
 /** Types to show on a result card: yourself, one letter apart, and your opposite. */
 export function suggestedMatches(a: ArchetypeKey): { natural: ArchetypeKey; complementary: ArchetypeKey | null; interesting: ArchetypeKey | null } {
   // Flip the activity letter (Move/Savour): the most noticeable difference at a table.

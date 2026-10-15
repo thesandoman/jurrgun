@@ -275,7 +275,7 @@ settingsRoutes.get("/settings", async (c) => {
       newcomer={p.newcomer}
       interests={p.interests}
       stats={[
-        { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events", tint: "green" },
+        { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events#past", tint: "green" },
         {
           emoji: "🤝",
           n: Number(circle?.n ?? 0),
@@ -285,7 +285,7 @@ settingsRoutes.get("/settings", async (c) => {
           tint: "teal",
         },
         { emoji: "🪑", n: tables.length, label: t("โต๊ะประจำ", tables.length === 1 ? "Table" : "Tables"), href: "/tables", tint: "sky" },
-        { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events", tint: "lime" },
+        { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events#upcoming", tint: "lime" },
       ]}
       steps={steps}
       type={typeCard}

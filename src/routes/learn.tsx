@@ -52,15 +52,24 @@ function Helplines(props: { lang: Lang }) {
             <span>
               <strong>{L(lang, h.name)}</strong>
               <small>
-                {L(lang, h.when)} · {L(lang, h.hours)} ·{" "}
-                <a href={h.source} target="_blank" rel="noopener noreferrer">
-                  {lang === "en" ? "source" : "แหล่งที่มา"}
-                </a>
+                {L(lang, h.when)} · {L(lang, h.hours)}
               </small>
             </span>
           </li>
         ))}
       </ul>
+      {/* Each source once, under the list (several helplines share one). */}
+      <p class="muted small">
+        {lang === "en" ? "Sources" : "แหล่งที่มา"}:{" "}
+        {[...new Set(HELPLINES.map((h) => h.source))].map((src, k) => (
+          <>
+            {k ? " · " : ""}
+            <a href={src} target="_blank" rel="noopener noreferrer">
+              {new URL(src).hostname.replace(/^www\./, "")}
+            </a>
+          </>
+        ))}
+      </p>
     </Card>
   );
 }
