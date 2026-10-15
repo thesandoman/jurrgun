@@ -15,11 +15,12 @@ import { Hono, type Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { and, desc, eq } from "drizzle-orm";
 import { batch, getDb } from "../db";
-import { ageOn, canSwitchToSingle, MIN_AGE } from "../domain/rules";
+import { ageOn, canBeWomenOnly, canSwitchToSingle, MIN_AGE } from "../domain/rules";
 import {
   DISTRICTS,
   EVENT_STYLES,
   GENDER_IDENTITIES,
+  ORIENTATIONS,
   INTENTS,
   LANGUAGES,
   RELATIONSHIP,
@@ -567,6 +568,7 @@ export function ConnectionsFields(props: { v: View }) {
         <Field label={t("อายุสูงสุดที่อยากรู้จัก", "Oldest you'd like to connect with")} name="ageMax" type="number" min={18} max={99} value={p?.ageMax ?? 99} />
       </div>
       <small>{t("ใช้หลังกิจกรรมเท่านั้น และเป็นความลับ", "Only used after events, and kept private.")}</small>
+      <WomenOnlyFields v={props.v} />
       <details open={!!p?.romanceOn}>
         <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ เฉพาะคนโสด)", "Open to something more (optional — Single only)")}</summary>
         <p class="muted">{t(ROMANCE_INFO[0], ROMANCE_INFO[1])}</p>
@@ -599,7 +601,39 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
         values={openTo === "everyone" ? ["everyone"] : Array.isArray(openTo) ? openTo : []}
         lang={lang}
       />
+      <Select label={t("รสนิยมทางเพศของคุณ (ไม่บังคับ)", "Your orientation (optional)")} name="orientation" options={ORIENTATIONS} value={p?.orientation} lang={lang} blank="—" />
+      <Choices
+        legend={t("กรองตามรสนิยมทางเพศ (ไม่บังคับ ไม่เลือก = ทุกแบบ)", "Only match people who are… (optional; none ticked = anyone)")}
+        name="orientationOpenTo"
+        options={ORIENTATIONS}
+        values={p?.orientationOpenTo ?? []}
+        lang={lang}
+      />
+      <Toggle
+        name="showDatingPrefs"
+        label={t("แสดงสรรพนาม รสนิยม และคนที่อยากเจอ ให้คนที่เปิดใจเรื่องเดทเหมือนกันเห็น", "Show my pronouns, orientation and who I'm open to, to members who are also open to dating")}
+        hint={t("ไม่บังคับ คนที่อยู่โหมดเพื่อนจะไม่เห็นเลย", "Optional. Friends-only members never see it.")}
+        checked={!!p?.showDatingPrefs}
+      />
     </>
+  );
+}
+
+/** Optional women-only spaces. The gender here is private and never shown. */
+export function WomenOnlyFields(props: { v: View }) {
+  const { t, lang } = props.v;
+  const p = props.v.user?.profile;
+  return (
+    <fieldset class="card">
+      <legend>🌸 {t("พื้นที่เฉพาะผู้หญิง (ไม่บังคับ)", "Women-only spaces (optional)")}</legend>
+      <Select label={t("เพศของคุณ (เป็นความลับ ไม่แสดงต่อใคร)", "Your gender (private, never shown)")} name="gender" options={GENDER_IDENTITIES} value={p?.gender} lang={lang} blank="—" />
+      <Toggle
+        name="womenOnly"
+        label={t("บัดดี้ การ์ด แมตช์ และแชตกับผู้หญิงเท่านั้น", "Women only: buddies, the deck, matches and chats")}
+        hint={t("ใช้ได้เมื่อเลือกเพศเป็นผู้หญิง กิจกรรม 'เฉพาะผู้หญิง' ก็ใช้เพศที่เลือกไว้ตรงนี้", "Available when your gender is Woman. Women-only events use this gender too, whether or not this is on.")}
+        checked={!!p?.womenOnly}
+      />
+    </fieldset>
   );
 }
 
@@ -630,20 +664,33 @@ export async function connectionsPatch(
       : null;
   const identity = identities.includes(str(body.genderIdentity)) ? str(body.genderIdentity) : null;
   const pronouns = str(body.pronouns).slice(0, 30) || null;
+  const gender = identities.includes(str(body.gender)) ? str(body.gender) : null;
+  const orientations = values(ORIENTATIONS);
+  const orientation = orientations.includes(str(body.orientation)) ? str(body.orientation) : null;
+  const orientationOpenTo = [...new Set(list(body.orientationOpenTo).filter((x) => orientations.includes(x)))];
   const patch: Partial<typeof profiles.$inferInsert> = {
     relationship,
     ageMin,
     ageMax,
     pronouns,
+    gender,
+    womenOnly: canBeWomenOnly(gender) && str(body.womenOnly) === "1",
     showPronouns: !!pronouns && str(body.showPronouns) === "1",
     updatedAt: new Date(),
     ...(switchingToSingle ? { lastSingleSwitchAt: new Date() } : {}),
   };
   if (wantsRomance) {
-    Object.assign(patch, { romanceOn: true, genderIdentity: identity, romanceOpenTo: openTo ?? "everyone" });
+    Object.assign(patch, {
+      romanceOn: true,
+      genderIdentity: identity,
+      romanceOpenTo: openTo ?? "everyone",
+      orientation,
+      orientationOpenTo: orientationOpenTo.length ? orientationOpenTo : null,
+      showDatingPrefs: str(body.showDatingPrefs) === "1",
+    });
   } else {
     // Off (or not Single): delete the sensitive fields immediately (PRD §3.4).
-    Object.assign(patch, { romanceOn: false, genderIdentity: null, romanceOpenTo: null });
+    Object.assign(patch, { romanceOn: false, genderIdentity: null, romanceOpenTo: null, orientation: null, orientationOpenTo: null, showDatingPrefs: false });
   }
   return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null };
 }
@@ -670,6 +717,9 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
       <FlowStep emoji="🏷️" title={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")}>
         <Field label={t("สรรพนาม", "Pronouns")} name="pronouns" value={p?.pronouns} maxlength={30} placeholder={t("เช่น she/her", "e.g. they/them")} />
         <Toggle name="showPronouns" label={t("แสดงในโปรไฟล์", "Show on my profile")} checked={!!p?.showPronouns} />
+      </FlowStep>
+      <FlowStep emoji="🌸" title={t("พื้นที่เฉพาะผู้หญิง", "Women-only spaces")} hint={t("ไม่บังคับ ข้ามได้", "Optional. Skip if you like.")}>
+        <WomenOnlyFields v={props.v} />
       </FlowStep>
       {props.mode === "friends" && !p?.romanceOn ? null : (
       <FlowStep

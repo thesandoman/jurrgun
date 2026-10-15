@@ -64,14 +64,46 @@ export function canSwitchToSingle(lastSwitch: Date | null, now: Date = new Date(
  * identities or "everyone". Someone with no stated identity only matches
  * people open to everyone.
  */
-export function romanceCompatible(
-  a: { genderIdentity: string | null; romanceOpenTo: string[] | "everyone" | null },
-  b: { genderIdentity: string | null; romanceOpenTo: string[] | "everyone" | null },
-): boolean {
+type RomanceSide = {
+  genderIdentity: string | null;
+  romanceOpenTo: string[] | "everyone" | null;
+  /** Optional orientation filter: only people who stated one of these. */
+  orientation?: string | null;
+  orientationOpenTo?: string[] | null;
+  gender?: string | null;
+  womenOnly?: boolean;
+};
+
+export function romanceCompatible(a: RomanceSide, b: RomanceSide): boolean {
   const accepts = (openTo: string[] | "everyone" | null, identity: string | null) =>
     openTo === "everyone" || (!!identity && Array.isArray(openTo) && openTo.includes(identity));
-  return accepts(a.romanceOpenTo, b.genderIdentity) && accepts(b.romanceOpenTo, a.genderIdentity);
+  const orientationOk = (filter: string[] | null | undefined, theirs: string | null | undefined) => !filter?.length || (!!theirs && filter.includes(theirs));
+  return (
+    accepts(a.romanceOpenTo, b.genderIdentity) &&
+    accepts(b.romanceOpenTo, a.genderIdentity) &&
+    orientationOk(a.orientationOpenTo, b.orientation) &&
+    orientationOk(b.orientationOpenTo, a.orientation) &&
+    womenOnlyOk(a, b)
+  );
 }
+
+// ------------------------------------------------------ women-only spaces --
+// Optional. A woman can choose women-only buddies, deck, dating matches and
+// chats (chats follow matches), and RSVP to events tagged women_only. The
+// gender behind it is private: self-described, never shown, never verified.
+
+export const WOMEN_ONLY_TAG = "women_only";
+export const isWoman = (p: { gender?: string | null }) => p.gender === "woman";
+/** Only a woman can switch women-only on. */
+export const canBeWomenOnly = (gender: string | null | undefined) => gender === "woman";
+
+/** Neither side's women-only choice rules the other out. */
+export function womenOnlyOk(a: { gender?: string | null; womenOnly?: boolean }, b: { gender?: string | null; womenOnly?: boolean }): boolean {
+  return (!a.womenOnly || isWoman(b)) && (!b.womenOnly || isWoman(a));
+}
+
+/** Whether this member may RSVP to an event with these tags. */
+export const womenOnlyEventOk = (tags: string[], p: { gender?: string | null }) => !tags.includes(WOMEN_ONLY_TAG) || isWoman(p);
 
 // ------------------------------------------------- mutual consent (§10.3) --
 

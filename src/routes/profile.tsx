@@ -25,7 +25,7 @@ import { ARCHETYPES } from "../vibe/archetypes";
 import { L } from "../lib/i18n";
 import { getObject, getObjectUrl } from "../storage";
 import { LinkButton, page, view } from "../ui/kit";
-import { ProfileCard, type CardPerson } from "../ui/profile-card";
+import { datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
 import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 
 export const profileRoutes = new Hono<AppEnv>();
@@ -40,7 +40,7 @@ function isActive(a: { status: string; suspendedUntil: Date | null }, now = new 
 }
 
 /** Display-safe fields only. Never age, username, relationship or romance data. */
-export function cardPerson(p: Profile): CardPerson {
+export function cardPerson(p: Profile, viewer?: Profile | null): CardPerson {
   const bio = cleanBio(p.bio);
   return {
     accountId: p.accountId,
@@ -54,6 +54,7 @@ export function cardPerson(p: Profile): CardPerson {
     legacy: p.prompts ?? {},
     bio,
     deck: currentDeck(p.accountId, bio),
+    dating: datingShown(p, viewer ?? p),
   };
 }
 
@@ -155,7 +156,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   const { t } = v;
   const me = c.var.user!;
   const db = getDb(c.env);
-  const person = cardPerson(target.profile);
+  const person = cardPerson(target.profile, me.profile);
   const vibes = await vibesFor(db, self ? [me.account.id] : [target.account.id, me.account.id]);
   const theirVibe = vibes.get(target.account.id);
   const resident = showsResidentBadge(target.account, target.profile);

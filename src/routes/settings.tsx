@@ -995,7 +995,7 @@ settingsRoutes.post("/settings/privacy", async (c) => {
     queries.push(
       db
         .update(profiles)
-        .set({ romanceOn: false, genderIdentity: null, romanceOpenTo: null, intents: intents.length ? intents : ["friends"], updatedAt: new Date() })
+        .set({ romanceOn: false, genderIdentity: null, romanceOpenTo: null, orientation: null, orientationOpenTo: null, showDatingPrefs: false, intents: intents.length ? intents : ["friends"], updatedAt: new Date() })
         .where(eq(profiles.accountId, user.account.id)),
     );
   }

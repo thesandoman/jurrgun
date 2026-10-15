@@ -33,7 +33,8 @@ import {
   universityKey,
   occupationLabel,
 } from "../content/profile";
-import { DISTRICTS, INTENTS, LANGUAGES, label } from "../lib/constants";
+import { DISTRICTS, GENDER_IDENTITIES, INTENTS, LANGUAGES, ORIENTATIONS, label } from "../lib/constants";
+import { romanceEligible } from "../domain/rules";
 import type { View } from "./kit";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
@@ -52,7 +53,33 @@ export type CardPerson = {
   legacy: Record<string, string>;
   bio: Bio;
   deck: string[];
+  /**
+   * Opt-in dating details (showDatingPrefs), only filled when the viewer is
+   * also open to dating. Null for everyone else.
+   */
+  dating?: DatingShown | null;
 };
+
+export type DatingShown = { orientation: string | null; openTo: string[] | "everyone" | null };
+
+/** What a dating viewer may see of `target`'s dating preferences, or null. */
+export function datingShown(
+  target: { romanceOn: boolean; relationship: string; showDatingPrefs: boolean; orientation: string | null; romanceOpenTo: string[] | "everyone" | null },
+  viewer: { romanceOn: boolean; relationship: string } | null | undefined,
+): DatingShown | null {
+  if (!viewer || !target.showDatingPrefs || !romanceEligible(target) || !romanceEligible(viewer)) return null;
+  return { orientation: target.orientation, openTo: target.romanceOpenTo };
+}
+
+/** The dating details as chips, bilingual. */
+export function datingChips(d: DatingShown, lang: "th" | "en"): string[] {
+  const out: string[] = [];
+  if (d.orientation) out.push(`🏳️‍🌈 ${label(ORIENTATIONS, d.orientation, lang)}`);
+  if (d.openTo === "everyone") out.push(lang === "en" ? "💘 Open to everyone" : "💘 เปิดใจกับทุกคน");
+  else if (Array.isArray(d.openTo) && d.openTo.length)
+    out.push(`💘 ${lang === "en" ? "Open to" : "อยากเจอ"} ${d.openTo.map((g) => label(GENDER_IDENTITIES, g, lang)).join(", ")}`);
+  return out;
+}
 
 const LEGACY: Record<string, { th: string; en: string; emoji: string }> = {
   weekend: { th: "วันหยุดในฝันของฉันคือ…", en: "My perfect Bangkok weekend is…", emoji: "🧺" },
@@ -165,6 +192,15 @@ export function ProfileCard(props: {
               <span aria-hidden="true">📚</span> {t("กำลังเรียนรู้", "Currently learning")}: {bio.learning}
             </p>
           ) : null}
+        </section>
+      ) : null}
+      {p.dating && datingChips(p.dating, lang).length ? (
+        <section class="pc-lines" aria-label={t("เรื่องเดท", "Dating")}>
+          <div class="pc-chips">
+            {datingChips(p.dating, lang).map((x) => (
+              <span class="pc-chip">{x}</span>
+            ))}
+          </div>
         </section>
       ) : null}
       {props.actions ? <div class="pc-actions">{props.actions}</div> : null}

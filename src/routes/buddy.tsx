@@ -28,6 +28,7 @@
  *    shared a contact (they moved off the app), or after a kind wrap-up note
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
+import { datingChips, datingShown } from "../ui/profile-card";
 import { SafeArrivalForm } from "./safety";
 import { cleanPrefs } from "../content/dating";
 import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
@@ -252,6 +253,8 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
       datesWith: datesWith(account.id),
       keen: keen.get(account.id),
       datingPrefs: DATING_INTENTS.includes(intentOf.get(account.id) ?? "") ? prefsOf.get(account.id) : undefined,
+      gender: profile.gender,
+      womenOnly: profile.womenOnly,
     });
   }
   return pool;
@@ -963,16 +966,28 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
     const chips = [...shared, ...person.interests.filter((i) => !shared.includes(i))].slice(0, 6);
     const energy = ENERGY.find((x) => x.value === bio.energy);
     const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
+    const shown = datingShown(person, mineP);
+    const dating = shown ? datingChips(shown, lang) : [];
     card = (
       <article class="deck-card" data-deck>
         <span class="deck-stamp keen" aria-hidden="true">{t("สนใจ", "Keen")}</span>
         <span class="deck-stamp pass" aria-hidden="true">{t("ผ่าน", "Pass")}</span>
         <div class="deck-face" aria-hidden="true">{a?.emoji ?? "🙂"}</div>
-        <h2>{person.nickname}</h2>
+        <h2>
+          {person.nickname}
+          {person.showPronouns && person.pronouns ? <small class="muted"> {person.pronouns}</small> : null}
+        </h2>
         <p class="deck-sub">
           {a ? L(lang, a.name) : null} · 📍 {DISTRICTS.find((d) => d.value === person.district)?.[lang === "en" ? "en" : "th"]}
         </p>
         {why ? <p class="deck-why">🤝 {L(lang, why)}</p> : null}
+        {dating.length ? (
+          <p class="chips2">
+            {dating.map((x) => (
+              <span>{x}</span>
+            ))}
+          </p>
+        ) : null}
         <p class="chips2">
           {chips.map((i) => {
             const o = ALL_INTERESTS.find((x) => x.value === i);

@@ -130,6 +130,7 @@ async function planFor(c: C) {
       energy: bio.energy,
       groupSize: bio.groupSize,
       socialEnergy: bio.socialEnergy,
+      gender: p.gender,
     },
     cands,
     now,

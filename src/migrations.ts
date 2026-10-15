@@ -198,5 +198,15 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE TABLE \"research_exit_reasons\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"reasons\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"note\" text DEFAULT '' NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
       "CREATE INDEX \"research_exit_reasons_created_idx\" ON \"research_exit_reasons\" (\"created_at\");"
     ]
+  },
+  {
+    "id": "0015_abnormal_maestro",
+    "statements": [
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"orientation\" text;",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"orientation_open_to\" jsonb;",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"show_dating_prefs\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"gender\" text;",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"women_only\" boolean DEFAULT false NOT NULL;"
+    ]
   }
 ];

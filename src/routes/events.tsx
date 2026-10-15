@@ -20,7 +20,7 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
-import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING } from "../domain/rules";
+import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, womenOnlyEventOk } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
 import { cleanBio } from "../content/profile";
 import { Hono, type Context } from "hono";
@@ -1233,6 +1233,13 @@ export async function rsvpGate(
   const age = ageOn(user.profile.birthDate, now);
   if (!withinRange(age, event.ageMin, event.ageMax)) {
     return no(`กิจกรรมนี้สำหรับอายุ ${event.ageMin}–${event.ageMax} ปี`, `This event is for ages ${event.ageMin}–${event.ageMax}.`, 403);
+  }
+  if (!womenOnlyEventOk(event.tags, user.profile)) {
+    return no(
+      "กิจกรรมนี้สำหรับผู้หญิงเท่านั้น ถ้าคุณเป็นผู้หญิง ตั้งค่าเพศได้ที่ ฉัน > ตั้งค่าการรู้จักกัน (เป็นความลับ)",
+      "This event is for women only. If you're a woman, set your gender in Me > Connection preferences (it stays private).",
+      403,
+    );
   }
 
   const existing = await myRegistration(db, event.id, user.account.id);

@@ -135,6 +135,18 @@ export const GENDER_IDENTITIES: Opt[] = [
   o("prefer_not", "ไม่ระบุ", "Prefer not to say"),
 ];
 
+/** Sexual orientation: romance data, optional, only kept while romance mode is on. */
+export const ORIENTATIONS: Opt[] = [
+  o("straight", "ชอบเพศตรงข้าม", "Straight"),
+  o("gay", "เกย์", "Gay"),
+  o("lesbian", "เลสเบี้ยน", "Lesbian"),
+  o("bi", "ไบเซ็กชวล", "Bisexual"),
+  o("pan", "แพนเซ็กชวล", "Pansexual"),
+  o("queer", "เควียร์", "Queer"),
+  o("ace", "เอเซ็กชวล", "Asexual"),
+  o("questioning", "ยังค้นหาตัวเอง", "Questioning"),
+];
+
 export const EVENT_TAGS: Opt[] = [
   o("food", "อาหาร", "Food"),
   o("run", "วิ่ง", "Run"),
@@ -154,6 +166,8 @@ export const EVENT_TAGS: Opt[] = [
   o("city_quest", "ซิตี้เควสต์", "City Quest"),
   o("festival", "เทศกาล", "Festival go-together"),
   o("daytime", "กลางวัน", "Daytime"),
+  /** Only women can RSVP (rsvpGate), by the private gender in Settings. */
+  o("women_only", "เฉพาะผู้หญิง", "Women only"),
 ];
 
 export const INTENSITY: Opt[] = [

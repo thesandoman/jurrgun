@@ -14,6 +14,7 @@
  *    both are romance-eligible and compatible, after two finished quests.
  */
 import { kidsClash, type DatingPrefs } from "../content/dating";
+import { womenOnlyOk } from "./rules";
 import { ARCHETYPES, matchLabel, type ArchetypeKey } from "../vibe/archetypes";
 import type { Text } from "../vibe/content";
 import { SCENARIOS, type Scenario, type TypeCode } from "../vibe/scenarios";
@@ -109,6 +110,9 @@ export type PoolMember = BuddyCandidate & {
   keen?: ReadonlySet<string>;
   /** Private dating preferences, only for members open to dating. */
   datingPrefs?: DatingPrefs;
+  /** Private gender and the optional women-only choice (rules.ts womenOnlyOk). */
+  gender?: string | null;
+  womenOnly?: boolean;
 };
 
 /** A keen flick moves someone up your list, and past the waiting bar. */
@@ -141,6 +145,7 @@ const inRange = (age: number, min: number, max: number) => age >= min && age <= 
 function acceptScore(a: PoolMember, b: PoolMember): number | null {
   if (a.accountId === b.accountId || a.excluded.has(b.accountId) || b.excluded.has(a.accountId)) return null;
   if (!inRange(b.age, a.ageMin, a.ageMax) || !inRange(a.age, b.ageMin, b.ageMax)) return null;
+  if (!womenOnlyOk(a, b)) return null;
   // Someone here only for dating is only paired with people they can date.
   if (a.datesWith && !a.datesWith.has(b.accountId)) return null;
   if (b.datesWith && !b.datesWith.has(a.accountId)) return null;

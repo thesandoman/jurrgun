@@ -166,6 +166,19 @@ export const profiles = pgTable(
     /** Private, optional, only kept while romance mode is on (PRD §3.4). */
     genderIdentity: text("gender_identity"),
     romanceOpenTo: jsonb("romance_open_to").$type<string[] | "everyone">(),
+    /** Romance data, like genderIdentity: optional, cleared when romance is switched off. */
+    orientation: text("orientation"),
+    /** Romance filter: only people of these orientations (null = anyone). */
+    orientationOpenTo: jsonb("orientation_open_to").$type<string[]>(),
+    /** Opt-in: show pronouns, orientation and who I'm open to, to members who are also open to dating. */
+    showDatingPrefs: boolean("show_dating_prefs").notNull().default(false),
+    /**
+     * Private gender, kept separately from romance mode, used only for the
+     * optional women-only spaces. Never shown to anyone.
+     */
+    gender: text("gender"),
+    /** Women only: buddies, the deck and dating matches are women only (needs gender = woman). */
+    womenOnly: boolean("women_only").notNull().default(false),
     pronouns: text("pronouns"),
     showPronouns: boolean("show_pronouns").notNull().default(false),
     /** Opt-in "Bangkok Registered Resident" badge (only meaningful when verified). */
