@@ -16,6 +16,7 @@ All chats share one Mac. Running renders and test suites at the same time pushed
   1. the film re-render (running now);
   2. then the quiz chats in D14 order, one at a time;
   3. then Branding's agents one at a time: Regular Tables, then admin partners and measurement.
+- **Full suite on your turn:** `npx vitest run --maxWorkers=1` (all 475 pass that way).
 - **Tests while waiting:** run only the files you changed, `npx vitest run <files> --poolOptions.threads.maxThreads=2 --testTimeout=30000`. Run the full suite only when it's your turn to push.
 - **Light work is fine anytime:** reading, writing and editing.
 - **When a chat finishes its heavy step,** it tells Branding, and Branding starts the next one.
@@ -69,7 +70,7 @@ None right now. New questions go to the Branding chat.
 | **film-review** | Film review and brief | done | |
 | **UI/UX** | Accessibility and UX pass (WCAG 2.1 AA, 56 pages, light, dark, 320 px, large text): field edges, brand green #11763f, skip link, focus ring, hint and error wiring, radio group labels, switch off state, heading order, friendly 404 and 500 pages, 12 px text floor, 24 px taps, /new hero CTA, denser Discover cards, sticky RSVP, Me tiles | merged | owner-approved per change (10-15); styles in `src/ui/a11y-css.ts` load last |
 | **2.0** | Admins (sandosit, pjj, aey) | idle | |
-| Quiz: audit and blueprint | Bank audit and blueprint (worktree gifted-visvesvaraya) | running | merges 1st (D14) |
+| Quiz: audit and blueprint | Bank audit and blueprint | done, landed 637eb30 | places to verify: Krung Thep Aphiwat (probably Chatuchak), Chokchai 4 (probably Lat Phrao), Brown Sugar's address, whether Jodd Fairs Ratchada is open |
 | Quiz: Q5 profile and mode | Profile-aware question sets (worktree dreamy-leavitt) | running | merges 2nd, after the blueprint (D14) |
 | Quiz: 100 Bangkok scenarios | Content (worktree amazing-bhabha) | running | merges after Q5 (D14) |
 | Quiz: funny scenarios | Content (worktree funny-lamarr) | running | merges after Q5 (D14) |
