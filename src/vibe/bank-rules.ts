@@ -68,16 +68,11 @@ export const FAMILIAR_EN = /\b(usual|regular|regulars|always|every (?:week|year|
 export const MIN_WORDS = 6;
 export const MAX_WORDS = 12;
 /**
- * Scenarios written before the review (2026-10-15). Until each is rewritten
- * they keep the old limits: up to 24 words and no cap on stock words. When you
- * rewrite one to the new rules, delete its id here; never add one.
+ * Scenarios written before the review kept the old limits (up to 24 words, no
+ * cap on stock words) until rewritten. All 47 were rewritten on 2026-10-15, so
+ * the list is empty and stays empty; never add one.
  */
-export const LEGACY_IDS: ReadonlySet<string> = new Set([
-  "saturday", "visitor", "friday", "sunday", "photo", "rain", "story", "newfriend", "firstdate", "seconddate",
-  "anniversary", "budget-date", "rainy-date", "sunset-date", "best-hours", "meetup-slot", "date-time",
-  "family-outing-time", "friends-time", "party-time", "free-evening", "meetup-signup", "date-plan", "family-trip",
-  "friends-weekend", "party-plan",
-]);
+export const LEGACY_IDS: ReadonlySet<string> = new Set([]);
 /** A D answer that reads as a habit, or an F answer that reads as a first. */
 export const CONTRA_D_EN = /\b(usual|regular|as always|like every|for years|like always|same (?:route|loop|table|stall|spot|order|seat))\b/i;
 export const CONTRA_F_EN = /\b(never(?! skip| miss)|none of you|neither of you|haven't|you've never|just opened|just-opened|brand[- ]new|first visit|first time)\b/i;

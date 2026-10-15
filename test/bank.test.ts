@@ -59,6 +59,10 @@ describe("quiz bank", () => {
     bad.answers.CFSN = { ...bad.answers.CFSN, en: "A café in Ari none of you has tried, slow coffee and a long talk" };
     bad.answers.CFSH = { ...bad.answers.CFSH, en: "Wang Lang Market with your grandparent, 50-baht curry, same stall", th: "ตลาดวังหลังกับตายาย แกงจานละ 40 บาท แชทกันยาว ๆ" };
     bad.answers.CDMH = { ...bad.answers.CDMH, en: "Paddle Khlong Lat Mayom with one friend past wooden houses on Yaowarat" };
+    // Two more stock-word answers, so four of the 16 lean on usual, regular, never or new (the cap is 3).
+    bad.answers.BFMN = { ...bad.answers.BFMN, en: "The usual run club lap of Benjakitti Forest Park" };
+    bad.answers.BFSN = { ...bad.answers.BFSN, en: "Your regular big table at The Commons in Thonglor" };
+    bad.answers.CDMN = { ...bad.answers.CDMN, en: "Walk Ari's back sois to a new design shop" };
     const { errors } = checkScenarios([bad]);
     const has = (s: string) => expect(errors.some((e) => e.includes(s)), `${s} in\n${errors.join("\n")}`).toBe(true);
     has('prompt must end with "?"');
@@ -72,11 +76,9 @@ describe("quiz bank", () => {
     has("CDMH: names Yaowarat in English but not in Thai");
   });
 
-  it("keeps the pre-review scenarios on a legacy list that only shrinks", async () => {
+  it("has no legacy scenarios left: all 47 pre-review scenarios are rewritten to the review rules", async () => {
     const { LEGACY_IDS } = await import("../src/vibe/bank-rules");
-    const ids = new Set(SCENARIOS.map((s) => s.id));
-    expect(LEGACY_IDS.size).toBeLessThanOrEqual(47);
-    for (const id of LEGACY_IDS) expect(ids.has(id), id).toBe(true);
+    expect([...LEGACY_IDS]).toEqual([]);
   });
 
   it("every D and F answer shows its letter, and a detail counts as much as a word (D24)", async () => {
