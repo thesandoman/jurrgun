@@ -64,6 +64,8 @@ export type SessionOptions = {
   /** Question ids this user has already answered; their scenarios are avoided where possible. */
   seen?: ReadonlySet<string>;
   personal?: Personal;
+  /** Here for friends only: no date scenarios at all. */
+  friendsOnly?: boolean;
 };
 
 /** The 8 opposite pairs, e.g. [BDSH, CFMN], keyed by their B-side code. */
@@ -83,8 +85,8 @@ const HOME_SCENARIOS = 2;
 const nearHome = (home: string | null | undefined) => (s: Scenario) => !!home && TYPE_CODES.some((c) => s.answers[c].district === home);
 
 /** 16 core scenarios: two twin pairs, the context minimums, then anything. */
-function pickCore(rng: Rng, seen: ReadonlySet<string>, home?: string | null): Scenario[] {
-  const core = SCENARIOS.filter((s) => s.kind === "core");
+function pickCore(rng: Rng, seen: ReadonlySet<string>, home?: string | null, friendsOnly = false): Scenario[] {
+  const core = SCENARIOS.filter((s) => s.kind === "core" && !(friendsOnly && s.context === "date"));
   const twinPairs: [Scenario, Scenario][] = [];
   for (const s of core) {
     const t = s.twin ? core.find((x) => x.id === s.twin) : undefined;
@@ -105,6 +107,7 @@ function pickCore(rng: Rng, seen: ReadonlySet<string>, home?: string | null): Sc
     }
   };
   for (const ctx of shuffle(rng, Object.keys(CONTEXT_MIN) as Context[])) {
+    if (friendsOnly && ctx === "date") continue;
     const need = CONTEXT_MIN[ctx] - chosen.filter((s) => s.context === ctx).length;
     for (let k = 0; k < need; k++) take(preferUnseen(rng, core.filter((s) => s.context === ctx && !has(s)), seen, prefer).slice(0, 1));
   }
@@ -201,10 +204,11 @@ function personalKey(p: Personal | undefined): string {
 
 export function generateSession(options: SessionOptions): Question[] {
   const key = personalKey(options.personal);
-  const rng = createRng(`bkk-type:${options.seed}${key}`);
+  const rng = createRng(`bkk-type:${options.seed}${key}${options.friendsOnly ? ":f" : ""}`);
   const seenScenarios = new Set([...(options.seen ?? [])].map(scenarioOfId));
-  const flavour = (kind: Kind) => preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind), seenScenarios).slice(0, FLAVOUR_ITEMS);
-  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, options.personal?.district), ...flavour("rhythm"), ...flavour("plan")]);
+  const flavour = (kind: Kind) =>
+    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && !(options.friendsOnly && s.context === "date")), seenScenarios).slice(0, FLAVOUR_ITEMS);
+  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, options.personal?.district, options.friendsOnly), ...flavour("rhythm"), ...flavour("plan")]);
   const pairs = pairsPerQuestion(rng, scenarios);
   // Home district: in up to two questions, swap in the pair whose answer is set near home.
   const home = options.personal?.district;

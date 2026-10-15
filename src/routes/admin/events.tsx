@@ -776,7 +776,7 @@ function EventForm(props: {
         <h2>{t("ผู้ดูแลและสถานะ", "Host and status")}</h2>
         <Select label={t("โฮสต์", "Host")} name="hostAccountId" options={hostOpts} value={d.hostAccountId} lang={lang} blank={t("— ยังไม่กำหนด —", "— Not assigned —")} />
         {props.a.role === "bma_admin" ? (
-          <Select label={t("องค์กรพาร์ตเนอร์", "Partner organisation")} name="partnerOrgId" options={orgOpts} value={d.partnerOrgId} lang={lang} blank={t("— กทม. (ไม่มีพาร์ตเนอร์) —", "— BMA (no partner) —")} />
+          <Select label={t("องค์กรพาร์ตเนอร์", "Partner organisation")} name="partnerOrgId" options={orgOpts} value={d.partnerOrgId} lang={lang} blank={t("— Jurrgun (ไม่มีพาร์ตเนอร์) —", "— Jurrgun (no partner) —")} />
         ) : null}
         {d.status === "cancelled" ? (
           <p>

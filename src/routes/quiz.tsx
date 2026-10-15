@@ -18,7 +18,7 @@ import { getDb } from "../db";
 import type { AppEnv } from "../lib/env";
 import { L, type Lang } from "../lib/i18n";
 import { requireUser } from "../lib/session";
-import { vibes } from "../schema";
+import { datingIntents, vibes } from "../schema";
 import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
 import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, POLES } from "../vibe/content";
@@ -75,8 +75,14 @@ export function quizSeed(accountId: string, row: Pick<VibeRow, "seen"> | null): 
  * set near their home district when known, so even the same seed reads differently
  * for different people.
  */
-export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal): Question[] {
-  return generateSession({ seed, seen: new Set(row?.seen ?? []), personal });
+export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal, friendsOnly = false): Question[] {
+  return generateSession({ seed, seen: new Set(row?.seen ?? []), personal, friendsOnly });
+}
+
+/** Members who said "friends only" never get date scenarios. */
+export async function isFriendsOnly(env: AppEnv["Bindings"], accountId: string): Promise<boolean> {
+  const [row] = await getDb(env).select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, accountId)).limit(1);
+  return row?.mode === "friends";
 }
 
 /** Personalisation from a profile (null before onboarding basics). */
@@ -496,7 +502,7 @@ quizRoutes.get("/quiz", async (c) => {
   return page(
     c,
     { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row, personalOf(user.profile))} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
+    <QuizFlow v={v} questions={quizQuestions(seed, row, personalOf(user.profile), await isFriendsOnly(c.env, user.account.id))} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
   );
 });
 
@@ -518,7 +524,7 @@ quizRoutes.post("/quiz", async (c) => {
     );
   }
   // The onboarding quiz (onboarding.tsx) is built without personalisation; match it.
-  const questions = quizQuestions(seed, row, next === "/onboarding/type" ? undefined : personalOf(user.profile));
+  const questions = quizQuestions(seed, row, next === "/onboarding/type" ? undefined : personalOf(user.profile), await isFriendsOnly(c.env, user.account.id));
   const { answers, invalid } = parseAnswers(body, questions);
   const result = scoreSession(questions, answers);
   if (invalid.length > 0 || result.answered < MIN_ANSWERED) {

@@ -216,3 +216,18 @@ describe("scoring and the margin of error", () => {
     for (const sc of SCENARIOS) for (const code of TYPE_CODES) expect(sc.answers[code as TypeCode]?.en, `${sc.id} ${code}`).toBeTruthy();
   });
 });
+
+describe("friends-only quizzes", () => {
+  it("never show a date scenario, and still ask 20 questions", async () => {
+    const { generateSession, QUIZ_LENGTH } = await import("../src/vibe/generator");
+    const { SCENARIOS } = await import("../src/vibe/scenarios");
+    const ctxOf = new Map(SCENARIOS.map((s) => [s.id, s.context]));
+    for (let i = 0; i < 40; i++) {
+      const qs = generateSession({ seed: `f${i}`, friendsOnly: true });
+      expect(qs).toHaveLength(QUIZ_LENGTH);
+      expect(qs.some((q) => ctxOf.get(q.id.split(".")[0]) === "date")).toBe(false);
+    }
+    // Everyone else still gets some.
+    expect(generateSession({ seed: "f0" }).some((q) => ctxOf.get(q.id.split(".")[0]) === "date")).toBe(true);
+  });
+});

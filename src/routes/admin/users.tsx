@@ -212,8 +212,8 @@ adminUsers.get("/:id", async (c) => {
           <h2 style="margin-top:0">{t("การยืนยันตัวตน (ชั่วคราว)", "Verification (manual stand-in)")}</h2>
           <p class="muted">
             {t(
-              "ใช้แทนชั่วคราวจนกว่าจะเชื่อมต่อ ThaiD และระบบทะเบียนของ กทม. ทุกการเปลี่ยนแปลงจะถูกบันทึก",
-              "A stand-in until ThaiD and the BMA registry are integrated. Every change is logged.",
+              "ตรวจด้วยมือไปก่อน ทุกการเปลี่ยนแปลงจะถูกบันทึก",
+              "Checked by hand for now. Every change is logged.",
             )}
           </p>
           <div class="grid2">

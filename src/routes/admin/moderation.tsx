@@ -411,7 +411,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
       <Card>
         <h2 style="margin-top:0">{t("ดำเนินการ", "Take action")}</h2>
         {protectedTarget ? (
-          <Notice kind="warn">{t("ผู้ดูแลไม่สามารถดำเนินการกับบัญชีแอดมิน กทม. ได้", "Moderators can't act on a BMA admin account.")}</Notice>
+          <Notice kind="warn">{t("ผู้ดูแลไม่สามารถดำเนินการกับบัญชีแอดมินได้", "Moderators can't act on an admin account.")}</Notice>
         ) : null}
         <form method="post" action={`/admin/moderation/${encodeURIComponent(r.id)}/action`}>
           <div class="field">

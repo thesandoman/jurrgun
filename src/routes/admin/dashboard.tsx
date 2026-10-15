@@ -41,8 +41,8 @@ function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: st
       <Card>
         <p class="muted">
           {t(
-            "ลบข้อมูลตามตารางระยะเวลาเก็บรักษา (PRD §12.4): สัญญาณทางสังคมหลัง 7 วัน, ตัวเลือกที่ไม่ตรงกันเมื่อหน้าต่าง 72 ชม. ปิด, เซสชันที่หมดอายุ, บันทึกการเข้าสู่ระบบหลัง 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้อัตโนมัติวันละไม่เกิน 1 ครั้งเมื่อผู้ดูแลเปิดหน้านี้",
-            "Deletes data on the retention schedule (PRD §12.4): social signals after 7 days, pending choices when the 72h window closes, expired sessions, sign-in attempts after 24h and accounts deactivated over 30 days ago. It also runs by itself at most once a day when an admin opens this page.",
+            "ลบข้อมูลตามตารางระยะเวลาเก็บรักษา: สัญญาณทางสังคมหลัง 7 วัน, ตัวเลือกที่ไม่ตรงกันเมื่อหน้าต่าง 72 ชม. ปิด, เซสชันที่หมดอายุ, บันทึกการเข้าสู่ระบบหลัง 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้อัตโนมัติวันละไม่เกิน 1 ครั้งเมื่อผู้ดูแลเปิดหน้านี้",
+            "Deletes data on the retention schedule: social signals after 7 days, pending choices when the 72h window closes, expired sessions, sign-in attempts after 24h and accounts deactivated over 30 days ago. It also runs by itself at most once a day when an admin opens this page.",
           )}
         </p>
         {run ? (

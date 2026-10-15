@@ -309,8 +309,8 @@ adminInsights.get("/", async (c) => {
       </nav>
       <Notice kind="info">
         {t(
-          `ตัวเลขที่มีฐานน้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10" เพื่อป้องกันการระบุตัวบุคคล เป้าหมายตาม PRD §18.4 (รอ กทม. ยืนยัน)`,
-          `Figures based on fewer than ${K_THRESHOLD} people show as "<10" to prevent re-identification. Targets from PRD §18.4 (placeholders, BMA to confirm).`,
+          `ตัวเลขที่มีฐานน้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10" เพื่อป้องกันการระบุตัวบุคคล เป้าหมายเป็นเป้าของทีมเราเอง`,
+          `Figures based on fewer than ${K_THRESHOLD} people show as "<10" to prevent re-identification. Targets are our own goals.`,
         )}
       </Notice>
 

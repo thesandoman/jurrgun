@@ -51,7 +51,7 @@ import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
 import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation } from "../content/profile";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, ProfileFormScript } from "../ui/profile-form";
-import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
+import { loadVibe, isFriendsOnly, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 
 export const onboarding = new Hono<AppEnv>();
 onboarding.use("*", requireUser);
@@ -283,7 +283,7 @@ onboarding.get("/quiz", async (c) => {
   return page(
     c,
     { title: TITLE, bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row)} seed={seed} next="/onboarding/type" stage={stage("quiz")} skipAction="/onboarding/quiz/skip" />,
+    <QuizFlow v={v} questions={quizQuestions(seed, row, undefined, await isFriendsOnly(c.env, user.account.id))} seed={seed} next="/onboarding/type" stage={stage("quiz")} skipAction="/onboarding/quiz/skip" />,
   );
 });
 

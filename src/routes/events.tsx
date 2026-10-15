@@ -981,7 +981,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           <dt>{t("จุดนัดพบและความปลอดภัย", "Meeting point & safety")}</dt>
           <dd>{event.safetyInfo || t("โฮสต์จะแจ้งก่อนงาน", "Your host will share it before the event")}</dd>
           <dt>{t("ติดต่อฉุกเฉิน", "Emergency contact")}</dt>
-          <dd>{event.emergencyContact || "1555 (กทม. / BMA)"}</dd>
+          <dd>{event.emergencyContact || "191 / 1669"}</dd>
           {event.residentQuota > 0 || event.residentPriority ? (
             <>
               <dt>{t("สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Bangkok resident priority")}</dt>
