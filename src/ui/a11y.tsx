@@ -1,5 +1,5 @@
 /**
- * Accessibility menu: light / dark / automatic appearance, text size, high
+ * Accessibility menu: light (the default) / dark / automatic appearance, text size, high
  * contrast, reduced motion, a more readable font and underlined links. Choices live in localStorage on this
  * device ("bkk-a11y") and become classes on <html> before first paint
  * (A11Y_HEAD_JS), so pages never flash the default look.
@@ -11,7 +11,7 @@ const FLAGS = ["contrast", "motion", "readable", "links", "touch", "wide", "spac
 
 /** Read the saved choices (migrating the old Aa "bkk-text" switch). Shared by both scripts. */
 const READ = `function rd(){try{var s=JSON.parse(localStorage.getItem("${KEY}")||"null");if(s&&typeof s==="object")return s;return localStorage.getItem("bkk-text")==="big"?{size:"large"}:{}}catch(e){return{}}}`;
-const APPLY = `function ap(s){var d=document.documentElement,c=d.classList,th=s.theme==="light"||s.theme==="dark"?s.theme:null;if(th)d.setAttribute("data-theme",th);else d.removeAttribute("data-theme");document.querySelectorAll("meta[name=theme-color]").forEach(function(m){var o=m.getAttribute("data-media");m.setAttribute("media",th?(th===m.getAttribute("data-scheme")?"all":"not all"):o)});c.toggle("a11y-small",s.size==="small");c.toggle("a11y-large",s.size==="large");c.toggle("a11y-xl",s.size==="xl");${JSON.stringify(FLAGS)}.forEach(function(k){c.toggle("a11y-"+k,!!s[k])})}`;
+const APPLY = `function ap(s){var d=document.documentElement,c=d.classList,tt=s.theme||"light",th=tt==="light"||tt==="dark"?tt:null;if(th)d.setAttribute("data-theme",th);else d.removeAttribute("data-theme");document.querySelectorAll("meta[name=theme-color]").forEach(function(m){var o=m.getAttribute("data-media");m.setAttribute("media",th?(th===m.getAttribute("data-scheme")?"all":"not all"):o)});c.toggle("a11y-small",s.size==="small");c.toggle("a11y-large",s.size==="large");c.toggle("a11y-xl",s.size==="xl");${JSON.stringify(FLAGS)}.forEach(function(k){c.toggle("a11y-"+k,!!s[k])})}`;
 
 /** Inline in <head>: apply saved choices before the page paints. */
 export const A11Y_HEAD_JS = `(function(){${READ}${APPLY}ap(rd())})()`;
@@ -73,7 +73,7 @@ export function A11yMenu(props: { t: T; class?: string }) {
           <div>
             {themes.map(([value, text, mark]) => (
               <label>
-                <input type="radio" name="a11y-theme" value={value} data-a11y="theme" data-default="auto" checked={value === "auto"} />
+                <input type="radio" name="a11y-theme" value={value} data-a11y="theme" data-default="light" checked={value === "light"} />
                 <span>
                   <b style="font-size:1.2rem" aria-hidden="true">
                     {mark}
