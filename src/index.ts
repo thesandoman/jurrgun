@@ -18,6 +18,7 @@ import { onboarding } from "./routes/onboarding";
 import { peopleRoutes } from "./routes/people";
 import { profileRoutes } from "./routes/profile";
 import { publicRoutes } from "./routes/public";
+import { newcomerRoutes } from "./routes/newcomers";
 import { pulseRoutes } from "./routes/pulse";
 import { pwaRoutes } from "./routes/pwa";
 import { quizRoutes } from "./routes/quiz";
@@ -41,6 +42,7 @@ app.use("*", loadUser);
 
 app.route("/api/setup", setup);
 app.route("/", publicRoutes);
+app.route("/", newcomerRoutes);
 app.route("/", learnRoutes);
 app.route("/", pwaRoutes);
 app.route("/", vendorRoutes);
