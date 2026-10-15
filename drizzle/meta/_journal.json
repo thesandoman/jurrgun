@@ -92,6 +92,13 @@
       "when": 1792043629144,
       "tag": "0012_magical_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792046154040,
+      "tag": "0013_supreme_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

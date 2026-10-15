@@ -287,6 +287,12 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chat-starters button{flex:none;white-space:nowrap}
 .chat-starters button{border:0;border-radius:999px;padding:6px 12px;background:var(--surface-2);color:var(--ink-2);font:inherit;font-size:.85rem;cursor:pointer;text-align:left}
 @media (min-width:1024px){.chat-send{bottom:0}}
+.grad{margin:8px 0;padding:10px 14px;border-radius:14px;background:var(--sun-soft,#fff4dc);color:var(--ink);font-weight:700}
+.thanks-starters button{border:0;border-radius:999px;padding:6px 12px;background:var(--surface-2);color:var(--ink-2);font:inherit;font-size:.85rem;cursor:pointer}
+.phone-down{text-align:center;padding:24px 4px}
+.phone-down .pd-emoji{font-size:4rem;margin:8px 0}
+.pd-prompts{list-style:none;padding:0;margin:20px 0;display:grid;gap:12px;text-align:left}
+.pd-prompts li{padding:16px 18px;border-radius:20px;background:var(--surface);border:1px solid var(--line);font-size:1.1rem;font-weight:600;line-height:1.4}
 .chips2 span{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:999px;background:var(--surface-2);font-size:.82rem;font-weight:600}
 @media (prefers-reduced-motion:reduce){.pill2-dot{animation:none}.fan-card,.tile2{transition:none}}
 `;

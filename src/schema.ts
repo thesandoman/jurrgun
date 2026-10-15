@@ -59,6 +59,9 @@ export type ProfileBio = {
   times?: string[];
   access?: string[];
   socialEnergy?: string;
+  /** When the energy check-in was last answered (ISO), and the answer before it. */
+  energyAt?: string;
+  energyPrev?: string;
   deck?: string[];
   skipped?: string[];
   answers?: Record<string, { kind: string; value: string | number | string[]; photoKey?: string }>;
@@ -251,6 +254,8 @@ export const events = pgTable(
     residentPriority: boolean("resident_priority").notNull().default(false),
     residentQuota: integer("resident_quota").notNull().default(0),
     buddyEnabled: boolean("buddy_enabled").notNull().default(false),
+    /** Pay-it-forward: seats anyone may quietly claim for free, no questions asked. */
+    freeSeats: integer("free_seats").notNull().default(0),
     buddyRoundAt: ts("buddy_round_at"),
     groupsPublishedAt: ts("groups_published_at"),
     /** Host-launched icebreaker shown on the live page. */
@@ -279,6 +284,8 @@ export const registrations = pgTable(
     plusOneWith: text("plus_one_with"),
     plusOneUsername: text("plus_one_username"),
     wantsBuddy: boolean("wants_buddy").notNull().default(false),
+    /** Took a pay-it-forward seat. Never shown to anyone but the member. */
+    freeSeat: boolean("free_seat").notNull().default(false),
     /** Secret on the personal event pass; the host scans it. */
     passToken: text("pass_token").notNull(),
     checkedInAt: ts("checked_in_at"),
@@ -833,6 +840,40 @@ export const pitchJoins = pgTable(
     createdAt: created(),
   },
   (t) => [uniqueIndex("social_pitch_joins_idx").on(t.pitchId, t.accountId)],
+);
+
+// ------------------------------------------------- people before the app --
+
+/**
+ * Graduation: two people who shared contacts and met at least twice. Jurrgun
+ * celebrates them, stops nudging them, and asks each once, 30 days later,
+ * whether they're still in touch (M&E only).
+ */
+export const graduations = pgTable(
+  "social_graduations",
+  {
+    id: text("id").primaryKey(),
+    connectionId: text("connection_id").notNull(),
+    aStill: boolean("a_still"),
+    bStill: boolean("b_still"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_graduations_conn_idx").on(t.connectionId)],
+);
+
+/** A private, one-line thank-you after meeting. No counts, no scores. */
+export const thanks = pgTable(
+  "social_thanks",
+  {
+    id: text("id").primaryKey(),
+    fromAccount: text("from_account").notNull(),
+    toAccount: text("to_account").notNull(),
+    /** conn:<connectionId> */
+    context: text("context").notNull(),
+    body: text("body").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_thanks_idx").on(t.fromAccount, t.toAccount, t.context), index("social_thanks_to_idx").on(t.toAccount, t.createdAt)],
 );
 
 /** A member asking to lead a circle (and so host its hangouts). Reviewed in /admin/review. */

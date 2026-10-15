@@ -179,5 +179,17 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"social_plan_pitches_week_idx\" ON \"social_plan_pitches\" (\"week\",\"account_id\");",
       "CREATE UNIQUE INDEX \"social_weekly_plans_idx\" ON \"social_weekly_plans\" (\"account_id\",\"week\");"
     ]
+  },
+  {
+    "id": "0013_supreme_omega_sentinel",
+    "statements": [
+      "CREATE TABLE \"social_graduations\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"connection_id\" text NOT NULL,\n\t\"a_still\" boolean,\n\t\"b_still\" boolean,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_thanks\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"from_account\" text NOT NULL,\n\t\"to_account\" text NOT NULL,\n\t\"context\" text NOT NULL,\n\t\"body\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"free_seats\" integer DEFAULT 0 NOT NULL;",
+      "ALTER TABLE \"social_registrations\" ADD COLUMN \"free_seat\" boolean DEFAULT false NOT NULL;",
+      "CREATE UNIQUE INDEX \"social_graduations_conn_idx\" ON \"social_graduations\" (\"connection_id\");",
+      "CREATE UNIQUE INDEX \"social_thanks_idx\" ON \"social_thanks\" (\"from_account\",\"to_account\",\"context\");",
+      "CREATE INDEX \"social_thanks_to_idx\" ON \"social_thanks\" (\"to_account\",\"created_at\");"
+    ]
   }
 ];

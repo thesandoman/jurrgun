@@ -23,7 +23,7 @@ import type { AppEnv } from "../lib/env";
 import { fmtDate, L } from "../lib/i18n";
 import { notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { buddyMatches, buddyQuests, connections, events, pitchJoins, planPitches, profiles, registrations, vibes, weeklyPlans, type Event } from "../schema";
+import { buddyMatches, buddyQuests, connections, contactShares, events, passportStamps, pitchJoins, planPitches, profiles, registrations, vibes, weeklyPlans, type Event } from "../schema";
 import { SEAT_STATUSES } from "../services/events";
 import { ARCHETYPES, isArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Field, LinkButton, Notice, page, Select, str, view, type View } from "../ui/kit";
@@ -205,12 +205,43 @@ planRoutes.get("/plan", async (c) => {
     ? await db.select().from(pitchJoins).where(inArray(pitchJoins.pitchId, visible.map((x) => x.p.id))).limit(500)
     : [];
   const restHint = plan.status === "skipped" && lastWeek[0]?.status === "skipped";
+  const bio = cleanBio(c.var.user!.profile!.bio);
+  const askEnergy = !bio.energyAt || now.getTime() - Date.parse(bio.energyAt) > 30 * DAY;
+  const lowTwice = bio.socialEnergy === "low" && bio.energyPrev === "low";
   return page(
     c,
     { title: t("แผนสัปดาห์นี้", "This week's plan"), tab: "events" },
     <>
       <h1>🗓️ {t("แผนสัปดาห์นี้", "This week's plan")}</h1>
       <p class="muted">{t("เราเลือกให้สองอย่างจากสิ่งที่คุณชอบ ไม่ต้องไล่ดูทั้งหมด ดีพอก็ดีแล้ว", "Two picks made for you from what you told us. No scrolling needed: good enough is great.")}</p>
+      {askEnergy ? (
+        <Card class="hint energy">
+          <strong>🔋 {t("เดือนนี้พลังโซเชียลของคุณเป็นยังไง?", "How's your social energy this month?")}</strong>
+          <p class="muted">{t("ส่วนตัว ใช้ปรับแผนให้เหมาะกับคุณ", "Private. We use it to fit your plan to you.")}</p>
+          <form method="post" action="/plan/energy" class="row">
+            <button class="btn ghost" name="energy" value="low">🪫 {t("ต่ำ", "Low")}</button>
+            <button class="btn ghost" name="energy" value="okay">🔋 {t("กลาง ๆ", "Okay")}</button>
+            <button class="btn ghost" name="energy" value="full">⚡ {t("เต็มที่", "Full")}</button>
+          </form>
+        </Card>
+      ) : null}
+      {bio.socialEnergy === "low" ? (
+        <Notice kind="info">
+          {t("พลังต่ำ: เราเลือกแผนที่ใกล้ เล็ก และสั้นให้ หรือพักก็ได้นะ", "Low energy: we picked closer, smaller, shorter plans. Resting is fine too.")}
+        </Notice>
+      ) : null}
+      {lowTwice ? (
+        <Card class="hint">
+          <strong>💚 {t("เหนื่อยมาสักพักแล้ว", "It's been a heavy stretch")}</strong>
+          <p class="muted">
+            {t("ถ้าอยากมีคนคุยด้วย โทรสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชม. หรืออ่านคู่มือเรื่องความเหงา", "If you'd like someone to talk to, the mental health line 1323 is open 24 hours, or read our guide on loneliness.")}
+          </p>
+          <p class="row">
+            <a class="btn ghost" href="tel:1323">📞 1323</a>
+            <a class="btn ghost" href="/learn/loneliness-and-mental-health">{t("อ่านคู่มือ", "Read the guide")}</a>
+          </p>
+        </Card>
+      ) : null}
       {plan.status === "accepted" ? <Notice kind="ok">{t("เยี่ยม! เจอกันที่นั่น", "Lovely. See you there.")}</Notice> : null}
       {plan.status === "skipped" ? <Notice kind="info">{t("ข้ามสัปดาห์นี้แล้ว ไม่เป็นไรเลย", "Skipped this week. That's fine.")}</Notice> : null}
       {restHint ? (
@@ -368,4 +399,81 @@ planRoutes.post("/plan/pitch/:id/join", async (c) => {
   await db.insert(pitchJoins).values({ pitchId: p.id, accountId: me }).onConflictDoNothing();
   await notify(db, p.accountId, "pitch", `${c.var.user!.profile!.nickname} ไปด้วย: ${p.what}`, `${c.var.user!.profile!.nickname} is in: ${p.what}`, "/plan");
   return c.redirect("/plan");
+});
+
+/** Monthly social-energy check-in (self only). It shapes the weekly plan, never anyone's view of you. */
+planRoutes.post("/plan/energy", async (c) => {
+  const energy = str((await c.req.parseBody()).energy);
+  if (!["low", "okay", "full"].includes(energy)) return c.redirect("/plan");
+  const user = c.var.user!;
+  const bio = cleanBio(user.profile!.bio);
+  const db = getDb(c.env);
+  await db
+    .update(profiles)
+    .set({ bio: { ...bio, energyPrev: bio.socialEnergy, socialEnergy: energy, energyAt: new Date().toISOString() }, updatedAt: new Date() })
+    .where(eq(profiles.accountId, user.account.id));
+  // Re-pick this week's plan with the new energy, if it hasn't been decided yet.
+  await db.delete(weeklyPlans).where(and(eq(weeklyPlans.accountId, user.account.id), eq(weeklyPlans.week, weekKey(new Date())), eq(weeklyPlans.status, "open")));
+  return c.redirect("/plan");
+});
+
+/** "Your month in people": who you met and where, never minutes on the app. */
+planRoutes.get("/me/month", requireMember, async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const since = new Date(Date.now() - 30 * DAY);
+  const [went, conns, shared, stamps] = await Promise.all([
+    db
+      .select({ district: events.district })
+      .from(registrations)
+      .innerJoin(events, eq(events.id, registrations.eventId))
+      .where(and(eq(registrations.accountId, me), gte(registrations.checkedInAt, since)))
+      .limit(100),
+    db
+      .select({ id: connections.id })
+      .from(connections)
+      .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), gte(connections.createdAt, since)))
+      .limit(200),
+    db.select({ id: contactShares.id }).from(contactShares).where(and(eq(contactShares.accountId, me), gte(contactShares.createdAt, since))).limit(200),
+    db.select({ district: passportStamps.district }).from(passportStamps).where(and(eq(passportStamps.accountId, me), gte(passportStamps.createdAt, since))).limit(60),
+  ]);
+  const places = [...new Set([...went.map((x) => x.district), ...stamps.map((x) => x.district)])];
+  const tiles: [string, number, string][] = [
+    ["🍽️", went.length, t("โต๊ะที่ได้ไปนั่ง", "Tables you sat at")],
+    ["🫂", conns.length, t("คนใหม่ในวงของคุณ", "New people in your circle")],
+    ["💬", shared.length, t("คนที่ยังคุยกันต่อ", "People you kept in touch with")],
+    ["📍", places.length, t("ย่านที่ได้ไป", "Districts you explored")],
+  ];
+  return page(
+    c,
+    { title: t("เดือนนี้ของฉัน", "My month in people"), tab: "me" },
+    <>
+      <h1>🌱 {t("เดือนนี้ของคุณ เป็นเรื่องของผู้คน", "Your month, in people")}</h1>
+      <p class="muted">{t("30 วันที่ผ่านมา เรานับคนและที่ ไม่นับเวลาบนหน้าจอ", "The last 30 days. We count people and places, never time on screen.")}</p>
+      <div class="stats month">
+        {tiles.map(([e, n, label]) => (
+          <div class="fact">
+            <b aria-hidden="true">{e}</b>
+            <span class="big-n">{n}</span>
+            <small>{label}</small>
+          </div>
+        ))}
+      </div>
+      {places.length ? (
+        <p class="chips2">
+          {places.map((d) => (
+            <span>📍 {label(DISTRICTS, d, lang)}</span>
+          ))}
+        </p>
+      ) : null}
+      <Card class="hint">
+        <strong>{went.length === 0 ? t("เดือนหน้าลองสักโต๊ะไหม?", "Try one table next month?") : t("เยี่ยมเลย ใช้ชีวิตนอกจอต่อไปนะ", "Lovely. Keep living off-screen.")}</strong>
+        <p class="row">
+          <LinkButton href="/plan">{t("แผนสัปดาห์นี้", "This week's plan")}</LinkButton>
+        </p>
+      </Card>
+    </>,
+  );
 });

@@ -1256,6 +1256,8 @@ export type Bio = {
   access?: string[];
   /** Monthly social-energy check-in, self only: low | okay | full. */
   socialEnergy?: string;
+  energyAt?: string;
+  energyPrev?: string;
   deck?: string[];
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
@@ -1372,6 +1374,8 @@ export function cleanBio(raw: unknown): Bio {
   if (strs(b.times)) out.times = strs(b.times);
   if (strs(b.access)) out.access = strs(b.access);
   if (s(b.socialEnergy)) out.socialEnergy = s(b.socialEnergy);
+  if (s(b.energyAt)) out.energyAt = s(b.energyAt);
+  if (s(b.energyPrev)) out.energyPrev = s(b.energyPrev);
   if (strs(b.deck)) out.deck = strs(b.deck);
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;

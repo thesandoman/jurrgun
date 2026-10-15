@@ -41,16 +41,19 @@ import {
   accounts,
   blocks,
   buddyMatches,
+  buddyQuests,
   circleShares,
   connectionChoices,
   connections,
   contactShares,
   events,
+  graduations,
   notifications,
   profiles,
   registrations,
   REPORT_REASONS,
   reports,
+  thanks,
   vibes,
   type Event,
   type Profile,
@@ -459,6 +462,10 @@ type CircleRow = {
   buddy?: boolean;
   mine: { method: string; value: string } | null;
   theirs: { method: string; value: string } | null;
+  /** Shared contacts and met twice or more: they don't need us anymore. */
+  graduated?: boolean;
+  /** I've already sent this person a thank-you note for this connection. */
+  iThanked?: boolean;
 };
 
 async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInfo }> {
@@ -519,7 +526,52 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
       theirs: theirs ? { method: theirs.method, value: theirs.value } : null,
     });
   }
+  await markGraduations(c, out);
   return { rows: out, myVibe: vibeMap.get(me) };
+}
+
+/** Meets with someone: shared events (one connection row each) plus buddy quests finished together. */
+async function markGraduations(c: Ctx, rows: CircleRow[]) {
+  if (!rows.length) return;
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const ids = rows.map((r) => r.id);
+  const [grads, sent, matches] = await Promise.all([
+    db.select({ connectionId: graduations.connectionId }).from(graduations).where(inArray(graduations.connectionId, ids)).limit(ids.length),
+    db.select({ context: thanks.context }).from(thanks).where(and(eq(thanks.fromAccount, me), inArray(thanks.context, ids.map((x) => `conn:${x}`)))).limit(ids.length),
+    db.select({ id: buddyMatches.id, a: buddyMatches.aAccount, b: buddyMatches.bAccount }).from(buddyMatches).where(or(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, me))).limit(50),
+  ]);
+  const done = new Set(grads.map((g) => g.connectionId));
+  const thanked = new Set(sent.map((x) => x.context.slice(5)));
+  const quests = matches.length
+    ? await db.select({ matchId: buddyQuests.matchId, a: buddyQuests.aDoneAt, b: buddyQuests.bDoneAt }).from(buddyQuests).where(inArray(buddyQuests.matchId, matches.map((m) => m.id))).limit(500)
+    : [];
+  const questsWith = (other: string) => {
+    const mids = matches.filter((m) => m.a === other || m.b === other).map((m) => m.id);
+    return quests.filter((q) => mids.includes(q.matchId) && q.a && q.b).length;
+  };
+  const now = new Date();
+  for (const r of rows) {
+    r.iThanked = thanked.has(r.id);
+    if (done.has(r.id)) {
+      r.graduated = true;
+      continue;
+    }
+    if (!r.mine || !r.theirs) continue;
+    const meets = rows.filter((x) => x.other.id === r.other.id && !x.buddy).length + questsWith(r.other.id);
+    if (meets < 2) continue;
+    // Only the first row for this pair graduates, once.
+    if (rows.find((x) => x.other.id === r.other.id && x.mine && x.theirs)?.id !== r.id) continue;
+    const made = await db.insert(graduations).values({ id: newId(), connectionId: r.id }).onConflictDoNothing().returning({ id: graduations.id });
+    r.graduated = true;
+    if (made.length) {
+      const later = new Date(now.getTime() + 30 * 86_400_000);
+      for (const who of [me, r.other.id]) {
+        await notify(db, who, "graduated", "🎓 คุณสองคนไม่ต้องพึ่งเราแล้ว ยินดีด้วย!", "🎓 You two don't need us anymore. Congrats!", "/connections");
+        await db.insert(notifications).values({ id: newId(), accountId: who, kind: "still_in_touch", titleTh: "ยังติดต่อกันอยู่ไหม? แตะเพื่อบอกเรา", titleEn: "Still in touch? Tap to tell us", link: `/connections/${r.id}/still`, createdAt: later });
+      }
+    }
+  }
 }
 
 type CircleExtras = {
@@ -672,6 +724,11 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         <a href="/chat">💬 {t("แชต", "Chats")}</a>
       </p>
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My Bangkok circle")}</h1>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-thanks]");if(!b)return;var i=b.closest("form").querySelector("input[name=body]");if(i){i.value=b.dataset.thanks;i.focus()}})`,
+        }}
+      />
       <p class="muted">
         {t("คนที่เลือกกันและกัน บัดดี้ และแฮงเอาต์กลุ่ม", "People you chose each other with, your buddy, and group hangouts.")}
       </p>
@@ -708,9 +765,30 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
             <p class="muted">
               {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : r.buddy ? t("🤝 บัดดี้กรุงเทพฯ", "🤝 Bangkok Buddy") : ""} · {label(CHOICE_LABELS, r.level, lang)}
             </p>
+            {r.graduated ? (
+              <p class="grad">🎓 {t("คุณสองคนไม่ต้องพึ่งเราแล้ว ยินดีด้วย!", "You two don't need us anymore. Congrats!")}</p>
+            ) : null}
             <p class="acts">
               <a class="btn primary" href={`/chat/conn:${r.id}`}>💬 {t("แชต", "Chat")}</a>
             </p>
+            {r.iThanked ? (
+              <p class="muted">💌 {t("ส่งคำขอบคุณแล้ว", "Thank-you sent")}</p>
+            ) : (
+              <details class="how">
+                <summary>💌 {t("ส่งคำขอบคุณสั้น ๆ", "Send a short thank-you")}</summary>
+                <form method="post" action={`/connections/${r.id}/thanks`}>
+                  <p class="chips2 thanks-starters">
+                    {THANK_STARTERS.map((x) => (
+                      <button type="button" data-thanks={lang === "en" ? x.en : x.th}>
+                        {lang === "en" ? x.en : x.th}
+                      </button>
+                    ))}
+                  </p>
+                  <Field label={t("ข้อความ (ส่วนตัว)", "Your note (private)")} name="body" maxlength={THANKS_MAX} required />
+                  <Button kind="ghost">{t("ส่ง", "Send")}</Button>
+                </form>
+              </details>
+            )}
             <p class="chips2">
               <span>{t("คุณแชร์", "You shared")}: {r.mine ? `${method(r.mine.method)} ${r.mine.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
               <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
@@ -1101,4 +1179,97 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
       )}
     </>,
   );
+});
+
+// ------------------------------------------------------------ thank-yous --
+
+const THANKS_MAX = 140;
+const THANK_STARTERS = [
+  { th: "ขอบคุณที่ชวนคุยนะ", en: "Thanks for the great chat" },
+  { th: "ขอบคุณที่แนะนำร้านอร่อย", en: "Thanks for the food tip" },
+  { th: "ดีใจที่ได้เจอ ไว้เจอกันอีกนะ", en: "So glad we met. See you again" },
+];
+
+/** A private one-line thank-you. One per connection, no counts anywhere. */
+peopleRoutes.post("/connections/:id/thanks", requireMember, async (c) => {
+  const found = await myConnection(c, c.req.param("id"));
+  if (!found || found.row.removedAt) return c.text("Not found", 404);
+  const body = str((await c.req.parseBody()).body).replace(/\s+/g, " ").trim().slice(0, THANKS_MAX);
+  if (!body) return c.redirect("/connections");
+  const db = getDb(c.env);
+  const made = await db
+    .insert(thanks)
+    .values({ id: newId(), fromAccount: found.me, toAccount: found.other, context: `conn:${found.row.id}`, body })
+    .onConflictDoNothing()
+    .returning({ id: thanks.id });
+  if (made.length) {
+    const nick = c.var.user!.profile!.nickname;
+    await notify(db, found.other, "thanks", `💌 ${nick} ส่งคำขอบคุณถึงคุณ`, `💌 ${nick} sent you a thank-you`, "/thanks");
+  }
+  return c.redirect("/connections?notice=saved");
+});
+
+peopleRoutes.get("/thanks", requireMember, async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const rows = await db
+    .select({ body: thanks.body, createdAt: thanks.createdAt, nickname: profiles.nickname })
+    .from(thanks)
+    .innerJoin(profiles, eq(profiles.accountId, thanks.fromAccount))
+    .where(eq(thanks.toAccount, me))
+    .orderBy(desc(thanks.createdAt))
+    .limit(50);
+  return page(
+    c,
+    { title: t("คำขอบคุณ", "Thank-yous"), tab: "connections" },
+    <>
+      <h1>💌 {t("คำขอบคุณถึงคุณ", "Thank-yous for you")}</h1>
+      <p class="muted">{t("เห็นแค่คุณคนเดียว ไม่มีการนับคะแนน", "Only you can see these. Nothing is counted or scored.")}</p>
+      {rows.length === 0 ? (
+        <Empty>{t("ยังไม่มี", "None yet.")}</Empty>
+      ) : (
+        rows.map((r) => (
+          <Card>
+            <p style="margin:0;font-size:1.1rem">“{r.body}”</p>
+            <p class="muted">
+              {r.nickname} · {fmtDay(r.createdAt, lang)}
+            </p>
+          </Card>
+        ))
+      )}
+    </>,
+  );
+});
+
+// ------------------------------------------------------------ graduation --
+
+/** "Still in touch?" 30 days after graduating: yes or no, for M&E only. */
+peopleRoutes.get("/connections/:id/still", requireMember, async (c) => {
+  const v = view(c);
+  const { t } = v;
+  const found = await myConnection(c, c.req.param("id"));
+  if (!found) return c.text("Not found", 404);
+  return page(
+    c,
+    { title: t("ยังติดต่อกันอยู่ไหม", "Still in touch?"), tab: "connections" },
+    <>
+      <h1>🎓 {t("ยังติดต่อกันอยู่ไหม?", "Still in touch?")}</h1>
+      <p class="muted">{t("ตอบครั้งเดียว ช่วยให้เรารู้ว่า Jurrgun ช่วยให้คนได้เพื่อนจริงไหม", "One tap. It tells us whether Jurrgun helps people make real friends.")}</p>
+      <form method="post" class="row">
+        <button class="btn primary" name="still" value="yes">{t("ยังคุยกันอยู่", "Yes, we are")}</button>
+        <button class="btn ghost" name="still" value="no">{t("ห่าง ๆ กันไป", "Not really")}</button>
+      </form>
+    </>,
+  );
+});
+
+peopleRoutes.post("/connections/:id/still", requireMember, async (c) => {
+  const found = await myConnection(c, c.req.param("id"));
+  if (!found) return c.text("Not found", 404);
+  const yes = str((await c.req.parseBody()).still) === "yes";
+  const side = found.row.aAccount === found.me ? { aStill: yes } : { bStill: yes };
+  await getDb(c.env).update(graduations).set(side).where(eq(graduations.connectionId, found.row.id));
+  return c.redirect("/connections?notice=saved");
 });

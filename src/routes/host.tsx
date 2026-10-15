@@ -63,6 +63,7 @@ function emptyInput(lang: string): ProposalInput {
     costThb: "0",
     paymentNote: "",
     paymentUrl: "",
+    freeSeats: "0",
     intensity: "social",
     groupMin: "4",
     groupMax: "6",
@@ -92,6 +93,7 @@ function inputFromEvent(e: Event): ProposalInput {
     costThb: String(e.costThb),
     paymentNote: e.paymentNote ?? "",
     paymentUrl: e.paymentUrl ?? "",
+    freeSeats: String(e.freeSeats ?? 0),
     intensity: e.intensity,
     groupMin: String(e.groupMin),
     groupMax: String(e.groupMax),
@@ -122,6 +124,7 @@ function inputFromBody(body: Record<string, unknown>): ProposalInput {
     costThb: s("costThb") || "0",
     paymentNote: s("paymentNote"),
     paymentUrl: s("paymentUrl"),
+    freeSeats: s("freeSeats") || "0",
     intensity: s("intensity"),
     groupMin: s("groupMin"),
     groupMax: s("groupMax"),
@@ -320,6 +323,15 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
       <Card>
         <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>
         <Field label={t("ค่าใช้จ่ายต่อคน (บาท, 0 = ฟรี)", "Cost per person (baht, 0 = free)")} name="costThb" type="number" min={0} max={20000} value={d.costThb} />
+        <Field
+          label={t("ที่นั่งส่งต่อน้ำใจ (ฟรี 0–5 ที่)", "Pay-it-forward seats (free, 0–5)")}
+          name="freeSeats"
+          type="number"
+          min={0}
+          max={5}
+          value={d.freeSeats ?? "0"}
+          hint={t("ใครก็ขอได้แบบเงียบ ๆ ไม่ต้องอธิบาย สำหรับกิจกรรมที่มีค่าใช้จ่าย", "Anyone can quietly claim one, no questions asked. For paid events.")}
+        />
         <Field label={t("วิธีชำระเงิน (เช่น จ่ายที่ร้าน / พร้อมเพย์)", "How to pay (e.g. at the venue, PromptPay)")} name="paymentNote" value={d.paymentNote} maxlength={500} />
         <Field
           label={t("ลิงก์ชำระเงินของคุณ (ไม่บังคับ)", "Your payment link (optional)")}

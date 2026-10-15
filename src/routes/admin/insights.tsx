@@ -296,7 +296,7 @@ adminInsights.get("/", async (c) => {
 
   // Healthy connections: chat, safety checks, weekly plans and mutual meet feedback.
   const winTs = sql`created_at >= ${since}::timestamptz and created_at < ${until}::timestamptz`;
-  const [chatRow, safeRow, planRow, skipRows, meetRow, heardRow, pitchRow] = await Promise.all([
+  const [chatRow, safeRow, planRow, skipRows, meetRow, heardRow, pitchRow, gradRow] = await Promise.all([
     db.execute(sql`select count(*), sum(case when money_flag then 1 else 0 end),
       (select count(*) from social_reports where target_message is not null and ${winTs})
       from social_chat_messages where ${winTs}`),
@@ -310,7 +310,13 @@ adminInsights.get("/", async (c) => {
       from social_meet_feedback where ${winTs}`),
     db.execute(sql`select avg(felt_heard), count(felt_heard) from social_feedback where ${winTs}`),
     db.execute(sql`select count(*), (select count(*) from social_pitch_joins where ${winTs}) from social_plan_pitches where ${winTs}`),
+    db.execute(sql`select count(*),
+      sum(case when a_still is not null then 1 else 0 end) + sum(case when b_still is not null then 1 else 0 end),
+      sum(case when a_still then 1 else 0 end) + sum(case when b_still then 1 else 0 end),
+      (select count(*) from social_connections where ${winTs})
+      from social_graduations where ${winTs}`),
   ]);
+  const [gradN, stillAnswered, stillYes, connsN] = nums(gradRow);
   const [msgs, moneyN, chatReports] = nums(chatRow);
   const [arrivals, helpN, answeredN] = nums(safeRow);
   const [plans, acceptedN, skippedN] = nums(planRow);
@@ -319,6 +325,8 @@ adminInsights.get("/", async (c) => {
   const [pitchesN, joinsN] = nums(pitchRow);
   const avg1 = (v: number, n: number) => (safeCount(n) === null ? null : Math.round(v * 10) / 10);
   const healthy: Kpi[] = [
+    { label: t("จบหลักสูตร: ไม่ต้องพึ่งเราแล้ว", "Graduated: don't need us anymore"), value: pct(gradN, connsN), unit: "%", base: connsN, hint: t("คู่ที่แลกช่องทางติดต่อและเจอกัน 2 ครั้งขึ้นไป ต่อคู่ใหม่", "Pairs who swapped contacts and met 2+ times, per new pair") },
+    { label: t("ยังติดต่อกันหลัง 30 วัน", "Still in touch after 30 days"), value: pct(stillYes, stillAnswered), unit: "%", base: stillAnswered },
     { label: t("ยอมรับแผนประจำสัปดาห์", "Weekly plan accepted"), value: pct(acceptedN, plans), unit: "%", base: plans },
     { label: t("ข้ามแผนประจำสัปดาห์", "Weekly plan skipped"), value: pct(skippedN, plans), unit: "%", base: plans },
     { label: t("ไอเดียที่สมาชิกเสนอ (คนเข้าร่วม)", "Member pitches (joins)"), value: safeCount(pitchesN), unit: "", base: pitchesN, hint: safeCount(joinsN) !== null ? `${joinsN} ${t("คนร่วม", "joins")}` : undefined },

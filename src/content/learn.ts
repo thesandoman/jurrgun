@@ -5,7 +5,7 @@
  * basics, getting around). Bilingual, public, non-explicit and inclusive.
  *
  * Facts about Thai services and law are summarised for general education
- * and must be reviewed by BMA (Health Dept / legal) before public launch —
+ * and must be reviewed by health and legal experts before public launch;
  * see REVIEW_NOTE. Hotline numbers are national Thai services.
  */
 
@@ -69,6 +69,60 @@ const GOV_DOS = { label: "Thailand.go.th (Government PR Department, from the Min
 const SANROO = "https://sanroo.xyz/";
 
 export const TOPICS: Topic[] = [
+  {
+    slug: "less-scrolling",
+    icon: "📵",
+    title: t("เลื่อนจอน้อยลง เจอคนมากขึ้น", "Less scrolling, more people"),
+    summary: t("ตัวเลือกเยอะเกินไป การเลือก 'ดีพอ' การใช้แอปอย่างพอดี และการออกไปเจอคนแม้มีข้อจำกัด", "Too many choices, choosing 'good enough', healthy app use, and getting out despite money, distance or time."),
+    sections: [
+      {
+        heading: t("ตัวเลือกเยอะไม่ได้แปลว่าดีกว่า", "More choice isn't always better"),
+        blocks: [
+          p("ยิ่งมีตัวเลือกให้ไล่ดูไม่รู้จบ ยิ่งเลือกยาก และเลือกแล้วก็ยังสงสัยว่ามีอันที่ดีกว่าไหม ความรู้สึกว่ามีคนหรือกิจกรรมให้เลือกไม่จำกัดเป็นภาพลวงตา เวลาและพลังของเรามีจำกัด", "Endless options make choosing harder, and leave you wondering whether something better was one scroll away. The feeling of infinite people or plans is an illusion: your time and energy are limited."),
+          list(
+            ["Jurrgun เลือกแผนให้สัปดาห์ละ 2 อย่าง ไม่ต้องไล่ดูทั้งหมด", "Jurrgun picks two plans a week, so you don't have to scroll everything."],
+            ["ปัดดูบัดดี้ได้วันละ 15 คน แล้วพัก", "The buddy deck stops at 15 a day."],
+            ["ไม่มีสถานะออนไลน์ ไม่มีการอ่านแล้ว ไม่ต้องคอยเช็ก", "No online status or read receipts, so nothing to keep checking."],
+          ),
+        ],
+      },
+      {
+        heading: t("เลือกแบบ 'ดีพอ' ก็ดีแล้ว", "Good enough is great"),
+        blocks: [
+          list(
+            ["ตั้งเกณฑ์สั้น ๆ 2 ข้อ เช่น ใกล้บ้านและไม่เกินงบ เจออันที่ผ่านก็ไปเลย", "Pick two simple rules, like near home and in budget. Go with the first plan that fits."],
+            ["เพื่อนดี ๆ มักเริ่มจากการเจอกันซ้ำ ๆ มากกว่าการเลือกคนที่ใช่ที่สุดตั้งแต่ครั้งแรก", "Good friendships usually grow from meeting again and again, not from finding the perfect person first time."],
+            ["ไปแล้วไม่สนุกก็ไม่เป็นไร ถือว่าได้ลอง", "If a meetup isn't great, that's fine. You tried something new."],
+          ),
+        ],
+      },
+      {
+        heading: t("ใช้แอปให้พอดี", "Using apps in a healthy way"),
+        blocks: [
+          list(
+            ["ตั้งจำนวนนัดต่อสัปดาห์ในหน้า 'นิสัยดี ๆ' เราจะถามก่อนถ้าเกิน", "Set your plans per week under Healthy habits. We'll check with you if you go over."],
+            ["พักแอปได้ 1 ถึง 4 สัปดาห์ วงและแชตยังอยู่", "Take a break for 1 to 4 weeks. Your circle and chats stay."],
+            ["เมื่อแลกช่องทางติดต่อและเจอกันบ่อยแล้ว ย้ายไปคุยที่ LINE ได้เลย เราดีใจด้วย", "Once you've swapped contacts and met a few times, move to LINE. We'll be glad you did."],
+            ["ที่งาน วางมือถือ แอปจะเหลือแค่บัตรเข้างานกับคำถามชวนคุย", "At an event, put your phone away. The app shrinks to your pass and a few conversation prompts."],
+          ),
+        ],
+      },
+      {
+        heading: t("เมื่อเงิน ระยะทาง หรือเวลาเป็นข้อจำกัด", "When money, distance or time get in the way"),
+        blocks: [
+          list(
+            ["ตั้งงบต่อนัดในโปรไฟล์ แผนประจำสัปดาห์จะเลือกเฉพาะที่อยู่ในงบ หลายกิจกรรมฟรี", "Set a budget in your profile: your weekly plan only picks what fits. Many meetups are free."],
+            ["กิจกรรมที่มีค่าใช้จ่ายบางงานมีที่นั่งส่งต่อน้ำใจ ขอใช้ได้เงียบ ๆ เดือนละครั้ง", "Some paid events offer pay-it-forward seats you can quietly claim once a month."],
+            ["ใช้ตัวกรอง 'ไม่เกิน 90 นาที' ถ้าต้องดูแลครอบครัวหรือเลิกงานดึก", "Use the '90 minutes or less' filter if you care for family or work long days."],
+            ["เลือกกิจกรรมใกล้บ้านหรือใกล้ BTS/MRT จะได้ไม่เหนื่อยกับการเดินทาง", "Pick meetups near home or near BTS/MRT so getting there doesn't wear you out."],
+            ["มาคนเดียวเป็นเรื่องปกติ หรือพาเพื่อนมาได้ในงานที่รับ +1", "Coming alone is normal, or bring a friend to +1 events."],
+          ),
+          tip("ถ้ารู้สึกเหงาหรือหมดแรงมานาน โทรสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชั่วโมง", "If you've felt lonely or drained for a while, the mental health line 1323 is open 24 hours."),
+        ],
+      },
+    ],
+    sources: [WHO_SOCIAL, WHO_COMMISSION],
+  },
   {
     slug: "dating-in-bangkok",
     icon: "🌆",
@@ -704,7 +758,7 @@ export const TOPICS: Topic[] = [
 /** The Learn page groups its cards into these sections (Bangkok Types included by slug). */
 export const LEARN_GROUPS: { key: string; title: Text; slugs: string[] }[] = [
   { key: "meeting-people", title: t("เจอผู้คน", "Meeting people"), slugs: ["making-friends", "meetup-etiquette", "communication", "dating-in-bangkok", "consent", "date-responsibly"] },
-  { key: "wellbeing", title: t("ดูแลกายและใจ", "Wellbeing"), slugs: ["loneliness-and-mental-health", "inclusion", "sexual-health"] },
+  { key: "wellbeing", title: t("ดูแลกายและใจ", "Wellbeing"), slugs: ["less-scrolling", "loneliness-and-mental-health", "inclusion", "sexual-health"] },
   { key: "bangkok", title: t("กรุงเทพฯ", "Bangkok"), slugs: ["new-to-bangkok", "getting-around", "bangkok-types"] },
 ];
 

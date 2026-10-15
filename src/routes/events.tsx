@@ -379,6 +379,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     district: c.req.query("district") ?? "",
     tag: c.req.query("tag") ?? "",
     free: c.req.query("free") === "1",
+    short: c.req.query("short") === "1",
     language: c.req.query("language") ?? "",
     intensity: c.req.query("intensity") ?? "",
     plusOne: c.req.query("plusOne") === "1",
@@ -395,6 +396,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (values(DISTRICTS).includes(q.district)) where.push(eq(events.district, q.district));
   if (values(EVENT_TAGS).includes(q.tag)) where.push(jsonHas(events.tags, q.tag));
   if (q.free) where.push(eq(events.costThb, 0));
+  // Short and sweet: 90 minutes or less, for carers and long work days.
+  if (q.short) where.push(sql`${events.endsAt} - ${events.startsAt} <= interval '90 minutes'`);
   if (values(LANGUAGES).includes(q.language)) where.push(jsonHas(events.languages, q.language));
   if (values(INTENSITY).includes(q.intensity)) where.push(eq(events.intensity, q.intensity));
   if (q.plusOne) where.push(eq(events.plusOneAllowed, true));
@@ -443,7 +446,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
   ]);
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
-  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
+  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
   // The same filters, in list or map view.
   const params = new URLSearchParams(c.req.query());
   params.delete("view");
@@ -464,6 +467,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <Select label={t("ภาษา", "Language")} name="language" options={LANGUAGES} value={q.language} lang={lang} blank={t("ทุกภาษา", "Any language")} />
       <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />
       <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
+      <Toggle name="short" label={t("สั้น ๆ ไม่เกิน 90 นาที", "Short: 90 minutes or less")} checked={q.short} />
       <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
       <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
       <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
@@ -937,6 +941,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           <span>💸 {costText(event, t)}</span>
           {event.plusOneAllowed ? <span>➕ {t("ชวนเพื่อนได้", "+1 welcome")}</span> : null}
           {event.accessibility ? <span>♿ {t("มีข้อมูลการเข้าถึง", "Access info")}</span> : null}
+          {event.freeSeats > 0 && event.costThb > 0 ? <span>🎁 {t("มีที่นั่งส่งต่อน้ำใจ", "Pay-it-forward seats")}</span> : null}
+          {event.endsAt.getTime() - event.startsAt.getTime() <= 90 * 60_000 ? <span>⏱️ {t("สั้น ๆ ไม่เกิน 90 นาที", "Short: 90 min or less")}</span> : null}
         </p>
         <details class="how">
         <summary>{t("รายละเอียดทั้งหมด", "All details")}</summary>
@@ -1165,6 +1171,13 @@ function RegistrationBox(props: {
         </Notice>
       ) : null}
       <form method="post" action={`${base}/rsvp`}>
+        {event.freeSeats > 0 && event.costThb > 0 ? (
+          <Toggle
+            name="freeSeat"
+            label={t("ขอใช้ที่นั่งส่งต่อน้ำใจ (ฟรี)", "Use a pay-it-forward seat (free)")}
+            hint={t("ไม่ต้องอธิบาย ไม่มีใครรู้ เดือนละ 1 ครั้ง", "No questions asked, nobody else knows. Once a month.")}
+          />
+        ) : null}
         {event.buddyEnabled ? (
           <Toggle name="wantsBuddy" label={t("หาบัดดี้ให้ฉันในงานนี้", "Find me a buddy for this event")} hint={t("จับคู่ 48 ชม. ก่อนงาน เห็นแค่ชื่อเล่น ไม่ใช่การจับคู่เดท", "Paired 48h before. Nicknames only — never a date.")} />
         ) : null}
@@ -1416,6 +1429,17 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
       </>,
     );
   }
+  // Pay-it-forward: a free seat if one is left and the member hasn't used one this month.
+  let freeSeat = false;
+  if (str(body.freeSeat) === "1" && event.freeSeats > 0 && event.costThb > 0) {
+    const [claimed, mineRecent] = await Promise.all([
+      db.select({ id: registrations.id }).from(registrations).where(and(eq(registrations.eventId, id), eq(registrations.freeSeat, true), inArray(registrations.status, [...ACTIVE]))).limit(10),
+      db.select({ id: registrations.id }).from(registrations).where(and(eq(registrations.accountId, user.account.id), eq(registrations.freeSeat, true), gt(registrations.createdAt, new Date(now.getTime() - 30 * 86_400_000)))).limit(1),
+    ]);
+    if (claimed.length >= event.freeSeats) return fail("ที่นั่งส่งต่อน้ำใจเต็มแล้ว", "The pay-it-forward seats are taken. You can still RSVP.", 409);
+    if (mineRecent.length) return fail("เดือนนี้คุณใช้ที่นั่งส่งต่อน้ำใจไปแล้ว", "You've used a pay-it-forward seat this month.", 409);
+    freeSeat = true;
+  }
   // Taking a seat ends a pause.
   if (isPaused(user.profile, now)) await db.update(profiles).set({ pausedUntil: null }).where(eq(profiles.accountId, user.account.id));
   const wantsBuddy = event.buddyEnabled && str(body.wantsBuddy) === "1";
@@ -1445,6 +1469,7 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
     extra: () =>
       plusOnePartner ? [db.update(registrations).set({ plusOneWith: user.account.id }).where(eq(registrations.id, plusOnePartner.regId))] : [],
   });
+  if (freeSeat) await db.update(registrations).set({ freeSeat: true }).where(and(eq(registrations.eventId, id), eq(registrations.accountId, user.account.id)));
   return c.redirect(`/events/${id}?notice=${status === "confirmed" ? "rsvp_confirmed" : "rsvp_waitlisted"}`);
 });
 
@@ -1726,6 +1751,31 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
     .limit(1);
   if (!row || row.event.status !== "published") return notFound(c);
   const { event, reg } = row;
+  // Phone-down mode: once checked in and while the event runs, the app steps back.
+  const now = new Date();
+  if (reg.checkedInAt && now < event.endsAt && c.req.query("show") !== "pass") {
+    const prompts: [string, string][] = [
+      ...(event.activePrompt ? [[event.activePrompt, event.activePrompt] as [string, string]] : []),
+      ["ย่านไหนในกรุงเทพฯ ที่ชอบที่สุด เพราะอะไร?", "Which part of Bangkok do you love most, and why?"],
+      ["ช่วงนี้มีอะไรที่ทำให้ยิ้มได้บ้าง?", "What's made you smile lately?"],
+      ["ถ้ามีวันว่างหนึ่งวัน จะพาเพื่อนใหม่ไปไหน?", "A free day with a new friend: where would you take them?"],
+    ];
+    return page(
+      c,
+      { title: t("วางมือถือได้แล้ว", "Phone down"), tab: "mine" },
+      <section class="phone-down">
+        <p class="pd-emoji" aria-hidden="true">📵</p>
+        <h1>{t("วางมือถือได้แล้ว", "Phone down, people up")}</h1>
+        <p class="muted">{t("คุณเช็กอินแล้ว ที่เหลือคือคนตรงหน้า ลองชวนคุยด้วยคำถามเหล่านี้", "You're checked in. The rest is the people in front of you. Try one of these.")}</p>
+        <ol class="pd-prompts">
+          {prompts.slice(0, 3).map(([th, en]) => (
+            <li>{t(th, en)}</li>
+          ))}
+        </ol>
+        <a class="btn ghost" href={`/me/events/${event.id}/pass?show=pass`}>{t("ดูบัตรเข้างาน", "Show my pass")}</a>
+      </section>,
+    );
+  }
   return page(
     c,
     { title: t("บัตรเข้างาน", "Event pass"), tab: "mine" },

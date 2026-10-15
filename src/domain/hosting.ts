@@ -107,6 +107,8 @@ export type ProposalInput = {
   costThb: string;
   paymentNote: string;
   paymentUrl: string;
+  /** Pay-it-forward seats (0 to 5), free for anyone who needs one. */
+  freeSeats?: string;
   intensity: string;
   groupMin: string;
   groupMax: string;
@@ -134,6 +136,7 @@ export type ProposalValues = {
   costThb: number;
   paymentNote: string | null;
   paymentUrl: string | null;
+  freeSeats: number;
   intensity: string;
   groupMin: number;
   groupMax: number;
@@ -211,6 +214,8 @@ export function checkProposal(
   const paymentUrl = d.paymentUrl ? httpsUrl(d.paymentUrl) : null;
   need(!d.paymentUrl || !!paymentUrl, "ลิงก์ชำระเงินต้องขึ้นต้นด้วย https://", "The payment link must start with https://");
   need(!(costThb === 0 && (paymentUrl || d.paymentNote)), "กิจกรรมฟรีไม่ต้องใส่ข้อมูลการชำระเงิน", "A free event doesn't need payment details.");
+  const freeSeats = intIn(d.freeSeats || "0", 0, 5);
+  need(freeSeats !== null && (capacity === null || freeSeats <= capacity), "ที่นั่งส่งต่อน้ำใจ 0–5 ที่", "Pay-it-forward seats must be 0 to 5.");
 
   need(allowed.intensity.includes(d.intensity), "เลือกระดับความคึกคัก", "Choose a social intensity.");
   const groupMin = intIn(d.groupMin, 2, 12);
@@ -240,6 +245,7 @@ export function checkProposal(
       costThb: costThb!,
       paymentNote: d.paymentNote || null,
       paymentUrl,
+      freeSeats: costThb === 0 ? 0 : freeSeats!,
       intensity: d.intensity,
       groupMin: groupMin!,
       groupMax: groupMax!,
