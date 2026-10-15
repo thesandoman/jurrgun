@@ -75,9 +75,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 
 /* Discover list: shorter covers, so more events fit on a phone screen. */
 .ev-card{--notch:96px}
-.ev-card.feat{--notch:140px}
+.ev-card.feat{--notch:116px}
 .ev-card .event-cover{height:96px;z-index:1}
-.ev-card.feat .event-cover{height:140px}
+.ev-card.feat .event-cover{height:116px}
 .ev-card .event-cover .scene-badge{width:46px;height:46px;border-radius:15px}
 .seg{flex-wrap:nowrap}
 .seg a{flex:1 1 auto;min-width:0;white-space:normal;text-align:center;line-height:1.15;padding:6px 8px;font-size:.86rem}
@@ -114,6 +114,14 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 /* Readability: 17px body text, and taller lines for Thai so stacked marks never touch. */
 body{font-size:17px}
 html[lang="th"] body{line-height:1.7}
+
+/* Tighter spacing (owner: "too much space"): Discover cards sit 12px apart, and the
+   event page's cover band is shorter on phones so the title shows sooner. */
+.discover-list{gap:12px}
+.discover-list .ev-card,.discover-list>.ev-item{margin-block:0}
+@media (max-width:679.98px){.ev-scene{height:140px}}
+/* "+3" on avatar stacks: readable size. */
+.av.more{font-size:.75rem}
 
 /* Notifications page: the inbox list, unread rows tinted, with room between rows. */
 .notif-page{gap:8px;margin-top:8px}
