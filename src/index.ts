@@ -117,11 +117,12 @@ app.post("/api/vibe/score", async (c) => {
   const per = parsePer(body.per);
   if (per === null) return c.json({ error: "per must be an integer from 2 to 6" }, 400);
   if (!body.answers || typeof body.answers !== "object" || Array.isArray(body.answers)) {
-    return c.json({ error: "answers must be an object of { questionId: number }" }, 400);
+    return c.json({ error: "answers must be an object of { questionId: number } (rank: an array of option indices, favourite first)" }, 400);
   }
   const answers: Answers = {};
   for (const [id, v] of Object.entries(body.answers as Record<string, unknown>)) {
     if (typeof v === "number") answers[id] = v;
+    else if (Array.isArray(v) && v.length <= 6 && v.every((x) => typeof x === "number")) answers[id] = v as number[];
   }
   const result = scoreSession(generateSession({ seed: body.seed }), answers);
   return c.json(result);
