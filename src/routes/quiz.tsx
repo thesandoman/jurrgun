@@ -194,6 +194,7 @@ function StyleLabel(props: { v: View; q: AnyQuestion }) {
 }
 
 const STYLE_SET_CSS = `.q-set{display:inline-block;font-size:.82rem;border-radius:999px;padding:2px 10px;margin:0 8px 8px 0;background:var(--brand-soft);color:var(--brand)}
+.q-extra{display:table;margin:2px 0 10px;font-weight:600}
 .q-set-date{background:var(--love-soft);color:var(--love-ink)}`;
 
 /** "How you host", from the Table Host questions, on the host's own result. */
@@ -238,7 +239,12 @@ export function QuizFlow(props: {
   const ask = props.ask ?? props.questions.map((_, i) => i);
   const followUp = props.ask !== undefined && ask[0] > 0;
   const n = props.questions.length;
-  // About 9 seconds a question.
+  // The intro counts the Bangkok Type questions; the 💘 and Table Host style questions are said separately.
+  const typeN = props.questions.filter((q) => !isStyleQuestion(q)).length;
+  const inSet = (set: string) => props.questions.filter((q) => isStyleQuestion(q) && q.set === set);
+  const dateN = inSet("open-to-more").length;
+  const hostN = inSet("table-host").length;
+  // About 9 seconds a question, over the real total.
   const minutes = Math.max(2, Math.round((n * 9) / 60));
   // A follow-up page carries on the progress bar from where the 16 left off.
   const outer = props.stage ?? { at: 0, of: 1 };
@@ -268,11 +274,15 @@ export function QuizFlow(props: {
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
         hint={t(
-          `${n} สถานการณ์สั้น ๆ ในกรุงเทพฯ ตอบตามความรู้สึกแรก ใช้เวลาราว ${minutes} นาที และมีแค่คุณที่เห็นคำตอบ`,
-          `${n} quick Bangkok moments. Go with your gut. About ${minutes} minutes, and only you see your answers.`,
+          `${typeN} สถานการณ์สั้น ๆ ในกรุงเทพฯ ตอบตามความรู้สึกแรก ใช้เวลาราว ${minutes} นาที และมีแค่คุณที่เห็นคำตอบ`,
+          `${typeN} quick Bangkok moments. Go with your gut. About ${minutes} minutes, and only you see your answers.`,
         )}
         cta={t("เริ่มเลย", "Start")}
       >
+        {dateN ? (
+          <p class="q-set q-set-date q-extra">{t(`+ ${dateN} คำถามเรื่องสไตล์การเดต เพราะคุณเปิด 💘 ไว้`, `+ ${dateN} about how you date, because 💘 is on`)}</p>
+        ) : null}
+        {hostN ? <p class="q-set q-extra">{t(`+ ${hostN} เรื่องสไตล์เจ้าภาพ`, `+ ${hostN} about how you host`)}</p> : null}
         <div class="tiles" aria-hidden="true">
           <span class="tile"><b>👆</b>{t("แตะข้อที่เป็นคุณที่สุด", "Tap what's most you")}</span>
           <span class="tile"><b>🤷</b>{t("ไม่ตรงเลย ก็บอกได้", "Nothing fits? Just say so")}</span>
@@ -281,6 +291,9 @@ export function QuizFlow(props: {
       </FlowStep>}
       {ask.map((i, k) => {
         const q = props.questions[i];
+        const style = isStyleQuestion(q) ? q.set : null;
+        const ofSet = style ? props.questions.filter((x) => isStyleQuestion(x) && x.set === style) : [];
+        const inSetAt = ofSet.indexOf(q);
         return (
           <FlowStep title={L(lang, q.prompt)} auto class="q q-choice">
             <QuestionArt art={q.art} lang={lang} />
@@ -289,8 +302,13 @@ export function QuizFlow(props: {
             {followUp && k === 0 ? (
               <span class="muted q-more">{t("อีกนิดเดียว ให้เราเดาน้อยลง", "A couple more, so we guess less.")}</span>
             ) : null}
+            {style && inSetAt === 0 ? (
+              <span class="muted q-more">
+                {style === "open-to-more" ? t("ต่อด้วยคำถามเรื่องสไตล์การเดตอีกนิด", "Now a few about how you date") : t("ต่อด้วยเรื่องสไตล์เจ้าภาพอีกนิด", "Now a couple about how you host")}
+              </span>
+            ) : null}
             <span class="muted q-count">
-              {i + 1} / {followUp ? n : ask.length}
+              {followUp ? `${i + 1} / ${n}` : style ? `${style === "open-to-more" ? "💘" : "🍽️"} ${inSetAt + 1} / ${ofSet.length}` : `${i + 1} / ${typeN}`}
             </span>
             <AnswerField v={props.v} q={q} i={i} />
             <NoneOfThese v={props.v} q={q} i={i} />
