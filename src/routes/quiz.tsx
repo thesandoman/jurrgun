@@ -31,7 +31,7 @@ import { CATEGORIES, POLES } from "../vibe/content";
 import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
 import { REFLECTION_CSS, ReflectionSteps } from "../ui/reflections";
 import { reflectionsFromForm, type Reflections } from "../content/reflections";
-import { recordQuizChange } from "./pulse";
+import { syncQuizChange } from "./pulse";
 import {
   ARCHETYPES,
   ARCHETYPE_KEYS,
@@ -727,7 +727,7 @@ quizRoutes.post("/quiz", async (c) => {
       })
       .where(eq(profiles.accountId, user.account.id));
   }
-  if (reflections?.change) await recordQuizChange(c, reflections.change);
+  if (member) await syncQuizChange(c, reflections?.change);
   return c.redirect(`${next}?new=1`);
 });
 

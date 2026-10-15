@@ -17,6 +17,9 @@
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
 import { canBeWomenOnly, canSwitchToSingle, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS, romanceEligible } from "../domain/rules";
+import { ReflectionFields } from "../ui/reflections";
+import { reflectionsFromForm } from "../content/reflections";
+import { syncQuizChange } from "./pulse";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
 import { Flow } from "../ui/flow";
 import { cleanPrefs, EXIT_REASONS } from "../content/dating";
@@ -458,6 +461,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
 
         <Section id="bangkok" emoji="🛺" title={t("กรุงเทพฯ ของฉัน", "My Bangkok")} hint={t("ไม่บังคับทั้งหมด ช่วยให้คนในโต๊ะรู้จักคุณมากขึ้น", "All optional. Helps your table get to know you.")}>
           <BangkokStory v={props.v} story={bio.story} time={bio.bkkTime} hometown={bio.hometown} guide={bio.guide} residency={bio.residency} />
+          <ReflectionFields v={props.v} value={bio.reflections} />
         </Section>
 
         <Section id="facts" emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
@@ -667,7 +671,10 @@ function parseProfileForm(c: C, body: Body): Parsed {
     groupSize: oneOf(str(body.groupSize), GROUP_SIZES),
     times: pickAll("times", TIME_WINDOWS.map((x) => x.value)),
     access: pickAll("access", ACCESS_NEEDS.map((x) => x.value)),
+    // "My Bangkok" reflections: the edit form sends them all, so they replace the stored ones (all blank clears them).
+    reflections: str(body.r_present) === "1" ? reflectionsFromForm(body) : stored.reflections,
   };
+  if (!bio.reflections) delete bio.reflections;
   const vals: ProfileVals = {
     nickname: str(body.nickname),
     district: str(body.district),
@@ -806,8 +813,12 @@ async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise
   const drop = [...parsed.dropKeys, ...(p.photoKey && p.photoKey !== photoKey ? [p.photoKey] : [])];
   for (const k of drop) await deleteObject(c.env, k).catch(() => {});
   if (vals.locale !== p.locale) setCookie(c, "lang", vals.locale, { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
+  // City Pulse follows the change reflection: replaced when edited, withdrawn when cleared (consent rules in syncQuizChange).
+  const before = cleanBio(p.bio).reflections?.change;
+  const after = vals.bio.reflections?.change;
   // Keep the in-request copy current for anything rendered after this.
   Object.assign(p, { ...vals, intents, photoKey, bio: vals.bio });
+  if (before !== after) await syncQuizChange(c, after);
   return null;
 }
 

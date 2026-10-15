@@ -129,4 +129,29 @@ describe.skipIf(!HAS_DB)("My Bangkok reflections", () => {
     expect(passport).toContain("Next to explore");
     expect(passport).toContain("Nong Chok");
   });
+
+  it("can be edited in Settings → My Bangkok without retaking the quiz, and City Pulse follows", async () => {
+    const m = await createMember({ research: true });
+    await take(m, REFLECT);
+    const page = await (await req("/settings/profile?lang=en", { cookie: m.cookie })).text();
+    expect(page).toContain("Your Bangkok, in your words");
+    expect(page).toMatch(/name="r_like" value="street_food"[^>]*checked/);
+    expect(page).toContain('name="r_present"');
+
+    const base = { nickname: "Ploy", district: "bang_rak", languages: ["th", "en"], interests: ["food"], intents: ["friends"], locale: "en" };
+    const edit = (extra: Record<string, string | string[]>) => req("/settings/profile", { cookie: m.cookie, form: { ...base, r_present: "1", ...extra } });
+    expect((await edit({ r_like: ["green"], r_change: "air", r_notyet_1: "min_buri" })).status).toBe(302);
+    expect((await bioOf(m.id)).reflections).toEqual({ like: ["green"], change: "air", notYet: { districts: ["min_buri"] } });
+    const answer = async () => (await db().select().from(pulseResponses).where(and(eq(pulseResponses.questionId, CHANGE_PULSE_ID), eq(pulseResponses.researchId, m.researchId))))[0]?.answer;
+    expect(await answer()).toBe("air");
+
+    // Clearing the change withdraws it from City Pulse.
+    expect((await edit({ r_like: ["green"] })).status).toBe(302);
+    expect((await bioOf(m.id)).reflections).toEqual({ like: ["green"] });
+    expect(await answer()).toBeUndefined();
+
+    // A save without the reflection fields leaves them alone.
+    expect((await req("/settings/profile", { cookie: m.cookie, form: base })).status).toBe(302);
+    expect((await bioOf(m.id)).reflections).toEqual({ like: ["green"] });
+  });
 });
