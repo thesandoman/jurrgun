@@ -283,9 +283,10 @@ describe("blueprint sets and audiences (quiz-blueprint 2.3, 2.3b)", () => {
     const seasonal = SCENARIOS.filter((s) => s.months?.length && !s.twin);
     expect(seasonal.length).toBeGreaterThan(0);
     let shownInSeason = 0;
-    for (const s of seasonal) {
-      for (let month = 1; month <= 12; month++) {
-        const shown = generateSession({ seed: "m", personal: { segment: "local" }, month }).some((q) => q.scenario === s.id);
+    for (let month = 1; month <= 12; month++) {
+      const ids = new Set(generateSession({ seed: "m", personal: { segment: "local" }, month }).map((q) => q.scenario));
+      for (const s of seasonal) {
+        const shown = ids.has(s.id);
         if (!s.months!.includes(month)) expect(shown, `${s.id} in month ${month}`).toBe(false);
         else if (shown) shownInSeason += 1;
       }
