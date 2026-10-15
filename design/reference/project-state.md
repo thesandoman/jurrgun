@@ -27,6 +27,7 @@
 | D11 | Show a person in the films (a single lead) even before real users exist | film-review | 10-15 |
 | D12 | Detecting Thai or English and tailoring the question bank for everyone is **Task 10**. The owner will send skills and subtasks; don't start it | Branding | 10-15 |
 | D13 | Task 6 (brand kit in Blender) is **postponed until the owner says go** | Branding | 10-15 |
+| D14 | **Quiz chats merge in this order** (owner, 18:50, in Branding): (1) "Audit the quiz bank and write its blueprint" lands first; (2) Q5 "Make the quiz fit each member's profile and mode" rebases on it and lands; (3) "Write 100 new Bangkok scenarios" and "Add funny and personality scenarios" rebase and fill the new structure. "Add interactive question formats" can land any time if it stays out of `src/vibe/bank` and `generator.ts`, otherwise after (2). Q5 is then folded into Task 10 and deployed. Each chat rebases on `main` before pushing, and only one quiz chat pushes at a time | Branding | 10-15 18:50 |
 
 ## Resolved by the owner (2026-10-15 18:30, in Branding)
 
@@ -52,6 +53,11 @@ None right now. New questions go to the Branding chat.
 | **film-review** | Film review and brief | done | |
 | **UI/UX** | Accessibility and UX audit (light, dark, 320 px, large text) in worktree `.claude/worktrees/a11y` (branch `a11y-pass`) | running | branched at `ae24ac6`, so it must rebase on `31ecc25` (new names, segments, women-only, /international) before fixing |
 | **2.0** | Admins (sandosit, pjj, aey) | idle | |
+| Quiz: audit and blueprint | Bank audit and blueprint (worktree gifted-visvesvaraya) | running | merges 1st (D14) |
+| Quiz: Q5 profile and mode | Profile-aware question sets (worktree dreamy-leavitt) | running | merges 2nd, after the blueprint (D14) |
+| Quiz: 100 Bangkok scenarios | Content (worktree amazing-bhabha) | running | merges after Q5 (D14) |
+| Quiz: funny scenarios | Content (worktree funny-lamarr) | running | merges after Q5 (D14) |
+| Quiz: interactive formats | UI formats (worktree amazing-ardinghelli) | running | any time if outside the bank and generator, else after Q5 (D14) |
 | worktree `jurgun-map` (`discover-map`) | merged into main 6 days ago | stale | safe to remove |
 
 ## Proposed next tasks (waiting for approval)
