@@ -38,9 +38,7 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
     r = await req("/onboarding/privacy", { cookie, form: { consent_service: "1", consent_safety: "1" } });
     expect(r.status).toBe(400); // code of conduct not accepted
     r = await req("/onboarding/privacy", { cookie, form: { consent_service: "1", consent_safety: "1", consent_research: "1", conduct: "1" } });
-    expect(r.headers.get("location")).toBe("/onboarding/you");
-
-    r = await req("/onboarding/you", { cookie, form: { languages: ["th", "en"], interests: ["food", "art"], intents: ["friends"] } });
+    // About-you comes after the first RSVP now (D42): privacy goes straight to the private settings.
     expect(r.headers.get("location")).toBe("/onboarding/connections");
 
     // Romance on without consent is refused; married can never turn it on.

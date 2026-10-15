@@ -91,6 +91,15 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 @media (max-width:1023.98px){body:has(.tabbar) main :is(.flow-bar,.pf-save)::after{content:"";position:absolute;left:0;right:0;top:100%;height:calc(112px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:none}}
 @media (min-width:1024px){body:has(.top-nav) main .pf-save{bottom:0}}
 
+/* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
+.flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
+.flow-body .field-label+.muted{margin-top:-2px}
+.flow-sub{font-size:1.02rem;margin:22px 0 2px}
+.flow-bar a.skip{display:flex;align-items:center;justify-content:center;text-decoration:underline}
+/* The table intro card on the RSVP confirmation and the pass (D42). */
+.table-intro{margin:16px 0;border:1.5px solid color-mix(in srgb,var(--brand) 35%,var(--line))}
+.table-intro .btn{margin-top:4px}
+
 /* Laptops: the Map / Cards switch sits in the page, not over the cards. */
 @media (min-width:900px){body:not(.fullmap-body) .view-switch{position:static;transform:none;display:inline-flex;margin:0 0 12px;box-shadow:none}body:has(.view-switch) .discover-list{padding-bottom:0}}
 

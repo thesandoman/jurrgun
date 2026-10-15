@@ -20,6 +20,7 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
+import { TableIntroPrompt } from "../ui/table-intro";
 import { segmentOf, type Segment } from "../domain/segment";
 import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
@@ -1067,6 +1068,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             <Seats capacity={event.capacity} taken={state.taken} />
           </div>
         </div>
+        {reg?.status === "confirmed" && !started ? <TableIntroPrompt v={v} next={`/events/${event.id}`} /> : null}
         {event.venueAddress || event.mapUrl ? (
           <p class="ev-line">
             {event.venueAddress ? `📍 ${event.venueAddress} ` : null}
@@ -2027,6 +2029,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
           {t("เริ่ม", "Starts")} {fmtDate(event.startsAt, lang)}
         </p>
       ) : null}
+      {now < event.startsAt ? <TableIntroPrompt v={view(c)} next={`/me/events/${event.id}/pass`} /> : null}
       <div class="pass-actions">
         <a class="chip-btn" href={`/me/events/${event.id}/calendar.ics`} download={`jurrgun-${event.id}.ics`}>
           <span aria-hidden="true">🗓️</span> {t("เพิ่มในปฏิทิน", "Add to calendar")}
