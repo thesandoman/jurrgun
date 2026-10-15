@@ -9,17 +9,15 @@
 - **Conflicts:** if two chats touch the same thing (films, the same files, production), stop and raise it in Branding.
 - **Owner decisions:** recorded below with the date and the chat they were given in. The newest decision wins. Where two conflict, the conflict is listed under Open and waits for the owner.
 
-## Machine load: one heavy job at a time (owner, 10-15)
+## Machine load: up to 3 heavy jobs at once (owner, 10-15, updated evening)
 
-All chats share one Mac. Running renders and test suites at the same time pushed load past 100, which made tests time out and skip.
-- **Heavy jobs:** film renders (ffmpeg, headless Chrome), full `npm test`, and share-card renders. **Only one runs at a time**, in this order:
-  1. the film re-render (running now);
-  2. then the quiz chats in D14 order, one at a time;
-  3. then Branding's agents one at a time: Regular Tables, then admin partners and measurement.
-- **Full suite on your turn:** `npx vitest run --maxWorkers=1` (all 475 pass that way).
-- **Tests while waiting:** run only the files you changed, `npx vitest run <files> --poolOptions.threads.maxThreads=2 --testTimeout=30000`. Run the full suite only when it's your turn to push.
+All chats share one Mac (14 cores, 24 GB). Earlier, many full-worker suites plus a film render at once pushed load past 100, so tests timed out and skipped. The owner later found one-at-a-time too slow and approved running more in parallel.
+- **Heavy jobs:** film renders (ffmpeg, headless Chrome), full `npm test`, and share-card renders. **At most 3 run at once.** If load goes above about 20, Branding holds the next one until it drops.
+- **Full suite:** `npx vitest run --maxWorkers=1` only, never with all workers.
+- **Pushing:** fetch and rebase onto origin/main, then `git push origin HEAD:main`. If rejected because main moved, rebase and push again; rerun the suite only if the rebase touched your files.
+- **Tests while working:** run only the files you changed, `npx vitest run <files> --poolOptions.threads.maxThreads=2 --testTimeout=30000`.
 - **Light work is fine anytime:** reading, writing and editing.
-- **When a chat finishes its heavy step,** it tells Branding, and Branding starts the next one.
+- **When a chat lands its push,** it tells Branding with the SHA.
 
 ## Routing rule (owner, 10-15)
 
