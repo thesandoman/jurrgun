@@ -918,7 +918,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
   }
   if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id));
   if (result.patch.relationship !== p.relationship) {
-    queries.push(audit(db, user.account.id, "profile.relationship_changed", { type: "account", id: user.account.id }));
+    queries.push(audit(db, user.account.id, "profile.private_updated", { type: "account", id: user.account.id }));
   }
   await batch(c.env, queries);
   return c.redirect("/settings/connections?notice=saved");
@@ -968,7 +968,7 @@ async function romanceQuick(c: C, on: boolean) {
       .where(eq(profiles.accountId, id)),
   );
   queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: true, version: CONSENT_VERSION }));
-  if (toSingle) queries.push(audit(db, id, "profile.relationship_changed", { type: "account", id }));
+  if (toSingle) queries.push(audit(db, id, "profile.private_updated", { type: "account", id }));
   await batch(c.env, queries);
   return c.redirect("/settings?notice=romance_on");
 }
