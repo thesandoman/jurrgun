@@ -940,7 +940,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
         ...result.patch,
         intents: result.patch.romanceOn ? [...intents, "romance"] : intents,
         // Dating prompts come with romance mode and go with it.
-        bio: withGenderSelf(result.patch.romanceOn ? { ...cleanBio(p.bio), datingDeck: currentDatingDeck(user.account.id, cleanBio(p.bio)) } : withoutDating(cleanBio(p.bio)), result.genderSelf),
+        bio: withGenderSelf(result.patch.romanceOn ? { ...cleanBio(p.bio), datingDeck: currentDatingDeck(user.account.id, cleanBio(p.bio)) } : withoutDating(cleanBio(p.bio)), result.genderSelf, result.datingGenderSelf),
       })
       .where(eq(profiles.accountId, user.account.id)),
   ];

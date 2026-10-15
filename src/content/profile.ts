@@ -1273,7 +1273,7 @@ export function currentDatingDeck(accountId: string, bio: Bio | null | undefined
 /** The bio with every dating prompt and answer removed (romance mode switched off). */
 export function withoutDating(bio: Bio): Bio {
   const answers = Object.fromEntries(Object.entries(bio.answers ?? {}).filter(([id]) => !DATING_BY_ID.has(id)));
-  const { datingDeck: _drop, dateStyle: _style, ...rest } = bio;
+  const { datingDeck: _drop, dateStyle: _style, datingGenderSelf: _self, ...rest } = bio;
   return { ...rest, answers, skipped: (bio.skipped ?? []).filter((id) => !DATING_BY_ID.has(id)) };
 }
 
@@ -1304,6 +1304,8 @@ export type Answer = { kind: string; value: string | number | string[]; photoKey
 export type Bio = {
   /** Private, with gender "self": the member's own words. Never shown to anyone, staff included. */
   genderSelf?: string;
+  /** Romance data, with the dating gender identity "self": the member's own words. Private, deleted with romance mode. */
+  datingGenderSelf?: string;
   comm?: string[];
   /** A value from OCCUPATIONS; "other" goes with occupationOther. */
   occupation?: string;
@@ -1461,6 +1463,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.bkkTime)) out.bkkTime = s(b.bkkTime);
   if (s(b.hometown)) out.hometown = s(b.hometown);
   if (s(b.genderSelf)) out.genderSelf = s(b.genderSelf)!.slice(0, 30);
+  if (s(b.datingGenderSelf)) out.datingGenderSelf = s(b.datingGenderSelf)!.slice(0, 30);
   if (b.guide === true) out.guide = true;
   if (s(b.learning)) out.learning = s(b.learning);
   if (strs(b.learningLangs)) out.learningLangs = strs(b.learningLangs);

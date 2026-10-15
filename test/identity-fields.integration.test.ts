@@ -30,4 +30,17 @@ describe.skipIf(!HAS_DB)("identity fields", () => {
     const html = await (await req("/onboarding/you?lang=en", { cookie: m.cookie })).text();
     for (const p of ["she/her", "he/him", "they/them", "use my name"]) expect(html).toContain(`data-pronoun="${p}"`);
   });
+
+  it("a self-described dating identity is kept privately while romance is on, and deleted with it", async () => {
+    const m = await createMember({ relationship: "single" });
+    const on = { relationship: "single", ageMin: "18", ageMax: "99", romanceOn: "1", romanceConsent: "1", genderIdentity: "self", datingGenderSelf: "two-spirit", romanceOpenTo: "everyone" };
+    await req("/settings/connections", { cookie: m.cookie, form: on });
+    const [a] = await db().select({ bio: profiles.bio, gi: profiles.genderIdentity }).from(profiles).where(eq(profiles.accountId, m.id));
+    expect(a.gi).toBe("self");
+    expect((typeof a.bio === "string" ? JSON.parse(a.bio) : a.bio).datingGenderSelf).toBe("two-spirit");
+    expect(await (await req("/me/profile", { cookie: m.cookie })).text()).not.toContain("two-spirit");
+    await req("/settings/connections", { cookie: m.cookie, form: { relationship: "single", ageMin: "18", ageMax: "99" } });
+    const [b] = await db().select({ bio: profiles.bio }).from(profiles).where(eq(profiles.accountId, m.id));
+    expect((typeof b.bio === "string" ? JSON.parse(b.bio) : b.bio).datingGenderSelf).toBeUndefined();
+  });
 });

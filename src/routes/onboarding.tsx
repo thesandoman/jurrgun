@@ -637,6 +637,15 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
     <>
       <Toggle name="romanceOn" label={t("เปิดโหมดนี้", "Switch this on")} checked={props.on ?? !!p?.romanceOn} />
       <Select label={t("อัตลักษณ์ทางเพศของคุณ (ไม่บังคับ)", "Your gender identity (optional)")} name="genderIdentity" options={GENDER_IDENTITIES} value={p?.genderIdentity} lang={lang} blank="-" />
+      {/* "Self-described" gets somewhere to describe it: private, deleted with romance mode. */}
+      <div data-dating-self hidden={p?.genderIdentity === "self" ? undefined : true}>
+        <Field label={t("อธิบายด้วยคำของคุณเอง (เป็นความลับ)", "In your own words (private)")} name="datingGenderSelf" value={cleanBio(p?.bio).datingGenderSelf} maxlength={30} />
+      </div>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var w=document.currentScript.previousElementSibling,s=w&&w.parentNode.querySelector('select[name="genderIdentity"]');if(!s)return;s.addEventListener("change",function(){w.hidden=s.value!=="self"})})();`,
+        }}
+      />
       <Choices
         legend={t("อยากเจอ…", "Open to meeting…")}
         name="romanceOpenTo"
@@ -693,17 +702,18 @@ export function WomenOnlyFields(props: { v: View }) {
   );
 }
 
-/** The bio with the self-described gender set, or removed. */
-export function withGenderSelf<B extends object>(bio: B, genderSelf: string | null): B {
-  const { genderSelf: _old, ...rest } = bio as B & { genderSelf?: string };
-  return (genderSelf ? { ...rest, genderSelf } : rest) as B;
+/** The bio with the self-described gender set, or removed (and the dating one, when given). */
+export function withGenderSelf<B extends object>(bio: B, genderSelf: string | null, datingGenderSelf?: string | null): B {
+  const { genderSelf: _old, datingGenderSelf: _oldDating, ...rest } = bio as B & { genderSelf?: string; datingGenderSelf?: string };
+  const keep = datingGenderSelf === undefined ? (_oldDating ? { datingGenderSelf: _oldDating } : {}) : datingGenderSelf ? { datingGenderSelf } : {};
+  return { ...rest, ...(genderSelf ? { genderSelf } : {}), ...keep } as B;
 }
 
 /** Shared by onboarding and Settings: validates and returns the profile patch. */
 export async function connectionsPatch(
   body: Record<string, unknown>,
   current: { relationship: string; lastSingleSwitchAt: Date | null },
-): Promise<{ patch: Partial<typeof profiles.$inferInsert>; romanceConsent: boolean | null; genderSelf: string | null } | { error: [string, string] }> {
+): Promise<{ patch: Partial<typeof profiles.$inferInsert>; romanceConsent: boolean | null; genderSelf: string | null; datingGenderSelf: string | null } | { error: [string, string] }> {
   const relationship = values(RELATIONSHIP).includes(str(body.relationship)) ? str(body.relationship) : "prefer_not";
   // Whole years only (the columns are integers; "30.5" used to be a 500).
   const ageMin = Math.max(18, Math.min(99, Math.trunc(Number(str(body.ageMin))) || 18));
@@ -756,7 +766,8 @@ export async function connectionsPatch(
   }
   // Self-described gender: the member's own words, kept only while "self" is picked.
   const genderSelf = gender === "self" ? str(body.genderSelf).slice(0, 30) || null : null;
-  return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null, genderSelf };
+  const datingGenderSelf = wantsRomance && identity === "self" ? str(body.datingGenderSelf).slice(0, 30) || null : null;
+  return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null, genderSelf, datingGenderSelf };
 }
 
 function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?: string }) {
@@ -836,7 +847,7 @@ onboarding.post("/connections", async (c) => {
     db
       .update(profiles)
       // Dating prompts exist only while romance mode is on.
-      .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents, bio: withGenderSelf(result.patch.romanceOn ? cleanBio(p.bio) : withoutDating(cleanBio(p.bio)), result.genderSelf) })
+      .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents, bio: withGenderSelf(result.patch.romanceOn ? cleanBio(p.bio) : withoutDating(cleanBio(p.bio)), result.genderSelf, result.datingGenderSelf) })
       .where(eq(profiles.accountId, user.account.id)),
   ];
   if (result.romanceConsent !== null) {
