@@ -6,6 +6,9 @@
  *   POST /chat/:thread                 send
  *   POST /chat/:thread/report/:msgId   report a message (goes to the moderation queue)
  *
+ *   GET  /chat/:thread/live            receive-only live connection: the page hears
+ *                                      "chat.changed" after a new message (no polling)
+ *
  * Who may read and write is worked out from the pairing, connection or
  * hangout on every request, so a thread closes by itself when the buddy
  * pairing ends, a connection is removed, someone blocks, or a hangout is a
@@ -22,6 +25,7 @@ import { audit } from "../lib/records";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, connections, events, notifications, profiles, registrations, reports } from "../schema";
 import { PROMPT_BANK } from "../content/profile";
+import { getStatefulObject } from "../state";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
 
 export const chatRoutes = new Hono<AppEnv>();
@@ -276,6 +280,24 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
 
 chatRoutes.get("/chat/:thread", (c) => renderThread(c, c.req.param("thread")));
 
+/**
+ * The thread's live feed. The object's name comes from the thread key, and only
+ * after resolveThread confirmed this member belongs in it (hard rule 8). Only
+ * a signal is published; each page refetches through its own checked route.
+ */
+chatRoutes.get("/chat/:thread/live", async (c) => {
+  const key = c.req.param("thread");
+  const th = await resolveThread(getDb(c.env), key, c.var.user!.account.id);
+  if (!th) return c.text("Not found", 404);
+  try {
+    const feed = await getStatefulObject(c.env, `chat:${th.key}`);
+    return feed.listen(c.req.raw);
+  } catch {
+    // Not available under `npm run dev`; the page still updates on send and on focus.
+    return c.text("Live updates unavailable", 503);
+  }
+});
+
 chatRoutes.post("/chat/:thread", async (c) => {
   const key = c.req.param("thread");
   const db = getDb(c.env);
@@ -313,6 +335,13 @@ chatRoutes.post("/chat/:thread", async (c) => {
     await db.insert(notifications).values(fresh.map((accountId) => ({ id: newId(), accountId, kind: "chat", titleTh: "มีข้อความใหม่", titleEn: "New message", link, createdAt: due })));
   }
   await db.insert(chatReads).values({ thread: key, accountId: me, lastReadAt: now }).onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } });
+  // Tell open pages in this thread to refetch. Never fail the send over it.
+  try {
+    const feed = await getStatefulObject(c.env, `chat:${th.key}`);
+    await feed.publish({ type: "chat.changed" }).catch(() => {});
+  } catch {
+    /* local dev: no live objects */
+  }
   return c.redirect(`/chat/${key}#msgs`);
 });
 
@@ -342,8 +371,19 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
   return c.redirect(`/chat/${key}?notice=reported`);
 });
 
-/** Starter chips fill the box; new messages appear every 20 s while the tab is in view (no typing state is sent). */
+/**
+ * Starter chips fill the box. New messages arrive over a receive-only live
+ * connection (no polling, SVAGENTS hard rule 10): refetch on connect, on each
+ * "chat.changed" signal and when the tab becomes visible. If the connection
+ * can't open, retry a few times with a growing delay, then stop.
+ */
 const CHAT_JS = `(function(){var ta=document.querySelector(".chat-send textarea");document.querySelectorAll("[data-starter]").forEach(function(b){b.addEventListener("click",function(){if(ta){ta.value=b.dataset.starter;ta.focus()}})});
-var box=document.getElementById("msgs");if(box)box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"});
-setInterval(function(){if(document.visibilityState!=="visible"||!box)return;fetch(location.pathname,{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(h){var d=new DOMParser().parseFromString(h,"text/html").getElementById("msgs");if(d&&d.innerHTML!==box.innerHTML){box.innerHTML=d.innerHTML;box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"})}}).catch(function(){})},20000)})()`;
+var box=document.getElementById("msgs");if(!box)return;box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"});
+function refetch(){fetch(location.pathname,{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(h){var d=new DOMParser().parseFromString(h,"text/html").getElementById("msgs");if(d&&d.innerHTML!==box.innerHTML){box.innerHTML=d.innerHTML;box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"})}}).catch(function(){})}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")refetch()});
+var tries=0;function live(){if(!("WebSocket" in window)||tries>5)return;var ws=new WebSocket(location.origin.replace(/^http/,"ws")+location.pathname+"/live");var ka;
+ws.onopen=function(){tries=0;refetch();ka=setInterval(function(){ws.readyState===1&&ws.send("ping")},30000)};
+ws.onmessage=function(e){if(e.data==="pong")return;try{if(JSON.parse(e.data).type==="chat.changed")refetch()}catch(x){}};
+ws.onclose=function(){clearInterval(ka);tries++;setTimeout(live,Math.min(30000,2000*Math.pow(2,tries)))}}
+live()})()`;
 
