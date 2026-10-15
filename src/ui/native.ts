@@ -53,6 +53,6 @@ body:has(.tabbar) .foot{display:none}
 .view-switch a.on{background:var(--lime);color:var(--deep,#06492a)}
 .fullmap .view-switch{bottom:calc(var(--tab-h) + var(--sheet-h) + 14px)}
 .fullmap .svm-key{bottom:calc(var(--tab-h) + var(--sheet-h) + 70px)}
-@media (min-width:1024px){.view-switch{left:calc(50% + var(--side,236px) / 2);bottom:24px}.fullmap .view-switch{left:50%;bottom:calc(var(--sheet-h) + 24px)}}
+@media (min-width:1024px){body:not(.fullmap-body) .view-switch{bottom:28px}}
 @media (prefers-reduced-motion:reduce){.seg a,details.how>summary::after{transition:none}}
 `;

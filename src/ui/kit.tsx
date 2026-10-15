@@ -130,6 +130,8 @@ function Layout(props: { v: View; opts: PageOpts; children: Child }) {
           <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">
             <BrandMark /> Jurrgun <small lang="th">เจอกัน</small>
           </a>
+          {/* Laptops: the main menu sits in the header (top-down); phones use the bottom bar. */}
+          {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} top /> : null}
           <nav class="top-actions">
             {staff ? <a href="/admin" class="chip">{t("ทีมงาน", "Staff")}</a> : null}
             {member ? <NotifMenu t={t} unread={user?.unread ?? 0} /> : null}
@@ -182,7 +184,7 @@ const TAB_ICONS = {
   buddy: <Icon d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2.5 20c.4-3.3 2.6-5.5 5.5-5.5 1.6 0 3 .7 4 1.8 1-1.1 2.4-1.8 4-1.8 2.9 0 5.1 2.2 5.5 5.5" />,
 };
 
-function TabBar(props: { v: View; tab: Tab }) {
+function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
   const { t } = props.v;
   // Same five places on every page; "My events" is the big centre button
   // (your pass lives there), like the Sanroo map's centre action. Bangkok
@@ -196,11 +198,7 @@ function TabBar(props: { v: View; tab: Tab }) {
     ["me", "/settings", TAB_ICONS.me, t("ฉัน", "Me")],
   ];
   return (
-    <nav class="tabbar" aria-label={t("เมนูหลัก", "Main")}>
-      {/* Only shown in the laptop sidebar. */}
-      <a href="/events" class="tab-brand" aria-label="Jurrgun">
-        <BrandMark /> Jurrgun <small lang="th">เจอกัน</small>
-      </a>
+    <nav class={props.top ? "top-nav" : "tabbar"} aria-label={t("เมนูหลัก", "Main")}>
       {items.map(([key, href, icon, text]) => (
         <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && (props.tab === "pulse" || props.tab === "learn")) ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
           <span aria-hidden="true">{icon}</span>
