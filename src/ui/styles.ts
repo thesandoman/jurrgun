@@ -19,9 +19,9 @@ html[data-theme="dark"]{color-scheme:dark}
   --ok:#15803d;--ok-soft:#dcfce7;--warn:#a35a00;--warn-soft:#fff1cc;--err:#c2261d;--err-soft:#fde8e6;
   --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(19,127,69,.08);
   --hero:linear-gradient(135deg,#137f45 0%,#22c55e 55%,#a3e635 120%);
-  /* The BMA type system (ui/fonts.ts): Sarabun New for body, Anuphan for
-     subheadings and UI labels, Sao Chingcha for headings. Each covers Thai and Latin. */
-  --font:'TH Sarabun New','Anuphan',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  /* The BMA type system (ui/fonts.ts): Anuphan for body, subheadings and UI
+     labels, Sao Chingcha for headings. Each covers Thai and Latin. */
+  --font:'Anuphan',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --sub:'Anuphan',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{

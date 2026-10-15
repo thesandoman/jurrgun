@@ -5,8 +5,11 @@ From the BMA type system sheet (`BMA_Type system.pdf`, supplied by the owner on 
 | Role | Typeface | Files here | Licence |
 |---|---|---|---|
 | Headings | Sao Chingcha (เสาชิงช้า), BMA's custom typeface | `saochingcha-400`, `-700` | Bangkok Metropolitan Administration; embedding allowed (OS/2 fsType 8) |
-| Subheadings, UI labels, buttons | Anuphan (Cadson Demak) | `anuphan-400`, `-500`, `-600`, `-700` | SIL Open Font License 1.1 |
-| Body text | TH Sarabun New (SIPA national font) | `sarabunnew-400`, `-400i`, `-700` | GPL with font exception |
+| Subheadings, UI labels, buttons and body text | Anuphan (Cadson Demak) | `anuphan-400`, `-500`, `-600`, `-700` | SIL Open Font License 1.1 |
+
+The sheet sets body text in TH Sarabun New. We use Anuphan instead: Sarabun New
+reads as an official document on screen and draws small (x-height 0.34 em
+against Anuphan's 0.57). Decided 2026-10-15.
 
 Each covers Thai and basic Latin. The files are WOFF2, subset to Latin-1, Thai
 and general punctuation with every OpenType feature kept (Thai mark placement

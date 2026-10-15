@@ -64,7 +64,7 @@ describe("GET /fonts/:file", () => {
     const html = await (await app.request("/", seen)).text();
     const urls = [...html.matchAll(/href="(\/fonts\/[^"]+\.woff2)"/g)].map((m) => m[1]);
     expect(urls.some((u) => u.includes("saochingcha-700"))).toBe(true);
-    expect(html).toContain("font-family:'TH Sarabun New'");
+    expect(html).toContain("font-family:'Anuphan'");
     const res = await app.request(urls[0]);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("font/woff2");
