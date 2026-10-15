@@ -111,7 +111,7 @@ await db.insert(events).values({
   accessibility: "Step-free from MRT Exit 1 by lift. Flat pavements, some crowded spots. Seated rests at stops 2 and 4.",
   safetyInfo: "Meet at the top of the Exit 1 lift. Host wears a green Jurrgun lanyard. Keep bags in front in crowds.",
   emergencyContact: "Host via the event chat · Police 191 · Ambulance 1669 · Tourist police 1155",
-  tags: ["food", "walk", "culture", "newcomers", "english_friendly", "small_group", "social"],
+  tags: ["food", "walk", "culture", "newcomers", "english_friendly"],
   status: "published",
   visibility: "public",
   buddyEnabled: true,

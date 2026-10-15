@@ -74,6 +74,9 @@ const RULES = `
   & .notice.ok.toast{background:#fff;color:var(--ink);box-shadow:0 14px 34px rgba(160,110,40,.22),0 0 0 1px var(--line) inset}
   & .notice.ok.toast::before{background:var(--brand);color:#fff}
 
+  /* checkboxes and radios in brand green, not the browser's blue */
+  & input[type=checkbox],& input[type=radio],& progress{accent-color:var(--brand)}
+
   /* focus rings stay visible on the light ground */
   & :focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:2px}
 `;

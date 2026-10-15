@@ -520,7 +520,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-status.ok{background:linear-gradient(135deg,#0a7a3d,#0f9a4c 60%,#16a34a)}
 .fd-status.calm{background:linear-gradient(135deg,#3d5a49,#5f7a69)}
 .fd-status{height:64px;justify-content:center;overflow:hidden}
-.fd-status strong{font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fd-status small{opacity:.92;font-size:.76rem;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fd-status strong{font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fd-status small{color:#fff;opacity:.92;font-size:.76rem;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fd-status small>i{flex:none}
 .fd-live{width:8px;height:8px;border-radius:50%;background:#b7f7cf;box-shadow:0 0 0 0 rgba(183,247,207,.7);animation:pulse 2.4s ease-out infinite}
 @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(183,247,207,0)}100%{box-shadow:0 0 0 0 rgba(183,247,207,0)}}
