@@ -19,7 +19,7 @@
 import { DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS } from "../domain/rules";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
 import { Flow } from "../ui/flow";
-import { cleanPrefs } from "../content/dating";
+import { cleanPrefs, EXIT_REASONS } from "../content/dating";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -75,6 +75,7 @@ import {
   connectionChoices,
   connections,
   datingIntents,
+  exitReasons,
   consents,
   contactShares,
   events,
@@ -95,7 +96,7 @@ import {
   type Profile,
 } from "../schema";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
-import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, Toggle, view, type View } from "../ui/kit";
+import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch } from "./onboarding";
 import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
@@ -852,7 +853,7 @@ const CATEGORIES: { key: string; required: boolean; th: string; en: string; hint
 const OPTIONAL = ["personalization", "research", "notifications"];
 
 function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
-  const { t } = props.v;
+  const { t, lang } = props.v;
   const cur = props.current;
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
@@ -944,7 +945,24 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
             "Your profile is hidden at once, you're signed out everywhere, your photo is deleted and the link to your research answers is cut. The account is permanently deleted after 30 days.",
           )}
         </p>
+        <p class="row">
+          <a class="btn ghost" href="/settings/habits">⏸️ {t("พักก่อนแทน (วงและแชตยังอยู่)", "Take a break instead (circle and chats stay)")}</a>
+        </p>
         <form method="post" action="/settings/deactivate">
+          <fieldset class="choices">
+            <legend>{t("ทำไมถึงออก? (ไม่บังคับ ไม่ระบุตัวตน)", "Why are you leaving? (optional, anonymous)")}</legend>
+            <div class="pills">
+              {EXIT_REASONS.map((o) => (
+                <label class="pill">
+                  <input type="checkbox" name="reasons" value={o.value} />
+                  <span>
+                    {o.emoji} {lang === "en" ? o.label.en : o.label.th}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <TextArea label={t("อยากบอกอะไรเราเพิ่มไหม (ไม่บังคับ)", "Anything you'd like us to know? (optional)")} name="exitNote" rows={2} maxlength={500} />
           <Toggle name="confirm" label={t("ฉันเข้าใจและต้องการปิดบัญชี", "I understand and want to deactivate my account")} />
           <Button kind="danger">{t("ปิดบัญชี", "Deactivate")}</Button>
         </form>
@@ -1124,7 +1142,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
 settingsRoutes.post("/settings/deactivate", async (c) => {
   const v = view(c);
   const user = me(c);
-  const body = await c.req.parseBody();
+  const body = await c.req.parseBody({ all: true });
   if (str(body.confirm) !== "1") {
     const current = await currentConsents(c, user.account.id);
     return page(
@@ -1138,6 +1156,10 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
   }
   const db = getDb(c.env);
   const id = user.account.id;
+  // Why they left: anonymous (no account id), only if they said something.
+  const reasons = [...new Set(list(body.reasons))].filter((r) => EXIT_REASONS.some((o) => o.value === r));
+  const exitNote = str(body.exitNote).slice(0, 500);
+  if (reasons.length || exitNote) await db.insert(exitReasons).values({ id: newId(), reasons, note: exitNote });
   const photoKey = user.profile?.photoKey ?? null;
   const promptPhotos = Object.values(cleanBio(user.profile?.bio).answers ?? {})
     .map((a) => a.photoKey)

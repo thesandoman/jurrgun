@@ -130,3 +130,17 @@ export const SAFETY_TIPS: { emoji: string; text: Text }[] = [
   { emoji: "💸", text: t("Never send money or codes", "ห้ามโอนเงินหรือให้รหัสใด ๆ") },
   { emoji: "🚪", text: t("Feel off? Leave. That's always OK", "รู้สึกไม่ดีเมื่อไหร่ ออกมาได้เลย") },
 ];
+
+/** Why someone is leaving (anonymous, optional). */
+export const EXIT_REASONS: { value: string; emoji: string; label: Text }[] = [
+  { value: "made_friends", emoji: "🎓", label: t("I made friends, I don't need it now", "ได้เพื่อนแล้ว ไม่ต้องใช้แล้ว") },
+  { value: "found_partner", emoji: "💞", label: t("I found someone", "เจอคนที่ใช่แล้ว") },
+  { value: "too_busy", emoji: "⏰", label: t("Too busy right now", "ช่วงนี้ยุ่งเกินไป") },
+  { value: "nothing_near", emoji: "📍", label: t("Not enough near me", "ใกล้บ้านมีกิจกรรมน้อย") },
+  { value: "cost", emoji: "💸", label: t("Too expensive", "ค่าใช้จ่ายสูงไป") },
+  { value: "didnt_click", emoji: "🤷", label: t("Didn't click with people", "ไม่ค่อยคลิกกับใคร") },
+  { value: "unsafe", emoji: "🛡️", label: t("Didn't feel safe", "รู้สึกไม่ปลอดภัย") },
+  { value: "privacy", emoji: "🔒", label: t("Privacy worries", "กังวลเรื่องความเป็นส่วนตัว") },
+  { value: "too_many", emoji: "🔔", label: t("Too many notifications", "แจ้งเตือนเยอะไป") },
+  { value: "other", emoji: "💬", label: t("Something else", "อื่น ๆ") },
+];

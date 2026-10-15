@@ -876,6 +876,21 @@ export const thanks = pgTable(
   (t) => [uniqueIndex("social_thanks_idx").on(t.fromAccount, t.toAccount, t.context), index("social_thanks_to_idx").on(t.toAccount, t.createdAt)],
 );
 
+/**
+ * Why people left. Anonymous on purpose: no account id, so it can never be
+ * tied back to a person. Shown to admins only as totals of 10 or more.
+ */
+export const exitReasons = pgTable(
+  "research_exit_reasons",
+  {
+    id: text("id").primaryKey(),
+    reasons: jsonb("reasons").$type<string[]>().notNull().default([]),
+    note: text("note").notNull().default(""),
+    createdAt: created(),
+  },
+  (t) => [index("research_exit_reasons_created_idx").on(t.createdAt)],
+);
+
 /** A member asking to lead a circle (and so host its hangouts). Reviewed in /admin/review. */
 export const circleHeadRequests = pgTable(
   "social_circle_head_requests",

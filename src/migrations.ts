@@ -191,5 +191,12 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_thanks_idx\" ON \"social_thanks\" (\"from_account\",\"to_account\",\"context\");",
       "CREATE INDEX \"social_thanks_to_idx\" ON \"social_thanks\" (\"to_account\",\"created_at\");"
     ]
+  },
+  {
+    "id": "0014_nasty_gateway",
+    "statements": [
+      "CREATE TABLE \"research_exit_reasons\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"reasons\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"note\" text DEFAULT '' NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE INDEX \"research_exit_reasons_created_idx\" ON \"research_exit_reasons\" (\"created_at\");"
+    ]
   }
 ];

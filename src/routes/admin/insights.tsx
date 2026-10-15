@@ -6,14 +6,15 @@
  * "<10" (PRD §12.5). Research tables (wellbeing, pulse) are never joined to
  * accounts. PRD §18.4 pilot targets sit next to each KPI.
  */
+import { EXIT_REASONS } from "../../content/dating";
 import { Hono } from "hono";
-import { asc, and, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { asc, and, eq, gte, inArray, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
 import { K_THRESHOLD, safeCount } from "../../domain/rules";
 import { DISTRICTS, label } from "../../lib/constants";
 import type { AppEnv } from "../../lib/env";
 import { requireRole } from "../../lib/session";
-import { pulseQuestions, pulseResponses } from "../../schema";
+import { exitReasons, pulseQuestions, pulseResponses } from "../../schema";
 import { Card, Empty, Notice, page, Stat, Tag, view } from "../../ui/kit";
 
 export const adminInsights = new Hono<AppEnv>();
@@ -317,6 +318,17 @@ adminInsights.get("/", async (c) => {
       from social_graduations where ${winTs}`),
   ]);
   const [gradN, stillAnswered, stillYes, connsN] = nums(gradRow);
+  // Counted here, not in SQL: jsonb arrays may come back as text through the proxy driver.
+  const exitRows = await db.select({ reasons: exitReasons.reasons }).from(exitReasons).where(gte(exitReasons.createdAt, new Date(since))).limit(5000);
+  const exitTally = new Map<string, number>();
+  for (const row of exitRows) {
+    const list: unknown = typeof row.reasons === "string" ? JSON.parse(row.reasons) : row.reasons;
+    if (Array.isArray(list)) for (const r of list) exitTally.set(String(r), (exitTally.get(String(r)) ?? 0) + 1);
+  }
+  const exitCounts = [...exitTally.entries()]
+    .map(([r, n]) => ({ r, n }))
+    .filter((x) => safeCount(x.n) !== null)
+    .sort((a, b) => b.n - a.n);
   const [msgs, moneyN, chatReports] = nums(chatRow);
   const [arrivals, helpN, answeredN] = nums(safeRow);
   const [plans, acceptedN, skippedN] = nums(planRow);
@@ -349,6 +361,10 @@ adminInsights.get("/", async (c) => {
     .map(([r, n]) => ({ r: String(r ?? "other"), n: Number(n) }))
     .filter((x) => safeCount(x.n) !== null)
     .sort((a, b) => b.n - a.n);
+  const EXIT_LABEL = (r: string) => {
+    const o = EXIT_REASONS.find((x) => x.value === r);
+    return o ? (lang === "en" ? o.label.en : o.label.th) : r;
+  };
   const SKIP_LABEL: Record<string, [string, string]> = { time: ["ไม่มีเวลา", "No time"], money: ["งบไม่พอ", "Money"], distance: ["ไกลไป", "Distance"], mood: ["ไม่มีอารมณ์", "Mood"], other: ["อื่น ๆ", "Other"] };
 
   return page(
@@ -394,6 +410,13 @@ adminInsights.get("/", async (c) => {
         <p class="muted">
           {t("เหตุผลที่ข้ามแผน: ", "Why plans were skipped: ")}
           {skipCounts.map((x) => `${t(SKIP_LABEL[x.r]?.[0] ?? x.r, SKIP_LABEL[x.r]?.[1] ?? x.r)} ${x.n}`).join(" · ")}
+        </p>
+      ) : null}
+
+      {exitCounts.length ? (
+        <p class="muted">
+          {t("เหตุผลที่ออก (ไม่ระบุตัวตน): ", "Why people left (anonymous): ")}
+          {exitCounts.map((x) => `${EXIT_LABEL(x.r)} ${x.n}`).join(" · ")}
         </p>
       ) : null}
 
