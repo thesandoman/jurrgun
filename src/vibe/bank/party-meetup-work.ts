@@ -236,7 +236,7 @@ export const PARTY_MEETUP_WORK: Scenario[] = [
     answers: {
       BDMN: a("🍱", "khlong_toei", "Walk them and the team through Emporium's food hall, picking at random", "พาเขากับเพื่อนร่วมทีมเดินฟู้ดฮอลล์ในเอ็มโพเรียม สุ่มเลือกร้านกัน"),
       BDMH: a("🧭", "ratchathewi", "Lead the whole team through Pratunam market's back sois, everyone curious", "พาทั้งทีมเดินลุยซอยหลังตลาดประตูน้ำ ทุกคนอยากรู้ว่าจะเจออะไร"),
-      BDSN: a("🏙️", "khlong_san", "The whole team at a Khlong San riverside restaurant that opened last week", "พาทั้งทีมไปร้านริมน้ำย่านคลองสานที่เพิ่งเปิดเมื่อสัปดาห์ก่อน"),
+      BDSN: a("🏙️", "khlong_san", "The team at a Khlong San riverside restaurant that opened last week", "พาทั้งทีมไปร้านริมน้ำย่านคลองสานที่เพิ่งเปิดเมื่อสัปดาห์ก่อน"),
       BDSH: a("🍜", "bang_na", "Udom Suk noodles with the team, a tip from a taxi driver", "ยกทีมไปร้านก๋วยเตี๋ยวแถวอุดมสุข คนขับแท็กซี่แนะนำมา"),
       BFMN: a("🥗", "khan_na_yao", "The team's daily lunchtime lap of Fashion Island, then salads", "พาเขาเดินรอบแฟชั่นไอส์แลนด์กับทีมเหมือนทุกวันตอนพักเที่ยง แล้วกินสลัด"),
       BFMH: a("🚶", "ratchathewi", "Walk them to the Victory Monument noodle alley, the team's ritual", "เดินพาเขาไปซอยก๋วยเตี๋ยวเรืออนุสาวรีย์ชัยฯ มื้อเที่ยงประจำของทีม"),
