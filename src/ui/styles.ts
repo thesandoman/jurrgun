@@ -14,11 +14,11 @@ html[data-theme="light"]{color-scheme:light}
 html[data-theme="dark"]{color-scheme:dark}
 :root{
   --bg:#f3fbf5;--surface:#ffffff;--surface-2:#e7f6ec;--ink:#10281b;--ink-2:#3d5a49;--ink-3:#668473;
-  --line:#d3eadb;--brand:#0c8a45;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
+  --line:#d3eadb;--brand:#137f45;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
   --gold:#e8a50b;--gold-soft:#fff5d1;
   --ok:#15803d;--ok-soft:#dcfce7;--warn:#a35a00;--warn-soft:#fff1cc;--err:#c2261d;--err-soft:#fde8e6;
-  --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(12,138,69,.08);
-  --hero:linear-gradient(135deg,#0c8a45 0%,#22c55e 55%,#a3e635 120%);
+  --radius:18px;--shadow:0 1px 2px rgba(16,40,27,.05),0 8px 24px rgba(19,127,69,.08);
+  --hero:linear-gradient(135deg,#137f45 0%,#22c55e 55%,#a3e635 120%);
   /* Inter for Latin; Thai has no Inter glyphs, so it falls back to IBM Plex Sans Thai. */
   --font:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
@@ -479,7 +479,7 @@ body:has(.tabbar) .notif-panel{max-height:calc(100dvh - 200px - env(safe-area-in
  * boarding-pass ticket.
  * ===================================================================== */
 :root{
-  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#157a4c;
+  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#137f45;
   --gx:20px;
 }
 @media (prefers-color-scheme:dark){:root{--bg:#0b1511;--river:#5cc8e0;--river-soft:#0f2d36;--sun:#f5c04a;--sun-soft:#3a2f12;--leaf:#4ade80}}

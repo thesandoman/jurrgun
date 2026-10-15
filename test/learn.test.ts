@@ -17,7 +17,7 @@ function texts(topic: Topic): Text[] {
 describe("FAQ", () => {
   it("keeps the home page visual: a bento hero, Buddy first, big-number tiles and a link to the FAQ", async () => {
     const html = await (await app.request("/?lang=en", { headers: { cookie: "jg_intro=seen" } })).text();
-    const hero = html.indexOf("Make friends in the city you love");
+    const hero = html.indexOf("Small groups. Real Bangkok places. See you there.");
     expect(hero).toBeGreaterThan(-1);
     expect(html.indexOf('href="/buddy" class="tile2')).toBeGreaterThan(hero);
     expect(html).toContain('href="/safety" class="tile2');

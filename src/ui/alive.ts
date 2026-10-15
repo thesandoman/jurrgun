@@ -98,7 +98,7 @@ document.querySelectorAll(".notice.toast").forEach(function(n){document.body.app
 // Confetti for the big moments, in the brand's colours.
 var t=document.querySelector(".toast.party");
 if(t&&!still){var box=document.createElement("div");box.className="confetti";box.setAttribute("aria-hidden","true");
-var cs=["#b4f03a","#22c55e","#0c8a45","#fbbf24","#f472b6","#38bdf8"];
+var cs=["#b4f03a","#22c55e","#137f45","#fbbf24","#f472b6","#38bdf8"];
 for(var i=0;i<34;i++){var p=document.createElement("i");var a=Math.random()*Math.PI*2,d=120+Math.random()*220;
 p.style.setProperty("--c",cs[i%cs.length]);p.style.setProperty("--x",Math.cos(a)*d+"px");p.style.setProperty("--y",(Math.sin(a)*d*.6+180+Math.random()*160)+"px");p.style.setProperty("--r",(Math.random()*720-360)+"deg");p.style.animationDelay=(Math.random()*.12)+"s";box.appendChild(p)}
 document.body.appendChild(box);setTimeout(function(){box.remove()},1900)}

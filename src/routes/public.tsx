@@ -22,13 +22,14 @@ publicRoutes.get("/", (c) => {
   if (!user && !getCookie(c, INTRO_COOKIE)) return c.redirect("/intro");
   return page(
     c,
-    { title: t("เพื่อนใหม่ในเมืองเดียวกัน", "Make friends in Bangkok") },
+    { title: t("เจอเพื่อนใหม่ในกรุงเทพฯ", "Make friends in Bangkok") },
     <>
       <Bento>
         <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
           <Pill dot>{t("กรุงเทพฯ · กลุ่มเล็ก", "Bangkok · small groups")}</Pill>
-          <h2>{t("เจอเพื่อนใหม่ ในเมืองที่คุณรัก", "Make friends in the city you love")}</h2>
-          <small>{t("ไม่ต้องปัดไม่รู้จบ เจอกันจริง", "No endless swiping. Real places.")}</small>
+          {/* Each phrase stays whole: Thai line breaking would otherwise split "แล้ว|เจอกันนะ". */}
+          <h2>{L(lang, BRAND.tagline).split(" ").map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}</h2>
+          <small>{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</small>
         </Tile>
         <Tile href="/buddy" tone="deep" size="tall">
           <span class="go" aria-hidden="true">↗</span>
@@ -88,7 +89,7 @@ publicRoutes.get("/intro", (c) => {
       art: "mark",
       tone: "s1",
       title: t("เจอกัน 👋", "Jurrgun 👋"),
-      body: t("ที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ แล้วเจอกันนะ!", "“Jurrgun” (เจอกัน) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
+      body: t("ที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ แล้วเจอกันนะ!", "“Jurrgun” (เจอกัน, say “jer-gun”) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
     },
     {
       art: "🗺️",
@@ -239,11 +240,11 @@ publicRoutes.get("/manifest.webmanifest", (c) =>
     {
       name: "Jurrgun (เจอกัน)",
       short_name: "Jurrgun",
-      description: BRAND.meaning.en,
+      description: `${BRAND.tagline.en} ${BRAND.meaning.en}.`,
       start_url: "/events",
       display: "standalone",
-      background_color: "#f3fbf5",
-      theme_color: "#0c8a45",
+      background_color: "#fff9f0",
+      theme_color: "#137f45",
       lang: "th",
       icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
     },

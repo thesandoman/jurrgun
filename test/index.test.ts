@@ -33,7 +33,7 @@ describe("GET /", () => {
 
   it("switches to English with ?lang=en", async () => {
     const body = await (await app.request("/?lang=en", seen)).text();
-    expect(body).toContain("Make friends in the city you love");
+    expect(body).toContain("Small groups. Real Bangkok places. See you there.");
   });
 });
 
@@ -52,10 +52,10 @@ describe("GET /intro", () => {
 
   it("serves the new app icon", async () => {
     const svg = await (await app.request("/icon.svg")).text();
-    expect(svg).toContain("#16a34a"); // waving-hand mark
+    expect(svg).toContain("#137f45"); // waving-hand mark, in the brand green
     const manifest = (await (await app.request("/manifest.webmanifest")).json()) as { name: string; theme_color: string };
     expect(manifest.name).toContain("Jurrgun");
-    expect(manifest.theme_color).toBe("#0c8a45");
+    expect(manifest.theme_color).toBe("#137f45");
   });
 });
 

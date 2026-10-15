@@ -24,7 +24,7 @@ const RULES = `
   & .topbar{background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);color:var(--ink);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
   & .topbar .brand{color:var(--ink)}
   & .topbar .brand small{color:var(--brand)}
-  & .topbar .brand-mark svg rect:first-child{fill:var(--fresh)}
+  & .topbar .brand-mark svg rect:first-child{fill:var(--brand)}
   & .topbar .chip{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
   & .topbar .icon-link,& .topbar summary{color:var(--ink)}
   & .proto-banner{background:var(--sun-soft);color:#7a4a00}
