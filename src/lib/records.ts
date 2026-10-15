@@ -5,6 +5,7 @@
  */
 import type { getDb } from "../db";
 import { auditLog, notifications } from "../schema";
+import { chunks } from "./bulk";
 import { newId } from "./crypto";
 
 type Db = ReturnType<typeof getDb>;
@@ -49,4 +50,17 @@ export function notify(db: Db, accountId: string, kind: string, th: string, en: 
     titleEn: en,
     link: link ?? null,
   });
+}
+
+/**
+ * The same kind of notification for many accounts: one multi-row insert per
+ * WRITE_CHUNK people (never one statement per person). Each row may carry
+ * its own text. Put the returned statements in `batch` / `batchAll`.
+ */
+export function notifyMany(db: Db, rows: { accountId: string; th: string; en: string }[], kind: string, link?: string) {
+  return chunks(rows).map((part) =>
+    db.insert(notifications).values(
+      part.map((r) => ({ id: newId(), accountId: r.accountId, kind, titleTh: r.th, titleEn: r.en, link: link ?? null })),
+    ),
+  );
 }

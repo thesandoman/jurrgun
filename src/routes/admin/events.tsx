@@ -25,7 +25,8 @@ import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label
 import { newId, randomToken } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
-import { audit, notify } from "../../lib/records";
+import { batchAll, chunks, KEYSET_CHUNK, keysetAll } from "../../lib/bulk";
+import { audit, notify, notifyMany } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import {
   accounts,
@@ -60,6 +61,8 @@ import {
   view,
   type View,
   TableFilter,
+  pageOf,
+  Pager,
 } from "../../ui/kit";
 
 export const adminEvents = new Hono<AppEnv>();
@@ -72,7 +75,36 @@ type Db = ReturnType<typeof getDb>;
 const BASE = "/admin/events";
 /** Registrations that hear about changes to an event. */
 const REACHABLE = ["confirmed", "offered", "waitlisted"];
-const MAX_REGS = 2000;
+/** Attendee table rows per page, and waitlist entries shown, on the event page. */
+const ATTENDEE_PAGE = 200;
+const WAITLIST_SHOWN = 200;
+
+/**
+ * Everyone who hears about changes to an event (confirmed, offered,
+ * waitlisted), however many: read in keyset pages, no cap.
+ */
+function reachableRegistrations(db: Db, eventId: string) {
+  return keysetAll(registrations.id, (after, n) =>
+    db
+      .select({ id: registrations.id, accountId: registrations.accountId })
+      .from(registrations)
+      .where(and(eq(registrations.eventId, eventId), inArray(registrations.status, REACHABLE), after))
+      .orderBy(asc(registrations.id))
+      .limit(n),
+  );
+}
+
+/** Checked-in confirmed registrations (the seating pool), however many. */
+function checkedInRegistrations(db: Db, eventId: string) {
+  return keysetAll(registrations.id, (after, n) =>
+    db
+      .select({ id: registrations.id, accountId: registrations.accountId, plusOneWith: registrations.plusOneWith, groupNo: registrations.groupNo })
+      .from(registrations)
+      .where(and(eq(registrations.eventId, eventId), eq(registrations.status, "confirmed"), isNotNull(registrations.checkedInAt), after))
+      .orderBy(asc(registrations.id))
+      .limit(n),
+  );
+}
 /** Staff and partner organisers set any size up to this; large events have no fixed cap (owner, D19). */
 export const ORGANISER_MAX_CAPACITY = 100_000;
 
@@ -990,24 +1022,19 @@ adminEvents.post(
       e.endsAt.getTime() !== data.endsAt.getTime() ||
       e.venueName !== data.venueName ||
       e.venueAddress !== (data.venueAddress ?? "");
-    const queries = [];
+    const queries: Parameters<typeof batchAll>[1] = [];
     queries.push(db.update(events).set(data).where(eq(events.id, e.id)));
     if (moved && e.status === "published" && data.status === "published") {
-      const regs = await db
-        .select({ accountId: registrations.accountId })
-        .from(registrations)
-        .where(and(eq(registrations.eventId, e.id), inArray(registrations.status, REACHABLE)))
-        .limit(MAX_REGS);
-      for (const r of regs) {
-        queries.push(
-          notify(db, r.accountId, "event_changed", `เวลาหรือสถานที่เปลี่ยน: ${data.title}`, `Time or venue changed: ${data.titleEn ?? data.title}`, `/events/${e.id}`),
-        );
-      }
+      const regs = await reachableRegistrations(db, e.id);
+      const th = `เวลาหรือสถานที่เปลี่ยน: ${data.title}`;
+      const en = `Time or venue changed: ${data.titleEn ?? data.title}`;
+      queries.push(...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_changed", `/events/${e.id}`));
     }
     queries.push(
       audit(db, a.id, "event.update", { type: "event", id: e.id }, { moved, capacity: [e.capacity, data.capacity], status: [e.status, data.status], cover: coverKey !== e.coverKey }),
     );
-    await batch(c.env, queries);
+    // The change itself goes in the first batch; a very large fan-out continues in further batches.
+    await batchAll(c.env, queries);
     // The old cover is unreferenced now: delete it (best effort).
     if (e.coverKey && e.coverKey !== coverKey) await deleteObject(c.env, e.coverKey).catch(() => {});
     if (data.capacity > e.capacity || (e.status !== "published" && data.status === "published")) {
@@ -1050,17 +1077,13 @@ adminEvents.post(
   withEvent(async (c, e, db) => {
     const { t } = view(c);
     if (e.status === "cancelled") return refuse(c, e, t("กิจกรรมนี้ถูกยกเลิกแล้ว", "This event is already cancelled"), 409);
-    const regs = await db
-      .select({ accountId: registrations.accountId })
-      .from(registrations)
-      .where(and(eq(registrations.eventId, e.id), inArray(registrations.status, REACHABLE)))
-      .limit(MAX_REGS);
-    await batch(c.env, [
+    const regs = await reachableRegistrations(db, e.id);
+    const th = `ขออภัย กิจกรรมถูกยกเลิก: ${e.title}`;
+    const en = `Sorry, this event was cancelled: ${e.titleEn ?? e.title}`;
+    await batchAll(c.env, [
       db.update(events).set({ status: "cancelled" }).where(eq(events.id, e.id)),
-      ...regs.map((r) =>
-        notify(db, r.accountId, "event_cancelled", `ขออภัย กิจกรรมถูกยกเลิก: ${e.title}`, `Sorry, this event was cancelled: ${e.titleEn ?? e.title}`, `/events/${e.id}`),
-      ),
       audit(db, me(c).id, "event.cancel", { type: "event", id: e.id }, { notified: regs.length }),
+      ...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_cancelled", `/events/${e.id}`),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=cancelled`);
   }, { edit: true }),
@@ -1125,20 +1148,34 @@ adminEvents.get(
       if (offers > 0) [e] = await db.select().from(events).where(eq(events.id, e.id)).limit(1);
     }
 
-    const [regs, strikeRows, pairs, hostRow] = await Promise.all([
+    // Totals come from one grouped count, never from loading every registration
+    // (an event can hold 100,000). The attendee table is paged.
+    const { page: ap, offset } = pageOf(c.req.query("ap"), ATTENDEE_PAGE);
+    const notWaitlisted = and(eq(registrations.eventId, e.id), ne(registrations.status, "waitlisted"));
+    const [totals, pageRows, waitRows, checked, pairs, hostRow] = await Promise.all([
+      db
+        .select({
+          status: registrations.status,
+          n: sql<number>`count(*)`.mapWith(Number),
+          checkedIn: sql<number>`count(${registrations.checkedInAt})`.mapWith(Number),
+          noShowPending: sql<number>`count(*) filter (where ${registrations.checkedInAt} is null and not ${registrations.noShowRecorded})`.mapWith(Number),
+          plusOnes: sql<number>`count(${registrations.plusOneWith})`.mapWith(Number),
+        })
+        .from(registrations)
+        .where(eq(registrations.eventId, e.id))
+        .groupBy(registrations.status)
+        .limit(20),
       db
         .select({
           id: registrations.id,
           accountId: registrations.accountId,
           status: registrations.status,
-          offeredUntil: registrations.offeredUntil,
           plusOneWith: registrations.plusOneWith,
           wantsBuddy: registrations.wantsBuddy,
           checkedInAt: registrations.checkedInAt,
           checkInMethod: registrations.checkInMethod,
           groupNo: registrations.groupNo,
           noShowRecorded: registrations.noShowRecorded,
-          createdAt: registrations.createdAt,
           nickname: profiles.nickname,
           // Usernames are for bma_admin only; nobody else even loads them.
           username: isAdmin ? accounts.username : sql<string | null>`null`,
@@ -1146,28 +1183,73 @@ adminEvents.get(
         .from(registrations)
         .innerJoin(accounts, eq(accounts.id, registrations.accountId))
         .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
-        .where(eq(registrations.eventId, e.id))
-        .orderBy(asc(registrations.createdAt))
-        .limit(MAX_REGS),
+        .where(notWaitlisted)
+        .orderBy(asc(registrations.createdAt), asc(registrations.id))
+        .limit(ATTENDEE_PAGE)
+        .offset(offset),
+      // The waitlist in the order members see their place in it: first come, first served.
       db
-        .select({ accountId: strikes.accountId, waivedBy: strikes.waivedBy, reason: strikes.reason })
-        .from(strikes)
-        .where(eq(strikes.eventId, e.id))
-        .limit(MAX_REGS),
+        .select({ id: registrations.id, accountId: registrations.accountId, status: registrations.status, offeredUntil: registrations.offeredUntil, nickname: profiles.nickname })
+        .from(registrations)
+        .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
+        .where(and(eq(registrations.eventId, e.id), inArray(registrations.status, ["waitlisted", "offered"])))
+        .orderBy(asc(registrations.createdAt), asc(registrations.id))
+        .limit(WAITLIST_SHOWN),
+      // Everyone checked in, for the seating view.
+      keysetAll(registrations.id, (after, n) =>
+        db
+          .select({ id: registrations.id, accountId: registrations.accountId, groupNo: registrations.groupNo, createdAt: registrations.createdAt, nickname: profiles.nickname })
+          .from(registrations)
+          .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
+          .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.checkedInAt), after))
+          .orderBy(asc(registrations.id))
+          .limit(n),
+      ),
       db.select().from(buddyPairs).where(eq(buddyPairs.eventId, e.id)).orderBy(asc(buddyPairs.createdAt)).limit(500),
       e.hostAccountId
         ? db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, e.hostAccountId)).limit(1)
         : Promise.resolve([] as { nickname: string }[]),
     ]);
 
-    const nick = new Map(regs.map((r) => [r.accountId, r.nickname ?? t("(ไม่มีชื่อ)", "(no name)")]));
-    const strikeOf = new Map(strikeRows.map((s) => [s.accountId, s]));
-    const attending = regs.filter((r) => r.status !== "waitlisted");
-    const waitlist = regs.filter((r) => r.status === "waitlisted" || r.status === "offered");
-    const confirmed = regs.filter((r) => r.status === "confirmed");
-    const checked = confirmed.filter((r) => r.checkedInAt);
+    const tally = (pick: (r: (typeof totals)[number]) => number, only?: (status: string) => boolean) =>
+      totals.filter((r) => !only || only(r.status)).reduce((sum, r) => sum + pick(r), 0);
+    const confirmedCount = tally((r) => r.n, (s) => s === "confirmed");
+    const checkedCount = tally((r) => r.checkedIn, (s) => s === "confirmed");
+    const waitlistedCount = tally((r) => r.n, (s) => s === "waitlisted");
+    const waitlistCount = tally((r) => r.n, (s) => s === "waitlisted" || s === "offered");
+    const attendingCount = tally((r) => r.n, (s) => s !== "waitlisted");
+    const anyPlusOne = tally((r) => r.plusOnes, (s) => s !== "waitlisted") > 0;
+    const noShowPending = tally((r) => r.noShowPending, (s) => s === "confirmed");
     const ended = now.getTime() >= e.endsAt.getTime();
-    const noShows = ended ? confirmed.filter((r) => !r.checkedInAt).length : 0;
+    const noShows = ended ? confirmedCount - checkedCount : 0;
+
+    const attendeesHref = (n: number) => `${BASE}/${e.id}${n > 1 ? `?ap=${n}` : ""}#attendees`;
+    // Past the last page (people cancelled): go to the last one.
+    if (pageRows.length === 0 && ap > 1 && attendingCount > 0) return c.redirect(attendeesHref(Math.ceil(attendingCount / ATTENDEE_PAGE)));
+
+    const noName = t("(ไม่มีชื่อ)", "(no name)");
+    const nick = new Map<string, string>();
+    for (const r of [...pageRows, ...waitRows, ...checked]) nick.set(r.accountId, r.nickname ?? noName);
+    // +1 partners and buddies who aren't on this page: look their nicknames up by id.
+    const missing = [...new Set([...pageRows.map((r) => r.plusOneWith), ...pairs.flatMap((p) => p.members)])].filter((x): x is string => !!x && !nick.has(x));
+    const pageIds = pageRows.map((r) => r.accountId);
+    const [extraNicks, strikeRows] = await Promise.all([
+      missing.length
+        ? db.select({ accountId: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, missing)).limit(missing.length)
+        : Promise.resolve([] as { accountId: string; nickname: string }[]),
+      // Strikes only for the people on this page.
+      pageIds.length
+        ? db
+            .select({ accountId: strikes.accountId, waivedBy: strikes.waivedBy, reason: strikes.reason })
+            .from(strikes)
+            .where(and(eq(strikes.eventId, e.id), inArray(strikes.accountId, pageIds)))
+            .limit(pageIds.length * 2)
+        : Promise.resolve([] as { accountId: string; waivedBy: string | null; reason: string }[]),
+    ]);
+    for (const x of extraNicks) nick.set(x.accountId, x.nickname ?? noName);
+
+    const strikeOf = new Map(strikeRows.map((s) => [s.accountId, s]));
+    checked.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime() || (x.id < y.id ? -1 : 1));
     const groups = new Map<number, typeof checked>();
     for (const r of checked) {
       if (r.groupNo == null) continue;
@@ -1175,6 +1257,8 @@ adminEvents.get(
     }
     const groupNos = [...groups.keys()].sort((x, y) => x - y);
     const ungrouped = checked.filter((r) => r.groupNo == null);
+    // The manual +1 link offers the confirmed people on this page of the list.
+    const confirmedHere = pageRows.filter((r) => r.status === "confirmed");
     const editable = canEdit(a, e);
     const title = lang === "en" && e.titleEn ? e.titleEn : e.title;
 
@@ -1224,17 +1308,19 @@ adminEvents.get(
         </div>
 
         <div class="stats">
-          <Stat label={t("ยืนยัน / ที่นั่ง", "Confirmed / capacity")} value={`${confirmed.length} / ${e.capacity}`} />
-          <Stat label={t("คาดว่าจะมา", "Expected")} value={confirmed.length} />
-          <Stat label={t("เช็กอินแล้ว", "Checked in")} value={checked.length} />
+          <Stat label={t("ยืนยัน / ที่นั่ง", "Confirmed / capacity")} value={`${confirmedCount} / ${e.capacity}`} />
+          <Stat label={t("คาดว่าจะมา", "Expected")} value={confirmedCount} />
+          <Stat label={t("เช็กอินแล้ว", "Checked in")} value={checkedCount} />
           <Stat label={t("ไม่มาตามนัด", "No-shows")} value={ended ? noShows : "–"} hint={ended ? undefined : t("นับหลังจบงาน", "Counted after the end")} />
-          <Stat label={t("คิวสำรอง", "Waitlist")} value={waitlist.filter((r) => r.status === "waitlisted").length} />
+          <Stat label={t("คิวสำรอง", "Waitlist")} value={waitlistedCount} />
         </div>
 
-        <h2>{t("ผู้เข้าร่วม", "Attendees")}</h2>
-        {attending.length === 0 ? (
+        <h2 id="attendees">{t("ผู้เข้าร่วม", "Attendees")}</h2>
+        {attendingCount === 0 ? (
           <Empty>{t("ยังไม่มีผู้ลงทะเบียน", "No registrations yet")}</Empty>
         ) : (
+          <>
+          <Pager t={t} label={t("หน้าของรายชื่อผู้เข้าร่วม", "Attendee list pages")} page={ap} size={ATTENDEE_PAGE} shown={pageRows.length} total={attendingCount} href={attendeesHref} />
           <div class="table-wrap">
             <table>
               <caption class="sr-only">{t("ผู้เข้าร่วม", "Attendees")}</caption>
@@ -1251,7 +1337,7 @@ adminEvents.get(
                 </tr>
               </thead>
               <tbody>
-                {attending.map((r) => {
+                {pageRows.map((r) => {
                   const s = strikeOf.get(r.accountId);
                   return (
                     <tr>
@@ -1292,15 +1378,16 @@ adminEvents.get(
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         <h2>{t("คิวสำรอง", "Waitlist")}</h2>
-        {waitlist.length === 0 ? (
+        {waitRows.length === 0 ? (
           <Empty>{t("ไม่มีใครในคิวสำรอง", "Nobody on the waitlist")}</Empty>
         ) : (
           <>
             <ol>
-              {waitlist.map((r) => (
+              {waitRows.map((r) => (
                 <li>
                   {nick.get(r.accountId)}{" "}
                   {r.status === "offered" ? (
@@ -1312,6 +1399,9 @@ adminEvents.get(
                 </li>
               ))}
             </ol>
+            {waitlistCount > waitRows.length ? (
+              <p class="muted">{t(`แสดง ${waitRows.length} คนแรกจากทั้งหมด ${waitlistCount} คน`, `Showing the first ${waitRows.length} of ${waitlistCount}`)}</p>
+            ) : null}
             <small>{t("ตอนเสนอที่นั่ง ระบบจะใช้สิทธิ์ผู้อยู่อาศัยและกฎ strike มาจัดลำดับด้วย", "Offers apply resident priority and strike rules on top of this order")}</small>
           </>
         )}
@@ -1457,7 +1547,7 @@ adminEvents.get(
           </>
         ) : null}
 
-        {e.plusOneAllowed || attending.some((r) => r.plusOneWith) ? (
+        {e.plusOneAllowed || anyPlusOne ? (
           <details>
             <summary>{t("จับคู่ +1 ด้วยตนเอง", "Link a +1 pair manually")}</summary>
             <form method="post" action={`${BASE}/${e.id}/plusone`}>
@@ -1466,9 +1556,14 @@ adminEvents.get(
                   label={k === "a" ? t("คนที่ 1", "First person") : t("คนที่ 2", "Second person")}
                   name={k}
                   lang={lang}
-                  options={confirmed.map((r) => ({ value: r.id, th: nick.get(r.accountId)!, en: nick.get(r.accountId)! }))}
+                  options={confirmedHere.map((r) => ({ value: r.id, th: nick.get(r.accountId)!, en: nick.get(r.accountId)! }))}
                 />
               ))}
+              {attendingCount > ATTENDEE_PAGE ? (
+                <p>
+                  <small>{t("เลือกได้จากคนที่ยืนยันแล้วในหน้านี้ของรายชื่อผู้เข้าร่วม", "Choose from the confirmed people on this page of the attendee list.")}</small>
+                </p>
+              ) : null}
               <Button kind="ghost">{t("จับคู่", "Link")}</Button>
             </form>
           </details>
@@ -1484,7 +1579,7 @@ adminEvents.get(
                 t(
                   `บันทึก ${n} คนเป็นผู้ไม่มาตามนัด? แต่ละคนจะได้ 1 strike และได้รับแจ้ง (ยกเว้นให้ได้ภายหลัง)`,
                   `Record ${n} ${n === 1 ? "person" : "people"} as no-shows? Each gets 1 strike and a private notice (you can waive one later).`,
-                ))(confirmed.filter((r) => !r.checkedInAt && !r.noShowRecorded).length),
+                ))(noShowPending),
             )})`}
           >
             <p>
@@ -1710,11 +1805,7 @@ adminEvents.post(
     let groupNo: number | null = null;
     if (e.groupsPublishedAt) {
       const [seated, blockRows] = await Promise.all([
-        db
-          .select({ accountId: registrations.accountId, groupNo: registrations.groupNo })
-          .from(registrations)
-          .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.groupNo), isNotNull(registrations.checkedInAt)))
-          .limit(MAX_REGS),
+        checkedInRegistrations(db, e.id).then((rows) => rows.filter((r) => r.groupNo != null)),
         db
           .select({ blocker: blocks.blocker, blocked: blocks.blocked })
           .from(blocks)
@@ -1804,11 +1895,7 @@ adminEvents.post(
   "/:id/groups/suggest",
   withEvent(async (c, e, db) => {
     const { t } = view(c);
-    const checked = await db
-      .select({ id: registrations.id, accountId: registrations.accountId, plusOneWith: registrations.plusOneWith })
-      .from(registrations)
-      .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.checkedInAt)))
-      .limit(MAX_REGS);
+    const checked = await checkedInRegistrations(db, e.id);
     if (checked.length === 0) return refuse(c, e, t("ยังไม่มีใครเช็กอิน", "Nobody has checked in yet"), 409);
 
     const byAccount = new Map(checked.map((r) => [r.accountId, r]));
@@ -1817,23 +1904,36 @@ adminEvents.post(
       const other = r.plusOneWith ? byAccount.get(r.plusOneWith) : undefined;
       if (other && other.plusOneWith === r.accountId && r.accountId < other.accountId) keepTogether.push([r.accountId, other.accountId]);
     }
-    const attendees = await loadAttendees(db, checked.map((r) => r.accountId), new Date(), e.id);
+    // Profiles in slices, so no single query carries more ids than it can.
+    const attendees = [];
+    const now = new Date();
+    for (const part of chunks(checked.map((r) => r.accountId), KEYSET_CHUNK)) attendees.push(...(await loadAttendees(db, part, now, e.id)));
     const result = suggestGroups(attendees, { seed: e.id, minSize: e.groupMin, maxSize: e.groupMax, keepTogether, romance: e.tags.includes(OPEN_TO_MORE_TAG) });
     const blockedMap = new Map(attendees.map((x) => [x.accountId, new Set(x.blocked)]));
     const blockedLeft = separateBlocked(result.groups, blockedMap, keepTogether);
 
-    const queries = [];
+    const queries: Parameters<typeof batchAll>[1] = [];
     // Clear old assignments (including anyone no longer checked in), then write 1..n.
     queries.push(db.update(registrations).set({ groupNo: null }).where(eq(registrations.eventId, e.id)));
     const placed = new Set<string>();
+    const seats: [string, number][] = [];
     result.groups.forEach((members, i) => {
       for (const m of members) {
         const r = byAccount.get(m);
         if (!r) continue;
         placed.add(m);
-        queries.push(db.update(registrations).set({ groupNo: i + 1 }).where(eq(registrations.id, r.id)));
+        seats.push([r.id, i + 1]);
       }
     });
+    // One update per WRITE_CHUNK people, each setting every seat in it.
+    for (const part of chunks(seats)) {
+      queries.push(
+        db
+          .update(registrations)
+          .set({ groupNo: sql`case ${registrations.id} ${sql.join(part.map(([id, g]) => sql`when ${id} then ${g}::int`), sql` `)} end` })
+          .where(inArray(registrations.id, part.map(([id]) => id))),
+      );
+    }
     // Suggested groups are a draft until the host publishes them again.
     queries.push(db.update(events).set({ groupsPublishedAt: null }).where(eq(events.id, e.id)));
     const m = result.metrics;
@@ -1847,7 +1947,7 @@ adminEvents.post(
         blockedConflicts: blockedLeft,
       }),
     );
-    await batch(c.env, queries);
+    await batchAll(c.env, queries);
     return c.redirect(
       `${BASE}/${e.id}?notice=groups_suggested&swaps=${m.blockingSwaps}&isolated=${m.isolated}&blocked=${blockedLeft}#groups`,
     );
@@ -1881,16 +1981,17 @@ adminEvents.post(
   "/:id/groups/publish",
   withEvent(async (c, e, db) => {
     const { t } = view(c);
-    const grouped = await db
-      .select({ accountId: registrations.accountId, groupNo: registrations.groupNo })
-      .from(registrations)
-      .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.checkedInAt), isNotNull(registrations.groupNo)))
-      .limit(MAX_REGS);
+    const grouped = (await checkedInRegistrations(db, e.id)).filter((r) => r.groupNo != null);
     if (grouped.length === 0) return refuse(c, e, t("ยังไม่มีโต๊ะ กด 'แนะนำโต๊ะ' ก่อน", "No groups yet. Suggest groups first"), 409);
-    await batch(c.env, [
+    await batchAll(c.env, [
       db.update(events).set({ groupsPublishedAt: new Date() }).where(eq(events.id, e.id)),
-      ...grouped.map((r) => notify(db, r.accountId, "group", `โต๊ะของคุณ: โต๊ะ ${r.groupNo}`, `Your group: group ${r.groupNo}`, `/events/${e.id}`)),
       audit(db, me(c).id, "event.groups_publish", { type: "event", id: e.id }, { notified: grouped.length }),
+      ...notifyMany(
+        db,
+        grouped.map((r) => ({ accountId: r.accountId, th: `โต๊ะของคุณ: โต๊ะ ${r.groupNo}`, en: `Your group: group ${r.groupNo}` })),
+        "group",
+        `/events/${e.id}`,
+      ),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=groups_published#groups`);
   }),
@@ -1930,14 +2031,10 @@ adminEvents.post(
     if (!th || !en || th.length > 200 || en.length > 200) {
       return refuse(c, e, t("ใส่ข้อความทั้งไทยและอังกฤษ ไม่เกิน 200 ตัวอักษร", "Write the notice in Thai and English, up to 200 characters each"));
     }
-    const regs = await db
-      .select({ accountId: registrations.accountId })
-      .from(registrations)
-      .where(and(eq(registrations.eventId, e.id), inArray(registrations.status, REACHABLE)))
-      .limit(MAX_REGS);
-    await batch(c.env, [
-      ...regs.map((r) => notify(db, r.accountId, "event_notice", th, en, `/events/${e.id}`)),
+    const regs = await reachableRegistrations(db, e.id);
+    await batchAll(c.env, [
       audit(db, me(c).id, "event.notice", { type: "event", id: e.id }, { th, en, recipients: regs.length }),
+      ...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_notice", `/events/${e.id}`),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=notice_sent`);
   }),
@@ -2006,38 +2103,40 @@ adminEvents.post(
     const now = new Date();
     if (now.getTime() < e.endsAt.getTime()) return refuse(c, e, t("บันทึกคนที่ไม่มาตามนัดได้หลังกิจกรรมจบ", "No-shows can only be recorded after the event ends"), 409);
     if (e.status !== "published") return refuse(c, e, t("กิจกรรมนี้ไม่ได้จัดขึ้น", "This event didn't run"), 409);
-    const missing = await db
-      .select({ id: registrations.id, accountId: registrations.accountId })
-      .from(registrations)
-      .where(
-        and(
-          eq(registrations.eventId, e.id),
-          eq(registrations.status, "confirmed"),
-          isNull(registrations.checkedInAt),
-          eq(registrations.noShowRecorded, false),
-        ),
-      )
-      .limit(MAX_REGS);
+    const missing = await keysetAll(registrations.id, (after, n) =>
+      db
+        .select({ id: registrations.id, accountId: registrations.accountId })
+        .from(registrations)
+        .where(
+          and(
+            eq(registrations.eventId, e.id),
+            eq(registrations.status, "confirmed"),
+            isNull(registrations.checkedInAt),
+            eq(registrations.noShowRecorded, false),
+            after,
+          ),
+        )
+        .orderBy(asc(registrations.id))
+        .limit(n),
+    );
     if (missing.length) {
       const expiresAt = strikeExpiry(now);
-      await batch(c.env, [
-        db.update(registrations).set({ noShowRecorded: true }).where(inArray(registrations.id, missing.map((r) => r.id))),
-        db
-          .insert(strikes)
-          .values(missing.map((r) => ({ id: newId(), accountId: r.accountId, eventId: e.id, reason: "no_show", expiresAt })))
-          .onConflictDoNothing(),
-        ...missing.map((r) =>
-          notify(
-            db,
-            r.accountId,
-            "strike",
-            `คุณไม่ได้เช็กอินที่ "${e.title}" เลยได้ 1 strike (หมดอายุใน 90 วัน) ถ้ามีเหตุจำเป็น ติดต่อโฮสต์ได้`,
-            `You didn't check in at "${e.titleEn ?? e.title}", so you got 1 strike (expires in 90 days). If something came up, contact the host.`,
-            "/me/events",
-          ),
-        ),
-        audit(db, me(c).id, "event.noshows", { type: "event", id: e.id }, { count: missing.length }),
-      ]);
+      const th = `คุณไม่ได้เช็กอินที่ "${e.title}" เลยได้ 1 strike (หมดอายุใน 90 วัน) ถ้ามีเหตุจำเป็น ติดต่อโฮสต์ได้`;
+      const en = `You didn't check in at "${e.titleEn ?? e.title}", so you got 1 strike (expires in 90 days). If something came up, contact the host.`;
+      // One batch per WRITE_CHUNK people: their flag, strike and notice land
+      // together, so a retry after a failure picks up exactly the rest.
+      const parts = chunks(missing);
+      for (const [i, part] of parts.entries()) {
+        await batch(c.env, [
+          db.update(registrations).set({ noShowRecorded: true }).where(inArray(registrations.id, part.map((r) => r.id))),
+          db
+            .insert(strikes)
+            .values(part.map((r) => ({ id: newId(), accountId: r.accountId, eventId: e.id, reason: "no_show", expiresAt })))
+            .onConflictDoNothing(),
+          ...notifyMany(db, part.map((r) => ({ accountId: r.accountId, th, en })), "strike", "/me/events"),
+          ...(i === parts.length - 1 ? [audit(db, me(c).id, "event.noshows", { type: "event", id: e.id }, { count: missing.length })] : []),
+        ]);
+      }
     } else {
       await audit(db, me(c).id, "event.noshows", { type: "event", id: e.id }, { count: 0 });
     }

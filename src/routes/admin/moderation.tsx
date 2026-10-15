@@ -2,7 +2,8 @@
  * Moderation queue (/admin/moderation) — moderators and BMA admins
  * (PRD §11, §13.2).
  *
- *   GET  /            queue, ?status=open|in_review|actioned|dismissed
+ *   GET  /            queue, ?status=open|in_review|actioned|dismissed, ?q= (server
+ *                     search over every report in that status), ?page= (50 a page)
  *   GET  /:id         case detail (audited); ?history=1 adds the target's event
  *                     participation history, audited separately
  *   POST /:id/action  note | warning | suspend | ban | lift | dismiss
@@ -17,7 +18,7 @@
  */
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { aliasedTable, and, asc, count, desc, eq, gte, ne, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, count, desc, eq, gte, ilike, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { label, REPORT_REASON_LABELS } from "../../lib/constants";
 import { newId } from "../../lib/crypto";
@@ -26,7 +27,7 @@ import { fmtDate, fmtDay } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { accounts, events, moderationActions, profiles, registrations, reports, sessions } from "../../schema";
-import { Button, Card, Empty, Field, int, Notice, page, str, TableFilter, Tag, TextArea, view } from "../../ui/kit";
+import { Button, Card, Empty, Field, int, Notice, page, pageOf, Pager, str, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
@@ -70,12 +71,37 @@ function age(from: Date, lang: "th" | "en"): string {
 
 // ------------------------------------------------------------------ queue --
 
+/** Reports per page of the queue. */
+const QUEUE_PAGE = 50;
+
 adminModeration.get("/", async (c) => {
   const { t, lang } = view(c);
   const raw = c.req.query("status") ?? "open";
   const status = (STATUSES as readonly string[]).includes(raw) ? raw : "open";
+  const q = (c.req.query("q") ?? "").trim().slice(0, 100);
+  const { page: pageNo, offset } = pageOf(c.req.query("page"), QUEUE_PAGE);
   const db = getDb(c.env);
-  const [rows, counts] = await Promise.all([
+
+  // Server search over every report in this status: the reason (its stored
+  // value and its Thai / English labels), both nicknames and the event title.
+  let where: SQL = eq(reports.status, status);
+  if (q) {
+    const like = `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+    const needle = q.toLowerCase();
+    const reasons = REPORT_REASON_LABELS.filter((r) => [r.value, r.th, r.en].some((x) => x.toLowerCase().includes(needle))).map((r) => r.value);
+    where = and(
+      where,
+      or(
+        ilike(reports.reason, like),
+        reasons.length ? inArray(reports.reason, reasons) : undefined,
+        ilike(reporterProfile.nickname, like),
+        ilike(targetProfile.nickname, like),
+        ilike(events.title, like),
+        ilike(events.titleEn, like),
+      ),
+    )!;
+  }
+  const [rows, [{ n: total }], counts] = await Promise.all([
     db
       .select({
         id: reports.id,
@@ -91,9 +117,19 @@ adminModeration.get("/", async (c) => {
       .leftJoin(reporterProfile, eq(reporterProfile.accountId, reports.reporter))
       .leftJoin(targetProfile, eq(targetProfile.accountId, reports.targetAccount))
       .leftJoin(events, eq(events.id, reports.targetEvent))
-      .where(eq(reports.status, status))
-      .orderBy(sql`case when ${reports.severity} = 'critical' then 0 else 1 end`, asc(reports.createdAt))
-      .limit(100),
+      .where(where)
+      // Critical first, then oldest first; the id keeps pages stable.
+      .orderBy(sql`case when ${reports.severity} = 'critical' then 0 else 1 end`, asc(reports.createdAt), asc(reports.id))
+      .limit(QUEUE_PAGE)
+      .offset(offset),
+    db
+      .select({ n: sql<number>`count(*)`.mapWith(Number) })
+      .from(reports)
+      .leftJoin(reporterProfile, eq(reporterProfile.accountId, reports.reporter))
+      .leftJoin(targetProfile, eq(targetProfile.accountId, reports.targetAccount))
+      .leftJoin(events, eq(events.id, reports.targetEvent))
+      .where(where)
+      .limit(1),
     db
       .select({ status: reports.status, n: sql<number>`count(*)`.mapWith(Number) })
       .from(reports)
@@ -101,6 +137,9 @@ adminModeration.get("/", async (c) => {
       .limit(10),
   ]);
   const countOf = new Map(counts.map((r) => [r.status, r.n]));
+  const href = (p: number) => `/admin/moderation?${new URLSearchParams({ status, ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
+  // Past the last page (the queue shrank): go to the last one.
+  if (rows.length === 0 && pageNo > 1 && total > 0) return c.redirect(href(Math.ceil(total / QUEUE_PAGE)));
 
   return page(
     c,
@@ -120,11 +159,18 @@ adminModeration.get("/", async (c) => {
           </a>
         ))}
       </nav>
+      <form method="get" action="/admin/moderation" role="search" class="tfilter">
+        <input type="hidden" name="status" value={status} />
+        <label for="report-q">{t("ค้นหารายงาน (เหตุผล ผู้รายงาน ผู้ถูกรายงาน กิจกรรม)", "Search reports (reason, reporter, reported, event)")}</label>
+        <input type="search" id="report-q" name="q" value={q} maxlength={100} autocomplete="off" />
+        <button type="submit" class="btn ghost">{t("ค้นหา", "Search")}</button>
+        {q ? <a href={`/admin/moderation?status=${status}`}>{t("ล้างการค้นหา", "Clear search")}</a> : null}
+      </form>
       {rows.length === 0 ? (
-        <Empty>{t("ไม่มีรายงานในสถานะนี้", "No reports with this status")}</Empty>
+        <Empty>{q ? t("ไม่พบรายงานที่ตรงกับคำค้นในสถานะนี้", "No reports with this status match your search") : t("ไม่มีรายงานในสถานะนี้", "No reports with this status")}</Empty>
       ) : (
         <>
-        <TableFilter t={t} target="admin-reports" label={t("ค้นหาในรายงาน (เหตุผล ผู้รายงาน ผู้ถูกรายงาน กิจกรรม)", "Search reports (reason, reporter, reported, event)")} />
+        <Pager t={t} label={t("หน้าของคิวรายงาน", "Moderation queue pages")} page={pageNo} size={QUEUE_PAGE} shown={rows.length} total={total} href={href} />
         <div class="table-wrap scroll">
           <table id="admin-reports">
             <caption class="sr-only">{t("รายงาน", "Reports")}</caption>

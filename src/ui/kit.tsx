@@ -535,6 +535,40 @@ export const TABLE_FILTER_JS = `(function(){document.querySelectorAll("input[dat
 function run(){var q=i.value.trim().toLowerCase(),n=0;rows.forEach(function(r){var on=!q||r.textContent.toLowerCase().indexOf(q)>-1;r.hidden=!on;if(on)n++});if(st)st.textContent=q?st.dataset.tpl.replace("{n}",n).replace("{t}",rows.length):""}
 i.addEventListener("input",run);if(i.value)run()})})()`;
 
+/** Rows per page, the 1-based page asked for, and the rows to skip. */
+export function pageOf(raw: string | undefined, size: number): { page: number; offset: number } {
+  const n = Number.parseInt(raw ?? "", 10);
+  const page = Number.isFinite(n) && n >= 1 && n <= 100_000 ? n : 1;
+  return { page, offset: (page - 1) * size };
+}
+
+/**
+ * "Showing 51–100 of 142" with Previous / Next links for a server-paged
+ * table. `href(n)` builds the link to page n, keeping the page's filters.
+ */
+export function Pager(props: { t: T; label: string; page: number; size: number; shown: number; total: number; href: (page: number) => string }) {
+  const { t, page, size, shown, total } = props;
+  if (total === 0 || shown === 0) return null;
+  const from = (page - 1) * size + 1;
+  const to = from + shown - 1;
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  return (
+    <nav class="pager" aria-label={props.label}>
+      <p>{t(`แสดง ${fmt(from)}–${fmt(to)} จาก ${fmt(total)} รายการ`, `Showing ${fmt(from)}–${fmt(to)} of ${fmt(total)}`)}</p>
+      {page > 1 ? (
+        <a href={props.href(page - 1)} rel="prev" class="btn ghost">
+          {t("← ก่อนหน้า", "← Previous")}
+        </a>
+      ) : null}
+      {to < total ? (
+        <a href={props.href(page + 1)} rel="next" class="btn ghost">
+          {t("ถัดไป →", "Next →")}
+        </a>
+      ) : null}
+    </nav>
+  );
+}
+
 export function Stat(props: { label: string; value: string | number | null; hint?: string }) {
   return (
     <div class="stat">
