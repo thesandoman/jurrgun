@@ -123,6 +123,18 @@ body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 /* A heading that's an h2 for the outline but sized like an h3. */
 h2.h3{font-size:1.02rem;margin:.2rem 0 .3rem}
 
+/* Reflow at 320px (1.4.10): nothing makes the page scroll sideways. */
+@media (max-width:380px){
+  .topbar{gap:8px;padding-inline:10px}
+  .topbar .brand small{display:none}
+  .top-actions{gap:4px}
+  .topbar .chip{padding:4px 9px}
+  body.admin .topbar .brand{font-size:0;gap:0}
+}
+.pf-photo{grid-template-columns:minmax(0,1fr)}
+.pf-photo>*{min-width:0;max-width:100%}
+.me-hero{overflow-x:clip}
+
 /* Missing page and error page. */
 .err-page{text-align:center;padding:8vh 0 4vh}
 .err-page .row{justify-content:center}
