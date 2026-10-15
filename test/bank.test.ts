@@ -14,12 +14,13 @@ describe("quiz bank", () => {
     expect(errors).toEqual([]);
   });
 
-  it("has 47 scenarios: 35 core, 6 rhythm, 6 plan", () => {
-    expect(SCENARIOS).toHaveLength(47);
-    expect(SCENARIOS.filter((s) => s.kind === "core")).toHaveLength(35);
-    expect(SCENARIOS.filter((s) => s.kind === "rhythm")).toHaveLength(6);
-    expect(SCENARIOS.filter((s) => s.kind === "plan")).toHaveLength(6);
+  it("has 148 scenarios: 122 core, 14 rhythm, 12 plan", () => {
+    expect(SCENARIOS).toHaveLength(148);
+    expect(SCENARIOS.filter((s) => s.kind === "core")).toHaveLength(122);
+    expect(SCENARIOS.filter((s) => s.kind === "rhythm")).toHaveLength(14);
+    expect(SCENARIOS.filter((s) => s.kind === "plan")).toHaveLength(12);
   });
+
 
   it("covers friends, family, dates, solo, coworkers, parties and meetups", () => {
     for (const ctx of ["friends", "family", "date", "solo", "coworkers", "party", "meetup"]) {

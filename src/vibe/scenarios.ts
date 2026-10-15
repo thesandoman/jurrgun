@@ -24,11 +24,18 @@ import type { Category, Pole, Text } from "./content";
 import type { Tone } from "./visuals";
 import { CLASSIC } from "./bank/classic";
 import { DATES } from "./bank/dates";
+import { EVERYDAY_COMMUTE } from "./bank/everyday-commute";
+import { EVERYDAY_HOME } from "./bank/everyday-home";
+import { EVERYDAY_RUT } from "./bank/everyday-rut";
 import { FAMILY } from "./bank/family";
 import { FRIENDS_SOLO } from "./bank/friends-solo";
+import { JURRGUN } from "./bank/jurrgun";
+import { LANDMARKS_CITY } from "./bank/landmarks-city";
+import { LANDMARKS_EDGE } from "./bank/landmarks-edge";
 import { PARTY_MEETUP_WORK } from "./bank/party-meetup-work";
 import { PLAN } from "./bank/plan";
 import { RHYTHM } from "./bank/rhythm";
+import { SEASONAL } from "./bank/seasonal";
 
 export const TYPE_CODES = [
   "BDMN", "BDMH", "BDSN", "BDSH", "BFMN", "BFMH", "BFSN", "BFSH",
@@ -88,6 +95,8 @@ export type Answer = Text & {
   district: string;
   /** rhythm / plan scenarios only: +1 night owl or spontaneous, -1 early riser or planner. Opposite types always lean opposite ways. */
   flavour?: Pole;
+  /** A place written from memory that the owner should double-check (still open, right district). Never shown to members. */
+  verify?: true;
 };
 
 export type Scenario = {
@@ -116,4 +125,8 @@ export type Scenario = {
   answers: Record<TypeCode, Answer>;
 };
 
-export const SCENARIOS: Scenario[] = [...CLASSIC, ...FAMILY, ...DATES, ...PARTY_MEETUP_WORK, ...FRIENDS_SOLO, ...RHYTHM, ...PLAN];
+export const SCENARIOS: Scenario[] = [
+  ...CLASSIC, ...FAMILY, ...DATES, ...PARTY_MEETUP_WORK, ...FRIENDS_SOLO, ...RHYTHM, ...PLAN,
+  // Task Q2: everyday Bangkok, landmarks and districts, seasons, and Jurrgun's own offerings.
+  ...EVERYDAY_COMMUTE, ...EVERYDAY_HOME, ...EVERYDAY_RUT, ...LANDMARKS_CITY, ...LANDMARKS_EDGE, ...SEASONAL, ...JURRGUN,
+];
