@@ -114,6 +114,17 @@ export const OPEN_TO_MORE_TAG = "open_to_more";
 export const romanceEventOk = (tags: string[], p: { relationship: string; romanceOn: boolean }) => !tags.includes(OPEN_TO_MORE_TAG) || romanceEligible(p);
 
 /**
+ * Tags an event saves with, given its partner organisation's kind (admin only).
+ * A dating partner's event (dating and friend apps) always carries
+ * open_to_more, so it reaches only members who chose Open to something more.
+ * Staff can't remove it while the event belongs to that partner.
+ */
+export function partnerEventTags(tags: string[], partnerKind: string | null | undefined): string[] {
+  if (partnerKind !== "dating" || tags.includes(OPEN_TO_MORE_TAG)) return tags;
+  return [...tags, OPEN_TO_MORE_TAG];
+}
+
+/**
  * Whether a women-only event shows up for this member at all: hidden from
  * anyone whose (private) gender is set to something else. Members who haven't
  * said still see it, with the RSVP gate telling them how to set it.

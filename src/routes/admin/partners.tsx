@@ -3,6 +3,11 @@
  *
  * Lists partner organisations and every staff account, creates partner
  * organisations and sets a username's role. Every write is audited.
+ *
+ * Each organisation has a kind (events, dating, venue, community) and optional
+ * internal notes. Both are admin only: no member-facing page names the kind.
+ * A dating partner's events always carry the open_to_more tag, so only members
+ * who chose Open to something more see them (rules.ts partnerEventTags).
  */
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -13,8 +18,8 @@ import type { AppEnv } from "../../lib/env";
 import { audit } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { normalizeUsername } from "../../domain/rules";
-import { accounts, partnerOrgs, profiles, ROLES, type Role } from "../../schema";
-import { Button, Card, Empty, Field, Notice, page, str, Tag, view, type View } from "../../ui/kit";
+import { accounts, PARTNER_KINDS, partnerOrgs, profiles, ROLES, type PartnerKind, type Role } from "../../schema";
+import { Button, Card, Empty, Field, Notice, page, str, Tag, TextArea, view, type View } from "../../ui/kit";
 
 export const adminPartners = new Hono<AppEnv>();
 adminPartners.use("*", requireRole("bma_admin"));
@@ -28,6 +33,38 @@ export const ROLE_LABELS: Record<Role, [string, string]> = {
   insight_viewer: ["ผู้ดูข้อมูลเชิงลึก", "City Insight viewer"],
   bma_admin: ["แอดมิน", "Admin"],
 };
+
+export const PARTNER_KIND_LABELS: Record<PartnerKind, [string, string]> = {
+  events: ["ผู้จัดกิจกรรม", "Events"],
+  dating: ["แอปเดตหรือแอปหาเพื่อน 💘", "Dating or friend app 💘"],
+  venue: ["สถานที่", "Venue"],
+  community: ["ชุมชน", "Community"],
+};
+
+const NOTES_MAX = 1000;
+const isKind = (k: string): k is PartnerKind => (PARTNER_KINDS as readonly string[]).includes(k);
+
+function KindSelect(props: { id: string; value: PartnerKind; v: View }) {
+  const { t, lang } = props.v;
+  return (
+    <div class="field">
+      <label for={props.id}>{t("ประเภทพาร์ตเนอร์", "Partner type")}</label>
+      <select id={props.id} name="kind" required>
+        {PARTNER_KINDS.map((k) => (
+          <option value={k} selected={k === props.value}>
+            {lang === "en" ? PARTNER_KIND_LABELS[k][1] : PARTNER_KIND_LABELS[k][0]}
+          </option>
+        ))}
+      </select>
+      <small>
+        {t(
+          "แอปเดตหรือแอปหาเพื่อน เช่น CMB, Tinder, Bumble: กิจกรรมของพาร์ตเนอร์นี้จะติดแท็กเดต 💘 (open_to_more) เสมอ จึงเห็นได้เฉพาะสมาชิกที่เลือกรับเรื่องเดตไว้ กิจกรรมที่มีอยู่แล้วจะติดแท็กเมื่อแก้ไขครั้งถัดไป สมาชิกไม่เห็นประเภทนี้",
+          "Dating or friend apps such as CMB, Tinder, Bumble: this partner's events always get the 💘 dating tag (open_to_more), so only members who opted into dating see them. Existing events get the tag on their next edit. Members never see the type.",
+        )}
+      </small>
+    </div>
+  );
+}
 
 async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 200) {
   const v: View = view(c);
@@ -51,6 +88,7 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
       .limit(200),
   ]);
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
+  const kindLabel = (k: string) => (isKind(k) ? (lang === "en" ? PARTNER_KIND_LABELS[k][1] : PARTNER_KIND_LABELS[k][0]) : k);
   const roleLabel = (r: Role) => (lang === "en" ? ROLE_LABELS[r]?.[1] : ROLE_LABELS[r]?.[0]) ?? r;
 
   return page(
@@ -90,6 +128,14 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
           <h2 style="margin-top:0">{t("เพิ่มองค์กรพาร์ตเนอร์", "Add a partner organisation")}</h2>
           <form method="post" action="/admin/partners/orgs">
             <Field label={t("ชื่อองค์กร", "Organisation name")} name="name" required maxlength={100} />
+            <KindSelect id="f-kind" value="events" v={v} />
+            <TextArea
+              label={t("โน้ตภายใน (ไม่บังคับ)", "Internal notes (optional)")}
+              name="notes"
+              rows={2}
+              maxlength={NOTES_MAX}
+              hint={t("ทีมงานเห็นเท่านั้น", "Staff only")}
+            />
             <Button>{t("เพิ่ม", "Add")}</Button>
           </form>
         </Card>
@@ -105,13 +151,34 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
             <thead>
               <tr>
                 <th>{t("ชื่อ", "Name")}</th>
+                <th>{t("ประเภท", "Type")}</th>
+                <th>{t("โน้ตภายใน", "Internal notes")}</th>
                 <th>{t("รหัส", "Id")}</th>
               </tr>
             </thead>
             <tbody>
               {orgs.map((o) => (
-                <tr>
+                <tr id={`org-${o.id}`}>
                   <td>{o.name}</td>
+                  <td>
+                    <Tag tone={o.kind === "dating" ? "accent" : "muted"}>{kindLabel(o.kind)}</Tag>
+                  </td>
+                  <td>
+                    {o.notes ? <span style="white-space:pre-wrap">{o.notes}</span> : null}
+                    <details>
+                      <summary>{t("แก้ไขประเภทและโน้ต", "Edit type and notes")}</summary>
+                      <form method="post" action={`/admin/partners/orgs/${encodeURIComponent(o.id)}`}>
+                        <KindSelect id={`f-kind-${o.id}`} value={isKind(o.kind) ? o.kind : "events"} v={v} />
+                        <div class="field">
+                          <label for={`f-notes-${o.id}`}>{t("โน้ตภายใน (ไม่บังคับ)", "Internal notes (optional)")}</label>
+                          <textarea id={`f-notes-${o.id}`} name="notes" rows={2} maxlength={NOTES_MAX}>
+                            {o.notes ?? ""}
+                          </textarea>
+                        </div>
+                        <Button>{t("บันทึก", "Save")}</Button>
+                      </form>
+                    </details>
+                  </td>
                   <td>
                     <small>{o.id}</small>
                   </td>
@@ -160,6 +227,15 @@ async function render(c: Context<AppEnv>, error?: string, status: 200 | 400 = 20
 
 adminPartners.get("/", (c) => render(c));
 
+/** Kind and notes from a form, or an error message. A missing kind means events. */
+function kindAndNotes(body: Record<string, unknown>, t: View["t"]): { kind: PartnerKind; notes: string | null } | string {
+  const kind = str(body.kind) || "events";
+  if (!isKind(kind)) return t("เลือกประเภทพาร์ตเนอร์", "Choose a partner type");
+  const notes = str(body.notes);
+  if (notes.length > NOTES_MAX) return t(`โน้ตยาวได้ไม่เกิน ${NOTES_MAX} ตัวอักษร`, `Notes can be at most ${NOTES_MAX} characters`);
+  return { kind, notes: notes || null };
+}
+
 adminPartners.post("/orgs", async (c) => {
   const { t } = view(c);
   const body = await c.req.parseBody();
@@ -167,12 +243,32 @@ adminPartners.post("/orgs", async (c) => {
   if (!name || name.length > 100) {
     return render(c, t("ชื่อองค์กรต้องยาว 1 ถึง 100 ตัวอักษร", "Organisation name must be 1 to 100 characters"), 400);
   }
+  const kn = kindAndNotes(body, t);
+  if (typeof kn === "string") return render(c, kn, 400);
   const db = getDb(c.env);
   const me = c.var.user!.account.id;
   const id = newId();
   await batch(c.env, [
-    db.insert(partnerOrgs).values({ id, name }),
-    audit(db, me, "partners.create_org", { type: "partner_org", id }, { name }),
+    db.insert(partnerOrgs).values({ id, name, kind: kn.kind, notes: kn.notes }),
+    audit(db, me, "partners.create_org", { type: "partner_org", id }, { name, kind: kn.kind }),
+  ]);
+  return c.redirect("/admin/partners?notice=saved");
+});
+
+adminPartners.post("/orgs/:id", async (c) => {
+  const { t } = view(c);
+  const id = c.req.param("id");
+  const body = await c.req.parseBody();
+  const kn = kindAndNotes(body, t);
+  if (typeof kn === "string") return render(c, kn, 400);
+  const db = getDb(c.env);
+  const [org] = await db.select({ id: partnerOrgs.id, kind: partnerOrgs.kind, notes: partnerOrgs.notes }).from(partnerOrgs).where(eq(partnerOrgs.id, id)).limit(1);
+  if (!org) return render(c, t("ไม่พบองค์กรนี้", "Unknown organisation"), 400);
+  const me = c.var.user!.account.id;
+  await batch(c.env, [
+    db.update(partnerOrgs).set({ kind: kn.kind, notes: kn.notes }).where(eq(partnerOrgs.id, id)),
+    // Notes stay out of the audit log; only that they changed.
+    audit(db, me, "partners.update_org", { type: "partner_org", id }, { from: org.kind, to: kn.kind, notesChanged: (org.notes ?? null) !== kn.notes }),
   ]);
   return c.redirect("/admin/partners?notice=saved");
 });

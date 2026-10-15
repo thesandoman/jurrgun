@@ -20,7 +20,7 @@ import { Hono, type Context } from "hono";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { suggestGroups } from "../../domain/matching";
-import { checkInOpen, strikeExpiry } from "../../domain/rules";
+import { checkInOpen, OPEN_TO_MORE_TAG, partnerEventTags, strikeExpiry } from "../../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../../lib/constants";
 import { newId, randomToken } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
@@ -515,10 +515,13 @@ async function adminCoverSrc(c: Ctx, e: Event | null): Promise<string | null> {
 }
 
 type HostOption = { id: string; username: string; nickname: string | null; role: string };
-type FormCtx = { hosts: HostOption[]; orgs: { id: string; name: string }[] };
+type OrgOption = { id: string; name: string; kind: string };
+/** `ownOrg` is a partner admin's own organisation (they can't choose another). */
+type FormCtx = { hosts: HostOption[]; orgs: OrgOption[]; ownOrg: OrgOption | null };
 
 async function loadFormCtx(db: Db, a: Account): Promise<FormCtx> {
-  const [hosts, orgs] = await Promise.all([
+  const orgCols = { id: partnerOrgs.id, name: partnerOrgs.name, kind: partnerOrgs.kind };
+  const [hosts, orgs, own] = await Promise.all([
     db
       .select({ id: accounts.id, username: accounts.username, nickname: profiles.nickname, role: accounts.role })
       .from(accounts)
@@ -527,10 +530,19 @@ async function loadFormCtx(db: Db, a: Account): Promise<FormCtx> {
       .orderBy(asc(accounts.username))
       .limit(200),
     a.role === "bma_admin"
-      ? db.select({ id: partnerOrgs.id, name: partnerOrgs.name }).from(partnerOrgs).orderBy(asc(partnerOrgs.name)).limit(200)
-      : Promise.resolve([] as { id: string; name: string }[]),
+      ? db.select(orgCols).from(partnerOrgs).orderBy(asc(partnerOrgs.name)).limit(200)
+      : Promise.resolve([] as OrgOption[]),
+    a.role !== "bma_admin" && a.partnerOrgId
+      ? db.select(orgCols).from(partnerOrgs).where(eq(partnerOrgs.id, a.partnerOrgId)).limit(1)
+      : Promise.resolve([] as OrgOption[]),
   ]);
-  return { hosts, orgs };
+  return { hosts, orgs, ownOrg: own[0] ?? null };
+}
+
+/** The partner kind an event's form resolves to (dating partners lock open_to_more). */
+function orgKindFor(a: Account, ctx: FormCtx, partnerOrgId: string | null | undefined): string | null {
+  if (a.role !== "bma_admin") return ctx.ownOrg?.kind ?? null;
+  return partnerOrgId ? (ctx.orgs.find((o) => o.id === partnerOrgId)?.kind ?? null) : null;
 }
 
 type EventValues = Omit<typeof events.$inferInsert, "id" | "createdBy" | "createdAt">;
@@ -659,7 +671,8 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
       accessibility: d.accessibility,
       safetyInfo: d.safetyInfo,
       emergencyContact: d.emergencyContact,
-      tags: d.tags,
+      // Server-side rule: a dating partner's event always carries open_to_more.
+      tags: partnerEventTags(d.tags, orgKindFor(a, ctx, partnerOrgId)),
       residentPriority: d.residentPriority,
       residentQuota: residentQuota!,
       buddyEnabled: d.buddyEnabled,
@@ -684,7 +697,11 @@ function EventForm(props: {
   const { v, d, ctx } = props;
   const { t, lang } = v;
   const hostOpts = ctx.hosts.map((h) => ({ value: h.id, th: `${h.nickname ?? h.username} (${h.username})`, en: `${h.nickname ?? h.username} (${h.username})` }));
-  const orgOpts = ctx.orgs.map((o) => ({ value: o.id, th: o.name, en: o.name }));
+  const datingOrgs = ctx.orgs.filter((o) => o.kind === "dating");
+  const orgOpts = ctx.orgs.map((o) =>
+    o.kind === "dating" ? { value: o.id, th: `${o.name} (แอปเดต 💘)`, en: `${o.name} (dating app 💘)` } : { value: o.id, th: o.name, en: o.name },
+  );
+  const locked = orgKindFor(props.a, ctx, d.partnerOrgId || null) === "dating";
   const statusOpts = [
     { value: "draft", th: "ร่าง (ยังไม่แสดงต่อสมาชิก)", en: "Draft (hidden from members)" },
     { value: "published", th: "เผยแพร่", en: "Published" },
@@ -719,7 +736,28 @@ function EventForm(props: {
         <Field label={t("ชื่อกิจกรรม (อังกฤษ)", "Title (English)")} name="titleEn" value={d.titleEn} maxlength={120} />
         <TextArea label={t("รายละเอียด (ไทย)", "Description (Thai)")} name="description" value={d.description} rows={4} maxlength={4000} />
         <TextArea label={t("รายละเอียด (อังกฤษ)", "Description (English)")} name="descriptionEn" value={d.descriptionEn} rows={4} maxlength={4000} />
-        <Choices legend={t("แท็ก", "Tags")} name="tags" options={EVENT_TAGS} values={d.tags} lang={lang} />
+        <Choices legend={t("แท็ก", "Tags")} name="tags" options={locked ? EVENT_TAGS.filter((x) => x.value !== OPEN_TO_MORE_TAG) : EVENT_TAGS} values={d.tags} lang={lang} />
+        {locked ? (
+          <p data-locked-tag={OPEN_TO_MORE_TAG}>
+            <input type="hidden" name="tags" value={OPEN_TO_MORE_TAG} />
+            <Tag tone="accent">🔒 {label(EVENT_TAGS, OPEN_TO_MORE_TAG, lang)}</Tag>{" "}
+            <small>
+              {props.a.role === "bma_admin"
+                ? t(
+                    "ล็อกไว้ เพราะเป็นกิจกรรมของพาร์ตเนอร์แอปเดต จึงเห็นได้เฉพาะสมาชิกที่เลือกเปิดใจมากกว่าเพื่อน",
+                    "Locked: this is a dating partner's event, so only members who chose Open to something more can see it.",
+                  )
+                : t("ล็อกไว้ เห็นได้เฉพาะสมาชิกที่เลือกเปิดใจมากกว่าเพื่อน", "Locked: only members who chose Open to something more can see it.")}
+            </small>
+          </p>
+        ) : datingOrgs.length ? (
+          <small>
+            {t(
+              "กิจกรรมของพาร์ตเนอร์แอปเดต (ดูในช่ององค์กรพาร์ตเนอร์ด้านล่าง) จะติดแท็ก 💘 เปิดใจมากกว่าเพื่อน ให้อัตโนมัติเมื่อบันทึก",
+              "Events for a dating partner (marked in Partner organisation below) get the 💘 Open to something more tag automatically when saved.",
+            )}
+          </small>
+        ) : null}
         <fieldset class="choices">
           <legend>{t("ภาพปก (ไม่บังคับ)", "Cover image (optional)")}</legend>
           {props.cover?.src ? (

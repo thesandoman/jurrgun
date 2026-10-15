@@ -13,6 +13,7 @@ import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { accountUsable, endSession, startSession } from "../lib/session";
 import { accounts, loginAttempts } from "../schema";
+import { signupSource } from "../lib/source";
 import { enabledProviders, SocialSignIn } from "./oauth";
 import { Button, Card, Field, Notice, page, safeNext, str, view } from "../ui/kit";
 
@@ -190,7 +191,7 @@ authRoutes.post("/signup", async (c) => {
   const { hash, salt } = await hashPassword(password);
   const id = newId();
   try {
-    await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: newId() });
+    await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: newId(), signupSource: signupSource(c) });
   } catch {
     // Unique index race: someone took it between the check and the insert.
     return fail(t("ชื่อผู้ใช้นี้ถูกใช้แล้ว", "That username is taken."));

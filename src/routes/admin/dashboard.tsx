@@ -6,6 +6,10 @@
  *   moderator       open reports
  *   insight_viewer  a way into City Insight
  *
+ * bma_admin and insight_viewer also see the north star trend: Weekly
+ * Reconnected Members for each of the last 8 weeks (weeklyReconnectedTrend).
+ * For insight viewers a week under k = 10 shows as "<10", as in City Insight.
+ *
  * Operational counts only (events, registrations, reports); the k ≥ 10
  * research threshold applies on the Insights and City Pulse pages.
  *
@@ -19,10 +23,12 @@ import { getDb } from "../../db";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
 import { requireRole } from "../../lib/session";
+import { K_THRESHOLD, safeCount } from "../../domain/rules";
 import { retentionIfDue, runRetention, type RetentionRun } from "../../services/retention";
 import { alias } from "drizzle-orm/pg-core";
 import { connections, events, registrations, reports } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
+import type { Lang } from "../../lib/i18n";
 
 export const adminDashboard = new Hono<AppEnv>();
 
@@ -77,6 +83,58 @@ function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: st
   );
 }
 
+const shortDay = (d: Date, lang: Lang) =>
+  new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { day: "numeric", month: "short", timeZone: "Asia/Bangkok" }).format(d);
+
+/** The north star over 8 weeks as a table with bars (screen readers read the table). */
+function TrendCard(props: { weeks: WeekCount[]; suppress: boolean; t: (th: string, en: string) => string; lang: Lang }) {
+  const { weeks, suppress, t, lang } = props;
+  const shown = weeks.map((w) => ({ ...w, value: suppress ? safeCount(w.n) : w.n }));
+  const max = Math.max(1, ...shown.map((w) => w.value ?? 0));
+  // Oldest first, so the chart reads left to right in time.
+  const rows = [...shown].reverse();
+  return (
+    <section id="north-star-trend">
+      <h2>{t("⭐ สมาชิกที่ได้เจอคนรู้จักอีกครั้ง 8 สัปดาห์ล่าสุด", "⭐ Weekly Reconnected Members, last 8 weeks")}</h2>
+      <Card>
+        <div class="table-wrap">
+          <table>
+            <caption class="muted" style="text-align:left;caption-side:bottom;padding-top:8px">
+              {t(
+                "แต่ละแถวคือ 7 วัน นับสมาชิกที่เช็กอินและได้นั่งกับคนที่เคยเจอกันที่ Jurrgun มาก่อน",
+                "Each row is 7 days: members who checked in and sat with someone they had met at Jurrgun before.",
+              )}
+              {suppress ? t(` สัปดาห์ที่น้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10"`, ` Weeks under ${K_THRESHOLD} people show as "<10".`) : null}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("สัปดาห์", "Week")}</th>
+                <th scope="col">{t("สมาชิก", "Members")}</th>
+                <th scope="col" aria-hidden="true" style="width:50%"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((w) => (
+                <tr data-week-start={w.start.toISOString()}>
+                  <th scope="row" style="font-weight:normal">
+                    {shortDay(w.start, lang)} {t("ถึง", "to")} {shortDay(new Date(w.end.getTime() - 1), lang)}
+                  </th>
+                  <td>{w.value === null ? "<10" : w.value}</td>
+                  <td aria-hidden="true">
+                    <div class="bar">
+                      <i style={`width:${Math.round(((w.value ?? 0) / max) * 100)}%`} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </section>
+  );
+}
+
 adminDashboard.get("/", async (c) => {
   const { t, lang, user } = view(c);
   const acct = user!.account;
@@ -100,7 +158,9 @@ adminDashboard.get("/", async (c) => {
   // Lazy timer: at most one retention run per 24 hours, triggered by an admin visit.
   const retention = isAdmin ? await retentionIfDue(c.env, acct.id, now) : null;
 
-  const [adminStats, reportStats, mine] = await Promise.all([
+  const showTrend = isAdmin || role === "insight_viewer";
+
+  const [adminStats, reportStats, mine, trend] = await Promise.all([
     isAdmin
       ? Promise.all([
           db
@@ -149,6 +209,7 @@ adminDashboard.get("/", async (c) => {
           .orderBy(asc(events.startsAt))
           .limit(10)
       : Promise.resolve([]),
+    showTrend ? weeklyReconnectedTrend(db, now) : Promise.resolve(null),
   ]);
 
   const upcoming = adminStats?.[0][0]?.n ?? 0;
@@ -185,6 +246,7 @@ adminDashboard.get("/", async (c) => {
             <LinkButton href="/admin/insights" kind="ghost">{t("ข้อมูลเชิงลึก", "City Insight")}</LinkButton>
             <LinkButton href="/admin/pulse" kind="ghost">City Pulse</LinkButton>
           </div>
+          {trend ? <TrendCard weeks={trend} suppress={false} t={t} lang={lang} /> : null}
           <RetentionCard run={retention} t={t} lang={lang} />
         </>
       ) : null}
@@ -228,6 +290,7 @@ adminDashboard.get("/", async (c) => {
           <p>{t("ดูตัวชี้วัดโครงการนำร่องและผลสำรวจ City Pulse แบบรวม (แสดงเฉพาะกลุ่มที่มีอย่างน้อย 10 คน)", "Pilot KPIs and aggregated City Pulse results (groups of 10 or more only).")}</p>
         </Card>
       ) : null}
+      {role === "insight_viewer" && trend ? <TrendCard weeks={trend} suppress t={t} lang={lang} /> : null}
     </>,
   );
 });
@@ -256,4 +319,48 @@ export async function weeklyReconnected(db: ReturnType<typeof getDb>, since: Dat
     )
     .where(and(sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`, among ? inArray(r1.accountId, among) : undefined));
   return row?.n ?? 0;
+}
+
+export type WeekCount = { start: Date; end: Date; n: number };
+
+/**
+ * Weekly Reconnected Members per week for the last `weeks` weeks, newest first.
+ * Week i covers [now - 7(i+1) days, now - 7i days), so week 0 matches the
+ * headline tile. Same definition as weeklyReconnected, in one query. Weeks
+ * with nobody come back as 0. `among` narrows it to some members (tests).
+ */
+export async function weeklyReconnectedTrend(db: ReturnType<typeof getDb>, now: Date, weeks = 8, among?: string[]): Promise<WeekCount[]> {
+  const r1 = alias(registrations, "r1");
+  const r2 = alias(registrations, "r2");
+  const since = new Date(now.getTime() - weeks * 7 * DAY);
+  const bucket = sql<number>`floor(extract(epoch from (${now.toISOString()}::timestamptz - ${r1.checkedInAt})) / 604800)`.mapWith(Number);
+  const rows = await db
+    .select({ week: bucket, n: sql<number>`count(distinct ${r1.accountId})`.mapWith(Number) })
+    .from(r1)
+    .innerJoin(events, eq(events.id, r1.eventId))
+    .innerJoin(r2, and(eq(r2.eventId, r1.eventId), sql`${r2.accountId} <> ${r1.accountId}`, sql`${r2.checkedInAt} is not null`))
+    .innerJoin(
+      connections,
+      and(
+        sql`${connections.removedAt} is null`,
+        sql`${connections.createdAt} < ${events.startsAt}`,
+        or(and(eq(connections.aAccount, r1.accountId), eq(connections.bAccount, r2.accountId)), and(eq(connections.aAccount, r2.accountId), eq(connections.bAccount, r1.accountId))),
+      ),
+    )
+    .where(
+      and(
+        sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`,
+        sql`${r1.checkedInAt} < ${now.toISOString()}::timestamptz`,
+        among ? inArray(r1.accountId, among) : undefined,
+      ),
+    )
+    // By position: the bucket carries a bound parameter, so Postgres cannot match it as an expression.
+    .groupBy(sql`1`)
+    .limit(weeks + 1);
+  const byWeek = new Map(rows.map((r) => [Number(r.week), Number(r.n)]));
+  return Array.from({ length: weeks }, (_, i) => ({
+    start: new Date(now.getTime() - (i + 1) * 7 * DAY),
+    end: new Date(now.getTime() - i * 7 * DAY),
+    n: byWeek.get(i) ?? 0,
+  }));
 }

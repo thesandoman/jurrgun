@@ -104,6 +104,12 @@ export const accounts = pgTable(
     trustedHost: boolean("trusted_host").notNull().default(false),
     /** Pseudonymous id used in research_* tables. Cut on account deletion. */
     researchId: text("research_id"),
+    /**
+     * First-touch placement (?src= or utm_source/utm_campaign) remembered for
+     * 30 days before sign-up. A short campaign slug, never personal data.
+     * Read only as k >= 10 totals in City Insight.
+     */
+    signupSource: text("signup_source"),
     createdAt: created(),
   },
   (t) => [uniqueIndex("identity_accounts_username_idx").on(t.username), index("identity_accounts_role_idx").on(t.role)],
@@ -139,9 +145,20 @@ export const oauthLinks = pgTable(
   (t) => [uniqueIndex("identity_oauth_links_provider_subject_idx").on(t.provider, t.subject), index("identity_oauth_links_account_idx").on(t.accountId)],
 );
 
+export const PARTNER_KINDS = ["events", "dating", "venue", "community"] as const;
+export type PartnerKind = (typeof PARTNER_KINDS)[number];
+
 export const partnerOrgs = pgTable("identity_partner_orgs", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  /**
+   * events (default) | dating (dating and friend apps) | venue | community.
+   * Admin only: no member-facing page names it. Events of a dating partner
+   * always carry the open_to_more tag (src/domain/rules.ts partnerEventTags).
+   */
+  kind: text("kind").$type<PartnerKind>().notNull().default("events"),
+  /** Internal notes for staff. Never shown to members. */
+  notes: text("notes"),
   createdAt: created(),
 });
 

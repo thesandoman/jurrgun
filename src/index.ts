@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "./lib/env";
 import { loadUser, sameOrigin } from "./lib/session";
+import { captureSource } from "./lib/source";
 import { createLogger } from "./logger";
 import { verifyTaskWebhook } from "./state";
 import { getObject, getObjectUrl } from "./storage";
@@ -41,6 +42,8 @@ const app = new Hono<AppEnv>();
 // (no database trip when there is no session cookie).
 app.use("*", sameOrigin);
 app.use("*", loadUser);
+// Public landings: remember a ?src= / utm placement for 30 days (src/lib/source.ts).
+app.use("*", captureSource);
 
 app.route("/api/setup", setup);
 app.route("/", publicRoutes);

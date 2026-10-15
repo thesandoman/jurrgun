@@ -228,6 +228,7 @@ publicRoutes.get("/privacy", (c) => {
         {Li("ข้อมูลกิจกรรม: ชื่อเล่น เขต ภาษา ความสนใจ คำตอบในโปรไฟล์ กิจกรรมที่เข้าร่วม คนรู้จัก และแชต", "Social: nickname, district, languages, interests, profile answers, events you join, connections and chats.")}
         {Li("ข้อมูลวิจัยเมือง (City Pulse): เก็บด้วยรหัสวิจัยแทนตัวตน ใช้เฉพาะเมื่อคุณยินยอม", "City research (City Pulse): stored under a research code instead of your identity, only if you agree.")}
         {Li("ข้อมูลอ่อนไหว: สถานะความสัมพันธ์ เพศ อัตลักษณ์ทางเพศ รสนิยม และการตั้งค่าเปิดใจมากกว่าเพื่อน เก็บเมื่อคุณให้ความยินยอมโดยชัดแจ้งเท่านั้น", "Sensitive data: relationship status, gender, gender identity, orientation and Open to something more settings, kept only with your explicit consent.")}
+        {Li("แหล่งที่มาตอนสมัคร: ถ้าคุณเข้ามาจากลิงก์แคมเปญหรือพาร์ตเนอร์ เราจำชื่อลิงก์นั้นไว้ในคุกกี้ 30 วัน บันทึกไว้กับบัญชีตอนสมัคร และนับเป็นภาพรวมเท่านั้น", "Sign-up source: if a campaign or partner link brought you here, we keep that link's name in a cookie for 30 days, save it with your account when you sign up, and count it only as totals.")}
       </ul>
 
       {H("เราใช้ข้อมูลเพื่ออะไร", "Why we use it")}

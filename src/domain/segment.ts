@@ -31,3 +31,7 @@ export const SEGMENT_TAGS: Record<Segment, string[]> = {
   newcomer: ["newcomers", "city_quest", "language_exchange", "daytime"],
   local: ["run", "board_game", "volunteer", "food"],
 };
+
+/** Bangkok story values behind each segment, for SQL that must agree with segmentOf. */
+export const INTERNATIONAL_STORIES = [...INTERNATIONAL];
+export const NEWCOMER_STORIES = [...NEWCOMER];

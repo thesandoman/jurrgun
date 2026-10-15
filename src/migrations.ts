@@ -235,5 +235,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"social_events_regular_table_idx\" ON \"social_events\" (\"regular_table_id\");",
       "-- One-time backfill (owner, D19): every Table Host (circle_head) without an open regular table gets one, named from their latest approved request, in their profile's district. Safe to run again: it skips hosts who already have one.\nINSERT INTO \"social_regular_tables\" (\"id\", \"host_account_id\", \"name\", \"district\", \"description\", \"women_only\", \"join_token\", \"request_id\", \"created_at\")\nSELECT replace(gen_random_uuid()::text, '-', ''), r.\"account_id\", left(r.\"circle_name\", 60), p.\"district\", '', false, replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), r.\"id\", now()\nFROM (\n\tSELECT DISTINCT ON (\"account_id\") \"id\", \"account_id\", \"circle_name\"\n\tFROM \"social_circle_head_requests\"\n\tWHERE \"status\" = 'approved'\n\tORDER BY \"account_id\", \"created_at\" DESC\n) r\nJOIN \"identity_accounts\" a ON a.\"id\" = r.\"account_id\" AND a.\"role\" = 'circle_head'\nJOIN \"social_profiles\" p ON p.\"account_id\" = r.\"account_id\"\nWHERE NOT EXISTS (SELECT 1 FROM \"social_regular_tables\" t WHERE t.\"host_account_id\" = r.\"account_id\" AND t.\"archived_at\" IS NULL);"
     ]
+  },
+  {
+    "id": "0018_thick_the_order",
+    "statements": [
+      "ALTER TABLE \"identity_accounts\" ADD COLUMN \"signup_source\" text;",
+      "ALTER TABLE \"identity_partner_orgs\" ADD COLUMN \"kind\" text DEFAULT 'events' NOT NULL;",
+      "ALTER TABLE \"identity_partner_orgs\" ADD COLUMN \"notes\" text;"
+    ]
   }
 ];

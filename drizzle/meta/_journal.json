@@ -127,6 +127,13 @@
       "when": 1792066223754,
       "tag": "0017_condemned_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792071821592,
+      "tag": "0018_thick_the_order",
+      "breakpoints": true
     }
   ]
 }

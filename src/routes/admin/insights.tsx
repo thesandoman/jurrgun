@@ -5,6 +5,11 @@
  * count and every ratio whose base is under k = 10 is suppressed and shown as
  * "<10" (PRD §12.5). Research tables (wellbeing, pulse) are never joined to
  * accounts. PRD §18.4 pilot targets sit next to each KPI.
+ *
+ * Two splits for the BMA (segmentFunnel, sourceFunnel): the funnel by the
+ * member's own Bangkok story segment (local, newcomer, international), and
+ * sign-ups and first RSVPs by first-touch placement source. Every cell keeps
+ * the k = 10 rule; sources under 10 sign-ups fold into one "other" row.
  */
 import { EXIT_REASONS } from "../../content/dating";
 import { Hono } from "hono";
@@ -15,6 +20,7 @@ import { DISTRICTS, label } from "../../lib/constants";
 import type { AppEnv } from "../../lib/env";
 import { requireRole } from "../../lib/session";
 import { exitReasons, pulseQuestions, pulseResponses } from "../../schema";
+import { INTERNATIONAL_STORIES, NEWCOMER_STORIES, type Segment } from "../../domain/segment";
 import { Card, Empty, Notice, page, Stat, Tag, view } from "../../ui/kit";
 
 export const adminInsights = new Hono<AppEnv>();
@@ -38,6 +44,135 @@ function table(rows: unknown): unknown[][] {
 export function pct(k: number, n: number): number | null {
   if (safeCount(n) === null || n === 0) return null;
   return Math.round((k / n) * 100);
+}
+
+type Db = ReturnType<typeof getDb>;
+
+/**
+ * segmentOf(profile) as SQL over social_profiles aliased `p`. test/measurement
+ * checks they agree. bio may be stored as a JSON string (driver dependent), so
+ * unwrap it first, as events.tsx jsonHas does.
+ */
+const STORY_SQL = sql`(case when jsonb_typeof(p.bio) = 'string' then (p.bio #>> '{}')::jsonb else p.bio end)->>'story'`;
+const SEGMENT_SQL = sql`case
+  when ${STORY_SQL} in (${sql.join(INTERNATIONAL_STORIES.map((x) => sql`${x}`), sql`, `)}) then 'international'
+  when p.newcomer or ${STORY_SQL} in (${sql.join(NEWCOMER_STORIES.map((x) => sql`${x}`), sql`, `)}) then 'newcomer'
+  else 'local' end`;
+
+const amongSql = (col: SQL, among?: string[]) => (among ? sql`and ${col} in (${sql.join(among.length ? among.map((x) => sql`${x}`) : [sql`null`], sql`, `)})` : sql``);
+
+export const SEGMENTS: Segment[] = ["local", "newcomer", "international"];
+
+/** Raw counts for one segment. Suppress with suppressSegment before showing. */
+export type SegmentRow = {
+  segment: Segment;
+  members: number;
+  joined: number;
+  joinedRsvp: number;
+  expected: number;
+  checkedIn: number;
+  withConnection: number;
+};
+
+/** What a viewer may see of one segment row: counts under k and ratios on a base under k are null. */
+export type SegmentCells = {
+  segment: Segment;
+  members: number | null;
+  regToRsvp: number | null;
+  rsvpToCheckIn: number | null;
+  mutualRate: number | null;
+};
+
+export function suppressSegment(r: SegmentRow): SegmentCells {
+  return {
+    segment: r.segment,
+    members: safeCount(r.members),
+    regToRsvp: pct(r.joinedRsvp, r.joined),
+    rsvpToCheckIn: pct(r.checkedIn, r.expected),
+    mutualRate: pct(r.withConnection, r.checkedIn),
+  };
+}
+
+/**
+ * Members and the funnel by segment, as SQL aggregates only. Members are all
+ * active onboarded members; the funnel uses the window like the KPIs above:
+ * registration to first RSVP for members who joined in it, RSVP to check-in
+ * and the mutual connection rate for published events that ended in it.
+ * `among` narrows it to some accounts (tests).
+ */
+export async function segmentFunnel(db: Db, since: string, until: string, among?: string[]): Promise<SegmentRow[]> {
+  const [members, joined, attendance] = await Promise.all([
+    db.execute(sql`
+      select ${SEGMENT_SQL} as seg, count(*)
+      from identity_accounts a
+      join social_profiles p on p.account_id = a.id
+      where a.role = 'user' and a.status = 'active' and p.onboarded_at is not null ${amongSql(sql`a.id`, among)}
+      group by 1`),
+    db.execute(sql`
+      select ${SEGMENT_SQL} as seg, count(*),
+             sum(case when exists (select 1 from social_registrations r where r.account_id = a.id) then 1 else 0 end)
+      from identity_accounts a
+      join social_profiles p on p.account_id = a.id
+      where a.role = 'user' and p.onboarded_at is not null
+        and a.created_at >= ${since}::timestamptz and a.created_at < ${until}::timestamptz ${amongSql(sql`a.id`, among)}
+      group by 1`),
+    db.execute(sql`
+      select ${SEGMENT_SQL} as seg, count(*),
+             sum(case when r.checked_in_at is not null then 1 else 0 end),
+             sum(case when r.checked_in_at is not null and exists (
+                   select 1 from social_connections x
+                   where x.event_id = r.event_id and (x.a_account = r.account_id or x.b_account = r.account_id)
+                 ) then 1 else 0 end)
+      from social_registrations r
+      join social_events e on e.id = r.event_id
+      join social_profiles p on p.account_id = r.account_id
+      where e.ends_at >= ${since}::timestamptz and e.ends_at < ${until}::timestamptz and e.status = 'published'
+        and (r.status = 'confirmed' or r.checked_in_at is not null) ${amongSql(sql`r.account_id`, among)}
+      group by 1`),
+  ]);
+  const out = new Map<string, SegmentRow>(
+    SEGMENTS.map((segment) => [segment, { segment, members: 0, joined: 0, joinedRsvp: 0, expected: 0, checkedIn: 0, withConnection: 0 }]),
+  );
+  for (const [seg, n] of table(members)) out.get(String(seg))!.members = Number(n ?? 0);
+  for (const [seg, n, k] of table(joined)) Object.assign(out.get(String(seg))!, { joined: Number(n ?? 0), joinedRsvp: Number(k ?? 0) });
+  for (const [seg, n, ci, wc] of table(attendance)) {
+    Object.assign(out.get(String(seg))!, { expected: Number(n ?? 0), checkedIn: Number(ci ?? 0), withConnection: Number(wc ?? 0) });
+  }
+  return SEGMENTS.map((x) => out.get(x)!);
+}
+
+/** One row of the placement table, already suppressed (null = under k). */
+export type SourceCells = { source: string; signups: number | null; firstRsvp: number | null; rate: number | null };
+
+export const NO_SOURCE = "(direct)";
+export const OTHER_SOURCES = "(other)";
+
+/**
+ * Sign-ups in the window by first-touch source (identity_accounts.signup_source),
+ * and how many of them have RSVPed to anything. Sources with under k sign-ups
+ * are folded into one OTHER_SOURCES row, so a rare campaign name never shows
+ * next to a count small enough to point at someone. `among`: tests.
+ */
+export async function sourceFunnel(db: Db, since: string, until: string, among?: string[]): Promise<SourceCells[]> {
+  const rows = await db.execute(sql`
+    select coalesce(a.signup_source, ${NO_SOURCE}) as src, count(*),
+           sum(case when exists (select 1 from social_registrations r where r.account_id = a.id) then 1 else 0 end)
+    from identity_accounts a
+    where a.role = 'user' and a.created_at >= ${since}::timestamptz and a.created_at < ${until}::timestamptz ${amongSql(sql`a.id`, among)}
+    group by 1
+    order by 2 desc
+    limit 500`);
+  const big: { source: string; n: number; k: number }[] = [];
+  const other = { source: OTHER_SOURCES, n: 0, k: 0 };
+  for (const [src, n, k] of table(rows)) {
+    const r = { source: String(src), n: Number(n ?? 0), k: Number(k ?? 0) };
+    if (safeCount(r.n) === null) {
+      other.n += r.n;
+      other.k += r.k;
+    } else big.push(r);
+  }
+  if (other.n > 0) big.push(other);
+  return big.map((r) => ({ source: r.source, signups: safeCount(r.n), firstRsvp: safeCount(r.k), rate: pct(r.k, r.n) }));
 }
 
 type Kpi = {
@@ -295,6 +430,16 @@ adminInsights.get("/", async (c) => {
     );
   };
 
+  const [segRows, sources] = await Promise.all([segmentFunnel(db, since, until), sourceFunnel(db, since, until)]);
+  const segCells = segRows.map(suppressSegment);
+  const SEG_LABEL: Record<Segment, [string, string]> = {
+    local: ["คนกรุงเทพฯ", "Local"],
+    newcomer: ["คนมาใหม่", "Newcomer"],
+    international: ["ชาวต่างชาติ", "International"],
+  };
+  const cell = (n: number | null, unit = "") => (n === null ? "<10" : `${n}${unit}`);
+  const sourceLabel = (s: string) => (s === NO_SOURCE ? t("ไม่มีแหล่งที่มา (เข้าตรง)", "No source (direct)") : s === OTHER_SOURCES ? t("อื่น ๆ (แต่ละแหล่งน้อยกว่า 10 คน)", "Other (each under 10)") : s);
+
   // Healthy connections: chat, safety checks, weekly plans and mutual meet feedback.
   const winTs = sql`created_at >= ${since}::timestamptz and created_at < ${until}::timestamptz`;
   const [chatRow, safeRow, planRow, skipRows, meetRow, heardRow, pitchRow, gradRow] = await Promise.all([
@@ -392,6 +537,72 @@ adminInsights.get("/", async (c) => {
           <KpiTile k={k} />
         ))}
       </div>
+
+      <h2 id="segments">{t("แยกตามเรื่องราวในกรุงเทพฯ", "By Bangkok story")}</h2>
+      <p class="muted">
+        {t(
+          "จากคำตอบของสมาชิกเองว่ามาอยู่กรุงเทพฯ อย่างไร สมาชิกนับทุกคนที่ใช้งานอยู่ ตัวเลขอื่นนับในช่วงเวลาที่เลือก",
+          "From each member's own Bangkok story answer. Members counts everyone active; the rest use the selected window.",
+        )}
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t("กลุ่ม", "Segment")}</th>
+              <th scope="col">{t("สมาชิก", "Members")}</th>
+              <th scope="col">{t("สมัคร → ลงทะเบียนกิจกรรมแรก", "Registration → first RSVP")}</th>
+              <th scope="col">{t("ลงทะเบียน → เช็กอิน", "RSVP → check-in")}</th>
+              <th scope="col">{t("ได้คนรู้จักใหม่ (เลือกตรงกัน)", "Mutual connection rate")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {segCells.map((r) => (
+              <tr data-segment={r.segment}>
+                <th scope="row" style="font-weight:normal">{t(SEG_LABEL[r.segment][0], SEG_LABEL[r.segment][1])}</th>
+                <td>{cell(r.members)}</td>
+                <td>{cell(r.regToRsvp, "%")}</td>
+                <td>{cell(r.rsvpToCheckIn, "%")}</td>
+                <td>{cell(r.mutualRate, "%")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="sources">{t("แหล่งที่มาของการสมัคร", "Sign-ups by source")}</h2>
+      <p class="muted">
+        {t(
+          "จากลิงก์แรกที่พาคนเข้ามา (?src= หรือ utm_source) จำไว้ 30 วันก่อนสมัคร สมัครในช่วงเวลาที่เลือก",
+          "From the first link that brought someone in (?src= or utm_source), remembered for 30 days before sign-up. Sign-ups in the selected window.",
+        )}
+      </p>
+      {sources.length === 0 ? (
+        <Empty>{t("ยังไม่มีการสมัครในช่วงนี้", "No sign-ups in this window")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{t("แหล่งที่มา", "Source")}</th>
+                <th scope="col">{t("สมัคร", "Sign-ups")}</th>
+                <th scope="col">{t("ลงทะเบียนกิจกรรมแรกแล้ว", "Made a first RSVP")}</th>
+                <th scope="col">{t("อัตรา", "Rate")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sources.map((r) => (
+                <tr data-source={r.source}>
+                  <th scope="row" style="font-weight:normal">{sourceLabel(r.source)}</th>
+                  <td>{cell(r.signups)}</td>
+                  <td>{cell(r.firstRsvp)}</td>
+                  <td>{cell(r.rate, "%")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2>{t("ผลกระทบทางสังคม", "Social impact")}</h2>
       <div class="stats">

@@ -20,7 +20,8 @@
  * in src/domain/hosting.ts. Money never passes through Jurrgun: the host says
  * whether it's free or paid at the venue, and may link their own payment page.
  */
-import { lateOrLong } from "../domain/rules";
+import { lateOrLong, partnerEventTags } from "../domain/rules";
+import { partnerKindOf } from "../services/events";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
@@ -453,14 +454,18 @@ hostRoutes.post("/host/new", async (c) => {
   const db = getDb(c.env);
   const id = newId();
   const now = new Date();
+  const partnerOrgId = me.role === "partner_admin" ? me.partnerOrgId : null;
+  // A dating partner's events always carry open_to_more (rules.ts partnerEventTags).
+  const tags = partnerEventTags(vals.tags, await partnerKindOf(db, partnerOrgId));
   await batch(c.env, [
     db.insert(events).values({
       id,
       ...vals,
+      tags,
       descriptionEn: null,
       emergencyContact: "191 / 1669",
       hostAccountId: me.id,
-      partnerOrgId: me.role === "partner_admin" ? me.partnerOrgId : null,
+      partnerOrgId,
       privateToken: vals.visibility === "private" ? randomToken(32) : null,
       status: direct ? "published" : "pending",
       submittedAt: now,
@@ -509,11 +514,13 @@ hostRoutes.post("/host/:id/edit", async (c) => {
   if (!vals) return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct, table, audience }, 400);
   if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
   const db = getDb(c.env);
+  const tags = partnerEventTags(vals.tags, await partnerKindOf(db, e.partnerOrgId));
   await batch(c.env, [
     db
       .update(events)
       .set({
         ...vals,
+        tags,
         privateToken: vals.visibility === "private" ? (e.privateToken ?? randomToken(32)) : e.privateToken,
         status: direct ? "published" : "pending",
         reviewNote: null,

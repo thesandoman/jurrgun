@@ -12,7 +12,7 @@ import { ageOn, OFFER_HOURS, seatAvailable, strikeStanding, waitlistOrder } from
 import { newId } from "../lib/crypto";
 import { cleanBio, universityKey } from "../content/profile";
 import { audit, notify } from "../lib/records";
-import { accounts, blocks, buddyPairs, events, profiles, registrations, strikes, vibes, type Event } from "../schema";
+import { accounts, blocks, buddyPairs, events, partnerOrgs, profiles, registrations, strikes, vibes, type Event } from "../schema";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -204,4 +204,11 @@ export async function runBuddyRound(
   queries.push(audit(db, opts.actor ?? "system", "event.buddy_round", { type: "event", id: event.id }, { groups: round.groups.length, method: round.method, unmatched: round.unmatched.length }));
   await batch(env, queries);
   return { ran: true, groups: round.groups.length, method: round.method };
+}
+
+/** A partner organisation's kind (events, dating, venue, community), or null for none. */
+export async function partnerKindOf(db: Db, partnerOrgId: string | null | undefined): Promise<string | null> {
+  if (!partnerOrgId) return null;
+  const [org] = await db.select({ kind: partnerOrgs.kind }).from(partnerOrgs).where(eq(partnerOrgs.id, partnerOrgId)).limit(1);
+  return org?.kind ?? null;
 }
