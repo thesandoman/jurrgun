@@ -73,12 +73,10 @@ export const MAX_WORDS = 12;
  * rewrite one to the new rules, delete its id here; never add one.
  */
 export const LEGACY_IDS: ReadonlySet<string> = new Set([
-  "saturday", "visitor", "friday", "sunday", "photo", "rain", "story", "newfriend", "familylunch", "parentsvisit",
-  "grandparent-birthday", "kids-day", "siblings", "chosen-family", "firstdate", "seconddate", "anniversary", "budget-date",
-  "rainy-date", "sunset-date", "birthday-host", "countdown", "farewell", "good-news", "stranger-dinner", "new-group",
-  "know-one", "team-outing", "new-coworker", "after-work", "longweekend", "cheer-up", "group-chat", "toohot",
-  "weekday-off", "best-hours", "meetup-slot", "date-time", "family-outing-time", "friends-time", "party-time",
-  "free-evening", "meetup-signup", "date-plan", "family-trip", "friends-weekend", "party-plan",
+  "saturday", "visitor", "friday", "sunday", "photo", "rain", "story", "newfriend", "firstdate", "seconddate",
+  "anniversary", "budget-date", "rainy-date", "sunset-date", "best-hours", "meetup-slot", "date-time",
+  "family-outing-time", "friends-time", "party-time", "free-evening", "meetup-signup", "date-plan", "family-trip",
+  "friends-weekend", "party-plan",
 ]);
 /** A D answer that reads as a habit, or an F answer that reads as a first. */
 export const CONTRA_D_EN = /\b(usual|regular|as always|like every|for years|like always|same (?:route|loop|table|stall|spot|order|seat))\b/i;
@@ -123,7 +121,8 @@ const PLACE_PAIRS: [RegExp, string][] = [
   [/Khlong Toei Market/, "ตลาดคลองเตย"], [/Udom Suk/, "อุดมสุข"], [/Bang Khen/, "บางเขน"], [/Bang Sue|Bang Pho/, "บางซื่อ|บางโพ|อภิวัฒน์"],
   [/Saen Saep/, "แสนแสบ"], [/Khlong Bangkok Yai/, "บางกอกใหญ่"], [/Bangkok Noi/, "บางกอกน้อย"], [/Kaset/, "เกษตร"], [/Khao San/, "ข้าวสาร"],
   [/Phraeng Phuthon/, "แพร่งภูธร"], [/Warehouse 30/, "Warehouse 30"], [/Thailand Cultural Centre/, "ศูนย์วัฒนธรรม"], [/Huai Khwang/, "ห้วยขวาง"],
-  [/Thepleela/, "เทพลีลา"], [/Gateway at Bangsue/, "เกตเวย์"], [/Rama VII\b/, "พระราม 7"],
+  [/Thepleela/, "เทพลีลา"], [/Sriwara|Town in Town/, "ศรีวรา|ทาวน์อินทาวน์"], [/Bodindecha/, "บดินทรเดชา"], [/Wat Kamphaeng/, "วัดกำแพง"],
+  [/Bang Phai/, "บางไผ่"], [/Bang Khae Phirom/, "บางแคภิรมย์"], [/Wang Thong 1/, "วังทอง 1"], [/Lat Phrao 87/, "ลาดพร้าว 87"], [/Gateway at Bangsue/, "เกตเวย์"], [/Rama VII\b/, "พระราม 7"],
 ];
 
 export type BankCheck = { errors: string[]; warnings: string[]; districts: { counts: Map<string, number> } };

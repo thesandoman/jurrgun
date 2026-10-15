@@ -330,7 +330,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
       c("BFMN", "A ready-made crew that loves to move.", "ก๊วนพร้อมลุยที่ชอบขยับตัวเหมือนกัน"),
     ],
     hangouts: [
-      h("🎪", "huai_khwang", "Jodd Fairs Ratchada", "จ๊อดแฟร์ รัชดา", "A night market that keeps changing, best with a big group.", "ตลาดกลางคืนที่เปลี่ยนตลอด ไปกันเยอะ ๆ สนุกสุด"),
+      h("🎪", "din_daeng", "Jodd Fairs Ratchada", "จ๊อดแฟร์ รัชดา", "A night market that keeps changing, best with a big group.", "ตลาดกลางคืนที่เปลี่ยนตลอด ไปกันเยอะ ๆ สนุกสุด"),
       h("🛍️", "pathum_wan", "Siam Square and Lido Connect", "สยามสแควร์และลิโด้ คอนเน็คท์", "Pop-ups, street dance and new shops every weekend.", "ป๊อปอัป สตรีทแดนซ์ และร้านใหม่ทุกสุดสัปดาห์"),
       h("✈️", "bang_phlat", "Chang Chui", "ช่างชุ่ย", "A creative market made for wandering with friends.", "ตลาดสร้างสรรค์ที่เหมาะกับการเดินเล่นกับเพื่อน"),
     ],
@@ -415,7 +415,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
     ],
     hangouts: [
       h("🛍️", "ratchathewi", "Pratunam market", "ตลาดประตูน้ำ", "Busy, cheap and full of food you already love.", "คึกคัก ราคาถูก และเต็มไปด้วยของกินที่คุณรักอยู่แล้ว"),
-      h("🍜", "huai_khwang", "Jodd Fairs Ratchada", "จ๊อดแฟร์ รัชดา", "Long tables and the stalls you always go back to.", "โต๊ะยาวและร้านที่กลับไปกินทุกครั้ง"),
+      h("🍜", "din_daeng", "Jodd Fairs Ratchada", "จ๊อดแฟร์ รัชดา", "Long tables and the stalls you always go back to.", "โต๊ะยาวและร้านที่กลับไปกินทุกครั้ง"),
       h("🥘", "khlong_toei", "Khlong Toei Market", "ตลาดคลองเตย", "Bangkok's big fresh market, early and lively.", "ตลาดสดใหญ่ของกรุงเทพฯ เช้าตรู่และคึกคัก"),
     ],
   },
@@ -464,7 +464,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
     hangouts: [
       h("🧵", "ratchathewi", "Ban Khrua weaving community", "ชุมชนทอผ้าบ้านครัว", "Silk weaving and family stories by the canal.", "ผ้าไหมทอมือและเรื่องเล่าครอบครัวริมคลอง"),
       h("🚣", "bangkok_noi", "The Royal Barges National Museum", "พิพิธภัณฑสถานแห่งชาติ เรือพระราชพิธี", "Every barge has a story worth hearing.", "เรือทุกลำมีเรื่องเล่าที่น่าฟัง"),
-      h("🖌️", "bang_kho_laem", "The murals of Wat Chong Nonsi", "จิตรกรรมฝาผนังวัดช่องนนทรี", "Old paintings you can study slowly.", "ภาพเขียนเก่าที่ค่อย ๆ ดูได้นาน ๆ"),
+      h("🖌️", "yan_nawa", "The murals of Wat Chong Nonsi", "จิตรกรรมฝาผนังวัดช่องนนทรี", "Old paintings you can study slowly.", "ภาพเขียนเก่าที่ค่อย ๆ ดูได้นาน ๆ"),
     ],
   },
   CFMN: {
