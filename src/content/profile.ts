@@ -1302,6 +1302,8 @@ export function swapPrompt(deck: string[], promptId: string, rnd: () => number =
 
 export type Answer = { kind: string; value: string | number | string[]; photoKey?: string };
 export type Bio = {
+  /** Private, with gender "self": the member's own words. Never shown to anyone, staff included. */
+  genderSelf?: string;
   comm?: string[];
   /** A value from OCCUPATIONS; "other" goes with occupationOther. */
   occupation?: string;
@@ -1458,6 +1460,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.story)) out.story = s(b.story);
   if (s(b.bkkTime)) out.bkkTime = s(b.bkkTime);
   if (s(b.hometown)) out.hometown = s(b.hometown);
+  if (s(b.genderSelf)) out.genderSelf = s(b.genderSelf)!.slice(0, 30);
   if (b.guide === true) out.guide = true;
   if (s(b.learning)) out.learning = s(b.learning);
   if (strs(b.learningLangs)) out.learningLangs = strs(b.learningLangs);

@@ -91,6 +91,30 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 @media (max-width:1023.98px){body:has(.tabbar) main :is(.flow-bar,.pf-save)::after{content:"";position:absolute;left:0;right:0;top:100%;height:calc(112px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:none}}
 @media (min-width:1024px){body:has(.top-nav) main .pf-save{bottom:0}}
 
+/* Chosen chips and answer cards carry a tick, not only colour (1.4.1). */
+.pill input:checked+span::before,.answer input:checked+span::before{content:"✓";font-weight:800;line-height:1}
+.pill input:checked+span::before{margin-inline-end:.3em}
+.flow .pill input:checked+span::before{margin-inline-end:0}
+/* Emoji and label keep a space between them in flex chips. */
+.pill span{column-gap:.35em}
+/* Flows: "2 of 5" beside the bar; a compact round Back so Next is the one big button. */
+.flow-count{flex:none;font-size:.82rem;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.flow-bar>.btn.flow-back{flex:0 0 52px;width:52px;padding:0;border-radius:50%}
+/* Calmer flow screens: the emoji sits inline with the question, no tile. */
+.flow-emoji{display:inline;width:auto;height:auto;margin:0 .3em 0 0;padding:0;background:none;border-radius:0;transform:none;font-size:1em}
+/* Prototype notice: a small chip in the header; tap for the full sentence. */
+.topbar details.proto-chip{position:relative;flex:none;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
+/* Pronoun quick picks. */
+.pronoun-picks{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 14px}
+.pronoun-picks [aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.pronoun-picks [aria-pressed="true"]::before{content:"✓ "}
+.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:32px;padding:2px 10px;border-radius:999px;background:var(--gold-soft);color:var(--warn);font-size:.75rem;font-weight:700;white-space:nowrap}
+.proto-chip>summary::-webkit-details-marker{display:none}
+.proto-chip>p{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:min(260px,70vw);margin:0;padding:10px 12px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:.86rem;box-shadow:0 10px 26px rgba(0,0,0,.18);border:1px solid var(--line)}
+/* Readability: 17px body text, and taller lines for Thai so stacked marks never touch. */
+body{font-size:17px}
+html[lang="th"] body{line-height:1.7}
+
 /* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
 .flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
 .flow-body .field-label+.muted{margin-top:-2px}
@@ -153,7 +177,10 @@ h2.h3{font-size:1.02rem;margin:.2rem 0 .3rem}
   .top-actions{gap:4px}
   .topbar .chip{padding:4px 9px}
   body.admin .topbar .brand{font-size:0;gap:0}
+  .proto-chip>summary{padding:2px 8px}
 }
+/* Under 360px, room for the Prototype chip: the logo alone stands for the name. */
+@media (max-width:359.98px){.topbar .brand{font-size:0;gap:0}}
 .pf-photo{grid-template-columns:minmax(0,1fr)}
 .pf-photo>*{min-width:0;max-width:100%}
 .me-hero{overflow-x:clip}

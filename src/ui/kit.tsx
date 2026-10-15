@@ -170,13 +170,15 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
         <a class="skip-link" href="#main">
           {t("ข้ามไปที่เนื้อหา", "Skip to content")}
         </a>
-        <div class="proto-banner">
-          {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data")}
-        </div>
         <header class="topbar">
           <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">
             <BrandMark /> Jurrgun <small lang="th">เจอกัน</small>
           </a>
+          {/* Prototype notice: a small chip, the full sentence one tap away. */}
+          <details class="proto-chip">
+            <summary>{t("ทดลอง", "Prototype")}</summary>
+            <p>{t("เวอร์ชันทดลอง อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data")}</p>
+          </details>
           {/* Laptops: the main menu sits in the header (top-down); phones use the bottom bar. */}
           {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} top /> : null}
           <nav class="top-actions">

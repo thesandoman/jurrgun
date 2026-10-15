@@ -103,7 +103,7 @@ import {
 } from "../schema";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
 import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
-import { CONSENT_VERSION, ConnectionsFields, connectionsPatch } from "./onboarding";
+import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, withGenderSelf } from "./onboarding";
 import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L } from "../lib/i18n";
@@ -922,7 +922,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
         ...result.patch,
         intents: result.patch.romanceOn ? [...intents, "romance"] : intents,
         // Dating prompts come with romance mode and go with it.
-        bio: result.patch.romanceOn ? { ...cleanBio(p.bio), datingDeck: currentDatingDeck(user.account.id, cleanBio(p.bio)) } : withoutDating(cleanBio(p.bio)),
+        bio: withGenderSelf(result.patch.romanceOn ? { ...cleanBio(p.bio), datingDeck: currentDatingDeck(user.account.id, cleanBio(p.bio)) } : withoutDating(cleanBio(p.bio)), result.genderSelf),
       })
       .where(eq(profiles.accountId, user.account.id)),
   ];

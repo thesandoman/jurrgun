@@ -88,6 +88,8 @@ export function Flow(props: {
   error?: Child;
   /** Step to open on (e.g. the step a server-side error refers to). */
   start?: number;
+  /** "2 of 5" beside the bar: this flow's place in a journey, or "steps" to count its own screens. */
+  count?: { at: number; of: number } | "steps";
   children: Child;
 }) {
   const { t } = props.v;
@@ -109,6 +111,11 @@ export function Flow(props: {
         <div class="flow-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((stage.at / stage.of) * 100)}>
           <i style={`width:${Math.round((stage.at / stage.of) * 100)}%`} />
         </div>
+        {props.count ? (
+          <span class="flow-count" data-tpl={t("{n} จาก {of}", "{n} of {of}")} data-steps={props.count === "steps" ? "1" : undefined}>
+            {props.count === "steps" ? null : t(`${props.count.at} จาก ${props.count.of}`, `${props.count.at} of ${props.count.of}`)}
+          </span>
+        ) : null}
         {props.close ? (
           <a href={props.close} class="flow-close" aria-label={t("ปิด", "Close")}>
             ✕
@@ -184,6 +191,7 @@ function show(n,dir,push){
   var last=n===steps.length-1,auto=st.dataset.auto==="1",picked=!!st.querySelector("input[type=radio]:checked");
   next.textContent=last?f.dataset.done:(st.dataset.cta||(auto&&!picked&&!st.querySelector("[required]")?f.dataset.skip:f.dataset.next));next.classList.toggle("ghost",auto&&!last);next.classList.toggle("primary",!(auto&&!last));
   var pct=Math.round(((at+(n+1)/steps.length)/of)*100);if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
+  var cnt=f.querySelector(".flow-count[data-steps]");if(cnt)cnt.textContent=cnt.dataset.tpl.replace("{n}",n+1).replace("{of}",steps.length);
   if(push&&history.pushState){history.pushState({flow:n},"");pushed++}else if(dir&&history.replaceState)history.replaceState({flow:n},"");
   var h=st.querySelector(".flow-title");if(h&&dir){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}
   if(dir)window.scrollTo(0,0);

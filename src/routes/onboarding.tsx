@@ -219,7 +219,7 @@ onboarding.get("/dating", (c) => {
   return page(
     c,
     { title: TITLE, bare: true },
-    <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")}>
+    <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")} count="steps">
       <FlowStep emoji="💘" title={t("อะไรทำให้อยากมาเดตที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
         <Pills name="reasons" options={DATING_REASONS.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
         <script
@@ -315,7 +315,7 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
   const p = props.v.user?.profile;
   const val = props.values ?? {};
   return (
-    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("basics")} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("basics")} count={{ at: 1, of: 3 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep emoji="👋" title={t("เริ่มจากเรื่องพื้นฐาน", "The basics")} hint={t("วันเกิดใช้เช็กว่าอายุ 18+ ไม่แสดงให้ใครเห็น", "Your birthday is only used to check you're 18+. Never shown to others.")}>
         <Field label={t("อยากให้เพื่อนเรียกว่าอะไร (ชื่อเล่น)", "What should people call you? (nickname)")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} autocomplete="nickname" />
         <Field label={t("วันเกิด", "Date of birth")} name="birthDate" type="date" value={val.birthDate ?? p?.birthDate} required />
@@ -384,7 +384,7 @@ const CONSENT_ITEMS: { key: string; required: boolean; emoji: string; th: string
 function PrivacyForm(props: { v: View; error?: string }) {
   const { t } = props.v;
   return (
-    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("privacy")} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("privacy")} count={{ at: 2, of: 3 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep
         emoji="🤝"
         title={t("สิ่งที่จำเป็น", "The must-haves")}
@@ -457,6 +457,30 @@ onboarding.post("/privacy", async (c) => {
   return c.redirect("/onboarding/connections");
 });
 
+const PRONOUN_PICKS: [string, string][] = [["she/her", "she/her"], ["he/him", "he/him"], ["they/them", "they/them"], ["ใช้ชื่อฉัน", "use my name"]];
+
+/** Pronouns: quick picks that fill the box, or type your own. */
+export function PronounField(props: { v: View; value?: string | null }) {
+  const { t } = props.v;
+  return (
+    <div class="pronoun-field">
+      <Field label={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")} name="pronouns" value={props.value ?? undefined} maxlength={30} placeholder={t("หรือพิมพ์เอง", "or type your own")} />
+      <div class="pronoun-picks" role="group" aria-label={t("เลือกสรรพนามแบบเร็ว", "Quick picks")}>
+        {PRONOUN_PICKS.map(([th, en]) => (
+          <button type="button" class="chip-btn" data-pronoun={t(th, en)} aria-pressed={props.value === t(th, en) ? "true" : "false"}>
+            {t(th, en)}
+          </button>
+        ))}
+      </div>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var w=document.currentScript.parentNode,i=w.querySelector('input[name="pronouns"]'),b=[].slice.call(w.querySelectorAll("[data-pronoun]"));function u(){b.forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.pronoun===i.value))})}b.forEach(function(x){x.addEventListener("click",function(){i.value=x.getAttribute("aria-pressed")==="true"?"":x.dataset.pronoun;u()})});i.addEventListener("input",u)})();`,
+        }}
+      />
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ you --
 // "Help your table get to know you" (D42): asked after the first RSVP, not at
 // sign-up. Open to members who have finished onboarding; skippable as a whole.
@@ -472,12 +496,13 @@ function YouForm(props: { v: View; next: string; error?: string; storyHint?: str
       action={`/onboarding/you?next=${encodeURIComponent(props.next)}`}
       submit={t("บันทึก", "Save")}
       close={props.next}
+      count="steps"
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={<a class="skip" href={props.next}>{t("ข้ามไปก่อน", "Skip for now")}</a>}
     >
       <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} hint={t("ช่วยให้โต๊ะรู้จักคุณ 5 คำถามสั้น ๆ", "Help your table get to know you. 5 quick questions.")} need={1} needText={t("เลือกอย่างน้อย 1 ภาษา", "Pick at least one")}>
         <Pills name="languages" options={LANGUAGES} values={p?.languages.length ? p.languages : [lang]} lang={lang} />
-        <Field label={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")} name="pronouns" value={p?.pronouns} maxlength={30} placeholder={t("เช่น she/her", "e.g. they/them")} />
+        <PronounField v={props.v} value={p?.pronouns} />
         <Toggle name="showPronouns" label={t("แสดงในโปรไฟล์", "Show on my profile")} checked={!!p?.showPronouns} />
       </FlowStep>
       <FlowStep
@@ -592,7 +617,7 @@ export function ConnectionsFields(props: { v: View }) {
         <summary>{t("เปิดใจมากกว่าเพื่อน (ไม่บังคับ เฉพาะคนโสด)", "Open to something more (optional, Single only)")}</summary>
         <p class="muted">{t(ROMANCE_INFO[0], ROMANCE_INFO[1])}</p>
         <RomanceFields v={props.v} openTo={openTo} />
-        <Field label={t("สรรพนาม (ไม่บังคับ)", "Pronouns (optional)")} name="pronouns" value={p?.pronouns} maxlength={30} />
+        <PronounField v={props.v} value={p?.pronouns} />
         <Toggle name="showPronouns" label={t("แสดงสรรพนามในโปรไฟล์", "Show my pronouns on my profile")} checked={!!p?.showPronouns} />
         <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
       </details>
@@ -649,6 +674,9 @@ export function WomenOnlyFields(props: { v: View }) {
     <fieldset class="card" data-women-fields>
       <legend>{t("เพศของคุณ (ไม่บังคับ)", "Your gender (optional)")}</legend>
       <Select label={t("เพศของคุณ (เป็นความลับ ไม่แสดงต่อใคร)", "Your gender (private, never shown)")} name="gender" options={GENDER_IDENTITIES} value={p?.gender} lang={lang} blank="-" />
+      <div data-gender-self hidden={p?.gender === "self" ? undefined : true}>
+        <Field label={t("อธิบายด้วยคำของคุณเอง (เป็นความลับ)", "In your own words (private)")} name="genderSelf" value={cleanBio(p?.bio).genderSelf} maxlength={30} />
+      </div>
       <div data-women-only hidden={eligible ? undefined : true}>
         <Toggle
           name="womenOnly"
@@ -659,18 +687,24 @@ export function WomenOnlyFields(props: { v: View }) {
       </div>
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){var f=document.currentScript.parentNode,s=f.querySelector('select[name="gender"]'),w=f.querySelector("[data-women-only]");if(!s||!w)return;s.addEventListener("change",function(){var ok=s.value==="woman"||s.value==="non-binary";w.hidden=!ok;if(!ok){var c=w.querySelector("input");if(c)c.checked=false}})})();`,
+          __html: `(function(){var f=document.currentScript.parentNode,s=f.querySelector('select[name="gender"]'),w=f.querySelector("[data-women-only]"),g=f.querySelector("[data-gender-self]");if(!s||!w)return;s.addEventListener("change",function(){var ok=s.value==="woman"||s.value==="non-binary";w.hidden=!ok;if(!ok){var c=w.querySelector("input");if(c)c.checked=false}if(g)g.hidden=s.value!=="self"})})();`,
         }}
       />
     </fieldset>
   );
 }
 
+/** The bio with the self-described gender set, or removed. */
+export function withGenderSelf<B extends object>(bio: B, genderSelf: string | null): B {
+  const { genderSelf: _old, ...rest } = bio as B & { genderSelf?: string };
+  return (genderSelf ? { ...rest, genderSelf } : rest) as B;
+}
+
 /** Shared by onboarding and Settings: validates and returns the profile patch. */
 export async function connectionsPatch(
   body: Record<string, unknown>,
   current: { relationship: string; lastSingleSwitchAt: Date | null },
-): Promise<{ patch: Partial<typeof profiles.$inferInsert>; romanceConsent: boolean | null } | { error: [string, string] }> {
+): Promise<{ patch: Partial<typeof profiles.$inferInsert>; romanceConsent: boolean | null; genderSelf: string | null } | { error: [string, string] }> {
   const relationship = values(RELATIONSHIP).includes(str(body.relationship)) ? str(body.relationship) : "prefer_not";
   // Whole years only (the columns are integers; "30.5" used to be a 500).
   const ageMin = Math.max(18, Math.min(99, Math.trunc(Number(str(body.ageMin))) || 18));
@@ -721,7 +755,9 @@ export async function connectionsPatch(
     // Off (or not Single): delete the sensitive fields immediately (PRD §3.4).
     Object.assign(patch, { romanceOn: false, genderIdentity: null, romanceOpenTo: null, orientation: null, orientationOpenTo: null, showDatingPrefs: false });
   }
-  return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null };
+  // Self-described gender: the member's own words, kept only while "self" is picked.
+  const genderSelf = gender === "self" ? str(body.genderSelf).slice(0, 30) || null : null;
+  return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null, genderSelf };
 }
 
 function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?: string }) {
@@ -733,6 +769,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
       v={props.v}
       submit={t("ต่อไป", "Next")}
       stage={stage("connections")}
+      count={{ at: 3, of: 3 }}
       start={props.start}
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={
@@ -800,7 +837,7 @@ onboarding.post("/connections", async (c) => {
     db
       .update(profiles)
       // Dating prompts exist only while romance mode is on.
-      .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents, ...(result.patch.romanceOn ? {} : { bio: withoutDating(cleanBio(p.bio)) }) })
+      .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents, bio: withGenderSelf(result.patch.romanceOn ? cleanBio(p.bio) : withoutDating(cleanBio(p.bio)), result.genderSelf) })
       .where(eq(profiles.accountId, user.account.id)),
   ];
   if (result.romanceConsent !== null) {
