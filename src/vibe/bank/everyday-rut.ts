@@ -149,7 +149,7 @@ export const EVERYDAY_RUT: Scenario[] = [
     tone: "evening",
     mood: "everyday",
     answers: {
-      BDMN: a("🪩", "huai_khwang", "The whole team dancing at an RCA club none of you know", "ทั้งทีมไปเต้นที่คลับย่าน RCA ที่ยังไม่มีใครรู้จัก"),
+      BDMN: a("🪩", "phra_nakhon", "The whole team dancing at a Khao San club nobody knows", "ทั้งทีมไปเต้นที่คลับบนถนนข้าวสารที่ยังไม่มีใครรู้จัก"),
       BDMH: a("🚲", "chom_thong", "The whole team cycling Bang Mot's orchards, a route nobody knows", "ทั้งทีมปั่นจักรยานในสวนบางมด เส้นทางที่ยังไม่มีใครรู้จัก"),
       BDSN: a("🌉", "khlong_san", "A long riverside table in Khlong San the team just heard about", "โต๊ะยาวริมแม่น้ำย่านคลองสานที่ทีมเพิ่งได้ยินมา"),
       BDSH: a("🍲", "don_mueang", "A team feast at Talat Mai Don Mueang, old recipes nobody's tried", "ทั้งทีมกินเลี้ยงที่ตลาดใหม่ดอนเมือง สูตรเก่าที่ยังไม่มีใครลอง"),
@@ -343,7 +343,7 @@ export const EVERYDAY_RUT: Scenario[] = [
       BDSN: a("🏙️", "khlong_san", "A long family table at an ICONSIAM restaurant nobody has tried", "โต๊ะยาวทั้งบ้านที่ร้านในไอคอนสยามที่ยังไม่มีใครลอง"),
       BDSH: a("🦀", "bang_khun_thian", "Finally, a family crab lunch on the Bang Khun Thian coast", "ในที่สุดทั้งบ้านก็ได้ไปกินปูมื้อเที่ยง ริมชายฝั่งบางขุนเทียน"),
       BFMN: a("🏸", "prawet", "Sunday badminton in Prawet again, cousins invited too", "ตีแบดวันอาทิตย์ย่านประเวศอีกครั้ง ชวนญาติ ๆ มาด้วย"),
-      BFMH: a("🌸", "thawi_watthana", "The whole family strolling the Thawi Watthana orchid farm, grandparents' favourite", "ทั้งบ้านเดินเล่นสวนกล้วยไม้ทวีวัฒนา ที่โปรดของคุณตาคุณยาย"),
+      BFMH: a("🏮", "thon_buri", "The whole family strolling Talat Phlu's old market, grandparents' favourite", "ทั้งบ้านเดินเล่นตลาดพลูเก่า ที่โปรดของคุณตาคุณยาย"),
       BFSN: a("🍕", "bang_kapi", "Same big family table at The Mall Bang Kapi, grandparents included", "โต๊ะใหญ่ตัวเดิมของครอบครัวที่เดอะมอลล์บางกะปิ ตายายมาด้วย"),
       BFSH: a("🐟", "nong_chok", "Back to the Saen Saep canal farm restaurant, the whole family", "ทั้งบ้านกลับไปร้านอาหารในสวนริมคลองแสนแสบ"),
       CDMN: a("🖼️", "pathum_wan", "Walking your parents round the BACC galleries they're curious about", "พาพ่อแม่ไปเดินดูแกลเลอรีใน BACC ที่อยากไปดูมานาน"),

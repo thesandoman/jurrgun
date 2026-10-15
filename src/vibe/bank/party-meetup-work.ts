@@ -191,7 +191,7 @@ export const PARTY_MEETUP_WORK: Scenario[] = [
       CDSN: a("💡", "bang_rak", "A small TCDC design talk on something you know nothing about", "ทอล์กเล็ก ๆ ที่ TCDC หัวข้อดีไซน์ที่คุณไม่รู้อะไรเลย"),
       CDSH: a("⛵", "bangkok_noi", "A first look at the Royal Barges, then chatting in pairs", "ไปดูเรือพระราชพิธีครั้งแรก แล้วจับคู่คุยกัน"),
       CFMN: a("🏊", "chatuchak", "Sunday swims at the Wachirabenjatas pool as ever, now with your friend", "ว่ายน้ำวันอาทิตย์ที่สระศูนย์กีฬาวชิรเบญจทัศเหมือนเคย คราวนี้ชวนเพื่อนคนนั้นมาด้วย"),
-      CFMH: a("🌾", "nong_khaem", "Your weekly canal walk at Wat Nong Khaem, bringing your friend along", "เดินริมคลองที่วัดหนองแขมทุกสัปดาห์ ชวนเพื่อนคนนั้นมาด้วย"),
+      CFMH: a("🌾", "phra_nakhon", "Your weekly canal walk along Khlong Ong Ang, bringing your friend along", "เดินริมคลองโอ่งอ่างทุกสัปดาห์ ชวนเพื่อนคนนั้นมาด้วย"),
       CFSN: a("🎲", "bang_kapi", "A small board-game night at the Bang Kapi café that knows you", "คืนบอร์ดเกมเล็ก ๆ ที่คาเฟ่ย่านบางกะปิ ที่รู้จักคุณดี"),
       CFSH: a("🍚", "lak_si", "Small khao tom supper by Wat Lak Si, your stool waiting", "ข้าวต้มมื้อดึกเล็ก ๆ แถววัดหลักสี่ เก้าอี้ตัวประจำรออยู่"),
     },

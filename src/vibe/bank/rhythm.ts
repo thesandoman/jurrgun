@@ -70,9 +70,9 @@ export const RHYTHM: Scenario[] = [
     tone: "night",
     mood: "personality",
     answers: {
-      BDMN: a("🪩", "huai_khwang", "Dancing till 1am at an RCA club neither of you knows", "เต้นจนตี 1 ที่คลับย่าน RCA ที่ทั้งสองคนยังไม่เคยไป", 1),
+      BDMN: a("🪩", "watthana", "Dancing till 1am at an Ekkamai club neither of you knows", "เต้นจนตี 1 ที่คลับย่านเอกมัยที่ทั้งสองคนยังไม่เคยไป", 1),
       BDMH: a("🌉", "bangkok_yai", "10pm, wandering Itsaraphap's old lanes with the crowd, snacking on a whim", "4 ทุ่ม เดินเล่นซอยเก่าแถวถนนอิสรภาพไปกับผู้คน เจอร้านไหนน่ากินก็แวะ", 1),
-      BDSN: a("🍓", "khlong_san", "8am brunch at the buzzing Charoen Nakhon café everyone's talking about", "บรันช์ 8 โมงเช้าที่คาเฟ่ถนนเจริญนครที่ใคร ๆ ก็พูดถึง คนแน่นแล้ว", -1),
+      BDSN: a("🍓", "samphanthawong", "8am brunch at the buzzing Song Wat café everyone's talking about", "บรันช์ 8 โมงเช้าที่คาเฟ่ถนนทรงวาดที่ใคร ๆ ก็พูดถึง คนแน่นแล้ว", -1),
       BDSH: a("🍜", "lat_krabang", "7am boat noodles at a busy Hua Takhe canal stall, a first", "ก๋วยเตี๋ยวเรือ 7 โมงเช้าที่ร้านริมคลองหัวตะเข้ คนแน่น มาครั้งแรก", -1),
       BFMN: a("👟", "khlong_toei", "Bring them to your 6am run club at Benjasiri. Everyone knows you", "ชวนเขามารันคลับ 6 โมงเช้าที่สวนเบญจสิริ ทุกคนในกลุ่มรู้จักคุณดี", -1),
       BFMH: a("🌾", "bang_bon", "Bring them on the crew's weekly sunrise ride by Bang Bon's canals", "ชวนเขาไปปั่นกับแก๊งตอนพระอาทิตย์ขึ้นเลียบคลองบางบอน ทริปประจำทุกสัปดาห์", -1),

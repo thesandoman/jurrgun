@@ -39,7 +39,7 @@ export const EVERYDAY_HOME: Scenario[] = [
     icon: "🙏",
     tone: "evening",
     answers: {
-      BDMN: a("🪩", "huai_khwang", "Dancing at that RCA club everyone keeps posting, the whole crew", "พาทั้งทีมขนของไปเต้นที่คลับย่าน RCA ที่ใคร ๆ ก็โพสต์"),
+      BDMN: a("🪩", "bang_rak", "The crew dancing at the Silom Soi 4 club everyone keeps posting", "พาทั้งทีมขนของไปเต้นที่คลับในสีลมซอย 4 ที่ใคร ๆ ก็โพสต์"),
       BDMH: a("🏮", "samphanthawong", "Lead the crew through Talat Noi's hidden lanes to dinner, your treat", "พาแก๊งเดินลัดตรอกลับในตลาดน้อยไปกินมื้อเย็น คุณเลี้ยง"),
       BDSN: a("🍝", "bang_rak", "Long table for everyone at a Charoenkrung spot you just heard about", "จองโต๊ะยาวให้ทุกคน ที่ร้านย่านเจริญกรุงที่เพิ่งได้ยินชื่อมา"),
       BDSH: a("🍛", "ratchathewi", "Halal khao mok all round, a Ban Khrua shop someone swears by", "เลี้ยงข้าวหมกฮาลาลทุกคน ที่ร้านในบ้านครัวที่เพื่อนบอกว่าห้ามพลาด"),
@@ -81,7 +81,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       CFMN: a("🏋️", "khan_na_yao", "Your daily workout at a Fashion Island gym, timing the walk home", "ย้ายการออกกำลังกายประจำวันมาที่ยิมในแฟชั่นไอส์แลนด์ จับเวลาเดินกลับห้อง"),
       CFMH: a("🌅", "bangkok_yai", "Test the sunset walk you take every evening: flat to Wat Arun", "ลองเดินชมพระอาทิตย์ตกแบบที่ทำทุกเย็น จากห้องไปริมน้ำวัดอรุณ"),
       CFSN: a("📚", "bang_rak", "Your Saturday reading ritual, tried at a Surawong book café", "ลองย้ายช่วงอ่านหนังสือวันเสาร์มาที่คาเฟ่หนังสือแถวสุรวงศ์"),
-      CFSH: a("🍖", "bang_khae", "Your order at Bang Khae market, khao kha mu, decides the flat", "สั่งข้าวขาหมูจานประจำที่ตลาดบางแค จานนี้แหละตัดสินว่าจะเอาห้องไหม"),
+      CFSH: a("🍖", "bueng_kum", "Your order at Pattavikorn Market, khao kha mu, decides the flat", "สั่งข้าวขาหมูจานประจำที่ตลาดนัดปัฐวิกรณ์ จานนี้แหละตัดสินว่าจะเอาห้องไหม"),
     },
   },
   {
@@ -176,7 +176,7 @@ export const EVERYDAY_HOME: Scenario[] = [
     answers: {
       BDMN: a("🪩", "bang_kapi", "No plan. Text the group, dance wherever just opened in Hua Mak", "ไม่วางแผน ทักกลุ่มเอา แล้วไปเต้นร้านที่เพิ่งเปิดแถวหัวหมาก", 1),
       BDMH: a("⛴️", "nong_chok", "On a whim, the whole gang explores Nong Chok's canals on foot", "นึกขึ้นได้ก็ไปเลย ทั้งแก๊งเดินสำรวจริมคลองแถวหนองจอก", 1),
-      BDSN: a("🎨", "khlong_san", "Nothing booked. Whatever pop-up dinner the group finds on Charoen Nakhon", "ไม่จองอะไรไว้ กลุ่มเจอป๊อปอัปร้านไหนแถวเจริญนครก็ไปกินที่นั่น", 1),
+      BDSN: a("🎨", "bangkok_yai", "Nothing booked. Whatever pop-up dinner the group finds near Wat Arun", "ไม่จองอะไรไว้ กลุ่มเจอป๊อปอัปร้านไหนแถววัดอรุณก็ไปกินที่นั่น", 1),
       BDSH: a("🥢", "bang_kho_laem", "Whoever's free tonight, a halal stall off Rama 3 on a hunch", "คืนนี้ใครว่างก็มา ไปเสี่ยงร้านฮาลาลแถวพระราม 3 ตามสัญชาตญาณ", 1),
       BFMN: a("🥏", "lat_krabang", "Ping your crew that morning: frisbee games on the Lat Krabang campus", "เช้านั้นทักแก๊งประจำ ไปเล่นจานร่อนกันที่สนามมหาวิทยาลัยย่านลาดกระบัง", 1),
       BFMH: a("🛶", "taling_chan", "Signed up days ahead: your gang's Sunday paddle, Khlong Lat Mayom", "ลงชื่อให้ทุกคนล่วงหน้าหลายวัน พายเรือวันอาทิตย์กับแก๊งที่คลองลัดมะยมเหมือนทุกที", -1),
@@ -237,7 +237,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       BFMH: a("💐", "phra_nakhon", "All eight on the Pak Khlong Talat night walk, your hosting ritual", "พาทั้งแปดคนเดินปากคลองตลาดตอนกลางคืน ธรรมเนียมทุกครั้งที่คุณเป็นเจ้าภาพ"),
       BFSN: a("🌉", "yan_nawa", "Your table on the Rama III riverside, plus whoever turns up", "โต๊ะประจำริมน้ำพระราม 3 ใครอยากมาสมทบก็มา"),
       BFSH: a("🦐", "samphanthawong", "All eight at the Talat Noi seafood shop that knows your order", "ทั้งแปดคนที่ร้านซีฟู้ดในตลาดน้อย ร้านที่จำเมนูคุณได้"),
-      CDMN: a("🌳", "khlong_san", "Quiet dinner, then a first stroll on the Chao Phraya Sky Park", "มื้อเย็นเงียบ ๆ แล้วเดินเล่นบนสวนลอยฟ้าเจ้าพระยาครั้งแรก"),
+      CDMN: a("🌳", "phra_nakhon", "Quiet dinner, then a first stroll on the Chao Phraya Sky Park", "มื้อเย็นเงียบ ๆ แล้วเดินเล่นบนสวนลอยฟ้าเจ้าพระยาครั้งแรก"),
       CDMH: a("🛶", "phra_nakhon", "A quiet dinner, then exploring the lanes along Khlong Ong Ang", "มื้อเย็นเงียบ ๆ แล้วเดินสำรวจตรอกเลียบคลองโอ่งอ่าง"),
       CDSN: a("🕯️", "bang_rak", "A quiet private room at a Silom restaurant you've meant to try", "ห้องส่วนตัวเงียบ ๆ ที่ร้านย่านสีลมที่อยากลองมานาน"),
       CDSH: a("🍚", "khlong_san", "Finally, a quiet riverside table at that old Charoen Nakhon shop", "ได้นั่งโต๊ะริมน้ำเงียบ ๆ ที่ร้านเก่าบนถนนเจริญนครสักที"),
@@ -325,7 +325,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       CFMN: a("🏸", "nong_chok", "Your court at Nong Chok Park, badminton for two", "คอร์ตแบดประจำในสวนหนองจอก ตีกันสองคน"),
       CFMH: a("🌺", "chom_thong", "Your walking route round Wat Ratchaorasaram every Sunday, now for two", "เส้นเดินวันอาทิตย์ประจำรอบวัดราชโอรสาราม คราวนี้เดินสองคน"),
       CFSN: a("🧋", "bueng_kum", "Your corner at a Nawamin café, now a table for two", "มุมประจำในคาเฟ่แถวนวมินทร์ คราวนี้นั่งกันสองคน"),
-      CFSH: a("🍗", "lak_si", "Two chicken rice plates by Wat Lak Si, served before you ask", "ข้าวมันไก่สองจานร้านแถววัดหลักสี่ มาวางก่อนสั่งด้วยซ้ำ"),
+      CFSH: a("🍗", "sathon", "Two chicken rice plates by Wat Yannawa, served before you ask", "ข้าวมันไก่สองจานร้านแถววัดยานนาวา มาวางก่อนสั่งด้วยซ้ำ"),
     },
   },
   {
@@ -346,7 +346,7 @@ export const EVERYDAY_HOME: Scenario[] = [
       BFSN: a("🍰", "khlong_toei", "Everyone round your table at a café in the Queen Sirikit Centre", "ทุกคนนั่งล้อมโต๊ะประจำที่คาเฟ่ในศูนย์ประชุมสิริกิติ์"),
       BFSH: a("🫓", "bang_kho_laem", "Family lunch at the halal Charoen Krung 103 shop they always pick", "มื้อเที่ยงครอบครัวที่ร้านฮาลาลซอยเจริญกรุง 103 ร้านที่ท่านเลือกทุกครั้ง"),
       CDMN: a("🏺", "bang_rak", "A hands-on workshop for two at Warehouse 30, something different for them", "เวิร์กช็อปลงมือทำสองคนที่ Warehouse 30 ให้เขาได้ลองอะไรแปลกใหม่"),
-      CDMH: a("🏯", "chom_thong", "Finally, a short stroll for two in Wat Ratchaorasaram's quiet courtyards", "ได้พาท่านเดินเล่นสั้น ๆ ในลานเงียบ ๆ ของวัดราชโอรสารามสักที"),
+      CDMH: a("🌳", "phra_nakhon", "Finally, a short stroll for two round Santichaiprakarn Park's riverside lawn", "ได้พาท่านเดินเล่นสั้น ๆ รอบสนามหญ้าริมน้ำสวนสันติชัยปราการสักที"),
       CDSN: a("🍵", "bang_phlat", "Tea for two at a Rama VIII riverside café you just found", "จิบชาสองคนที่คาเฟ่ริมน้ำเชิงสะพานพระราม 8 ที่เพิ่งเจอ"),
       CDSH: a("🍜", "phra_nakhon", "Old-recipe noodles for two at a Phraeng Phuthon shop with no signboard", "ก๋วยเตี๋ยวสูตรเก่าสองชาม ร้านไม่มีป้ายในย่านแพร่งภูธร"),
       CFMN: a("🌳", "ratchathewi", "The short Santiphap Park lap you two always do, arm in arm", "เดินรอบสั้น ๆ ในสวนสันติภาพแบบที่ทำทุกครั้ง ควงแขนกันสองคน"),

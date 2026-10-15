@@ -109,7 +109,7 @@ export const FRIENDS_SOLO: Scenario[] = [
       CDSN: a("🎬", "chatuchak", "A random film at Major Ratchayothin, the coldest seat in town", "สุ่มดูหนังสักเรื่องที่เมเจอร์ รัชโยธิน ที่นั่งเย็นที่สุดในเมือง"),
       CDSH: a("✈️", "don_mueang", "The Air Force Museum's old planes, on a whim, reading every label", "แวะพิพิธภัณฑ์กองทัพอากาศแบบไม่ได้คิดไว้ ค่อย ๆ อ่านป้ายใต้เครื่องบินเก่าทุกลำ"),
       CFMN: a("🏊", "khlong_toei", "Swim at the Khlong Toei Youth Centre pool, lane four as ever", "ว่ายน้ำตอนบ่ายแก่ที่สระศูนย์เยาวชนคลองเตย เลนสี่เหมือนเคย"),
-      CFMH: a("🚲", "nong_khaem", "Shady canal ride in Nong Khaem, the aunties waving from their porches", "ปั่นช้า ๆ ใต้ร่มไม้ริมคลองในหนองแขม ป้า ๆ โบกมือทักจากหน้าบ้าน"),
+      CFMH: a("🚲", "phasi_charoen", "Shady canal ride by Khlong Bang Luang, aunties waving from porches", "ปั่นช้า ๆ ใต้ร่มไม้ริมคลองบางหลวง ป้า ๆ โบกมือทักจากหน้าบ้าน"),
       CFSN: a("📚", "phaya_thai", "Your seat in a Pradiphat bookshop, a favourite reread in aircon", "ที่นั่งประจำในร้านหนังสือแถวประดิพัทธ์ แอร์เย็น ๆ กับเล่มโปรดที่อ่านซ้ำ"),
       CFSH: a("🍰", "thon_buri", "Iced tea and khanom farang at your Kudi Chin bakery, since childhood", "ชาเย็นกับขนมฝรั่งกุฎีจีนร้านเจ้าประจำ กินมาตั้งแต่เด็ก"),
     },
