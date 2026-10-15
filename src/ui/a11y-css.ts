@@ -70,6 +70,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .hero-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:14px}
 .hero-btn{background:#fff;color:#0e5f33;border:0;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .hero-btn:hover{background:#f2fbf5}
+.tile2 .hero-btn{text-shadow:none}
 .hero-link{color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center}
 
 /* Discover list: shorter covers, so more events fit on a phone screen. */
@@ -92,6 +93,23 @@ body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 
 /* Me: an odd tile out spans the row instead of sitting alone. */
 .me-menu>:last-child:nth-child(odd){grid-column:1/-1}
+
+/* Landing heroes: a shade behind the text so it reads on any sky (1.4.3). */
+.tile2.hero .tile2-art::after{background:linear-gradient(to top,rgba(8,20,14,.78) 0%,rgba(8,20,14,.6) 55%,rgba(8,20,14,.5) 100%)}
+.tile2.hero .tile2-body{text-shadow:0 1px 3px rgba(0,0,0,.6),0 0 14px rgba(0,0,0,.35)}
+.tile2.hero small{opacity:1;align-self:flex-start;max-width:100%;padding:3px 9px;border-radius:10px;background:rgba(8,20,14,.55);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.tile2.hero .hero-title{margin:0;line-height:1.1;font-size:1.9rem;letter-spacing:-.02em}
+
+/* Intro: language and accessibility sit together, top left, 44px taps. */
+.intro-tools{position:absolute;z-index:3;top:calc(10px + env(safe-area-inset-top,0px));left:12px;display:flex;align-items:center;gap:6px}
+.intro-tools .intro-lang{position:static;display:flex;gap:2px;margin:0;font-size:.9rem}
+.intro-tools .intro-lang a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;border-radius:999px;color:var(--ink-2);font-weight:600;text-decoration:none}
+.intro-tools .intro-lang a[aria-current]{background:var(--surface);color:var(--brand);box-shadow:0 0 0 1px var(--line)}
+.intro-a11y>summary{width:44px;height:44px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.intro .a11y-panel{position:fixed;left:12px;right:12px;width:auto;max-width:360px;top:calc(64px + env(safe-area-inset-top,0px))}
+.intro-skip{min-height:44px;display:inline-flex;align-items:center}
+/* The floating art moves for three loops, then rests (2.2.2). */
+.intro-art{animation-iteration-count:3}
 
 /* Missing page and error page. */
 .err-page{text-align:center;padding:8vh 0 4vh}

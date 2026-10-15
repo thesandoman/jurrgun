@@ -10,6 +10,7 @@ import { L } from "../lib/i18n";
 import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { BRAND, MARK_SVG } from "../ui/brand";
+import { A11yMenu } from "../ui/a11y";
 
 export const publicRoutes = new Hono<AppEnv>();
 
@@ -28,9 +29,25 @@ publicRoutes.get("/", (c) => {
         <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
           <Pill dot>{t("กรุงเทพฯ · กลุ่มเล็ก", "Bangkok · small groups")}</Pill>
           {/* Each phrase stays whole: Thai line breaking would otherwise split "แล้ว|เจอกันนะ". */}
-          <h2>{L(lang, BRAND.tagline).split(" ").map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}</h2>
+          <h1 class="hero-title">{L(lang, BRAND.tagline).split(" ").map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}</h1>
           <small>{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</small>
           <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
+          <div class="hero-cta">
+            {user ? (
+              <a href="/onboarding" class="btn hero-btn">
+                {t("ทำโปรไฟล์ต่อ", "Continue setting up")}
+              </a>
+            ) : (
+              <>
+                <a href="/signup" class="btn hero-btn">
+                  {t("เริ่มเลย", "Get started")}
+                </a>
+                <a href="/login" class="hero-link">
+                  {t("เข้าสู่ระบบ", "Sign in")}
+                </a>
+              </>
+            )}
+          </div>
         </Tile>
         <Tile href="/buddy" tone="deep" size="tall">
           <span class="go" aria-hidden="true">↗</span>
@@ -86,7 +103,7 @@ publicRoutes.get("/", (c) => {
 
 /** The intro for first-time visitors: five swipeable slides, then sign up. */
 publicRoutes.get("/intro", (c) => {
-  const { t, user } = view(c);
+  const { t, user, lang } = view(c);
   setCookie(c, INTRO_COOKIE, "seen", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
   const done = user ? (user.profile?.onboardedAt ? "/events" : "/onboarding") : "/signup";
   const slides: { art: string; tone: string; title: string; body: string; foot?: string }[] = [
@@ -151,21 +168,30 @@ publicRoutes.get("/intro", (c) => {
         <div class="intro-dots" id="intro-dots" aria-hidden="true">
           {slides.map((_, i) => <i class={i === 0 ? "on" : ""} />)}
         </div>
-        <a href="#" class="btn primary intro-next" id="intro-next">
-          {t("ถัดไป", "Next")} →
-        </a>
+        <button type="button" class="btn primary intro-next" id="intro-next">
+          {t("ถัดไป", "Next")} <span aria-hidden="true">→</span>
+        </button>
       </div>
-      <p class="intro-lang">
-        <a href="/lang/th?back=/intro" lang="th">ไทย</a> · <a href="/lang/en?back=/intro" lang="en">English</a>
+      <p class="sr-only" id="intro-status" role="status" data-of={t("จาก", "of")} data-word={t("หน้า", "Slide")}>
+        {t(`หน้า 1 จาก ${slides.length}`, `Slide 1 of ${slides.length}`)}
       </p>
+      <div class="intro-tools">
+        <p class="intro-lang">
+          <a href="/lang/th?back=/intro" lang="th" aria-current={lang === "th" ? "true" : undefined}>ไทย</a>
+          <a href="/lang/en?back=/intro" lang="en" aria-current={lang === "en" ? "true" : undefined}>English</a>
+        </p>
+        <A11yMenu t={t} class="intro-a11y" />
+      </div>
       <script
         dangerouslySetInnerHTML={{
           __html: `(function(){var tr=document.getElementById("intro-track"),dots=document.querySelectorAll("#intro-dots i"),nx=document.getElementById("intro-next");
 var n=dots.length;function idx(){return Math.round(tr.scrollLeft/tr.clientWidth)}
-function upd(){var i=idx();for(var j=0;j<n;j++)dots[j].className=j===i?"on":"";nx.style.visibility=i===n-1?"hidden":"visible"}
+var st=document.getElementById("intro-status"),last=-1;
+function upd(){var i=idx();for(var j=0;j<n;j++)dots[j].className=j===i?"on":"";nx.style.visibility=i===n-1?"hidden":"visible";if(i!==last&&st){last=i;st.textContent=st.dataset.word+" "+(i+1)+" "+st.dataset.of+" "+n}}
+function still(){return (window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)||document.documentElement.classList.contains("a11y-motion")}
 tr.addEventListener("scroll",function(){window.requestAnimationFrame(upd)});
-nx.addEventListener("click",function(e){e.preventDefault();var r=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;tr.scrollTo({left:(idx()+1)*tr.clientWidth,behavior:r?"auto":"smooth"})});
-tr.addEventListener("keydown",function(e){if(e.key==="ArrowRight"){e.preventDefault();nx.click()}if(e.key==="ArrowLeft"){e.preventDefault();tr.scrollTo({left:(idx()-1)*tr.clientWidth,behavior:"smooth"})}});upd()})();`,
+nx.addEventListener("click",function(e){e.preventDefault();tr.scrollTo({left:(idx()+1)*tr.clientWidth,behavior:still()?"auto":"smooth"})});
+tr.addEventListener("keydown",function(e){if(e.key==="ArrowRight"){e.preventDefault();nx.click()}if(e.key==="ArrowLeft"){e.preventDefault();tr.scrollTo({left:(idx()-1)*tr.clientWidth,behavior:still()?"auto":"smooth"})}});upd()})();`,
         }}
       />
     </div>,
