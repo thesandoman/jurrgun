@@ -31,6 +31,7 @@ import { planRoutes } from "./routes/plan";
 import { hostInsightRoutes } from "./routes/host-insights";
 import { settingsRoutes } from "./routes/settings";
 import { setup } from "./routes/setup";
+import { errorPage, notFoundPage, plainErrorHtml, wantsHtml } from "./routes/errors";
 import { vendorRoutes } from "./routes/vendor";
 
 const app = new Hono<AppEnv>();
@@ -210,11 +211,19 @@ app.get("/assets/*", async (c) => {
 
 app.notFound((c) => {
   createLogger(c.env).debug("route not found", { path: c.req.path });
+  if (wantsHtml(c)) return notFoundPage(c);
   return c.json({ error: "Not found" }, 404);
 });
 
 app.onError((err, c) => {
   createLogger(c.env).error("unhandled error", { path: c.req.path, err });
+  if (wantsHtml(c)) {
+    try {
+      return errorPage(c);
+    } catch {
+      return plainErrorHtml(c);
+    }
+  }
   return c.json({ error: "Internal server error" }, 500);
 });
 

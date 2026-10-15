@@ -126,7 +126,18 @@ async function landing(c: Ctx, audience: Audience) {
           </h1>
           <small>{L2(k.sub)}</small>
           <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
+          <div class="hero-cta">
+            <a href={join} class="btn hero-btn">
+              {member ? t("ดูกิจกรรมทั้งหมด", "See all events") : t("เริ่มเลย ฟรี", "Get started, it's free")}
+            </a>
+            {member ? null : (
+              <a href="/login" class="hero-link">
+                {t("เข้าสู่ระบบ", "Sign in")}
+              </a>
+            )}
+          </div>
         </Tile>
+        <h2 class="sr-only">{t("เริ่มต้นที่นี่", "Start here")}</h2>
         <Tile>
           <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />
         </Tile>

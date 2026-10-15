@@ -14,7 +14,7 @@ html[data-theme="light"]{color-scheme:light}
 html[data-theme="dark"]{color-scheme:dark}
 :root{
   --bg:#f3fbf5;--surface:#ffffff;--surface-2:#e7f6ec;--ink:#10281b;--ink-2:#3d5a49;--ink-3:#668473;
-  --line:#d3eadb;--brand:#137f45;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
+  --line:#d3eadb;--brand:#11763f;--brand-ink:#ffffff;--brand-soft:#dcf5e5;--fresh:#22c55e;--lime:#a3e635;
   --gold:#e8a50b;--gold-soft:#fff5d1;
   /* Love red: only for the romance opt-in moments, never decoration. */
   --love:#e23744;--love-ink:#c0222f;--love-soft:#fde3e5;
@@ -489,7 +489,7 @@ body:has(.tabbar) .notif-panel{max-height:calc(100dvh - 200px - env(safe-area-in
  * boarding-pass ticket.
  * ===================================================================== */
 :root{
-  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#137f45;
+  --bg:#f4f8f6;--river:#0b6e8a;--river-soft:#e0f1f5;--sun:#f2b134;--sun-soft:#fff4dc;--leaf:#11763f;
   --gx:20px;
 }
 @media (prefers-color-scheme:dark){:root{--bg:#0b1511;--river:#5cc8e0;--river-soft:#0f2d36;--sun:#f5c04a;--sun-soft:#3a2f12;--leaf:#4ade80}}

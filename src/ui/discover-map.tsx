@@ -154,6 +154,7 @@ export function FullDiscover(props: {
     <div class="fd">
       <link rel="stylesheet" href={`/vendor/sv-map.css?v=${SV_MAP_VERSION}`} />
       <style dangerouslySetInnerHTML={{ __html: FULLMAP_CSS }} />
+      <h1 class="sr-only">{t("ค้นหากิจกรรมบนแผนที่", "Discover events on the map")}</h1>
       <a class="fd-skip" href="#discover-sheet">
         {t("ข้ามแผนที่ ดูเป็นรายการ", "Skip the map, show the list")}
       </a>

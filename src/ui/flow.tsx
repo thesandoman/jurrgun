@@ -60,7 +60,7 @@ export function FlowStep(props: {
         {props.hint ? <p class="flow-hint">{props.hint}</p> : null}
         {props.info ? (
           <details class="info">
-            <summary>ⓘ</summary>
+            <summary aria-label={`ⓘ ${props.title}`}>ⓘ</summary>
             <div>{props.info}</div>
           </details>
         ) : null}

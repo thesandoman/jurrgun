@@ -12,9 +12,9 @@
 const RULES = `
   --bg:#fff9f0;--surface:#ffffff;--surface-2:#fff1df;
   --ink:#1e2b22;--ink-2:#46564b;--ink-3:#5f6d63;
-  --line:#f0e2cc;--brand:#137f45;--brand-ink:#ffffff;--brand-soft:#e3f5ea;--fresh:#2fb866;--lime:#c6ef6e;
+  --line:#f0e2cc;--brand:#11763f;--brand-ink:#ffffff;--brand-soft:#e3f5ea;--fresh:#2fb866;--lime:#c6ef6e;
   --gold:#f5a524;--gold-soft:#fff0d6;--sun:#ffb443;--sun-soft:#fff0d6;--coral:#ff7a5c;--coral-soft:#ffe8e1;--sky-soft:#e3f2fc;
-  --deep:#137f45;--deep-2:#0e6b39;--on-deep:#ffffff;--on-deep-2:#e3f5ea;
+  --deep:#11763f;--deep-2:#0e6b39;--on-deep:#ffffff;--on-deep-2:#e3f5ea;
   --shadow:0 1px 2px rgba(120,80,30,.06),0 10px 28px rgba(160,110,40,.10);
   --hero:linear-gradient(135deg,#2fb866 0%,#8fd96b 55%,#ffd27a 120%);
 

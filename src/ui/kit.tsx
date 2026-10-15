@@ -19,11 +19,12 @@ import { WARM_CSS } from "./warm";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS;
+const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + A11Y_CSS;
 import { BRAND, BrandMark } from "./brand";
 import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
+import { A11Y_CSS } from "./a11y-css";
 import { asset, type AssetPath } from "../assets";
-import { A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
+import { A11Y_FORM_JS, A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
 
 export type View = { lang: Lang; t: T; user: CurrentUser | null; path: string };
@@ -40,7 +41,7 @@ export type PageOpts = {
   tab?: Tab;
   /** Staff pages get a wider layout and the admin side menu. */
   admin?: boolean;
-  status?: 200 | 400 | 403 | 404 | 409;
+  status?: 200 | 400 | 403 | 404 | 409 | 500;
   /** Focused task screens (onboarding, quiz): no tab bar, no footer. */
   bare?: boolean;
   /** Full-screen map screens (Discover): the page draws its own floating header. */
@@ -153,6 +154,9 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
           <main class="fullmap">{props.children}</main>
         ) : (
           <>
+        <a class="skip-link" href="#main">
+          {t("ข้ามไปที่เนื้อหา", "Skip to content")}
+        </a>
         <div class="proto-banner">
           {t("เวอร์ชันทดลอง อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data")}
         </div>
@@ -173,7 +177,9 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
           </nav>
         </header>
         {opts.admin ? <AdminNav v={v} /> : null}
-        <main class={opts.admin ? "wrap wide" : "wrap"}>{props.children}</main>
+        <main id="main" tabindex={-1} class={opts.admin ? "wrap wide" : "wrap"}>
+          {props.children}
+        </main>
         <footer class="foot">
           <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a>
           <a href="/learn">{t("เรียนรู้", "Learn")}</a>
@@ -186,7 +192,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
           </>
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
-        <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS }} />
+        <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS + A11Y_FORM_JS }} />
         <script dangerouslySetInnerHTML={{ __html: ALIVE_JS }} />
         {member && !opts.fullscreen ? <script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}
         <script
@@ -315,11 +321,16 @@ export function Field(props: {
   pattern?: string;
   /** Password fields: labels for a Show / Hide toggle (needs JS; without it the field stays hidden-text). */
   reveal?: { show: string; hide: string };
+  /** What's wrong with the value, shown under the field and read with it. */
+  error?: string;
 }) {
   const id = `f-${props.name}`;
+  const described = describedBy(id, props.hint, props.error);
   const input = (
       <input
         id={id}
+        aria-describedby={described}
+        aria-invalid={props.error ? "true" : undefined}
         name={props.name}
         type={props.type ?? "text"}
         value={props.value ?? ""}
@@ -353,32 +364,60 @@ export function Field(props: {
       ) : (
         input
       )}
-      {props.hint ? <small>{props.hint}</small> : null}
+      <FieldNotes id={id} hint={props.hint} error={props.error} />
     </div>
   );
 }
 
-export function TextArea(props: { label: string; name: string; value?: string | null; rows?: number; hint?: string; required?: boolean; maxlength?: number }) {
+/** Ids of a field's hint and error, for aria-describedby. */
+function describedBy(id: string, hint?: string, error?: string): string | undefined {
+  return [hint ? `${id}-hint` : "", error ? `${id}-err` : ""].filter(Boolean).join(" ") || undefined;
+}
+
+/** A field's hint and error, each with the id its input points at. */
+function FieldNotes(props: { id: string; hint?: string; error?: string }) {
+  return (
+    <>
+      {props.hint ? <small id={`${props.id}-hint`}>{props.hint}</small> : null}
+      {props.error ? (
+        <small id={`${props.id}-err`} class="field-err">
+          <span aria-hidden="true">⚠ </span>
+          {props.error}
+        </small>
+      ) : null}
+    </>
+  );
+}
+
+export function TextArea(props: { label: string; name: string; value?: string | null; rows?: number; hint?: string; required?: boolean; maxlength?: number; error?: string }) {
   const id = `f-${props.name}`;
   return (
     <div class="field">
       <label for={id}>{props.label}</label>
-      <textarea id={id} name={props.name} rows={props.rows ?? 3} required={props.required} maxlength={props.maxlength}>
+      <textarea
+        id={id}
+        name={props.name}
+        rows={props.rows ?? 3}
+        required={props.required}
+        maxlength={props.maxlength}
+        aria-describedby={describedBy(id, props.hint, props.error)}
+        aria-invalid={props.error ? "true" : undefined}
+      >
         {props.value ?? ""}
       </textarea>
-      {props.hint ? <small>{props.hint}</small> : null}
+      <FieldNotes id={id} hint={props.hint} error={props.error} />
     </div>
   );
 }
 
 type Opt = { value: string; th: string; en: string };
 
-export function Select(props: { label: string; name: string; options: Opt[]; value?: string | null; lang: Lang; required?: boolean; blank?: string }) {
+export function Select(props: { label: string; name: string; options: Opt[]; value?: string | null; lang: Lang; required?: boolean; blank?: string; hint?: string }) {
   const id = `f-${props.name}`;
   return (
     <div class="field">
       <label for={id}>{props.label}</label>
-      <select id={id} name={props.name} required={props.required}>
+      <select id={id} name={props.name} required={props.required} aria-describedby={describedBy(id, props.hint)}>
         {props.blank !== undefined ? <option value="">{props.blank}</option> : null}
         {props.options.map((o) => (
           <option value={o.value} selected={o.value === props.value}>
@@ -386,6 +425,7 @@ export function Select(props: { label: string; name: string; options: Opt[]; val
           </option>
         ))}
       </select>
+      <FieldNotes id={id} hint={props.hint} />
     </div>
   );
 }
@@ -403,10 +443,11 @@ export function Choices(props: {
 }) {
   const type = props.type ?? "checkbox";
   const selected = new Set(props.values ?? []);
+  const hintId = props.hint ? `c-${props.name}-hint` : undefined;
   return (
-    <fieldset class="choices">
+    <fieldset class="choices" aria-describedby={hintId}>
       <legend>{props.legend}</legend>
-      {props.hint ? <small>{props.hint}</small> : null}
+      {props.hint ? <small id={hintId}>{props.hint}</small> : null}
       <div class="pills">
         {props.options.map((o) => (
           <label class="pill">

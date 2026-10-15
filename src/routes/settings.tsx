@@ -1441,10 +1441,10 @@ settingsRoutes.get("/settings/habits", async (c) => {
       <p class="muted">{t("Jurrgun อยากให้คุณใช้แอปน้อยลง และเจอคนจริงมากขึ้น", "Jurrgun wants you on the app less, and with people more.")}</p>
       {c.req.query("notice") === "saved" ? <Notice kind="ok">{t("บันทึกแล้ว", "Saved")}</Notice> : null}
       <Card>
-        <h2 style="margin-top:0">🗓️ {t("นัดกี่ครั้งต่อสัปดาห์กำลังดี", "How many plans a week feel right?")}</h2>
+        <h2 style="margin-top:0" id="rhythm-h">🗓️ {t("นัดกี่ครั้งต่อสัปดาห์กำลังดี", "How many plans a week feel right?")}</h2>
         <p class="muted">{t("ถ้าเกินนี้ เราจะถามคุณก่อน 1 ครั้ง แต่ไม่ได้ห้าม", "Past this, we'll check with you once. Never a block.")}</p>
         <form method="post" action="/settings/habits">
-          <div class="pills">
+          <div class="pills" role="radiogroup" aria-labelledby="rhythm-h">
             {RHYTHMS.map((n) => (
               <label class="pill">
                 <input type="radio" name="rhythm" value={String(n)} checked={n === rhythm} />

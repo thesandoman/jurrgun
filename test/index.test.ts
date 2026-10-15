@@ -111,6 +111,21 @@ describe("unknown routes", () => {
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Not found" });
   });
+
+  it("shows browsers a friendly page with a skip link and a way back", async () => {
+    const res = await app.request("/definitely-not-a-route", { headers: { accept: "text/html" } });
+    expect(res.status).toBe(404);
+    const html = await res.text();
+    expect(html).toContain('class="err-page"');
+    expect(html).toContain('href="#main"');
+    expect(html).toContain('id="main"');
+  });
+
+  it("still answers JSON for API paths, even from a browser", async () => {
+    const res = await app.request("/api/definitely-not-a-route", { headers: { accept: "text/html" } });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Not found" });
+  });
 });
 
 describe("GET /assets/*", () => {

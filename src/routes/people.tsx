@@ -652,6 +652,7 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
   const host = !!props.v.user && canHost(props.v.user.account, true);
   return (
     <>
+      <h2 class="sr-only">{t("ทางลัด", "Shortcuts")}</h2>
       <Bento>
         <Tile href="/buddy" tone="deep" size="wide" class="circle-buddy">
           <span class="go" aria-hidden="true">↗</span>

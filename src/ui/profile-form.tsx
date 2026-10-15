@@ -336,7 +336,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
     case "scale":
       body = (
         <div class="pf-scale">
-          <div class="pills">
+          <div class="pills" role="radiogroup" aria-label={L(lang, p)}>
             {[1, 2, 3, 4, 5].map((n) => (
               <label class="pill">
                 <input type="radio" name={name} value={String(n)} checked={val === n} />
@@ -353,7 +353,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
       break;
     case "choice":
       body = (
-        <div class="pills">
+        <div class="pills" role="radiogroup" aria-label={L(lang, p)}>
           {p.options!.map((o) => (
             <EmojiPill name={name} o={o} lang={lang} type="radio" checked={has(o.value)} />
           ))}
@@ -363,7 +363,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
     case "emoji": {
       const pick = p.pick ?? 1;
       body = (
-        <div class="pills pf-emoji" data-limit={pick > 1 ? String(pick) : undefined}>
+        <div class="pills pf-emoji" data-limit={pick > 1 ? String(pick) : undefined} role={pick > 1 ? "group" : "radiogroup"} aria-label={L(lang, p)}>
           {p.options!.map((o) => (
             <EmojiPill name={name} o={o} lang={lang} type={pick > 1 ? "checkbox" : "radio"} checked={has(o.value)} big />
           ))}
@@ -379,7 +379,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
     case "multi": {
       const pick = p.pick ?? 3;
       body = (
-        <div class="pills" data-limit={String(pick)}>
+        <div class="pills" data-limit={String(pick)} role="group" aria-label={L(lang, p)}>
           {p.options!.map((o) => (
             <EmojiPill name={name} o={o} lang={lang} checked={has(o.value)} />
           ))}
