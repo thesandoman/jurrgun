@@ -367,7 +367,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
     ],
     hangouts: [
       h("🌶️", "huai_khwang", "Huai Khwang night market", "ตลาดกลางคืนห้วยขวาง", "Late food stalls that locals queue for.", "ร้านอาหารดึกที่คนแถวนั้นยอมต่อคิว"),
-      h("🍢", "wang_thonglang", "Chokchai 4 market", "ตลาดโชคชัย 4", "A real neighbourhood food market, far from the tourist trail.", "ตลาดอาหารของคนในย่านจริง ๆ ไกลจากเส้นทางนักท่องเที่ยว"),
+      h("🍢", "lat_phrao", "Chokchai 4 market", "ตลาดโชคชัย 4", "A real neighbourhood food market, far from the tourist trail.", "ตลาดอาหารของคนในย่านจริง ๆ ไกลจากเส้นทางนักท่องเที่ยว"),
       h("🍛", "ratchathewi", "Ban Khrua", "ชุมชนบ้านครัว", "Halal khao mok and silk weaving by the Saen Saep canal.", "ข้าวหมกฮาลาลและผ้าทอริมคลองแสนแสบ"),
     ],
   },

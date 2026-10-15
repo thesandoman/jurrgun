@@ -129,8 +129,8 @@ These are marked `verify: true` in `landmarks.ts` where they are landmarks.
 
 | # | Problem | Answers | Proposed fix | Why not fixed now |
 |---|---|---|---|---|
-| V1 | Krung Thep Aphiwat Central Terminal is most likely in **Chatuchak** district, not Bang Sue (the old Bang Sue station is) | 11 | Move to `chatuchak` and write 4 new Bang Sue answers (Bang Pho woodworking street, Bang Sue riverside) | Bang Sue would fall to 2 answers, below the minimum of 6 |
-| V2 | Chokchai 4 market is most likely in **Lat Phrao** district, not Wang Thonglang | 8 | Move to `lat_phrao`; give Wang Thonglang new answers (the Chao Phraya Bodindecha house museum is unused) | Wang Thonglang would fall to 0 |
+| V1 | **Fixed (owner, Q-D2).** Krung Thep Aphiwat Central Terminal moved to `chatuchak` (7 answers); 4 answers rewritten to Bang Sue places (Bang Pho lanes, Gateway at Bangsue, the Rama VII riverside) so Bang Sue keeps 6 | 11 | done | |
+| V2 | **Fixed (owner, Q-D2).** Chokchai 4 market moved to `lat_phrao` (2 answers and the BFSH hangout); 6 answers rewritten around Wat Thepleela and its Khlong Saen Saep pier so Wang Thonglang keeps 6. Wat Thepleela and Gateway at Bangsue are marked verify | 8 | done | |
 | V3 | Brown Sugar jazz bar is listed as "Chinatown" in Pom Prap; it moved to Phra Sumen Road (Phra Nakhon) years ago and may have moved again | 3 | Confirm where it is now, then fix the district and the "(Chinatown)" label | not sure of today's address |
 | V4 | Jodd Fairs Ratchada: the market has moved more than once (Rama 9, then DanNeramit in Chatuchak) | 7 + 2 hangouts | Confirm which Jodd Fairs runs now; switch to Jodd Fairs DanNeramit (`chatuchak`) if Ratchada is gone | not sure it is open |
 | V5 | Can you ride a bike on the Benjakitti skywalk and over Rama VIII Bridge? | photo BDMN, longweekend BDMN | Change to walking if not | rules not confirmed |

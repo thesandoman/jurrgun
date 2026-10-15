@@ -96,7 +96,7 @@ export const RHYTHM: Scenario[] = [
     answers: {
       BDMN: a("🦒", "khlong_sam_wa", "Safari World at 9 am opening, first through the gate with a whole carful of cousins", "ไปซาฟารีเวิลด์ 9 โมงเช้าตอนเปิด เข้าประตูเป็นคันแรกพร้อมญาติเต็มรถ", -1),
       BDMH: a("🏮", "samphanthawong", "The whole family on a 9 pm walk through Talat Noi's lit lanes, somewhere none of you know", "ทั้งบ้านเดินเล่น 3 ทุ่มในซอยตลาดน้อยที่เปิดไฟ มุมที่ไม่มีใครเคยไป", 1),
-      BDSN: a("🚉", "bang_sue", "An early 8 am table for the whole clan at a new café inside Krung Thep Aphiwat station", "โต๊ะ 8 โมงเช้าสำหรับทั้งบ้านที่คาเฟ่เปิดใหม่ในสถานีกลางกรุงเทพอภิวัฒน์", -1),
+      BDSN: a("🚉", "chatuchak", "An early 8 am table for the whole clan at a new café inside Krung Thep Aphiwat station", "โต๊ะ 8 โมงเช้าสำหรับทั้งบ้านที่คาเฟ่เปิดใหม่ในสถานีกลางกรุงเทพอภิวัฒน์", -1),
       BDSH: a("🍢", "bang_kapi", "The whole family at 9 pm on a Ramkhamhaeng street-food lane none of you have tried", "ทั้งครอบครัวไปซอยสตรีทฟู้ดรามคำแหงตอน 3 ทุ่ม ซอยที่ไม่มีใครเคยไป", 1),
       BFMN: a("🏟️", "bang_kapi", "A 7 am family fun run at Rajamangala Stadium, the same group of families every month", "งานวิ่งฟันรันครอบครัว 7 โมงเช้าที่ราชมังคลาฯ กลุ่มครอบครัวเดิมทุกเดือน", -1),
       BFMH: a("🎠", "chatuchak", "The family's yearly Kaset Fair night at Kasetsart, rides, games and food stalls till 10 pm", "คืนงานเกษตรแฟร์ประจำปีของครอบครัว เล่นเครื่องเล่น เกม ร้านอาหาร อยู่ถึง 4 ทุ่ม", 1),
@@ -136,7 +136,7 @@ export const RHYTHM: Scenario[] = [
       CFMN: a("🌅", "khlong_toei", "Sunrise laps with one friend on Benjakitti's skywalk, the same route every Sunday", "วิ่งกับเพื่อนสักคนตอนพระอาทิตย์ขึ้นบนสกายวอล์กเบญจกิติ เส้นเดิมทุกวันอาทิตย์", -1),
       CFMH: a("🏮", "bangkok_noi", "Your usual 9 pm walk with one friend through Wang Lang's back lanes, the same loop every week", "เดินกับเพื่อนสักคนตอน 3 ทุ่มในซอยหลังวังหลัง เส้นเดิมทุกสัปดาห์", 1),
       CFSN: a("🎲", "bang_na", "Late-night board games with two friends at your usual Udom Suk café, past 11 pm", "เล่นบอร์ดเกมดึก ๆ กับเพื่อนสองคนที่คาเฟ่ประจำแถวอุดมสุข เลย 5 ทุ่ม", 1),
-      CFSH: a("🥣", "wang_thonglang", "Your usual 7 am jok with one old friend at the same Chokchai 4 market stall", "โจ๊ก 7 โมงเช้ากับเพื่อนเก่าคนหนึ่งที่ร้านเจ้าประจำในตลาดโชคชัย 4", -1),
+      CFSH: a("🥣", "wang_thonglang", "Your usual 7 am jok with one old friend at the same stall by the Wat Thepleela pier", "โจ๊ก 7 โมงเช้ากับเพื่อนเก่าคนหนึ่งที่ร้านเจ้าประจำแถวท่าเรือวัดเทพลีลา", -1),
     },
   },
   {
@@ -148,7 +148,7 @@ export const RHYTHM: Scenario[] = [
     tone: "evening",
     mood: "personality",
     answers: {
-      BDMN: a("🚉", "bang_sue", "A 6 am birthday ride with the whole crowd to a new pop-up breakfast near Krung Thep Aphiwat", "ปั่นวันเกิด 6 โมงเช้ากับทั้งแก๊ง ไปมื้อเช้าป๊อปอัปใหม่แถวสถานีกลางกรุงเทพอภิวัฒน์", -1),
+      BDMN: a("🚉", "chatuchak", "A 6 am birthday ride with the whole crowd to a new pop-up breakfast near Krung Thep Aphiwat", "ปั่นวันเกิด 6 โมงเช้ากับทั้งแก๊ง ไปมื้อเช้าป๊อปอัปใหม่แถวสถานีกลางกรุงเทพอภิวัฒน์", -1),
       BDMH: a("🛶", "taling_chan", "A 7 am group paddle through Taling Chan's canals, a stretch none of you have seen", "พายเรือเป็นกลุ่ม 7 โมงเช้าในคลองตลิ่งชัน ช่วงที่ไม่มีใครเคยเห็น", -1),
       BDSN: a("🌆", "sathon", "The after-party at a new Sathon rooftop, a midnight crowd, a DJ and mocktails", "อาฟเตอร์ปาร์ตี้บนรูฟท็อปใหม่ย่านสาทร คนแน่นตอนเที่ยงคืน มีดีเจกับม็อกเทล", 1),
       BDSH: a("🥘", "thung_khru", "A 7 am feast for the whole party at a Pracha Uthit market stall none of you have tried", "มื้อเช้า 7 โมงสำหรับทุกคนในงานที่ร้านในตลาดประชาอุทิศที่ยังไม่มีใครลอง", -1),
@@ -156,7 +156,7 @@ export const RHYTHM: Scenario[] = [
       BFMH: a("🪘", "min_buri", "Ramwong with the whole neighbourhood at the yearly Min Buri old-market fair, dancing till 11 pm", "รำวงกับคนทั้งย่านในงานประจำปีตลาดเก่ามีนบุรี เต้นจน 5 ทุ่ม", 1),
       BFSN: a("🎤", "huai_khwang", "Midnight karaoke with the whole crew at your usual room in Huai Khwang", "ร้องคาราโอเกะเที่ยงคืนกับทั้งแก๊งที่ห้องประจำในห้วยขวาง", 1),
       BFSH: a("🍲", "sai_mai", "The 7 am birthday breakfast at the same Wongsakorn Market stall, everyone squeezed in", "มื้อเช้าวันเกิด 7 โมงที่ร้านเจ้าเดิมในตลาดวงศกร สายไหม ทุกคนนั่งเบียดกัน", -1),
-      CDMN: a("✨", "bang_sue", "A 10 pm walk for two around the lit-up plaza of Krung Thep Aphiwat, a part you've never explored", "เดินสองคน 4 ทุ่มรอบลานสถานีกลางกรุงเทพอภิวัฒน์ที่เปิดไฟ มุมที่ยังไม่เคยสำรวจ", 1),
+      CDMN: a("✨", "bang_sue", "A 10 pm walk for two on the Bang Sue riverside under the lit-up Rama VII Bridge, a stretch you've never explored", "เดินสองคน 4 ทุ่มริมน้ำบางซื่อใต้สะพานพระราม 7 ที่เปิดไฟ ช่วงที่ยังไม่เคยไป", 1),
       CDMH: a("🌾", "nong_chok", "A sunrise walk for two through the rice fields of Nong Chok, down a farm lane neither of you knows", "เดินสองคนตอนพระอาทิตย์ขึ้นในทุ่งนาหนองจอก เข้าทางในสวนที่ทั้งสองคนไม่รู้จัก", -1),
       CDSN: a("🥐", "sathon", "A quiet 7 am pastry with one friend at a new café beside Chong Nonsi Canal Park", "ขนมอบเงียบ ๆ 7 โมงเช้ากับเพื่อนสักคนที่คาเฟ่ใหม่ข้างสวนคลองช่องนนทรี", -1),
       CDSH: a("🍜", "phasi_charoen", "A 10 pm quiet bowl with one friend at a Khlong Phasi Charoen shop you've never tried", "ก๋วยเตี๋ยวเงียบ ๆ 4 ทุ่มกับเพื่อนสักคนที่ร้านริมคลองภาษีเจริญที่ยังไม่เคยลอง", 1),

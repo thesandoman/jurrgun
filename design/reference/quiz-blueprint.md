@@ -2,6 +2,15 @@
 
 *Quiz chat, 2026-10-15. Builds on [quiz-audit.md](quiz-audit.md). How to write one scenario is in `src/vibe/bank/WRITING.md`; this file says what the whole bank should become, the checklist every new scenario must pass, and how new question formats will score. Approvals go through the Branding chat (project-state.md).*
 
+## 0. Owner decisions (2026-10-15, choice cards in the Quiz chat)
+
+| # | Question | Owner's answer | What it means for the work |
+|---|---|---|---|
+| Q-D1 | Where do the 9 romance `date` scenarios go? | "flexible. if both users prefer to be friends" | Date scenarios stay, but must work both ways: as a date for members who chose Open to something more, and as a one-to-one friendship meetup when both people prefer to be friends. Q5 decides the mechanism (for example a friendship wording of each prompt, shown to friends-only members). **The Branding chat should confirm this reading.** |
+| Q-D2 | Fix the two places in the wrong district now? | Fix both now | Done: Krung Thep Aphiwat moved to Chatuchak, Chokchai 4 to Lat Phrao; Bang Sue and Wang Thonglang got new answers (Bang Pho lanes, Gateway at Bangsue, the Rama VII riverside; Wat Thepleela and its Saen Saep pier) |
+| Q-D3 | Which new formats? | "something BKK related + this or that + would you + letter association + more categories" | Build: a Bangkok-themed format (for example pick a place photo, a BTS or MRT stop, or a street-food dish), this or that (2.5 B), would you rather (2.5 F, the letter duel), letter association (pick the word, sound or picture you link with a moment; scores one letter, like F), and more question categories (new contexts and moments beyond the seven). The interactive formats chat builds them; scoring follows section 4 |
+| Q-D4 | Use the new tags to choose questions? | Prefer in-season, Segment questions, Table Host set | All three approved: prefer in-season scenarios by `months`, show `audience` scenarios by the member's segment, and give Table Hosts the `table-host` set. Q5 wires them into the generator |
+
 ## 1. Why 200
 
 Today a session draws 16 of 35 core scenarios, a friends-only member has 28 to draw from, and the 2 meetup questions come from a pool of 3. With 200 scenarios:
@@ -71,7 +80,7 @@ Some scenarios are only for members in a set. The structure is in place (`Scenar
 | `open-to-more` | only members who switched on 💘 Open to something more (D4) | 26 (the whole `date` row in 2.1) | dating moments; red only on these screens (D9); never shown or hinted to anyone else |
 | `table-host` | Table Hosts (เจ้าภาพโต๊ะ) of a Regular Table (โต๊ะประจำ) | 10 (taken from the meetup and party rows) | hosting moments: welcoming a newcomer to the table, choosing the next spot |
 
-**Open conflict for Q5 and the Branding chat:** the 9 `date` scenarios in today's bank (7 core, 1 rhythm, 1 plan) are romance, and they are shown to every member who is not friends-only. Under "no romance in the core quiz" they belong in `open-to-more`. They are left untagged here so Q5 can move them together with the generator change. In 2.1 the `date` row is the open-to-more set; one-to-one friendship moments belong under meetup or friends.
+**Owner decision Q-D1 (section 0) replaces this note: date scenarios become flexible, working as a date or as a friendship meetup.** The earlier note: the 9 `date` scenarios in today's bank (7 core, 1 rhythm, 1 plan) are romance, and they are shown to every member who is not friends-only. Under "no romance in the core quiz" they belong in `open-to-more`. They are left untagged here so Q5 can move them together with the generator change. In 2.1 the `date` row is the open-to-more set; one-to-one friendship moments belong under meetup or friends.
 
 `audience` (segment flavour) and `set` combine: a scenario can be for newcomers in the open-to-more set.
 
@@ -156,7 +165,7 @@ The letter checks look for words, so they are generous on purpose. If an answer 
 
 1. **Letter by letter.** Read the four letters aloud against the answer. B: is it with a group or a busy place? C: alone or one or two people? D: new to you? F: your usual? M: are you moving (walking, riding, dancing, playing, making something)? Sitting on a boat, watching a show or floating a krathong is not M. S: sitting, eating, talking, watching? N: modern, creative, a new venue? H: old Bangkok (temples, old markets, canals, shophouses, old recipes, traditional crafts)? A mall food court is not H. A plain park is weak N and weak H; give it a detail that says which.
 2. **Would a real person do this?** Right time of day for the dish (no dim sum at midnight), the place is open then (museums close in the late afternoon), it is the right season, it costs what the answer says, and the thing is possible there (no seats on an orchid farm, check whether bikes are allowed).
-3. **Is the place real and in that district?** Check the district key against where the place actually is, not the name of the nearest station (Benjasiri Park is in Khlong Toei, not Watthana; Krung Thep Aphiwat is most likely in Chatuchak, not Bang Sue). If unsure, use a landmark from `landmarks.ts` or add it with `verify: true` and list it for the owner. Do not call somewhere "new" if it opened more than a year ago.
+3. **Is the place real and in that district?** Check the district key against where the place actually is, not the name of the nearest station (Benjasiri Park is in Khlong Toei, not Watthana; Krung Thep Aphiwat is in Chatuchak, not Bang Sue). If unsure, use a landmark from `landmarks.ts` or add it with `verify: true` and list it for the owner. Do not call somewhere "new" if it opened more than a year ago.
 4. **Do the Thai and English say the same thing?** Same place, same people, same time, same numbers. The Thai is written Thai first (thai-voice.md), short and spoken, not a translation.
 5. **Who is it for?** Works for any gender, age 23 to 32 and up, no assumption that the member has children or a partner (say "your young cousin", not "your kid"), works on a small budget, and someone new to the city can picture it.
 6. **Is it fresh?** Not the same idea or place this type already has too often (P4 to P6). Read the type's other answers before writing.
@@ -193,7 +202,7 @@ Session guard rails (checked in the generator tests):
 
 - **No database change.** Results are stored as the vector, the blend and the seen question ids (`social_vibes`); single answers are never stored, and none of that changes shape.
 - **Code change:** `Question.format` gains the new values; the answer for C and D becomes two option indices instead of one; `scoreSession` moves to weighted votes; the quiz page renders the new formats. The current results must not shift: pick-one sessions must score exactly as today (a test pins this).
-- **Needs the owner's yes (through Branding)** before building: the new formats on screen (they change how the quiz feels), using `months` to prefer in-season scenarios, and showing `audience` scenarios by segment.
+- **Approved by the owner** (section 0, Q-D3 and Q-D4): this or that, would you rather, letter association, a Bangkok-themed format and more categories; preferring in-season scenarios, segment questions and the Table Host set.
 
 ## 5. How to get there
 

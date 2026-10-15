@@ -90,6 +90,7 @@ const PLACE_PAIRS: [RegExp, string][] = [
   [/Khlong Toei Market/, "ตลาดคลองเตย"], [/Udom Suk/, "อุดมสุข"], [/Bang Khen/, "บางเขน"], [/Bang Sue|Bang Pho/, "บางซื่อ|บางโพ|อภิวัฒน์"],
   [/Saen Saep/, "แสนแสบ"], [/Khlong Bangkok Yai/, "บางกอกใหญ่"], [/Bangkok Noi/, "บางกอกน้อย"], [/Kaset/, "เกษตร"], [/Khao San/, "ข้าวสาร"],
   [/Phraeng Phuthon/, "แพร่งภูธร"], [/Warehouse 30/, "Warehouse 30"], [/Thailand Cultural Centre/, "ศูนย์วัฒนธรรม"], [/Huai Khwang/, "ห้วยขวาง"],
+  [/Thepleela/, "เทพลีลา"], [/Gateway at Bangsue/, "เกตเวย์"], [/Rama VII\b/, "พระราม 7"],
 ];
 
 export type BankCheck = { errors: string[]; warnings: string[]; districts: { counts: Map<string, number>; missing: string[] } };
