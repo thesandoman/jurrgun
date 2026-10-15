@@ -11,6 +11,7 @@
  * here so the routes and the tests share one set of rules.
  */
 import { createRng, shuffle } from "../vibe/rng";
+import { cleanStyle, type StyleCard } from "../vibe/styles";
 import { universityById, universityByName, universityName } from "./universities";
 
 export type L2 = { th: string; en: string };
@@ -1271,7 +1272,7 @@ export function currentDatingDeck(accountId: string, bio: Bio | null | undefined
 /** The bio with every dating prompt and answer removed (romance mode switched off). */
 export function withoutDating(bio: Bio): Bio {
   const answers = Object.fromEntries(Object.entries(bio.answers ?? {}).filter(([id]) => !DATING_BY_ID.has(id)));
-  const { datingDeck: _drop, ...rest } = bio;
+  const { datingDeck: _drop, dateStyle: _style, ...rest } = bio;
   return { ...rest, answers, skipped: (bio.skipped ?? []).filter((id) => !DATING_BY_ID.has(id)) };
 }
 
@@ -1347,6 +1348,10 @@ export type Bio = {
   deck?: string[];
   /** Dating prompts (romance mode only), answered in `answers` like the rest. */
   datingDeck?: string[];
+  /** "How you date" from the quiz's Open to something more set (romance mode only; vibe/styles.ts). */
+  dateStyle?: StyleCard;
+  /** "How you host" from the quiz's Table Host set (vibe/styles.ts). */
+  hostStyle?: StyleCard;
   /** Prompts swapped away, so shuffling doesn't bring them straight back. */
   skipped?: string[];
   answers?: Record<string, Answer>;
@@ -1466,6 +1471,10 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.energyPrev)) out.energyPrev = s(b.energyPrev);
   if (strs(b.deck)) out.deck = strs(b.deck);
   if (strs(b.datingDeck)) out.datingDeck = strs(b.datingDeck);
+  const dateStyle = cleanStyle("date", b.dateStyle);
+  if (dateStyle) out.dateStyle = dateStyle;
+  const hostStyle = cleanStyle("host", b.hostStyle);
+  if (hostStyle) out.hostStyle = hostStyle;
   if (strs(b.skipped)) out.skipped = strs(b.skipped);
   if (b.answers && typeof b.answers === "object") out.answers = b.answers as Record<string, Answer>;
   return out;

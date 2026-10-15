@@ -20,7 +20,11 @@ import { getDb } from "../db";
 import type { AppEnv } from "../lib/env";
 import { L, type Lang } from "../lib/i18n";
 import { requireUser } from "../lib/session";
-import { datingIntents, vibes } from "../schema";
+import { profiles, vibes } from "../schema";
+import { cleanBio } from "../content/profile";
+import { romanceEligible } from "../domain/rules";
+import { segmentOf } from "../domain/segment";
+import { styleLines } from "../vibe/styles";
 import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
 import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, POLES } from "../vibe/content";
@@ -50,7 +54,19 @@ const districtName = (lang: Lang, key: string) => {
   const d = DISTRICTS.find((x) => x.value === key);
   return d ? (lang === "en" ? d.en : d.th) : key;
 };
-import { generateSession, itemScore, scoreSession, strengthOf, type Answers, type Personal, type Question } from "../vibe/generator";
+import {
+  generateSession,
+  generateStyleQuestions,
+  isStyleQuestion,
+  itemScore,
+  scoreSession,
+  strengthOf,
+  styleOf,
+  typeQuestions,
+  type AnyQuestion,
+  type Answers,
+  type Personal,
+} from "../vibe/generator";
 
 export const quizRoutes = new Hono<AppEnv>();
 
@@ -74,25 +90,45 @@ export function quizSeed(accountId: string, row: Pick<VibeRow, "seen"> | null): 
 
 /**
  * The member's session: 20 hand-written scenarios, with one or two answers
- * set near their home district when known, so even the same seed reads differently
- * for different people.
+ * set near their home district when known and some prompts told through their
+ * Bangkok story, then the style questions their profile calls for (generator.ts).
+ * The POST rebuilds it from the same seed and profile inputs to score it.
  */
-export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal, friendsOnly = false): Question[] {
-  return generateSession({ seed, seen: new Set(row?.seen ?? []), personal, friendsOnly });
+export function quizQuestions(seed: string, row: Pick<VibeRow, "seen"> | null, personal?: Personal): AnyQuestion[] {
+  const options = { seed, seen: new Set(row?.seen ?? []), personal };
+  return [...generateSession(options), ...generateStyleQuestions(options)];
 }
 
-/** Members who said "friends only" never get date scenarios. */
-export async function isFriendsOnly(env: AppEnv["Bindings"], accountId: string): Promise<boolean> {
-  const [row] = await getDb(env).select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, accountId)).limit(1);
-  return row?.mode === "friends";
-}
+type PersonalProfile = {
+  district?: string | null;
+  languages?: readonly string[] | null;
+  interests?: readonly string[] | null;
+  newcomer?: boolean;
+  bio?: unknown;
+  relationship?: string;
+  romanceOn?: boolean;
+};
 
-/** Personalisation from a profile (null before onboarding basics). */
-export function personalOf(profile: { district?: string | null; interests?: readonly string[] | null } | null | undefined): Personal | undefined {
+/**
+ * The profile inputs the quiz uses (null before onboarding basics): home
+ * district, segment (D7), 💘 Open to something more (romanceEligible: single
+ * and switched on), Table Host (role circle_head), and language (Task 10):
+ * members who don't list Thai, or who are here from abroad, get plain-English
+ * wording. Thai text never changes, so the UI language itself isn't needed.
+ */
+export function personalOf(profile: PersonalProfile | null | undefined, role?: string): Personal | undefined {
   if (!profile) return undefined;
   const interests = Array.isArray(profile.interests) ? profile.interests.filter((x): x is string => typeof x === "string") : [];
-  if (!profile.district) return undefined;
-  return { district: profile.district, interests };
+  const segment = segmentOf({ newcomer: !!profile.newcomer, bio: profile.bio });
+  const speaksThai = Array.isArray(profile.languages) && profile.languages.includes("th");
+  return {
+    district: profile.district || null,
+    interests,
+    segment,
+    explainLocal: segment === "international" || !speaksThai,
+    openToMore: romanceEligible({ relationship: profile.relationship ?? "", romanceOn: !!profile.romanceOn }),
+    tableHost: role === "circle_head",
+  };
 }
 
 /** "The Connector" → "connector": readable, shareable URLs. */
@@ -112,7 +148,7 @@ export function isArchetype(key: string): key is ArchetypeKey {
 
 // ------------------------------------------------------------ the quiz --
 
-function AnswerField(props: { v: View; q: Question; i: number }) {
+function AnswerField(props: { v: View; q: AnyQuestion; i: number }) {
   const { lang } = props.v;
   return (
     <div class="answers answers-six">
@@ -123,9 +159,42 @@ function AnswerField(props: { v: View; q: Question; i: number }) {
   );
 }
 
+/** The label above a style question, so it's clear it's a short extra and not part of the type. */
+function StyleLabel(props: { v: View; q: AnyQuestion }) {
+  const { t } = props.v;
+  if (!isStyleQuestion(props.q)) return null;
+  return props.q.set === "date" ? (
+    <span class="q-set q-set-date">💘 {t("เปิดใจมากกว่าเพื่อน · ไม่มีผลกับไทป์", "Open to something more · doesn't change your type")}</span>
+  ) : (
+    <span class="q-set">🍽️ {t("เจ้าภาพโต๊ะ · ไม่มีผลกับไทป์", "Table Host · doesn't change your type")}</span>
+  );
+}
+
+const STYLE_SET_CSS = `.q-set{display:inline-block;font-size:.82rem;border-radius:999px;padding:2px 10px;margin:0 8px 8px 0;background:var(--brand-soft);color:var(--brand)}
+.q-set-date{background:var(--love-soft);color:var(--love-ink)}`;
+
+/** "How you host", from the Table Host questions, on the host's own result. */
+function HostStyle(props: { v: View; bio: unknown }) {
+  const { t, lang } = props.v;
+  const lines = styleLines("host", cleanBio(props.bio).hostStyle, lang);
+  if (!lines.length) return null;
+  return (
+    <Card>
+      <h2>🍽️ {t("สไตล์เจ้าภาพโต๊ะของคุณ", "How you host")}</h2>
+      <ul>
+        {lines.map((x) => (
+          <li>
+            <span aria-hidden="true">{x.emoji}</span> {x.title}: <b>{x.label}</b>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 export function QuizFlow(props: {
   v: View;
-  questions: Question[];
+  questions: AnyQuestion[];
   seed: string;
   next: string;
   stage?: Stage;
@@ -157,7 +226,7 @@ export function QuizFlow(props: {
         ) : undefined
       }
     >
-      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS }} />
       <FlowStep
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
@@ -173,6 +242,7 @@ export function QuizFlow(props: {
       {props.questions.map((q, i) => (
         <FlowStep title={L(lang, q.prompt)} auto class="q q-choice">
           <QuestionArt art={q.art} lang={lang} />
+          <StyleLabel v={props.v} q={q} />
           {i === 0 ? <span class="tap-hint">👆 {t("แตะคำตอบที่ตรงกับคุณที่สุด", "Tap the answer that's most you")}</span> : null}
           <span class="muted q-count">
             {i + 1} / {n}
@@ -189,7 +259,7 @@ export function QuizFlow(props: {
  * A question left blank is just unanswered; anything else that isn't a valid
  * option goes into `invalid` so the route can answer 400.
  */
-export function parseAnswers(body: Record<string, unknown>, questions: Question[]): { answers: Answers; invalid: number[] } {
+export function parseAnswers(body: Record<string, unknown>, questions: AnyQuestion[]): { answers: Answers; invalid: number[] } {
   const answers: Answers = {};
   const invalid: number[] = [];
   questions.forEach((q, i) => {
@@ -202,7 +272,7 @@ export function parseAnswers(body: Record<string, unknown>, questions: Question[
   return { answers, invalid };
 }
 
-export function answersFrom(body: Record<string, unknown>, questions: Question[]): Answers {
+export function answersFrom(body: Record<string, unknown>, questions: AnyQuestion[]): Answers {
   return parseAnswers(body, questions).answers;
 }
 
@@ -544,7 +614,7 @@ quizRoutes.get("/quiz", async (c) => {
   return page(
     c,
     { title: v.t("ไทป์กรุงเทพฯ", "Bangkok Type"), bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row, personalOf(user.profile), await isFriendsOnly(c.env, user.account.id))} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
+    <QuizFlow v={v} questions={quizQuestions(seed, row, personalOf(user.profile, user.account.role))} seed={seed} next="/quiz/result" close={row ? "/quiz/result" : "/settings"} />,
   );
 });
 
@@ -565,10 +635,12 @@ quizRoutes.post("/quiz", async (c) => {
       </>,
     );
   }
-  // The onboarding quiz (onboarding.tsx) is built without personalisation; match it.
-  const questions = quizQuestions(seed, row, next === "/onboarding/type" ? undefined : personalOf(user.profile), await isFriendsOnly(c.env, user.account.id));
+  // The onboarding quiz (onboarding.tsx) is built without profile inputs, only plain English for English readers; match it.
+  const personal = next === "/onboarding/type" ? (v.lang === "en" ? { explainLocal: true } : undefined) : personalOf(user.profile, user.account.role);
+  const questions = quizQuestions(seed, row, personal);
   const { answers, invalid } = parseAnswers(body, questions);
-  const result = scoreSession(questions, answers);
+  // Only the 20 type questions score: style answers never move the type.
+  const result = scoreSession(typeQuestions(questions), answers);
   if (invalid.length > 0 || result.answered < MIN_ANSWERED) {
     const bad = invalid[0];
     const error =
@@ -598,10 +670,29 @@ quizRoutes.post("/quiz", async (c) => {
   const blend: TypeResult = { types, unsure: result.unsure, consistency: result.consistency, margin: result.margin };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);
   const values = { vector: result.vector, archetype, modifier, blend, seen, takenAt: new Date() };
-  await getDb(c.env)
+  const db = getDb(c.env);
+  await db
     .insert(vibes)
     .values({ accountId: user.account.id, ...values })
     .onConflictDoUpdate({ target: vibes.accountId, set: values });
+  // Style cards go on the profile, merged with earlier answers. "How you date" is
+  // romance data, so it lives in the bio and is cleared with romance mode (withoutDating).
+  const dateStyle = personal?.openToMore ? styleOf(questions, answers, "date") : {};
+  const hostStyle = personal?.tableHost ? styleOf(questions, answers, "host") : {};
+  if (user.profile && (Object.keys(dateStyle).length || Object.keys(hostStyle).length)) {
+    const bio = cleanBio(user.profile.bio);
+    await db
+      .update(profiles)
+      .set({
+        bio: {
+          ...bio,
+          ...(Object.keys(dateStyle).length ? { dateStyle: { ...bio.dateStyle, ...dateStyle } } : {}),
+          ...(Object.keys(hostStyle).length ? { hostStyle: { ...bio.hostStyle, ...hostStyle } } : {}),
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.accountId, user.account.id));
+  }
   return c.redirect(`${next}?new=1`);
 });
 
@@ -626,6 +717,7 @@ quizRoutes.get("/quiz/result", async (c) => {
       visibilityNext="/quiz/result"
       retake={member}
     />
+    {user.account.role === "circle_head" && user.profile ? <HostStyle v={v} bio={user.profile.bio} /> : null}
     </>,
   );
 });

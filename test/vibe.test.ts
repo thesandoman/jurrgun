@@ -64,10 +64,14 @@ describe("generateSession", () => {
     }
   });
 
-  it("mixes who you're with: the context minimums hold in every session", () => {
+  it("mixes who you're with: the context minimums hold in every session (date only for opted-in members)", () => {
     for (let i = 0; i < 300; i++) {
-      const core = session(`ctx${i}`).filter((q) => q.kind === "core");
-      for (const [ctx, min] of Object.entries(CONTEXT_MIN)) expect(core.filter((q) => q.context === ctx).length, ctx).toBeGreaterThanOrEqual(min);
+      const openToMore = i % 2 === 0;
+      const core = session(`ctx${i}`, { personal: { openToMore } }).filter((q) => q.kind === "core");
+      for (const [ctx, min] of Object.entries(CONTEXT_MIN)) {
+        if (ctx === "date" && !openToMore) continue;
+        expect(core.filter((q) => q.context === ctx).length, ctx).toBeGreaterThanOrEqual(min);
+      }
     }
   });
 
@@ -217,17 +221,21 @@ describe("scoring and the margin of error", () => {
   });
 });
 
-describe("friends-only quizzes", () => {
-  it("never show a date scenario, and still ask 20 questions", async () => {
+describe("romance in the core quiz", () => {
+  it("never shows a date scenario unless the member opted into Open to something more, and still asks 20 questions", async () => {
     const { generateSession, QUIZ_LENGTH } = await import("../src/vibe/generator");
     const { SCENARIOS } = await import("../src/vibe/scenarios");
     const ctxOf = new Map(SCENARIOS.map((s) => [s.id, s.context]));
     for (let i = 0; i < 40; i++) {
-      const qs = generateSession({ seed: `f${i}`, friendsOnly: true });
-      expect(qs).toHaveLength(QUIZ_LENGTH);
-      expect(qs.some((q) => ctxOf.get(q.id.split(".")[0]) === "date")).toBe(false);
+      for (const qs of [generateSession({ seed: `f${i}` }), generateSession({ seed: `f${i}`, personal: { district: "bang_rak", segment: "newcomer", tableHost: true } })]) {
+        expect(qs).toHaveLength(QUIZ_LENGTH);
+        expect(qs.some((q) => ctxOf.get(q.id.split(".")[0]) === "date")).toBe(false);
+      }
     }
-    // Everyone else still gets some.
-    expect(generateSession({ seed: "f0" }).some((q) => ctxOf.get(q.id.split(".")[0]) === "date")).toBe(true);
+    // Opted-in members still get some, at least the context minimum.
+    for (let i = 0; i < 10; i++) {
+      const qs = generateSession({ seed: `f${i}`, personal: { openToMore: true } });
+      expect(qs.filter((q) => q.context === "date").length).toBeGreaterThanOrEqual(3);
+    }
   });
 });

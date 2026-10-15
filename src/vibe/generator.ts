@@ -19,17 +19,40 @@
  *   - every type is offered 7 or 8 times;
  *   - scenarios the person has already seen are avoided where possible.
  *
+ * Who the member is (Personal) shapes the session without changing how types
+ * are scored:
+ *   - romance: date scenarios only for members who opted into 💘 Open to
+ *     something more; everyone else gets none;
+ *   - style sets (styles.ts, generateStyleQuestions): 4 "how you date"
+ *     questions for opted-in members and 2 "how you host" questions for Table
+ *     Hosts, after the 20. They are their own question type with no type
+ *     codes, and scoreSession only takes the 20, so they never move the type;
+ *   - segment flavour: local, newcomer or international members see some
+ *     prompts told through their own Bangkok story (bank/segment-prompts.ts),
+ *     with the same answers;
+ *   - language flavour (Task 10, bank/plain-english.ts): members who don't
+ *     speak Thai get local words explained and a few expat moments, in the
+ *     English only. It never changes which questions or answers appear, and
+ *     it stays out of the seed, so switching language mid-quiz is safe.
+ *
  * Scoring allows for a margin of error: people are subjective, so a letter
  * only counts as clear when it is clear beyond the margin (see scoreSession).
  */
 
 import { CATEGORIES, POLES, type Category, type Pole, type Text } from "./content";
+import type { Segment } from "../domain/segment";
+import { SEGMENT_PROMPTS } from "./bank/segment-prompts";
+import { EXPAT_PROMPTS, explainLocal } from "./bank/plain-english";
 import { createRng, hashString, shuffle, type Rng } from "./rng";
 import { codePoles, oppositeCode, SCENARIOS, TYPE_CODES, type Context, type Kind, type Scenario, type TypeCode } from "./scenarios";
+import { STYLE_DIMENSIONS, STYLE_SCENARIOS, type StyleCard, type StyleScenario, type StyleSet } from "./styles";
 import type { Art } from "./visuals";
 
 export const QUIZ_LENGTH = 20;
 export const OPTIONS_PER_QUESTION = 6;
+/** Style questions after the 20: one per "how you date" dimension, two "how you host". */
+export const DATE_STYLE_ITEMS = Object.keys(STYLE_DIMENSIONS.date).length;
+export const HOST_STYLE_ITEMS = 2;
 const CORE_ITEMS = 16;
 const FLAVOUR_ITEMS = 2; // per flavour kind (rhythm, plan)
 const TWIN_PAIRS = 2;
@@ -53,19 +76,52 @@ export type Question = {
   art: Art;
 };
 
+/** A style question (styles.ts): its answers fill a style card and carry no type code. */
+export type StyleOption = { label: Text; icon: string; style: string };
+export type StyleQuestion = {
+  id: string;
+  format: "choice";
+  scenario: string;
+  kind: "style";
+  set: StyleSet;
+  dimension: string;
+  prompt: Text;
+  options: StyleOption[];
+  art: Art;
+};
+
+/** Everything the quiz form shows: the 20 type questions, then any style questions. */
+export type AnyQuestion = Question | StyleQuestion;
+export const isStyleQuestion = (q: AnyQuestion): q is StyleQuestion => q.kind === "style";
+/** The type questions only, for scoreSession. */
+export const typeQuestions = (qs: AnyQuestion[]): Question[] => qs.filter((q): q is Question => !isStyleQuestion(q));
+
 /** What the browser gets: no type, no district, nothing to game. */
 export type PublicQuestion = { id: string; format: "choice"; prompt: Text; options: Text[]; icons: string[]; art: Art };
 
-/** Light personalisation: the person's home district leans one or two questions toward it. */
-export type Personal = { district?: string | null; interests?: readonly string[] | null };
+/**
+ * Who the member is. The home district leans one or two questions toward it;
+ * the rest choose which sets they see (see the top of this file). All of it
+ * goes into the seed, so the server rebuilds the same session to score it.
+ */
+export type Personal = {
+  district?: string | null;
+  interests?: readonly string[] | null;
+  /** local / newcomer / international (src/domain/segment.ts). */
+  segment?: Segment | null;
+  /** Opted into 💘 Open to something more (romanceEligible): date scenarios and the "how you date" set. */
+  openToMore?: boolean;
+  /** Hosts a Regular Table: the "how you host" set. */
+  tableHost?: boolean;
+  /** Doesn't speak Thai, or here from abroad: plain-English wording (bank/plain-english.ts). Wording only, never in the seed. */
+  explainLocal?: boolean;
+};
 
 export type SessionOptions = {
   seed: string;
   /** Question ids this user has already answered; their scenarios are avoided where possible. */
   seen?: ReadonlySet<string>;
   personal?: Personal;
-  /** Here for friends only: no date scenarios at all. */
-  friendsOnly?: boolean;
 };
 
 /** The 8 opposite pairs, e.g. [BDSH, CFMN], keyed by their B-side code. */
@@ -85,8 +141,8 @@ const HOME_SCENARIOS = 2;
 const nearHome = (home: string | null | undefined) => (s: Scenario) => !!home && TYPE_CODES.some((c) => s.answers[c].district === home);
 
 /** 16 core scenarios: two twin pairs, the context minimums, then anything. */
-function pickCore(rng: Rng, seen: ReadonlySet<string>, home?: string | null, friendsOnly = false): Scenario[] {
-  const core = SCENARIOS.filter((s) => s.kind === "core" && !(friendsOnly && s.context === "date"));
+function pickCore(rng: Rng, seen: ReadonlySet<string>, home: string | null | undefined, romance: boolean): Scenario[] {
+  const core = SCENARIOS.filter((s) => s.kind === "core" && (romance || s.context !== "date"));
   const twinPairs: [Scenario, Scenario][] = [];
   for (const s of core) {
     const t = s.twin ? core.find((x) => x.id === s.twin) : undefined;
@@ -107,7 +163,7 @@ function pickCore(rng: Rng, seen: ReadonlySet<string>, home?: string | null, fri
     }
   };
   for (const ctx of shuffle(rng, Object.keys(CONTEXT_MIN) as Context[])) {
-    if (friendsOnly && ctx === "date") continue;
+    if (!romance && ctx === "date") continue;
     const need = CONTEXT_MIN[ctx] - chosen.filter((s) => s.context === ctx).length;
     for (let k = 0; k < need; k++) take(preferUnseen(rng, core.filter((s) => s.context === ctx && !has(s)), seen, prefer).slice(0, 1));
   }
@@ -179,11 +235,13 @@ function arrange(rng: Rng, list: Scenario[]): Scenario[] {
   return best;
 }
 
-function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][]): Question {
+function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][], p?: Personal): Question {
   const codes = shuffle(rng, pairs.flat());
+  const en = (x: string) => (p?.explainLocal ? explainLocal(x) : x);
+  const told = (p?.segment && SEGMENT_PROMPTS[sc.id]?.[p.segment]) || sc.prompt;
   const options: Option[] = codes.map((code) => {
     const a = sc.answers[code];
-    return { label: { en: a.en, th: a.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}) };
+    return { label: { en: en(a.en), th: a.th }, icon: a.icon, type: code, district: a.district, ...(a.flavour ? { flavour: a.flavour } : {}) };
   });
   return {
     id: `${sc.id}.${hashString(codes.join("")).toString(36)}`,
@@ -192,23 +250,52 @@ function buildQuestion(rng: Rng, sc: Scenario, pairs: [TypeCode, TypeCode][]): Q
     kind: sc.kind,
     context: sc.context,
     ...(sc.twin ? { twin: sc.twin } : {}),
-    prompt: sc.prompt,
+    prompt: { en: (p?.explainLocal && EXPAT_PROMPTS[sc.id]) || en(told.en), th: told.th },
     options,
     art: { tone: sc.tone, icons: [sc.icon], seed: hashString(sc.id + codes.join("")) },
   };
 }
 
+function buildStyleQuestion(rng: Rng, sc: StyleScenario, p?: Personal): StyleQuestion {
+  const answers = shuffle(rng, sc.answers);
+  const en = (x: string) => (p?.explainLocal ? explainLocal(x) : x);
+  return {
+    id: `${sc.id}.${hashString(answers.map((a) => a.value).join("")).toString(36)}`,
+    format: "choice",
+    scenario: sc.id,
+    kind: "style",
+    set: sc.set,
+    dimension: sc.dimension,
+    prompt: { en: en(sc.prompt.en), th: sc.prompt.th },
+    options: answers.map((a) => ({ label: { en: en(a.en), th: a.th }, icon: a.icon, style: a.value })),
+    art: { tone: sc.tone, icons: [sc.icon], seed: hashString(sc.id + answers.map((a) => a.value).join("")) },
+  };
+}
+
+/** One style scenario for each of `n` dimensions of the set (random dimensions when fewer than all). */
+function pickStyle(rng: Rng, set: StyleSet, n: number, seen: ReadonlySet<string>): StyleScenario[] {
+  const dimensions = shuffle(rng, Object.keys(STYLE_DIMENSIONS[set])).slice(0, n);
+  return dimensions.flatMap((d) => {
+    const list = STYLE_SCENARIOS.filter((s) => s.set === set && s.dimension === d);
+    const [first] = shuffle(rng, list).sort((a, b) => (seen.has(a.id) ? 1 : 0) - (seen.has(b.id) ? 1 : 0));
+    return first ? [first] : [];
+  });
+}
+
+/** Everything that changes which questions and answers appear, so the rebuild matches what the member saw. Language (explainLocal) only changes wording and is left out. */
 function personalKey(p: Personal | undefined): string {
-  return p?.district ? `|d=${p.district}` : "";
+  if (!p) return "";
+  return [p.district ? `|d=${p.district}` : "", p.segment ? `|s=${p.segment}` : "", p.openToMore ? "|r" : "", p.tableHost ? "|h" : ""].join("");
 }
 
 export function generateSession(options: SessionOptions): Question[] {
-  const key = personalKey(options.personal);
-  const rng = createRng(`bkk-type:${options.seed}${key}${options.friendsOnly ? ":f" : ""}`);
+  const p = options.personal;
+  const romance = !!p?.openToMore;
+  const rng = createRng(`bkk-type:${options.seed}${personalKey(p)}`);
   const seenScenarios = new Set([...(options.seen ?? [])].map(scenarioOfId));
   const flavour = (kind: Kind) =>
-    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && !(options.friendsOnly && s.context === "date")), seenScenarios).slice(0, FLAVOUR_ITEMS);
-  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, options.personal?.district, options.friendsOnly), ...flavour("rhythm"), ...flavour("plan")]);
+    preferUnseen(rng, SCENARIOS.filter((s) => s.kind === kind && (romance || s.context !== "date")), seenScenarios).slice(0, FLAVOUR_ITEMS);
+  const scenarios = arrange(rng, [...pickCore(rng, seenScenarios, p?.district, romance), ...flavour("rhythm"), ...flavour("plan")]);
   const pairs = pairsPerQuestion(rng, scenarios);
   // Home district: in up to two questions, bring in the pair whose answer is set near home.
   // The pair is traded with another question, not just swapped in, so every type is
@@ -228,10 +315,34 @@ export function generateSession(options: SessionOptions): Question[] {
       swapped += 1;
     }
   }
-  return scenarios.map((sc, i) => buildQuestion(rng, sc, pairs[i]));
+  return scenarios.map((sc, i) => buildQuestion(rng, sc, pairs[i], p));
 }
 
-export function toPublic(q: Question): PublicQuestion {
+/**
+ * The style questions for this member, shown after the 20: "how you date"
+ * only when opted into Open to something more, "how you host" only for Table
+ * Hosts. Their own random stream, so they never change the 20.
+ */
+export function generateStyleQuestions(options: SessionOptions): StyleQuestion[] {
+  const p = options.personal;
+  const rng = createRng(`bkk-style:${options.seed}${personalKey(p)}`);
+  const seen = new Set([...(options.seen ?? [])].map(scenarioOfId));
+  const picked = [...(p?.openToMore ? pickStyle(rng, "date", DATE_STYLE_ITEMS, seen) : []), ...(p?.tableHost ? pickStyle(rng, "host", HOST_STYLE_ITEMS, seen) : [])];
+  return picked.map((sc) => buildStyleQuestion(rng, sc, p));
+}
+
+/** The style card a session's answers give for one set: dimension → picked value. */
+export function styleOf(questions: AnyQuestion[], answers: Answers, set: StyleSet): StyleCard {
+  const out: StyleCard = {};
+  for (const q of questions) {
+    if (!isStyleQuestion(q) || q.set !== set) continue;
+    const o = pickedOption(q, answers[q.id]);
+    if (o) out[q.dimension] = o.style;
+  }
+  return out;
+}
+
+export function toPublic(q: AnyQuestion): PublicQuestion {
   return { id: q.id, format: "choice", prompt: q.prompt, options: q.options.map((o) => ({ en: o.label.en, th: o.label.th })), icons: q.options.map((o) => o.icon), art: q.art };
 }
 
@@ -264,12 +375,12 @@ export type VibeResult = {
 const isInt = (x: unknown): x is number => typeof x === "number" && Number.isInteger(x);
 
 /** The picked option, or null when the answer is not valid for the question. */
-export function pickedOption(q: Question, answer: unknown): Option | null {
+export function pickedOption<O>(q: { options: O[] }, answer: unknown): O | null {
   return isInt(answer) && answer >= 0 && answer < q.options.length ? q.options[answer] : null;
 }
 
 /** 1 for a valid answer, null otherwise (kept for form validation). */
-export function itemScore(q: Question, answer: unknown): number | null {
+export function itemScore(q: { options: unknown[] }, answer: unknown): number | null {
   return pickedOption(q, answer) ? 1 : null;
 }
 
