@@ -20,14 +20,13 @@ if (!Array.isArray(list)) {
   console.error(`${file} has no array export named ${name}`);
   process.exit(2);
 }
-const { errors, warnings, districts } = checkScenarios(list, { requireEveryDistrict: true });
-const missing = districts.missing;
+// District coverage is a rule for the whole bank (test/bank.test.ts), not for one file (quiz-review.md, rule 3).
+const { errors, warnings, districts } = checkScenarios(list, { oneFile: true });
 // Warnings are hints a human should look at (a letter with no word that shows it); they never fail the check.
 for (const w of warnings) console.log("WARN", w);
-if (errors.length === 0 && missing.length === 0) {
-  console.log(`OK: ${list.length} scenarios, ${list.length * 16} answers, all 50 districts used.`);
+if (errors.length === 0) {
+  console.log(`OK: ${list.length} scenarios, ${list.length * 16} answers, ${districts.counts.size} districts used.`);
 } else {
   for (const e of errors) console.log("ERROR", e);
-  if (missing.length) console.log("MISSING DISTRICTS", missing.join(", "));
   process.exit(1);
 }

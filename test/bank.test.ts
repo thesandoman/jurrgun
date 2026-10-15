@@ -63,11 +63,19 @@ describe("quiz bank", () => {
     has('prompt must end with "?"');
     has("CDSN: a D answer reads as a habit");
     has("CDSN: retired name");
-    has("CFSN: an F answer must say it is your usual");
+    has("words; keep answers to 6 to 12");
+    has("answers say usual, regular, never or new");
     has("CFSN: an F answer reads as a first");
     has("CFSH: 50 baht in English but not in Thai");
     has("CFSH: glossary spelling");
     has("CDMH: names Yaowarat in English but not in Thai");
+  });
+
+  it("keeps the pre-review scenarios on a legacy list that only shrinks", async () => {
+    const { LEGACY_IDS } = await import("../src/vibe/bank-rules");
+    const ids = new Set(SCENARIOS.map((s) => s.id));
+    expect(LEGACY_IDS.size).toBeLessThanOrEqual(47);
+    for (const id of LEGACY_IDS) expect(ids.has(id), id).toBe(true);
   });
 
   it("every district has a landmark, and every landmark and type hangout is in a real district", () => {
