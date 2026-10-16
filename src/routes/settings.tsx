@@ -578,7 +578,7 @@ function LinksSection(props: { v: View; links: Record<string, string>; on: boole
             value={props.links[n.key] ?? ""}
             maxlength={200}
             autocomplete="off"
-            placeholder={n.kind === "url" ? "https://" : n.key === "linkedin" ? t("ชื่อในลิงก์ หรือวางลิงก์", "Name or profile link") : t("@ชื่อผู้ใช้ หรือวางลิงก์", "@name or profile link")}
+            placeholder={n.kind === "url" ? "https://" : n.at ? t("@ชื่อผู้ใช้ หรือวางลิงก์", "@name or profile link") : t("ชื่อในลิงก์ หรือวางลิงก์", "Name or profile link")}
             error={props.errorField === n.key ? props.error : undefined}
           />
         ))}
