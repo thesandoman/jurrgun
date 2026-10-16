@@ -546,7 +546,8 @@ export const PROFILE_CSS = `
 .pc-pick b{font-size:2.6rem;font-weight:400;line-height:1}
 .pc-pick span{font-size:1.4rem;font-weight:700}
 p.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
-.pc-track{position:relative;height:12px;border-radius:999px;background:var(--surface-2);margin:22px 0 10px}
+/* The 36px knob is centred on the value, so the track leaves 18px each side for it now the section has no padding. */
+.pc-track{position:relative;height:12px;border-radius:999px;background:var(--surface-2);margin:24px 18px 12px}
 .pc-track i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,var(--fresh),var(--brand))}
 .pc-track b{position:absolute;top:50%;transform:translate(-50%,-50%);min-width:36px;height:36px;padding:0 6px;border-radius:999px;background:var(--surface);border:3px solid var(--brand);display:grid;place-items:center;font-size:.9rem;color:var(--brand)}
 .pc-ends{display:flex;justify-content:space-between;gap:12px}
