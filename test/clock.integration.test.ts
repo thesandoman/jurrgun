@@ -5,12 +5,12 @@
  * Open to something more event's title. Plus the push subscribe route.
  */
 import { describe, expect, it } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import app from "../src/index";
 import { ENV, HAS_DB, createMember, db, req } from "./helpers";
-import { consents, events, notifications, pushSubscriptions, registrations } from "../src/schema";
+import { accounts, consents, events, notifications, pushSubscriptions, registrations } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
-import { KIND_TOMORROW, KIND_WINDOW, nextSlot, quietHours, runClock } from "../src/services/clock";
+import { KIND_TOMORROW, KIND_WINDOW, bangkokDaysApart, nextSlot, quietHours, runClock, tomorrowText } from "../src/services/clock";
 
 const HOUR = 3_600_000;
 // 10:00 in Bangkok today: outside quiet hours whatever time the suite runs.
@@ -126,6 +126,73 @@ describe.skipIf(!HAS_DB)("hourly clock", () => {
     expect(html).toContain("Notifications on this phone");
     const without = await (await req("/notifications", { cookie: m.cookie })).text();
     expect(without).not.toContain('id="push"');
+  });
+
+  it("a member who saved consents many times and said no last still gets nothing, even in a busy batch", async () => {
+    const no = await createMember();
+    const yes = await createMember();
+    const ev = await mkEvent({ startsAt: new Date(NOW.getTime() + 22 * HOUR) });
+    // An older "no" from one member, then a burst of newer rows from another
+    // that used to fill the shared limit and hide the "no".
+    await db().insert(consents).values({ id: newId(), accountId: no.id, category: "notifications", granted: false, version: "test", createdAt: new Date(Date.now() + 30_000) });
+    await db()
+      .insert(consents)
+      .values(Array.from({ length: 12 }, (_, i) => ({ id: newId(), accountId: yes.id, category: "notifications", granted: i % 2 === 0, version: "test", createdAt: new Date(Date.now() + 60_000 + i * 1000) })));
+    await mkReg(ev, no.id);
+    await mkReg(ev, yes.id);
+    await runClock(ENV, NOW);
+    expect(await mine(no.id, KIND_TOMORROW)).toEqual([]);
+    // The newest of yes's rows (i = 11) is a no as well.
+    expect(await mine(yes.id, KIND_TOMORROW)).toEqual([]);
+  });
+
+  it("does not send twice when a member has older reminders for other events in the same batch", async () => {
+    const a = await createMember();
+    const b = await createMember();
+    const ev1 = await mkEvent({ startsAt: new Date(NOW.getTime() + 21 * HOUR) });
+    const ev2 = await mkEvent({ startsAt: new Date(NOW.getTime() + 23 * HOUR) });
+    const ev3 = await mkEvent({ startsAt: new Date(NOW.getTime() + 24 * HOUR) });
+    await mkReg(ev1, a.id);
+    for (const ev of [ev2, ev3]) {
+      await mkReg(ev, a.id);
+      await mkReg(ev, b.id);
+    }
+    await runClock(ENV, NOW);
+    // a gives up two seats after the reminder: a's old rows for them must not
+    // crowd out the rows that say a and b were already reminded.
+    await db().update(registrations).set({ status: "cancelled" }).where(and(eq(registrations.accountId, a.id), inArray(registrations.eventId, [ev2, ev3])));
+    await runClock(ENV, new Date(NOW.getTime() + HOUR));
+    await runClock(ENV, new Date(NOW.getTime() + 2 * HOUR));
+    expect((await mine(a.id, KIND_TOMORROW)).length).toBe(3);
+    expect((await mine(b.id, KIND_TOMORROW)).length).toBe(2);
+  });
+
+  it("reminds a member whose suspension has ended, not one still suspended", async () => {
+    const back = await createMember();
+    const still = await createMember();
+    await db().update(accounts).set({ status: "suspended", suspendedUntil: new Date(NOW.getTime() - HOUR) }).where(eq(accounts.id, back.id));
+    await db().update(accounts).set({ status: "suspended", suspendedUntil: new Date(NOW.getTime() + 48 * HOUR) }).where(eq(accounts.id, still.id));
+    const ev = await mkEvent({ startsAt: new Date(NOW.getTime() + 25 * HOUR) });
+    await mkReg(ev, back.id);
+    await mkReg(ev, still.id);
+    await runClock(ENV, NOW);
+    expect((await mine(back.id, KIND_TOMORROW)).length).toBe(1);
+    expect(await mine(still.id, KIND_TOMORROW)).toEqual([]);
+  });
+
+  it("says tomorrow only when the table is on tomorrow's date in Bangkok", () => {
+    const base = { title: "Board games", titleEn: "Board games", venueName: "Lumphini Park", tags: [] as string[] } as unknown as Parameters<typeof tomorrowText>[0];
+    // Thursday 15 Oct 2026, 19:00 Bangkok; the table is Saturday 00:30 Bangkok.
+    const thu = new Date("2026-10-15T12:00:00Z");
+    const satEarly = { ...base, startsAt: new Date("2026-10-16T17:30:00Z") } as typeof base;
+    expect(bangkokDaysApart(thu, satEarly.startsAt)).toBe(2);
+    expect(tomorrowText(satEarly, "en", thu)).toBe("Saturday at 00:30: Board games, at Lumphini Park. Your pass is ready.");
+    expect(tomorrowText(satEarly, "th", thu)).toContain("วันเสาร์ 00:30");
+    expect(tomorrowText(satEarly, "th", thu)).not.toContain("พรุ่งนี้");
+    // Friday 18:00 Bangkok from Thursday: tomorrow.
+    const fri = { ...base, startsAt: new Date("2026-10-16T11:00:00Z") } as typeof base;
+    expect(tomorrowText(fri, "th", thu)).toBe("พรุ่งนี้ 18:00 Board games ที่ Lumphini Park บัตรเข้างานพร้อมแล้ว");
+    for (const s of [tomorrowText(satEarly, "th", thu), tomorrowText(fri, "en", thu)]) expect(s).not.toMatch(new RegExp("[\\u2013\\u2014]"));
   });
 
   it("refuses an unsigned clock webhook", async () => {

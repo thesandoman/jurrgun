@@ -18,7 +18,7 @@
  * An admin starts and stops the chain from /admin. Locally there are no
  * stateful objects; tests call runClock directly.
  */
-import { and, desc, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import type { Bindings } from "../lib/env";
 import { fmtParts, type Lang } from "../lib/i18n";
@@ -95,6 +95,11 @@ export async function onClockTask(env: Bindings, firedAt: number): Promise<Clock
 
 type Due = { accountId: string; locale: string; event: Event };
 
+/** Active accounts, plus suspended ones whose suspension has ended (as accountUsable in src/lib/session.ts). */
+function usable(now: Date) {
+  return or(eq(accounts.status, "active"), and(eq(accounts.status, "suspended"), lt(accounts.suspendedUntil, now)));
+}
+
 export async function runClock(env: Bindings, now: Date = new Date()): Promise<ClockRun> {
   const out: ClockRun = { retention: false, quiet: false, tomorrow: 0, windowOpen: 0, pushed: 0 };
   const before = await retentionIfDue(env, "system", now);
@@ -117,13 +122,13 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
       and(
         eq(events.status, "published"),
         eq(registrations.status, "confirmed"),
-        eq(accounts.status, "active"),
+        usable(now),
         gte(events.startsAt, new Date(t + 18 * HOUR)),
         lt(events.startsAt, new Date(t + 30 * HOUR)),
       ),
     )
     .limit(BATCH);
-  const sentTomorrow = await sendOnce(env, KIND_TOMORROW, tomorrow, (d) => `/me/events/${d.event.id}/pass`, (d, lang) => tomorrowText(d.event, lang), 12 * 3600);
+  const sentTomorrow = await sendOnce(env, KIND_TOMORROW, tomorrow, (d) => `/me/events/${d.event.id}/pass`, (d, lang) => tomorrowText(d.event, lang, now), 12 * 3600);
   out.tomorrow = sentTomorrow.sent;
   out.pushed += sentTomorrow.pushed;
 
@@ -138,7 +143,7 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
       and(
         eq(events.status, "published"),
         isNotNull(registrations.checkedInAt),
-        eq(accounts.status, "active"),
+        usable(now),
         gte(events.endsAt, new Date(t - 14 * HOUR)),
         lt(events.endsAt, new Date(t - HOUR)),
       ),
@@ -162,29 +167,29 @@ async function sendOnce(
   if (!due.length) return { sent: 0, pushed: 0 };
   const db = getDb(env);
   const ids = [...new Set(due.map((d) => d.accountId))];
-  const links = [...new Set(due.map(linkOf))];
+  // Exactly the (member, link) pairs that are due. Matching ids and links
+  // separately also returns other pairs, which could push a real one past the limit.
+  const pairs = sql.join(
+    due.map((d) => sql`(${d.accountId}, ${linkOf(d)})`),
+    sql`, `,
+  );
   const [already, said] = await Promise.all([
     db
       .select({ accountId: notifications.accountId, link: notifications.link })
       .from(notifications)
-      .where(and(eq(notifications.kind, kind), inArray(notifications.accountId, ids), inArray(notifications.link, links)))
-      .limit(due.length),
+      .where(and(eq(notifications.kind, kind), sql`(${notifications.accountId}, ${notifications.link}) in (${pairs})`))
+      .limit(due.length * 2),
+    // The newest answer per member, however many times anyone saved their consents.
     db
-      .select({ accountId: consents.accountId, granted: consents.granted })
+      .selectDistinctOn([consents.accountId], { accountId: consents.accountId, granted: consents.granted })
       .from(consents)
       .where(and(eq(consents.category, "notifications"), inArray(consents.accountId, ids)))
-      .orderBy(desc(consents.createdAt))
-      .limit(ids.length * 4),
+      .orderBy(consents.accountId, desc(consents.createdAt))
+      .limit(ids.length),
   ]);
   const done = new Set(already.map((r) => `${r.accountId} ${r.link}`));
-  // The newest answer wins; no answer at all counts as yes (older accounts never saw the question).
-  const optedOut = new Set<string>();
-  const seen = new Set<string>();
-  for (const c of said) {
-    if (seen.has(c.accountId)) continue;
-    seen.add(c.accountId);
-    if (!c.granted) optedOut.add(c.accountId);
-  }
+  // No answer at all counts as yes (older accounts never saw the question).
+  const optedOut = new Set(said.filter((c) => !c.granted).map((c) => c.accountId));
   const todo = due.filter((d) => !optedOut.has(d.accountId) && !done.has(`${d.accountId} ${linkOf(d)}`));
   if (!todo.length) return { sent: 0, pushed: 0 };
   await db.insert(notifications).values(
@@ -204,11 +209,31 @@ function shownTitle(e: Event, lang: Lang): string | null {
   return lang === "en" && e.titleEn ? e.titleEn : e.title;
 }
 
-export function tomorrowText(e: Event, lang: Lang): string {
+/** Bangkok calendar days from `now` to `at` (0 today, 1 tomorrow). */
+export function bangkokDaysApart(now: Date, at: Date): number {
+  const day = (d: Date) => {
+    const [y, m, dd] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(d).split("-").map(Number);
+    return Date.UTC(y, m - 1, dd) / 86_400_000;
+  };
+  return day(at) - day(now);
+}
+
+/**
+ * "Tomorrow" only when the event really is on tomorrow's date in Bangkok. A
+ * table just after midnight can be reminded the evening two days before
+ * (quiet hours hold the later slots), so that one names the weekday instead.
+ */
+export function tomorrowText(e: Event, lang: Lang, now: Date): string {
   const time = fmtParts(e.startsAt, lang).time;
   const name = shownTitle(e, lang);
-  if (lang === "en") return name ? `Tomorrow at ${time}: ${name}, at ${e.venueName}. Your pass is ready.` : `You have a table tomorrow at ${time}. Your pass is ready.`;
-  return name ? `พรุ่งนี้ ${time} ${name} ที่ ${e.venueName} บัตรเข้างานพร้อมแล้ว` : `พรุ่งนี้ ${time} คุณมีนัดหนึ่งโต๊ะ บัตรเข้างานพร้อมแล้ว`;
+  const isTomorrow = bangkokDaysApart(now, e.startsAt) === 1;
+  const weekday = new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { weekday: "long", timeZone: "Asia/Bangkok" }).format(e.startsAt);
+  if (lang === "en") {
+    const when = isTomorrow ? `Tomorrow at ${time}` : `${weekday} at ${time}`;
+    return name ? `${when}: ${name}, at ${e.venueName}. Your pass is ready.` : `You have a table ${isTomorrow ? "tomorrow" : `on ${weekday}`} at ${time}. Your pass is ready.`;
+  }
+  const when = isTomorrow ? `พรุ่งนี้ ${time}` : `${weekday} ${time}`;
+  return name ? `${when} ${name} ที่ ${e.venueName} บัตรเข้างานพร้อมแล้ว` : `${when} คุณมีนัดที่โต๊ะ บัตรเข้างานพร้อมแล้ว`;
 }
 
 export function windowText(e: Event, lang: Lang, now: Date): string {
