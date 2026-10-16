@@ -68,6 +68,14 @@ describe("stations (pure)", () => {
     expect(isStationKey("mrt_bang_wa") && isStationKey("bts_bang_wa")).toBe(true);
     for (const s of STATIONS) expect(`${s.th} ${s.en}`).not.toMatch(/[\u2013\u2014]/);
   });
+
+  it("keeps stored keys when only the English name changed (checked against official names, 2026-10-16)", () => {
+    expect(stationLine("mrt_ram_inthra_km_4", 3, "en")).toBe("MRT Ram Inthra Kor Mor 4, 3 min walk");
+    expect(stationLine("mrt_ram_inthra_km_9", null, "th")).toBe("MRT รามอินทรา กม.9");
+    expect(isStationKey("mrt_ram_inthra_kor_mor_4")).toBe(false);
+    expect(stationLine("mrt_chaeng_watthana_pak_kret_28", null, "en")).toBe("MRT Chaeng Watthana-Pak Kret 28");
+    expect(stationLine("mrt_outer_ring_road_ram_inthra", null, "en")).toBe("MRT Outer Ring Road-Ram Inthra");
+  });
   it("checks the host's fields", () => {
     const keys = STATIONS.map((s) => s.key);
     expect(checkVenueExtras({ venueNotes: " ชั้น 2 ", nearestStation: "bts_asok", walkMinutes: "5" }, keys)).toEqual({

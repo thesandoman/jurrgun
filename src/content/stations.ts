@@ -28,8 +28,10 @@ export const LINES: Record<RailLine, { th: string; en: string; system: RailSyste
 /** What a station is called before its name: "BTS อโศก", "ARL มักกะสัน". */
 export const SYSTEM_PREFIX: Record<RailSystem, string> = { bts: "BTS", mrt: "MRT", arl: "ARL" };
 
-// [Thai, English], in line order.
-const RAW: Record<RailLine, [string, string][]> = {
+// [Thai, English], in line order. A third value keeps a station's stored key
+// when its English name changed after keys were first saved.
+type Raw = [th: string, en: string, keyEn?: string];
+const RAW: Record<RailLine, Raw[]> = {
   bts_sukhumvit: [
     ["คูคต", "Khu Khot"],
     ["แยก คปอ.", "Yaek Kor Por Aor"],
@@ -191,7 +193,7 @@ const RAW: Record<RailLine, [string, string][]> = {
     ["กรมชลประทาน", "Royal Irrigation Department"],
     ["แยกปากเกร็ด", "Yaek Pak Kret"],
     ["เลี่ยงเมืองปากเกร็ด", "Pak Kret Bypass"],
-    ["แจ้งวัฒนะ ปากเกร็ด 28", "Chaeng Watthana Pak Kret 28"],
+    ["แจ้งวัฒนะ-ปากเกร็ด 28", "Chaeng Watthana-Pak Kret 28"],
     ["ศรีรัช", "Si Rat"],
     ["เมืองทองธานี", "Muang Thong Thani"],
     ["แจ้งวัฒนะ 14", "Chaeng Watthana 14"],
@@ -202,13 +204,13 @@ const RAW: Record<RailLine, [string, string][]> = {
     ["วัดพระศรีมหาธาตุ", "Wat Phra Sri Mahathat"],
     ["รามอินทรา 3", "Ram Inthra 3"],
     ["ลาดปลาเค้า", "Lat Pla Khao"],
-    ["รามอินทรา กม.4", "Ram Inthra Km 4"],
+    ["รามอินทรา กม.4", "Ram Inthra Kor Mor 4", "Ram Inthra Km 4"],
     ["มัยลาภ", "Maiyalap"],
     ["วัชรพล", "Vacharaphol"],
-    ["รามอินทรา กม.6", "Ram Inthra Km 6"],
+    ["รามอินทรา กม.6", "Ram Inthra Kor Mor 6", "Ram Inthra Km 6"],
     ["คู้บอน", "Khu Bon"],
-    ["รามอินทรา กม.9", "Ram Inthra Km 9"],
-    ["วงแหวนรามอินทรา", "Outer Ring Road Ram Inthra"],
+    ["รามอินทรา กม.9", "Ram Inthra Kor Mor 9", "Ram Inthra Km 9"],
+    ["วงแหวนรามอินทรา", "Outer Ring Road-Ram Inthra"],
     ["นพรัตน์", "Nopparat"],
     ["บางชัน", "Bang Chan"],
     ["เศรษฐบุตรบำเพ็ญ", "Setthabutbamphen"],
@@ -233,8 +235,8 @@ function build(): Station[] {
   const byKey = new Map<string, Station>();
   for (const line of Object.keys(RAW) as RailLine[]) {
     const system = LINES[line].system;
-    for (const [th, en] of RAW[line]) {
-      const key = `${system}_${slug(en)}`;
+    for (const [th, en, keyEn] of RAW[line]) {
+      const key = `${system}_${slug(keyEn ?? en)}`;
       const had = byKey.get(key);
       if (had) {
         if (!had.lines.includes(line)) had.lines.push(line);
@@ -277,6 +279,6 @@ export function stationsByLine(): { line: RailLine; th: string; en: string; stat
     line,
     th: LINES[line].th,
     en: LINES[line].en,
-    stations: RAW[line].map(([, en]) => BY_KEY.get(`${LINES[line].system}_${slug(en)}`)!),
+    stations: RAW[line].map(([, en, keyEn]) => BY_KEY.get(`${LINES[line].system}_${slug(keyEn ?? en)}`)!),
   }));
 }
