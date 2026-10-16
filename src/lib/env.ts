@@ -31,6 +31,13 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   EMAIL_API_KEY?: string;
   EMAIL_FROM?: string;
   EMAIL_HASH_SALT?: string;
+  /**
+   * Optional secret key for the hashes of client IPs and sign-in usernames in
+   * identity_login_attempts and identity_login_codes (privacy R10, R11). Falls
+   * back to EMAIL_HASH_SALT; with neither set the hashes are still keyed, but
+   * with a key in the code, so set one of them on the deployed app.
+   */
+  IP_HASH_SECRET?: string;
   /** Set in tests: skip calls to outside services (weather, email). */
   NO_EXTERNAL?: string;
 };

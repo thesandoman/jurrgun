@@ -7,7 +7,7 @@ import type { Context } from "hono";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { isPasswordless, normalizeUsername, passwordProblem, USERNAME_RE } from "../domain/rules";
-import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
+import { hashPassword, hmacSha256, newId, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
@@ -42,9 +42,22 @@ function clientIp(c: Context<AppEnv>): string {
   return xff || UNKNOWN_IP;
 }
 
+/** The secret the IP and username hashes are keyed with (R10, R11). */
+const hashSecret = (c: Context<AppEnv>) => c.env.IP_HASH_SECRET || c.env.EMAIL_HASH_SALT || "";
+
+/** The client IP as a keyed HMAC, never the address itself (privacy R10: a plain SHA-256 of an IP can be reversed). */
 export async function ipKey(c: Context<AppEnv>): Promise<{ ipHash: string; known: boolean }> {
   const ip = clientIp(c);
-  return { ipHash: await sha256(ip), known: ip !== UNKNOWN_IP };
+  return { ipHash: await hmacSha256(`ip:${hashSecret(c)}`, ip), known: ip !== UNKNOWN_IP };
+}
+
+/**
+ * The key a password sign-in's failures are counted under: a keyed HMAC of the
+ * username, never the username itself (privacy R11). Rows from before this
+ * (the raw username) are no longer matched and go within 24 hours (retention).
+ */
+export async function attemptUser(c: Context<AppEnv>, username: string): Promise<string> {
+  return `user:${await hmacSha256(`user:${hashSecret(c)}`, username)}`;
 }
 
 /**
@@ -251,16 +264,17 @@ authRoutes.post("/login", async (c) => {
   const ip = await ipKey(c);
   // Checked before the account lookup, so the answer is the same whether or
   // not the username exists, and the password is never verified once locked.
-  if (await loginThrottled(c, username, ip, now)) return tooMany(c, "login");
+  const attempt = await attemptUser(c, username);
+  if (await loginThrottled(c, attempt, ip, now)) return tooMany(c, "login");
 
   const [acct] = await db.select().from(accounts).where(eq(accounts.username, username)).limit(1);
   // Same message whether the username or the password was wrong.
   if (!acct || !(await verifyPassword(password, acct.passwordHash, acct.passwordSalt))) {
-    await db.insert(loginAttempts).values({ id: newId(), username, ipHash: ip.ipHash, createdAt: now });
+    await db.insert(loginAttempts).values({ id: newId(), username: attempt, ipHash: ip.ipHash, createdAt: now });
     return fail(t("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "Wrong username or password."));
   }
   // Correct password: forget this username's failures.
-  await db.delete(loginAttempts).where(eq(loginAttempts.username, username));
+  await db.delete(loginAttempts).where(eq(loginAttempts.username, attempt));
   return signIn(c, acct, next, fail);
 });
 

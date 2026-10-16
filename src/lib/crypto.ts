@@ -27,6 +27,12 @@ export async function sha256(input: string): Promise<string> {
   return b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(input))));
 }
 
+/** HMAC-SHA-256 of `msg` under `key`, base64url. */
+export async function hmacSha256(key: string, msg: string): Promise<string> {
+  const k = await crypto.subtle.importKey("raw", enc.encode(key || "jurrgun"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(msg))));
+}
+
 /** Workers cap PBKDF2 at 100,000 iterations. */
 const PBKDF2_ITERATIONS = 100_000;
 

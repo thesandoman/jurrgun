@@ -6,9 +6,11 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import app from "../src/index";
 import { ENV, HAS_DB, TEST_PASSWORD, createMember, db } from "./helpers";
-import { randomToken } from "../src/lib/crypto";
+import { hmacSha256, randomToken } from "../src/lib/crypto";
 import { loginAttempts } from "../src/schema";
 
+/** How a username is stored in identity_login_attempts: a keyed hash, never the name (privacy R11). Tests set no secret. */
+const userKey = async (u: string) => `user:${await hmacSha256("user:", u)}`;
 const octet = () => Math.floor(Math.random() * 250) + 1;
 const randomIp = () => `10.${octet()}.${octet()}.${octet()}`;
 
@@ -33,7 +35,7 @@ describe.skipIf(!HAS_DB)("login throttling", () => {
     const html = await locked.text();
     expect(html).toContain("15 นาที");
     // A locked attempt is not recorded again.
-    const rows = await db().select().from(loginAttempts).where(eq(loginAttempts.username, m.username)).limit(50);
+    const rows = await db().select().from(loginAttempts).where(eq(loginAttempts.username, await userKey(m.username))).limit(50);
     expect(rows.length).toBe(5);
 
     // Another username from the same IP still works.
@@ -52,7 +54,7 @@ describe.skipIf(!HAS_DB)("login throttling", () => {
     const m = await createMember();
     for (let i = 0; i < 4; i++) await login(m.username, "wrongpass1", ip);
     expect((await login(m.username, TEST_PASSWORD, ip)).status).toBe(302);
-    const rows = await db().select().from(loginAttempts).where(eq(loginAttempts.username, m.username)).limit(50);
+    const rows = await db().select().from(loginAttempts).where(eq(loginAttempts.username, await userKey(m.username))).limit(50);
     expect(rows.length).toBe(0);
     // Four more failures are allowed again before the lock.
     for (let i = 0; i < 4; i++) expect((await login(m.username, "wrongpass1", ip)).status).toBe(400);
