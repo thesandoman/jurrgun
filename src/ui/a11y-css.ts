@@ -690,6 +690,9 @@ details.sheet[open]>.sheet-more{background:var(--surface-2)}
 /* B1 people on My people: avatar, name, one last-met line, Chat and ⋯ (rows of one grouped list, below). */
 .pc-av{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:0 0 48px;background:var(--surface-2)}
 .pc-row .avstack{flex:0 0 auto;margin:0}
+/* Chat and ⋯ side by side (person rows and the buddy card share this). */
+.pc-acts{display:flex;align-items:center;gap:8px}
+.pc-acts .btn{min-height:44px;margin:0}
 .pc-met{margin:2px 0 0;color:var(--ink-2);font-size:.9rem;line-height:1.45}
 /* B1: the full meeting history now sits on the person's profile. */
 .met-at h2.eyebrow{margin:0 0 6px;font-size:.8rem}
