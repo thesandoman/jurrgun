@@ -22,7 +22,16 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   VAPID_PRIVATE_KEY?: string;
   /** Contact for push services, a URL or mailto:. Defaults to the live site. */
   VAPID_SUBJECT?: string;
-  /** Set in tests: skip calls to outside services (weather). */
+  /**
+   * Sign in with an email code (src/services/email-code.ts). Off, with every
+   * surface hidden, until all four are set. EMAIL_PROVIDER is "resend" or
+   * "postmark"; EMAIL_HASH_SALT keys the hash the address is stored as.
+   */
+  EMAIL_PROVIDER?: string;
+  EMAIL_API_KEY?: string;
+  EMAIL_FROM?: string;
+  EMAIL_HASH_SALT?: string;
+  /** Set in tests: skip calls to outside services (weather, email). */
   NO_EXTERNAL?: string;
 };
 

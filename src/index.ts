@@ -10,6 +10,7 @@ import { generateSession, scoreSession, toPublic, type Answers } from "./vibe/ge
 import { adminRoutes } from "./routes/admin";
 import { authRoutes } from "./routes/auth";
 import { oauthRoutes } from "./routes/oauth";
+import { emailCodeRoutes } from "./routes/email-code";
 import { universityRoutes } from "./routes/universities";
 import { hostRoutes } from "./routes/host";
 import { eventRoutes } from "./routes/events";
@@ -63,6 +64,7 @@ app.route("/", planRoutes);
 app.route("/", hostInsightRoutes);
 app.route("/", authRoutes);
 app.route("/", oauthRoutes);
+app.route("/", emailCodeRoutes);
 app.route("/", universityRoutes);
 app.route("/", hostRoutes);
 app.route("/onboarding", onboarding);
