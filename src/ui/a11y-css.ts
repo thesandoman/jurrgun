@@ -488,4 +488,20 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 .see-again{margin:16px 0;border:1.5px solid color-mix(in srgb,var(--brand) 35%,var(--line))}
 .see-again .see-again-names{font-weight:600;margin:4px 0 4px;overflow-wrap:anywhere}
 .see-again .muted{margin:0 0 12px}
+/* Offline next table: the pass's essentials card, the "saved for offline" note (words, not just an icon),
+   and the saved tables on the offline page as full-width rows with 44px+ targets. */
+.essentials{margin:16px 0}
+.essentials dl.facts{margin:8px 0 0}
+.essentials dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.essentials .ess-addr{display:block;color:var(--ink-2)}
+.essentials .ess-map{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
+.essentials .ess-bring{margin:0;padding-left:18px}
+.essentials .ess-bring li{margin:0 0 4px}
+.essentials details.how summary{min-height:44px;display:flex;align-items:center}
+.offline-saved{display:flex;gap:8px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1.5px solid var(--brand);color:var(--ink)}
+.offline-saved small{display:block;color:var(--ink-2)}
+.offline-saved[hidden]{display:none}
+.offline-next-list ul{list-style:none;margin:12px 0 16px;padding:0;display:grid;gap:12px}
+.offline-next-list a.card{display:grid;gap:4px;min-height:44px;padding:12px 16px;text-decoration:none;color:var(--ink)}
+.offline-next-list a.card small{color:var(--ink-2)}
 `);

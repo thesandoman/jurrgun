@@ -14,9 +14,11 @@ describe("PWA", () => {
     expect(js).toContain("/offline");
     expect(js).toContain("skipWaiting");
     expect(js).toContain("clients.claim");
-    // Only the three public shell files are ever put in the cache.
+    // The three public shell files are precached; the only page ever stored is the member's
+    // own pass (test/offline-next.test.ts runs that logic), in its own cache.
     expect(js).toContain('["/offline", "/icon.svg", "/manifest.webmanifest"]');
-    expect(js).not.toMatch(/cache\.put/);
+    expect(js.match(/\.put\(/g)).toHaveLength(1);
+    expect(js).toContain("const PASS = /^\\/me\\/events\\/[A-Za-z0-9_-]+\\/pass$/;");
   });
 
   it("serves a bilingual offline page without a login", async () => {

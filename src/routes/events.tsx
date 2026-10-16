@@ -21,6 +21,7 @@
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
 import { TableIntroPrompt } from "../ui/table-intro";
+import { OfflineSavedNote, SaveNext } from "../ui/offline-next";
 import { segmentOf, type Segment } from "../domain/segment";
 import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
@@ -1180,6 +1181,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           </div>
         </div>
         {reg?.status === "confirmed" && !started ? <TableIntroPrompt v={v} next={`/events/${event.id}`} /> : null}
+        {reg?.status === "confirmed" && event.status === "published" && !ended ? <SaveNext paths={[`/me/events/${event.id}/pass`]} /> : null}
         {event.venueAddress || event.mapUrl ? (
           <p class="ev-line">
             {event.venueAddress ? `📍 ${event.venueAddress} ` : null}
@@ -1995,6 +1997,8 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         </Card>
       ) : null}
 
+      {/* The next booked tables stay readable offline; anything else saved on this phone is dropped. */}
+      <SaveNext replace paths={upcoming.filter((r) => r.reg.status === "confirmed" && r.event.status === "published").map((r) => `/me/events/${r.event.id}/pass`)} />
       <h2 id="upcoming">{t("กำลังจะมาถึง", "Upcoming")}</h2>
       {upcoming.length === 0 ? (
         <>
@@ -2079,6 +2083,74 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
 
 // ---------------------------------------------------------------- pass --
 
+/** The first word of a nickname: the host's first name, nothing more. */
+export function firstName(nickname: string): string {
+  return nickname.trim().split(/\s+/)[0] ?? nickname;
+}
+
+/**
+ * The essentials of a booked table, on the pass: what a member needs at the
+ * door with no signal (owner: offline next table). The service worker keeps
+ * this page and fills in data-offline-saved with the time it saved it.
+ */
+function Essentials(props: { event: Event; hostName: string | null; v: View }) {
+  const { event } = props;
+  const { t, lang } = props.v;
+  const map = event.mapUrl ?? directionsUrl(event);
+  const desc = description(event, lang);
+  return (
+    <section class="card essentials" aria-labelledby="essentials-h" data-ends={event.endsAt.toISOString()} data-when={fmtDate(event.startsAt, lang)} data-offline-saved="">
+      <h2 id="essentials-h" class="h3">
+        <span aria-hidden="true">📌</span> {t("ข้อมูลที่ต้องใช้วันงาน", "What you need on the day")}
+      </h2>
+      <p class="muted">{t("เปิดหน้านี้ตอนมีเน็ตครั้งหนึ่ง แล้วจะดูได้แม้ไม่มีสัญญาณ", "Open this page once while online and it stays readable with no signal.")}</p>
+      <dl class="facts">
+        <dt>{t("เมื่อไหร่", "When")}</dt>
+        <dd>
+          {fmtDate(event.startsAt, lang)} {t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`)}
+        </dd>
+        <dt>{t("ที่ไหน", "Where")}</dt>
+        <dd>
+          <b>{event.venueName}</b>
+          {event.venueAddress ? <span class="ess-addr">{event.venueAddress}</span> : null}
+          <a href={map} target="_blank" rel="noopener noreferrer" class="ess-map">
+            {t("เปิดแผนที่", "Open map")} ↗
+          </a>
+        </dd>
+        {event.safetyInfo ? (
+          <>
+            <dt>{t("จุดนัดพบ", "Meeting point")}</dt>
+            <dd>{event.safetyInfo}</dd>
+          </>
+        ) : null}
+        <dt>{t("โฮสต์", "Host")}</dt>
+        <dd>{props.hostName ? firstName(props.hostName) : t("ทีม Jurrgun", "Jurrgun team")}</dd>
+        <dt>{t("สิ่งที่ต้องเตรียม", "What to bring")}</dt>
+        <dd>
+          <ul class="ess-bring">
+            <li>{t("บัตรนี้ เปิดได้แม้ไม่มีเน็ต หรือจดรหัสบัตรไว้", "This pass. It opens without signal, or note the pass code.")}</li>
+            {event.costThb > 0 ? (
+              <li>
+                {t(`ค่าใช้จ่าย ${costText(event, t)} จ่ายที่งานหรือกับผู้จัด`, `${costText(event, t)}, paid at the venue or to the host`)}
+                {event.paymentNote ? ` (${event.paymentNote})` : ""}
+              </li>
+            ) : null}
+            {event.accessibility ? <li>♿ {event.accessibility}</li> : null}
+          </ul>
+          {desc ? (
+            <details class="how">
+              <summary>{t("รายละเอียดจากผู้จัด", "Notes from the host")}</summary>
+              <p style="white-space:pre-line;margin:8px 0 0">{desc}</p>
+            </details>
+          ) : null}
+        </dd>
+        <dt>{t("ติดต่อฉุกเฉิน", "Emergency contact")}</dt>
+        <dd>{event.emergencyContact || "191 / 1669"}</dd>
+      </dl>
+    </section>
+  );
+}
+
 eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
   const { t, lang } = view(c);
   const user = me(c);
@@ -2119,10 +2191,15 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
   }
   const live = !reg.checkedInAt && checkInOpen(event.startsAt, now);
   const code = shortCode(reg.passToken);
+  // Only the host's first name: the same as the event page shows, nothing more about anyone.
+  const [host] = event.hostAccountId
+    ? await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, event.hostAccountId)).limit(1)
+    : [];
   return page(
     c,
     { title: t("บัตรเข้างาน", "Event pass"), tab: "mine" },
     <>
+      <OfflineSavedNote t={t} lang={lang} />
       <section class={live ? "ticket is-live" : "ticket"} aria-label={t("บัตรเข้างาน", "Event pass")}>
         <div class="ticket-top">
           <p class="eyebrow">{t("บัตรเข้างาน", "Event pass")} · {user.profile.nickname}</p>
@@ -2168,6 +2245,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
         </a>
       </div>
       <script dangerouslySetInnerHTML={{ __html: COUNTDOWN_JS }} />
+      <Essentials event={event} hostName={host?.nickname ?? null} v={view(c)} />
       <ol class="next-steps" aria-label={t("ขั้นตอนต่อไป", "What happens next")}>
         <li class="done">
           <span>
