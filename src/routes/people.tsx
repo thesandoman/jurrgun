@@ -14,6 +14,8 @@
  * `use("*")`, because this sub-app is mounted at "/" and a wildcard would
  * wrap every page in the app.
  */
+import { vapidKeys } from "../services/push";
+import { PushSwitch } from "../ui/push-switch";
 import { MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
 import { myTables, raiseConflicts } from "../services/regular-tables";
@@ -1267,11 +1269,15 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
   if (rows.some((r) => !r.readAt)) {
     await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), isNull(notifications.readAt), lte(notifications.createdAt, new Date())));
   }
+  // They are read now: the bell on this page shows no badge (it was counted before this request marked them).
+  c.var.user!.unread = 0;
+  const push = vapidKeys(c.env);
   return page(
     c,
     { title: t("การแจ้งเตือน", "Notifications") },
     <>
       <h1>{t("การแจ้งเตือน", "Notifications")}</h1>
+      {push ? <PushSwitch t={t} publicKey={push.publicKey} card /> : null}
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีการแจ้งเตือน", "No notifications yet.")}</Empty>
       ) : (

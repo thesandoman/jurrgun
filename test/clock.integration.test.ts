@@ -114,6 +114,20 @@ describe.skipIf(!HAS_DB)("hourly clock", () => {
     expect((await db().select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint)).limit(5)).length).toBe(0);
   });
 
+  it("Notifications page: no badge once they're read, and the phone switch once keys are set", async () => {
+    const m = await createMember();
+    await db().insert(notifications).values({ id: newId(), accountId: m.id, kind: "test", titleTh: "ทดสอบ", titleEn: "Test", link: "/events" });
+    const withKeys = { ...ENV, VAPID_PUBLIC_KEY: "x".repeat(87), VAPID_PRIVATE_KEY: "y".repeat(43) };
+    const html = await (await app.request("/notifications", { headers: { cookie: `${m.cookie}; lang=en` } }, withKeys)).text();
+    expect(html).toContain("Test");
+    expect(html).toContain('class="notif-new"');
+    expect(html).not.toContain('class="notif-dot"');
+    expect(html).toContain('id="push"');
+    expect(html).toContain("Notifications on this phone");
+    const without = await (await req("/notifications", { cookie: m.cookie })).text();
+    expect(without).not.toContain('id="push"');
+  });
+
   it("refuses an unsigned clock webhook", async () => {
     const res = await req("/api/tasks/webhook", { json: { id: 1, name: "clock", payload: {}, firedAt: Date.now() } });
     expect(res.status).toBe(401);

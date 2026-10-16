@@ -79,6 +79,7 @@ import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import { allowedEndpoint } from "../lib/webpush";
 import { vapidKeys } from "../services/push";
+import { PushSwitch } from "../ui/push-switch";
 import type { AppEnv } from "../lib/env";
 import { audit } from "../lib/records";
 import { requireMember, SESSION_COOKIE } from "../lib/session";
@@ -363,50 +364,6 @@ settingsRoutes.post("/settings/push/off", async (c) => {
     .where(and(eq(pushSubscriptions.accountId, user.account.id), eq(pushSubscriptions.endpoint, endpoint)));
   return c.json({ ok: true });
 });
-
-/**
- * The phone-notifications switch on Me. Shown only where the browser can do
- * push and the keys are set; the script reads this browser's own state, so
- * the server never needs to know which device is looking.
- */
-function PushSwitch(props: { t: View["t"]; publicKey: string }) {
-  const { t } = props;
-  const text = {
-    on: t("เตือนก่อนวันงาน และตอนที่เลือกคนที่อยากเจออีกได้", "The day before a table, and when you can choose who to meet again"),
-    blocked: t("ถูกปิดไว้ในการตั้งค่าเบราว์เซอร์ เปิดได้ที่การตั้งค่าเว็บไซต์", "Blocked in your browser. Allow notifications in its site settings."),
-    ios: t("บน iPhone ให้เพิ่ม Jurrgun ลงหน้าจอโฮมก่อน", "On iPhone, add Jurrgun to your Home Screen first."),
-    failed: t("เปิดไม่สำเร็จ ลองใหม่อีกครั้ง", "Couldn't switch on. Try again."),
-  };
-  return (
-    <>
-      <form class="push-switch" hidden data-key={props.publicKey} data-text={JSON.stringify(text)} onsubmit="return false">
-        <button type="button" class="qs" aria-pressed="false">
-          <span aria-hidden="true">🔔</span>
-          <span>
-            <b>{t("แจ้งเตือนบนเครื่องนี้", "Notifications on this phone")}</b>
-            <small>{text.on}</small>
-          </span>
-          <span class="sw" aria-hidden="true" />
-        </button>
-      </form>
-      <script dangerouslySetInnerHTML={{ __html: PUSH_SWITCH_JS }} />
-    </>
-  );
-}
-
-const PUSH_SWITCH_JS = `(function(){var f=document.querySelector(".push-switch");if(!f)return;var T=JSON.parse(f.dataset.text),b=f.querySelector("button"),hint=f.querySelector("small");
-var ios=/iP(hone|ad|od)/.test(navigator.userAgent)&&!(navigator.standalone||matchMedia("(display-mode: standalone)").matches);
-if(!("serviceWorker" in navigator)||!("Notification" in window)){if(ios){f.hidden=false;b.disabled=true;hint.textContent=T.ios}return}
-if(!("PushManager" in window))return;f.hidden=false;
-function key(s){s=s.replace(/-/g,"+").replace(/_/g,"/");var r=atob(s+"===".slice((s.length+3)%4)),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
-function show(on){b.setAttribute("aria-pressed",on?"true":"false");hint.textContent=Notification.permission==="denied"?T.blocked:T.on}
-function post(u,d){return fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(d),credentials:"same-origin"}).then(function(r){if(!r.ok)throw r})}
-navigator.serviceWorker.ready.then(function(reg){reg.pushManager.getSubscription().then(function(s){show(!!s)});
-b.addEventListener("click",function(){b.disabled=true;reg.pushManager.getSubscription().then(function(s){
-if(s)return post("/settings/push/off",{endpoint:s.endpoint}).then(function(){return s.unsubscribe()}).then(function(){show(false)});
-return Notification.requestPermission().then(function(p){if(p!=="granted"){show(false);return}
-return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(f.dataset.key)}).then(function(s){return post("/settings/push",s.toJSON())}).then(function(){show(true)})})
-}).catch(function(){hint.textContent=T.failed}).then(function(){b.disabled=false})})})})()`;
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
 function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean }) {

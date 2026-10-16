@@ -316,6 +316,11 @@ h2.h3{font-size:1.02rem;margin:.2rem 0 .3rem}
 .circle-none a{display:inline-flex;align-items:center;min-height:44px;font-weight:700}
 /* My events with nothing booked, owner card F: the next events as tickets. */
 .next-up{margin:8px 0 4px}
+/* Notifications on this phone: a card at the top of the Notifications page; a switch that can't work reads as off, not broken. */
+.push-card{margin:4px 0 16px}
+.push-card .qs{border:1px solid var(--line)}
+.qs:disabled{cursor:default}
+.qs:disabled b{color:var(--ink-2)}
 /* Discover, owner card A: one sticky bar (time, filters, map/cards) so events start on the first screen. */
 .plan-line{display:flex;align-items:center;gap:6px;min-height:44px;margin:-4px 0 4px;font-weight:700;color:var(--brand);text-decoration:none}
 .disc-bar{position:sticky;top:var(--disc-top,60px);z-index:4;display:grid;gap:6px;margin:0 calc(-1 * var(--gx,20px)) 12px;padding:6px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line)}
