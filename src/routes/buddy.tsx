@@ -30,6 +30,7 @@
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
 import { SafeArrivalForm } from "./safety";
+import { Sheet } from "../ui/sheet";
 import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
@@ -313,7 +314,7 @@ async function seasonBadges(db: Db, me: string): Promise<{ key: string; icon: st
 // ------------------------------------------------------------------ views --
 
 const SAFETY = (v: View) => (
-  <details class="buddy-safety">
+  <details class="how buddy-safety">
     <summary>🛡️ {v.t("ปลอดภัยไว้ก่อน", "Stay safe")}</summary>
     <ul>
       <li>{v.t("นัดเจอในที่สาธารณะเสมอ ทุกเควสต์อยู่ในที่สาธารณะ", "Always meet in public places. Every quest is in one.")}</li>
@@ -434,8 +435,12 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
       <p class="chips2">
         <span>📍 {place}</span>
         {season ? <span>🗓️ {t("แสตมป์ประจำฤดู", "Season stamp")}</span> : picker ? <span>{picker.emoji} {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</span> : null}
-        <span>{mineDone ? "✅" : "⬜"} {t("คุณ", "You")}</span>
-        <span>{theirsDone ? "✅" : "⬜"} {props.buddyName}</span>
+        <span class={mineDone ? "quest-who done" : "quest-who"}>
+          {t("คุณ", "You")}: {mineDone ? t("✓ ไปแล้ว", "✓ Done") : t("ยังไม่ได้ไป", "Not yet")}
+        </span>
+        <span class={theirsDone ? "quest-who done" : "quest-who"}>
+          {props.buddyName}: {theirsDone ? t("✓ ไปแล้ว", "✓ Done") : t("ยังไม่ได้ไป", "Not yet")}
+        </span>
       </p>
       {mineDone && theirsDone ? (
         <>
@@ -625,8 +630,8 @@ function WrapUp(props: { v: View; m: BuddyMatch; me: string; offApp: boolean }) 
     );
   }
   return (
-    <details class="buddy-wrap">
-      <summary>{t("ปิดบัดดี้รอบนี้แบบดี ๆ", "Wrap up kindly")}</summary>
+    <details class="how buddy-wrap">
+      <summary>🌙 {t("ปิดบัดดี้รอบนี้แบบดี ๆ", "Wrap up kindly")}</summary>
       <p class="muted">
         {props.offApp
           ? t("คุณทั้งสองคนแชร์ช่องทางติดต่อกันแล้ว จึงปิดในแอปได้ทันที แล้วไปคุยกันต่อนอกแอปได้", "You've both shared a contact, so you can close here right away and carry on off the app.")
@@ -713,37 +718,55 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
         </Card>
       ) : (
         <>
-          <BuddyCard v={v} eyebrow={t("บัดดี้ของคุณ", "Your buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)}>
-            <span class="acts">
-              <a class="btn ghost" href={`/people/${otherId}`}>👤 {t("โปรไฟล์", "Card")}</a>
-              <a class="btn ghost" href={`/chat/buddy:${match.id}`}>💬 {t("แชต", "Chat")}</a>
-            </span>
-          </BuddyCard>
+          <BuddyCard v={v} eyebrow={t("บัดดี้ของคุณ", "Your buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)} />
+          {/* B4: Chat stays on the face; profile, stay safe, wrap up, report, block and buddy settings share one ⋯ Sheet. */}
+          <div class="pc-acts buddy-acts">
+            <a class="btn primary" href={`/chat/buddy:${match.id}`}>💬 {t("แชต", "Chat")}</a>
+            <Sheet
+              t={t}
+              title={t(`บัดดี้ของคุณ: ${buddyName}`, `Your buddy: ${buddyName}`)}
+              trigger={<span aria-hidden="true">⋯</span>}
+              triggerClass="sheet-more"
+              triggerLabel={t(`ตัวเลือกเพิ่มเติมสำหรับ ${buddyName}`, `More options for ${buddyName}`)}
+              align="start"
+            >
+              {/* Pinky slot: the quiet "เกี่ยวก้อย · Pinky" row for members with 💘 on goes first here, never on the card face. */}
+              <a class="sheet-item" href={`/people/${otherId}`}>
+                <span aria-hidden="true">👤</span> {t(`ดูโปรไฟล์ ${buddyName}`, `See ${buddyName}'s profile`)}
+              </a>
+              {SAFETY(v)}
+              {match.endRequestedBy ? null : <WrapUp v={v} m={match} me={me} offApp={offApp} />}
+              <details class="how">
+                <summary>⚙️ {t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
+                <OptIn v={v} intent={optin.intent} hasType={types.has(me)} compact />
+                <form method="post" action="/buddy/pause">
+                  <Button kind="ghost">{t("หยุดรับบัดดี้ใหม่", "Stop new buddies")}</Button>
+                </form>
+              </details>
+              <div class="sheet-sep" role="separator" />
+              <a class="sheet-item" href={`/report?account=${otherId}`}>
+                <span aria-hidden="true">🚩</span> {t("รายงาน", "Report")}
+              </a>
+              <form method="post" action={`/block/${otherId}`}>
+                <input type="hidden" name="back" value="/buddy" />
+                <button class="sheet-item danger">
+                  <span aria-hidden="true">⛔</span> {t("บล็อก", "Block")}
+                </button>
+              </form>
+            </Sheet>
+          </div>
+          {match.endRequestedBy ? <WrapUp v={v} m={match} me={me} offApp={offApp} /> : null}
           {quest ? <QuestCard v={v} m={match} q={quest} me={me} buddyName={buddyName} types={types} /> : null}
           {bigQuest ? <QuestCard v={v} m={match} q={bigQuest} me={me} buddyName={buddyName} types={types} /> : null}
-          {SAFETY(v)}
           <Card class="first-meet">
             <h3 style="margin-top:0">🛡️ {t("ก่อนเจอกัน", "Before you meet")}</h3>
             <p class="muted">{t("นัดในที่สาธารณะตอนกลางวัน บอกเพื่อนว่าไปไหน และตั้งให้เราถามว่าถึงบ้านปลอดภัยไหม", "Meet in public, in daylight. Tell a friend, and let us ask if you got home safe.")}</p>
             <SafeArrivalForm v={v} context={`buddy:${match.id}`} />
           </Card>
-          <WrapUp v={v} m={match} me={me} offApp={offApp} />
-          <div class="row safety-row">
-            <a href={`/report?account=${otherId}`}>{t("รายงาน", "Report")}</a>
-            <details class="more-menu">
-              <summary aria-label={t("ตัวเลือกเพิ่มเติม", "More options")}>⋯ {t("เพิ่มเติม", "More")}</summary>
-              <div>
-                <form method="post" action={`/block/${otherId}`}>
-                  <input type="hidden" name="back" value="/buddy" />
-                  <Button kind="danger">{t("บล็อก", "Block")}</Button>
-                </form>
-              </div>
-            </details>
-          </div>
         </>
       )}
       <Passport v={v} stamped={stamped} compact wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
-      {optin?.active ? (
+      {optin?.active && match?.state !== "active" ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
           <OptIn v={v} intent={optin.intent} hasType={types.has(me)} compact />

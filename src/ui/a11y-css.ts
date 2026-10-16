@@ -716,4 +716,9 @@ details.sheet[open]>.sheet-more{background:var(--surface-2)}
 .met-at ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
 .met-at li{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
 .met-at li a{display:inline-flex;align-items:center;min-height:44px}
+/* B4 Buddy: Chat and ⋯ under the buddy card; cards inside the Sheet sit flat. Quest progress in words, ✓ when done. */
+.buddy-acts{margin:0 4px 16px}
+.sheet-body .card{margin:8px 0;padding:12px;box-shadow:none}
+.sheet-body .buddy-safety ul{padding-left:0}
+.chips2 .quest-who.done{background:var(--ok-soft);color:var(--ink);font-weight:700}
 `);
