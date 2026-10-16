@@ -534,4 +534,14 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 .chat-ice button{display:flex;gap:8px;align-items:flex-start;width:100%;min-height:44px;padding:10px 14px;border-radius:14px;border:1.5px solid var(--brand);background:var(--surface);color:var(--ink);font:inherit;text-align:left;line-height:1.45;white-space:normal;cursor:pointer}
 .chat-ice button:hover{background:var(--brand-soft)}
 .chat-ice button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+/* Profile facts as two-column tiles (owner card): the answer in bold with its icon, the label small
+   underneath, about half the height of label-over-value rows. */
+.pc-facts:has(.pc-tile){grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:900px){.pc-facts:has(.pc-tile){grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pc-tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--surface-2);min-width:0}
+.pc-tile dd{order:-1;margin:0;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.pc-tile dd span[aria-hidden]{margin-right:4px}
+.pc-tile dt{font-size:.78rem;color:var(--ink-3)}
+.pc-tile.pc-wide{grid-column:1/-1}
+.pc-tile dd{font-size:.95rem}
 `);

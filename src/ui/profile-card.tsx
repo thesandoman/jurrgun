@@ -214,6 +214,8 @@ export function ProfileCard(props: {
   if (punctual) factsMeet.push([punctual.emoji, t("เวลานัด", "Timing"), L(lang, punctual)]);
   if (p.languages.length) factsLang.push(["🗣️", t("พูดภาษา", "Speaks"), p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
   if (bio.learningLangs?.length) factsLang.push(["🔤", t("กำลังหัดภาษา", "Learning"), bio.learningLangs.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
+  // The short "Currently learning" answer is a tile with the languages (owner: one learning line, not two).
+  if (bio.learning) factsLang.push(["📚", t("กำลังเรียนรู้", "Currently learning"), bio.learning]);
   const factGroups = [
     { th: "ชีวิตในกรุงเทพฯ", en: "Life in Bangkok", items: factsBkk },
     { th: "งานและการเรียน", en: "Work and study", items: factsWork },
@@ -254,15 +256,6 @@ export function ProfileCard(props: {
         </nav>
       ) : null}
 
-      {bio.learning ? (
-        <section class="pc-lines">
-          {bio.learning ? (
-            <p>
-              <span aria-hidden="true">📚</span> {t("กำลังเรียนรู้", "Currently learning")}: {bio.learning}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
       {props.actions && !props.compact ? <div class="pc-actions">{props.actions}</div> : null}
 
       {slot()}
@@ -284,11 +277,11 @@ export function ProfileCard(props: {
               <h3 class="pc-group-h">{t(g.th, g.en)}</h3>
               <dl class="pc-facts">
                 {g.items.map(([e, k, val]) => (
-                  <div>
-                    <dt>
-                      <span aria-hidden="true">{e}</span> {k}
-                    </dt>
-                    <dd>{val}</dd>
+                  <div class={[...val].length > 22 ? "pc-tile pc-wide" : "pc-tile"}>
+                    <dt>{k}</dt>
+                    <dd>
+                      <span aria-hidden="true">{e}</span> {val}
+                    </dd>
                   </div>
                 ))}
               </dl>
