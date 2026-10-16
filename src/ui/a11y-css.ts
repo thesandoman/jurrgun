@@ -476,4 +476,12 @@ body:has(.disc) .discover-list{padding-bottom:0}
 .ev-card .event-cover .scene-badge{width:34px;height:34px;border-radius:11px;font-size:1.1rem;box-shadow:none;background:color-mix(in srgb,var(--surface) 80%,transparent)}
 .ev-card .chips2{gap:2px 12px}
 .ev-card .chips2 span:not(:last-child)::after{content:none}
+/* Calmer motion (Phase 3): with reduced motion on (system setting or the app's own switch), nothing
+   moves or scales, but colour and opacity changes still show, so state changes stay visible. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-property:color,background-color,border-color,opacity,box-shadow!important}
+  .type-emoji,.btn-ticket.is-busy::before{animation:none!important}
+}
+html.a11y-motion *,html.a11y-motion *::before,html.a11y-motion *::after{transition-property:color,background-color,border-color,opacity,box-shadow!important}
+html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animation:none!important}
 `);

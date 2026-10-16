@@ -19,8 +19,8 @@
  */
 export const ALIVE_CSS = `
 /* toast: the ok notice floats under the header, then tucks itself away */
-.notice.ok.toast{position:fixed;z-index:40;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);width:max-content;max-width:min(92vw,460px);margin:0;display:flex;align-items:center;gap:10px;padding:12px 18px 12px 12px;border-radius:999px;background:var(--lime);color:#06301c;font-weight:650;box-shadow:0 14px 34px rgba(4,40,22,.35),0 0 0 1px rgba(6,48,28,.12) inset;animation:toast-in .5s cubic-bezier(.2,1.4,.4,1) both,toast-out .45s ease 4.2s forwards}
-.notice.ok.toast::before{content:"✓";flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#06301c;color:var(--lime);font-weight:800;animation:toast-tick .5s .18s cubic-bezier(.2,1.6,.4,1) both}
+.notice.ok.toast{position:fixed;z-index:40;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);width:max-content;max-width:min(92vw,460px);margin:0;display:flex;align-items:center;gap:10px;padding:12px 18px 12px 12px;border-radius:999px;background:var(--lime);color:#06301c;font-weight:650;box-shadow:0 14px 34px rgba(4,40,22,.35),0 0 0 1px rgba(6,48,28,.12) inset;animation:toast-in .5s cubic-bezier(.2,.8,.2,1) both,toast-out .45s ease 4.2s forwards}
+.notice.ok.toast::before{content:"✓";flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#06301c;color:var(--lime);font-weight:800;animation:toast-tick .5s .18s cubic-bezier(.2,.8,.2,1) both}
 .notice.ok.toast.party::before{content:"🎉";background:transparent;font-size:1.25rem}
 @keyframes toast-in{from{opacity:0;transform:translate(-50%,-16px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes toast-out{to{opacity:0;transform:translate(-50%,-12px) scale(.96);visibility:hidden}}
@@ -47,7 +47,7 @@ export const ALIVE_CSS = `
 @media (hover:hover) and (pointer:fine){
   .ev-card:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-4px)}
   .ev-card:hover::after{opacity:1}
-  .ev-card:hover .ev-date{transform:rotate(0) scale(1.06);transition:transform .3s cubic-bezier(.2,1.5,.4,1)}
+  .ev-card:hover .ev-date{transform:rotate(0) scale(1.06);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
 }
 /* lists rise in, one after another */
 .discover-list>*,.me-menu>*,.stack-in>*{animation:rise .5s cubic-bezier(.2,.8,.2,1) backwards}
@@ -73,7 +73,7 @@ export const ALIVE_CSS = `
 .qs b{display:block;font-weight:650}
 .qs small{display:block;color:var(--ink-3);font-size:.8rem}
 .qs .sw{margin-left:auto;flex:none;position:relative;width:46px;height:28px;border-radius:999px;background:color-mix(in srgb,var(--ink-3) 30%,transparent);transition:background-color .25s ease}
-.qs .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.2,1.5,.4,1)}
+.qs .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
 .qs[aria-pressed=true] .sw{background:var(--brand)}
 .qs.love[aria-pressed=true] .sw{background:var(--love)}
 .qs.love[aria-pressed=true]{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--love) 45%,transparent)}

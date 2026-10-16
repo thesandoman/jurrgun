@@ -305,7 +305,7 @@ body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 /* Bangkok Types */
 .type-hero{text-align:center;padding:8px 0 4px}
 .type-emoji{font-size:4.2rem;line-height:1.1;display:block}
-.type-hero.reveal .type-emoji{animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.type-hero.reveal .type-emoji{animation:pop .5s cubic-bezier(.2,.8,.2,1) both}
 @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
 .type-hero h1{margin:.2rem 0}
 .type-hero p{color:var(--ink-2);margin:0}

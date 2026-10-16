@@ -194,7 +194,7 @@ a.tile2:active{transform:scale(.98)}
 .type-hero2 .type-emoji{font-size:3.6rem;line-height:1;filter:drop-shadow(0 6px 12px rgba(0,0,0,.35))}
 .type-hero2 h1{color:#fff;margin:.1rem 0;font-size:1.9rem;line-height:1.1}
 .type-hero2 .type-range a{color:#fff;font-weight:700}
-.type-hero2.reveal .type-emoji{animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.type-hero2.reveal .type-emoji{animation:pop .5s cubic-bezier(.2,.8,.2,1) both}
 .blend3{grid-template-columns:repeat(3,1fr)}
 .blend3 .tile2{min-height:150px;padding:12px}
 .blend3 .big-n{font-size:1.7rem}

@@ -20,7 +20,7 @@ export const MOMENTS_CSS = themed(`
 .btn-ticket::before{content:"";position:absolute;right:18px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--surface);box-shadow:inset 0 1px 2px rgba(0,0,0,.35);transform:scale(0)}
 .btn-ticket>span{position:relative;padding-right:14px;border-right:2px dashed color-mix(in srgb,currentColor 45%,transparent)}
 .btn-ticket.is-busy{animation:punch-press .28s ease}
-.btn-ticket.is-busy::before{animation:punch .38s .08s cubic-bezier(.2,1.6,.4,1) forwards}
+.btn-ticket.is-busy::before{animation:punch .38s .08s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes punch{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
 @keyframes punch-press{35%{transform:translateY(2px) scale(.97)}}
 
@@ -59,9 +59,9 @@ export const MOMENTS_CSS = themed(`
 /* Mutual connection spark */
 .spark-pop{position:fixed;z-index:45;left:50%;top:40%;display:flex;align-items:center;transform:translate(-50%,-50%);pointer-events:none;animation:sp-out .45s 2.3s ease forwards}
 .spark-pop i{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 10px 28px rgba(0,0,0,.2);font-style:normal;font-weight:800;font-size:1.5rem;color:#fff}
-.spark-pop .sp-a{background:linear-gradient(135deg,#2fb866,var(--brand));animation:sp-l .7s cubic-bezier(.2,1.3,.4,1) both}
-.spark-pop .sp-b{background:linear-gradient(135deg,#ffc766,#ffa53a);margin-left:-14px;animation:sp-r .7s cubic-bezier(.2,1.3,.4,1) both}
-.spark-pop b{position:absolute;left:50%;top:-26px;font-size:1.9rem;transform:translateX(-50%) scale(0);animation:sp-burst .5s .55s cubic-bezier(.2,1.8,.4,1) forwards}
+.spark-pop .sp-a{background:linear-gradient(135deg,#2fb866,var(--brand));animation:sp-l .7s cubic-bezier(.2,.8,.2,1) both}
+.spark-pop .sp-b{background:linear-gradient(135deg,#ffc766,#ffa53a);margin-left:-14px;animation:sp-r .7s cubic-bezier(.2,.8,.2,1) both}
+.spark-pop b{position:absolute;left:50%;top:-26px;font-size:1.9rem;transform:translateX(-50%) scale(0);animation:sp-burst .5s .55s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes sp-l{from{transform:translateX(-90px);opacity:0}}
 @keyframes sp-r{from{transform:translateX(90px);opacity:0}}
 @keyframes sp-burst{to{transform:translateX(-50%) scale(1)}}
