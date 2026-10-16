@@ -84,10 +84,11 @@ describe.skipIf(!HAS_DB)("dating events (open_to_more)", () => {
     const title = `Singles canal walk ${id.slice(0, 6)}`;
     const startsAt = new Date(Date.now() + 9 * 86_400_000);
     await db().insert(events).values({ id, title, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3600_000), venueName: "Pier", district: "bang_rak", capacity: 10, status: "published", createdBy: "t", tags: ["open_to_more"] });
-    expect(await (await req("/events?view=list", { cookie: friend.cookie })).text()).not.toContain(title);
+    const listed = `/events?view=list&q=${encodeURIComponent(title)}`; // a search, so other tests' events can't crowd it off the list
+    expect(await (await req(listed, { cookie: friend.cookie })).text()).not.toContain(`href="/events/${id}"`);
     expect((await req(`/events/${id}`, { cookie: friend.cookie })).status).toBe(404);
     expect((await req(`/events/${id}/rsvp`, { cookie: friend.cookie, form: { rhythmOk: "1" } })).status).not.toBe(302);
-    expect(await (await req("/events?view=list", { cookie: dater.cookie })).text()).toContain(title);
+    expect(await (await req(listed, { cookie: dater.cookie })).text()).toContain(`href="/events/${id}"`);
     expect((await req(`/events/${id}`, { cookie: dater.cookie })).status).toBe(200);
   });
 });
