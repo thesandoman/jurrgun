@@ -275,7 +275,7 @@ export function ProfileCard(props: {
           {factGroups.map((g) => (
             <>
               <h3 class="pc-group-h">{t(g.th, g.en)}</h3>
-              <FactTiles cols={3} class="pc-tiles" facts={g.items.map(([e, k, val]) => ({ icon: e, label: k, answer: val, wide: [...val].length > 22 }))} />
+              <FactTiles class="pc-tiles" facts={g.items.map(([e, k, val]) => ({ icon: e, label: k, answer: val, wide: [...val].length > 22 }))} />
             </>
           ))}
           {tableCount > 1 ? (
