@@ -260,6 +260,12 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .notif-count{color:var(--brand)}
 .notif-page li.unread .notif-title{font-weight:700}
 
+/* Person cards: Chat is the one primary action; thank-you and share contact become quiet rows (Phase 3). */
+main .card:has(.safety-row) details.how{margin:2px 0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
+main .card:has(.safety-row) details.how>summary{min-height:44px;padding:0;font-weight:600;color:var(--brand);background:none;border:0}
+main .card:has(.safety-row) details.how[open]>summary{color:var(--ink)}
+main .card:has(.safety-row) details.how>form{padding:4px 0 8px}
+
 /* Headings break evenly (no lone last word). */
 h1,h2,h3,.flow-title{text-wrap:balance}
 /* Staff chip in the header: on narrow phones it drops to the Me menu's job, so the header never overflows. */

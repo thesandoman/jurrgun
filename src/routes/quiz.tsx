@@ -744,25 +744,25 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
           ) : null}
         </Tile>
       </div>
-      <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
+      {/* Lean result (owner, Phase 3): the type, why, three short cards and the feel check up top;
+          everything else one tap away. The letter chips are gone; the letters are explained in words below. */}
       {res.moves ? <p class="type-moves">{L(lang, motiveSentence(res.moves.motive, res.moves.place))}</p> : null}
       <WhyYou v={props.v} archetype={key} why={(props.row.blend as { why?: Why } | null)?.why} />
       <FeelsLikeYou v={props.v} feel={(props.row.blend as { feel?: Feel } | null)?.feel} next={props.visibilityNext} />
       <TypeFacts v={props.v} a={a} />
-      <details class="how">
-        <summary>{t("เกี่ยวกับไทป์นี้", "About this type")}</summary>
+      <details class="how card explore-type">
+        <summary>🧭 {t("สำรวจไทป์ของคุณ", "Explore your type")}</summary>
+        <h3>{t("เกี่ยวกับไทป์นี้", "About this type")}</h3>
         <p style="margin:8px 0 0">{L(lang, a.description)}</p>
-      </details>
-      <Blend v={props.v} blend={res.types} />
-      <TypeSpots v={props.v} a={a} mine />
-      <Clicks v={props.v} a={a} />
-      <details class="how card">
-        <summary>🎯 {t("ผลแม่นแค่ไหน และตัวอักษรของคุณ", "How sure we are, and your letters")}</summary>
+        <Blend v={props.v} blend={res.types} />
+        <TypeSpots v={props.v} a={a} mine />
+        <Clicks v={props.v} a={a} />
+        <h3>🎯 {t("ผลแม่นแค่ไหน และตัวอักษรของคุณ", "How sure we are, and your letters")}</h3>
         <Certainty v={props.v} res={{ ...res, unsure: close }} />
         <Meter lang={lang} vector={props.row.vector} margin={res.margin} unsure={res.margin ? close : undefined} />
+        <Matches v={props.v} archetype={key} shown={res.types.map((x) => x.key)} />
+        <ShareType v={props.v} archetype={key} />
       </details>
-      <Matches v={props.v} archetype={key} shown={res.types.map((x) => x.key)} />
-      <ShareType v={props.v} archetype={key} />
       <VisibilityToggle v={props.v} visible={props.row.visible} next={props.visibilityNext} />
       <div class="flow-bar">
         <LinkButton href={props.continueHref}>{props.continueLabel}</LinkButton>

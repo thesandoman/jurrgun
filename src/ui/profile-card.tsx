@@ -173,43 +173,54 @@ export function ProfileCard(props: {
   const sharedCount = interests.filter((x) => shared.has(x.value)).length;
   const energy = ENERGY.find((x) => x.value === bio.energy);
   const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
-  const facts: [string, string, string][] = [];
+  // Facts in 3 or 4 headed groups instead of one long list (Phase 3).
+  const factsBkk: [string, string, string][] = [];
+  const factsWork: [string, string, string][] = [];
+  const factsMeet: [string, string, string][] = [];
+  const factsLang: [string, string, string][] = [];
   const story = BKK_STORY.find((x) => x.value === bio.story);
   const time = BKK_TIME.find((x) => x.value === bio.bkkTime);
   if (story || time) {
     const parts = [story ? L(lang, story) : "", time && time.value !== "always" ? t(`อยู่มา ${L(lang, time)}`, `here ${L(lang, time).toLowerCase()}`) : time ? L(lang, time) : ""].filter(Boolean);
-    facts.push([story?.emoji ?? time!.emoji, t("กรุงเทพฯ ของฉัน", "My Bangkok"), parts.join(" · ")]);
+    factsBkk.push([story?.emoji ?? time!.emoji, t("กรุงเทพฯ ของฉัน", "My Bangkok"), parts.join(" · ")]);
   }
   // "Lives in Bangkok" is the default; the others are worth knowing at a table.
   const res = RESIDENCY.find((x) => x.value === bio.residency && x.value !== "lives");
-  if (res) facts.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
+  if (res) factsBkk.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
   // Several tables read better as a count and one chip each than as a long comma line.
   const tableCount = props.regularAt?.length ?? 0;
-  if (tableCount === 1) facts.push(["🪑", t("ขาประจำที่", "Regular at"), props.regularAt![0]]);
-  if (bio.hometown) facts.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
-  facts.push(...reflectionFacts(bio.reflections, lang, t));
-  if (bio.guide) facts.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
+  if (tableCount === 1) factsBkk.push(["🪑", t("ขาประจำที่", "Regular at"), props.regularAt![0]]);
+  if (bio.hometown) factsBkk.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
+  factsBkk.push(...reflectionFacts(bio.reflections, lang, t));
+  if (bio.guide) factsBkk.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
   const occupation = occupationLabel(bio, lang);
-  if (occupation) facts.push([occupation.emoji, t("อาชีพ", "Work"), occupation.text]);
+  if (occupation) factsWork.push([occupation.emoji, t("อาชีพ", "Work"), occupation.text]);
   const education = educationLabel(bio, lang);
-  if (education) facts.push([education.emoji, t("การศึกษา", "Education"), education.text]);
-  if (energy) facts.push([energy.emoji, t("ตอนเจอกันครั้งแรก", "First-meet energy"), L(lang, energy)]);
-  if (weekend) facts.push([weekend.emoji, t("สไตล์วันหยุด", "Weekend rhythm"), L(lang, weekend)]);
+  if (education) factsWork.push([education.emoji, t("การศึกษา", "Education"), education.text]);
+  if (energy) factsMeet.push([energy.emoji, t("ตอนเจอกันครั้งแรก", "First-meet energy"), L(lang, energy)]);
+  if (weekend) factsMeet.push([weekend.emoji, t("สไตล์วันหยุด", "Weekend rhythm"), L(lang, weekend)]);
   const many = (list: typeof PAY_METHODS, vals?: string[]) => (vals ?? []).map((v) => list.find((x) => x.value === v)).filter((x) => !!x).map((x) => L(lang, x!)).join(", ");
   const one = (list: typeof PAY_METHODS, v?: string) => list.find((x) => x.value === v);
-  if (bio.pay?.length) facts.push(["💳", t("จ่ายด้วย", "Pays with"), many(PAY_METHODS, bio.pay)]);
+  if (bio.pay?.length) factsMeet.push(["💳", t("จ่ายด้วย", "Pays with"), many(PAY_METHODS, bio.pay)]);
   const bill = one(BILL_STYLE, bio.bill);
-  if (bill) facts.push([bill.emoji, t("เวลาเช็กบิล", "Bill style"), L(lang, bill)]);
-  if (bio.travel?.length) facts.push(["🚇", t("เดินทางด้วย", "Gets around by"), many(GETTING_AROUND, bio.travel)]);
-  if (bio.diet?.length) facts.push(["🍽️", t("เรื่องอาหาร", "Food needs"), many(DIET, bio.diet)]);
+  if (bill) factsMeet.push([bill.emoji, t("เวลาเช็กบิล", "Bill style"), L(lang, bill)]);
+  if (bio.travel?.length) factsMeet.push(["🚇", t("เดินทางด้วย", "Gets around by"), many(GETTING_AROUND, bio.travel)]);
+  if (bio.diet?.length) factsMeet.push(["🍽️", t("เรื่องอาหาร", "Food needs"), many(DIET, bio.diet)]);
   const spice = one(SPICE, bio.spice);
-  if (spice) facts.push([spice.emoji, t("ความเผ็ด", "Spice"), L(lang, spice)]);
+  if (spice) factsMeet.push([spice.emoji, t("ความเผ็ด", "Spice"), L(lang, spice)]);
   const pets = one(PETS, bio.pets);
-  if (pets) facts.push([pets.emoji, t("สัตว์เลี้ยง", "Pets"), L(lang, pets)]);
+  if (pets) factsMeet.push([pets.emoji, t("สัตว์เลี้ยง", "Pets"), L(lang, pets)]);
   const punctual = one(PUNCTUAL, bio.punctual);
-  if (punctual) facts.push([punctual.emoji, t("เวลานัด", "Timing"), L(lang, punctual)]);
-  if (p.languages.length) facts.push(["🗣️", t("พูดภาษา", "Speaks"), p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
-  if (bio.learningLangs?.length) facts.push(["🔤", t("กำลังหัดภาษา", "Learning"), bio.learningLangs.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
+  if (punctual) factsMeet.push([punctual.emoji, t("เวลานัด", "Timing"), L(lang, punctual)]);
+  if (p.languages.length) factsLang.push(["🗣️", t("พูดภาษา", "Speaks"), p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
+  if (bio.learningLangs?.length) factsLang.push(["🔤", t("กำลังหัดภาษา", "Learning"), bio.learningLangs.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
+  const factGroups = [
+    { th: "ชีวิตในกรุงเทพฯ", en: "Life in Bangkok", items: factsBkk },
+    { th: "งานและการเรียน", en: "Work and study", items: factsWork },
+    { th: "เวลาเจอกัน", en: "Meeting up", items: factsMeet },
+    { th: "ภาษา", en: "Languages", items: factsLang },
+  ].filter((g) => g.items.length);
+  const facts = factGroups.flatMap((g) => g.items);
 
   return (
     <article class="pc">
@@ -268,18 +279,21 @@ export function ProfileCard(props: {
               </div>
             </>
           ) : null}
-          {facts.length ? (
-            <dl class="pc-facts">
-              {facts.map(([e, k, val]) => (
-                <div>
-                  <dt>
-                    <span aria-hidden="true">{e}</span> {k}
-                  </dt>
-                  <dd>{val}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
+          {factGroups.map((g) => (
+            <>
+              <h3 class="pc-group-h">{t(g.th, g.en)}</h3>
+              <dl class="pc-facts">
+                {g.items.map(([e, k, val]) => (
+                  <div>
+                    <dt>
+                      <span aria-hidden="true">{e}</span> {k}
+                    </dt>
+                    <dd>{val}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          ))}
           {tableCount > 1 ? (
             <>
               <h2 class="pc-tables-h">
@@ -517,6 +531,11 @@ export const PROFILE_CSS = `
 .pc-datestyle{background:var(--surface);border-radius:var(--radius);padding:14px 16px}
 .pc-datestyle h2{margin:0 0 8px;font-size:1.05rem}
 .pc-datestyle .pc-facts{margin:0}
+.pc-group-h{margin:18px 0 0;font-size:.82rem;font-weight:700;color:var(--ink-2);text-transform:none}
+.pc-group-h+.pc-facts{margin-top:8px}
+.pc-sec h2.pc-tables-h{margin-top:20px}
+/* No coloured stripe on prompt cards (craft floor, Phase 3): the question label carries the colour. */
+.pc-card::before{content:none!important}
 .pc-lock{margin:-4px 0 10px;font-size:.86rem;color:var(--love-ink)}
 .pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
 .pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
