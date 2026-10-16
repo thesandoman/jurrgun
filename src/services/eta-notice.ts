@@ -54,14 +54,14 @@ export async function notifyHostRunningLate(
     .returning({ id: notifications.id });
   if (!inserted.length) return false;
   if (quietHours(now)) return true;
-  // The newest answer counts; no answer at all counts as yes, as for the clock.
+  // The newest answer counts; no answer at all means no, as for the clock (privacy R7).
   const [said] = await db
     .select({ granted: consents.granted })
     .from(consents)
     .where(and(eq(consents.accountId, p.hostId), eq(consents.category, "notifications")))
     .orderBy(desc(consents.createdAt))
     .limit(1);
-  if (said && !said.granted) return true;
+  if (!said?.granted) return true;
   const lang: Lang = p.hostLocale === "en" ? "en" : "th";
   // The event is about to start or under way: an hour is long enough to matter.
   await pushToAccount(env, db, p.hostId, { title: "Jurrgun", body: etaLateText(p.firstName, lang), url: link, tag: `${KIND_ETA_LATE}:${p.eventId}` }, 3600);

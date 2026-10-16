@@ -17,6 +17,9 @@
  *                             pairs are cleared; the registration row and its
  *                             status stay, so attendance totals still add up
  *   City Pulse and wellbeing  24 months after the answer (research code rows)
+ *   research ids              cut, with every answer under them, from any
+ *                             account whose newest research answer isn't yes
+ *                             (a research_id exists only with research consent)
  *   deactivated accounts      30 days after deactivation, unless a moderation
  *                             hold applies (an open or in-review report about
  *                             them): profile, vibe, sessions, notifications,
@@ -79,6 +82,8 @@ export const CHECKIN_RETENTION_DAYS = 365;
 export const RESEARCH_RETENTION_DAYS = 730;
 /** Chat messages are kept this long, then deleted (reported ones stay in the report's details). */
 export const CHAT_RETENTION_DAYS = 180;
+/** Research ids cut per run (accounts without research consent); the rest wait for the next run. */
+export const RESEARCH_BATCH = 500;
 /** Accounts anonymised per run; the rest wait for the next run. */
 export const ACCOUNT_BATCH = 200;
 /** How often the lazy run on /admin may fire. */
@@ -94,6 +99,8 @@ export type RetentionCounts = {
   checkInsAggregated: number;
   researchAnswersDeleted: number;
   accountsDeleted: number;
+  /** Research ids cut (and their answers deleted) because research consent isn't on. */
+  researchLinksCut: number;
   /** True when more deactivated accounts were due than one run handles. */
   accountsRemaining: boolean;
 };
@@ -153,6 +160,21 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     db.delete(loginCodes).where(lt(loginCodes.createdAt, new Date(now.getTime() - CODE_RETENTION_HOURS * HOUR))).returning({ id: loginCodes.id }),
   ]);
 
+  // 1b. A research_id only with research consent (privacy R7): an account holding one whose newest
+  // research answer isn't yes (older accounts got one at sign-up) loses it and its answers. Bounded.
+  const unconsented = await db
+    .select({ id: accounts.id, rid: accounts.researchId })
+    .from(accounts)
+    .where(
+      and(
+        isNotNull(accounts.researchId),
+        sql`not exists (select 1 from ${consents} c where c.account_id = ${accounts.id} and c.category = 'research' and c.granted
+          and not exists (select 1 from ${consents} d where d.account_id = c.account_id and d.category = 'research' and d.created_at > c.created_at))`,
+      ),
+    )
+    .limit(RESEARCH_BATCH);
+  const cutRids = unconsented.map((r) => r.rid!);
+
   // 2. Deactivated accounts past 30 days, without a moderation hold. Bounded.
   const due = await db
     .select({ id: accounts.id })
@@ -186,11 +208,19 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     loginCodesDeleted: codesOld.length,
     checkInsAggregated: checkIns.length,
     researchAnswersDeleted: pulseOld.length + wellOld.length,
+    researchLinksCut: unconsented.length,
     accountsDeleted: ids.length,
     accountsRemaining: due.length > ACCOUNT_BATCH,
   };
 
   const writes = [];
+  if (unconsented.length) {
+    writes.push(
+      db.delete(pulseResponses).where(inArray(pulseResponses.researchId, cutRids)),
+      db.delete(wellbeing).where(inArray(wellbeing.researchId, cutRids)),
+      db.update(accounts).set({ researchId: null }).where(inArray(accounts.id, unconsented.map((r) => r.id))),
+    );
+  }
   if (ids.length) {
     writes.push(
       db.delete(profiles).where(inArray(profiles.accountId, ids)),

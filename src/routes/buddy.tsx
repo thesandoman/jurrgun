@@ -65,6 +65,7 @@ import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View }
 import { AvatarStack, Bento, Big, Pill, PostcardFan, Stamps, Tile, artFor } from "../ui/visual";
 import type { Child } from "hono/jsx";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
+import { consentsFor, PERSONALIZATION_CONSENT } from "../services/consent";
 
 export const buddyRoutes = new Hono<AppEnv>();
 type Ctx = Context<AppEnv>;
@@ -204,6 +205,7 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
     typeOfAccount(db, ids),
     db.select({ accountId: buddySwipes.accountId, targetId: buddySwipes.targetId, choice: buddySwipes.choice }).from(buddySwipes).where(inArray(buddySwipes.accountId, ids)).limit(50_000),
   ]);
+  const personal = await consentsFor(db, ids, PERSONALIZATION_CONSENT);
   const busy = new Set(history.filter((m) => m.state !== "ended").flatMap((m) => [m.a, m.b]));
   const excluded = new Map<string, Set<string>>(ids.map((id) => [id, new Set<string>()]));
   const lastEnded = new Map<string, number>();
@@ -245,6 +247,7 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
       keen: keen.get(account.id),
       gender: profile.gender,
       womenOnly: profile.womenOnly,
+      ...(personal.has(account.id) ? {} : { plain: true }),
     });
   }
   return pool;

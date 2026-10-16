@@ -575,9 +575,11 @@ onboarding.post("/privacy", async (c) => {
   const db = getDb(c.env);
   await batch(
     c.env,
-    CONSENT_ITEMS.map((i) =>
-      db.insert(consents).values({ id: newId(), accountId: user.account.id, category: i.key, granted: granted(i.key), version: CONSENT_VERSION }),
-    ),
+    CONSENT_ITEMS.flatMap((i) => [
+      consentRow(db, user.account.id, i.key, granted(i.key)),
+      // A research yes is what issues the research_id (privacy R7).
+      ...consentEffects(db, user.account.id, i.key, granted(i.key), user.account.researchId),
+    ]),
   );
   return c.redirect("/onboarding/connections");
 });

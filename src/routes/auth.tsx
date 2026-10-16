@@ -192,7 +192,7 @@ authRoutes.post("/signup", async (c) => {
   const { hash, salt } = await hashPassword(password);
   const id = newId();
   try {
-    await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: newId(), signupSource: signupSource(c) });
+    await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: null, signupSource: signupSource(c) });
   } catch {
     // Unique index race: someone took it between the check and the insert.
     return fail(t("ชื่อผู้ใช้นี้ถูกใช้แล้ว", "That username is taken."));

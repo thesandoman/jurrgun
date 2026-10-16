@@ -26,6 +26,7 @@ import { requireMember } from "../lib/session";
 import { buddyMatches, buddyQuests, connections, contactShares, events, passportStamps, pitchJoins, planPitches, profiles, registrations, vibes, weeklyPlans, type Event } from "../schema";
 import { SEAT_STATUSES } from "../services/events";
 import { ARCHETYPES, isArchetypeKey } from "../vibe/archetypes";
+import { hasConsent, PERSONALIZATION_CONSENT } from "../services/consent";
 import { Button, Card, Field, LinkButton, Notice, page, Select, str, view, type View } from "../ui/kit";
 
 export const planRoutes = new Hono<AppEnv>();
@@ -95,6 +96,7 @@ async function planFor(c: C) {
   const friendsOf = new Map(friends.map((x) => [x.eventId, Number(x.n)]));
   const already = new Set(mine.map((x) => x.eventId));
   const code = vibe && isArchetypeKey(vibe.archetype) ? vibe.archetype : null;
+  const personal = await hasConsent(db, me, PERSONALIZATION_CONSENT);
   const typeDistricts = code ? ARCHETYPES[code].hangouts.map((h) => h.district) : [];
   const cands: PlanEvent[] = upcoming
     .filter((e) => !already.has(e.id))
@@ -121,9 +123,10 @@ async function planFor(c: C) {
       age: ageOn(p.birthDate, now),
       district: p.district,
       languages: p.languages,
-      interests: p.interests,
-      typeDistricts,
-      activities: bio.activities ?? [],
+      // Privacy R7: interests, activities and the Bangkok Type count only with the personalization consent.
+      interests: personal ? p.interests : [],
+      typeDistricts: personal ? typeDistricts : [],
+      activities: personal ? (bio.activities ?? []) : [],
       budgetMax: budgetMax(bio.budget),
       times: bio.times ?? [],
       access: bio.access ?? [],

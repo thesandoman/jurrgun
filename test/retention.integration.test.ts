@@ -120,11 +120,11 @@ describe.skipIf(!HAS_DB)("runRetention", () => {
     await db().insert(reports).values({ id: closedReport, reporter: b.id, targetAccount: gone.id, reason: "other", status: "dismissed" });
     await deactivate(gone, 31);
 
-    const recent = await createMember();
+    const recent = await createMember({ research: true });
     await personalRows(recent);
     await deactivate(recent, 5);
 
-    const held = await createMember();
+    const held = await createMember({ research: true });
     await db().insert(reports).values({ id: newId(), reporter: b.id, targetAccount: held.id, reason: "harassment", status: "open" });
     await deactivate(held, 40);
 

@@ -14,6 +14,7 @@ import { cleanBio, universityKey } from "../content/profile";
 import { audit, notify } from "../lib/records";
 import { accounts, blocks, buddyPairs, connections, events, partnerOrgs, profiles, registrations, strikes, vibes, type Event } from "../schema";
 import { segmentOf } from "../domain/segment";
+import { consentsFor, PERSONALIZATION_CONSENT } from "./consent";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -137,7 +138,7 @@ export async function releaseUpcomingSeats(env: DatabaseEnv, accountId: string, 
  */
 export async function loadAttendees(db: Db, accountIds: string[], now = new Date(), eventId?: string): Promise<Attendee[]> {
   if (accountIds.length === 0) return [];
-  const [profs, blockRows, vibeRows, connRows, seatRows] = await Promise.all([
+  const [profs, blockRows, vibeRows, connRows, seatRows, personal] = await Promise.all([
     db.select().from(profiles).where(inArray(profiles.accountId, accountIds)).limit(5000),
     db
       .select({ blocker: blocks.blocker, blocked: blocks.blocked })
@@ -155,6 +156,7 @@ export async function loadAttendees(db: Db, accountIds: string[], now = new Date
       .from(registrations)
       .where(and(inArray(registrations.accountId, accountIds), isNotNull(registrations.groupNo), isNotNull(registrations.checkedInAt)))
       .limit(20_000),
+    consentsFor(db, accountIds, PERSONALIZATION_CONSENT),
   ]);
   const vibeOf = new Map(vibeRows.map((v) => [v.accountId, v.vector]));
   const typeOf = new Map(vibeRows.map((v) => [v.accountId, v.archetype]));
@@ -178,26 +180,32 @@ export async function loadAttendees(db: Db, accountIds: string[], now = new Date
   for (const members of tables.values()) {
     for (const a of members) for (const b of members) if (a !== b && !mutualOf.get(a)?.has(b)) link(noClickOf, a, b);
   }
-  return profs.map((p) => ({
-    accountId: p.accountId,
-    age: ageOn(p.birthDate, now),
-    ageMin: p.ageMin,
-    ageMax: p.ageMax,
-    languages: p.languages,
-    interests: p.interests,
-    socialStyles: p.socialStyles,
-    intents: p.intents,
-    blocked: blockRows
-      .filter((b) => b.blocker === p.accountId || b.blocked === p.accountId)
-      .map((b) => (b.blocker === p.accountId ? b.blocked : b.blocker)),
-    vibe: vibeOf.get(p.accountId) ?? null,
-    university: universityKey(cleanBio(p.bio)),
-    type: /^[BC][DF][MS][NH]$/.test(typeOf.get(p.accountId) ?? "") ? typeOf.get(p.accountId)! : null,
-    segment: segmentOf(p),
-    openToMore: romanceEligible(p),
-    mutual: [...(mutualOf.get(p.accountId) ?? [])],
-    metNoClick: [...(noClickOf.get(p.accountId) ?? [])],
-  }));
+  // Privacy R7: without the personalization consent (newest answer yes), seating doesn't read
+  // interests, social styles, university, the quiz vector or the Bangkok Type. What seating
+  // needs stays: languages, ages, blocks, history, segment and the 💘 opt-in on 💘 events.
+  return profs.map((p) => {
+    const mine = personal.has(p.accountId);
+    return {
+      accountId: p.accountId,
+      age: ageOn(p.birthDate, now),
+      ageMin: p.ageMin,
+      ageMax: p.ageMax,
+      languages: p.languages,
+      interests: mine ? p.interests : [],
+      socialStyles: mine ? p.socialStyles : [],
+      intents: p.intents,
+      blocked: blockRows
+        .filter((b) => b.blocker === p.accountId || b.blocked === p.accountId)
+        .map((b) => (b.blocker === p.accountId ? b.blocked : b.blocker)),
+      vibe: mine ? (vibeOf.get(p.accountId) ?? null) : null,
+      university: mine ? universityKey(cleanBio(p.bio)) : null,
+      type: mine && /^[BC][DF][MS][NH]$/.test(typeOf.get(p.accountId) ?? "") ? typeOf.get(p.accountId)! : null,
+      segment: segmentOf(p),
+      openToMore: romanceEligible(p),
+      mutual: [...(mutualOf.get(p.accountId) ?? [])],
+      metNoClick: [...(noClickOf.get(p.accountId) ?? [])],
+    };
+  });
 }
 
 export const BUDDY_LEAD_HOURS = 48;

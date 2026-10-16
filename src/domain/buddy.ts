@@ -49,6 +49,8 @@ export type BuddyCandidate = {
   archetype: ArchetypeKey;
   district: string;
   languages: string[];
+  /** No personalization consent: the Bangkok Type doesn't score their pairs (privacy R7). */
+  plain?: boolean;
 };
 
 /** Districts a type is drawn to: its hangouts. */
@@ -62,6 +64,8 @@ function typeDistricts(code: ArchetypeKey): Set<string> {
  */
 export function pairScore(a: BuddyCandidate, b: BuddyCandidate): number | null {
   if (!a.languages.some((l) => b.languages.includes(l))) return null;
+  // Without the personalization consent on either side, only languages and home districts count.
+  if (a.plain || b.plain) return a.district === b.district ? 3 : 0;
   let s = 0;
   if (ARCHETYPES[a.archetype].clicks.some((c) => c.key === b.archetype)) s += 3;
   if (ARCHETYPES[b.archetype].clicks.some((c) => c.key === a.archetype)) s += 3;

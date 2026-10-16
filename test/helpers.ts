@@ -64,7 +64,8 @@ export async function createMember(
     passwordHash: cachedHash.hash,
     passwordSalt: cachedHash.salt,
     role: opts.role ?? "user",
-    researchId,
+    // A research_id exists only with research consent (privacy R7).
+    researchId: opts.research ? researchId : null,
     bkkRegistered: opts.bkkRegistered ?? "not_checked",
   });
   await d.insert(profiles).values({

@@ -209,7 +209,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   const id = newId();
   const { hash, salt } = await hashPassword(randomToken(32));
   const username = `${p}_${randomToken(9).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10) || id.slice(0, 10)}`;
-  await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: newId(), signupSource: signupSource(c) });
+  await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: null, signupSource: signupSource(c) });
   await db.insert(oauthLinks).values({ id: newId(), provider: p, subject: sub, accountId: id });
   await db.insert(loginAttempts).values({ id: newId(), username: `${SIGNUP_PREFIX}${id}`, ipHash: ip.ipHash, createdAt: now });
   createLogger(c.env).info("oauth.account_created", { provider: p, lang });

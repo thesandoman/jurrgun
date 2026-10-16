@@ -120,7 +120,7 @@ import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, dropPendingDating, pendingDatingIntent, withGenderSelf } from "./onboarding";
-import { consentEffects, consentRow, deleteDatingIntents, hasConsent, privateFieldConsents, ROMANCE_CONSENT } from "../services/consent";
+import { consentEffects, consentRow, deleteDatingIntents, hasConsent, NOTIFICATIONS_CONSENT, privateFieldConsents, ROMANCE_CONSENT } from "../services/consent";
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L, type T } from "../lib/i18n";
@@ -422,9 +422,17 @@ settingsRoutes.post("/settings/push/off", async (c) => {
   const user = me(c);
   const body = (await c.req.json().catch(() => null)) as { endpoint?: unknown } | null;
   const endpoint = typeof body?.endpoint === "string" ? body.endpoint : "";
-  await getDb(c.env)
-    .delete(pushSubscriptions)
-    .where(and(eq(pushSubscriptions.accountId, user.account.id), eq(pushSubscriptions.endpoint, endpoint)));
+  const db = getDb(c.env);
+  await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.accountId, user.account.id), eq(pushSubscriptions.endpoint, endpoint)));
+  // Privacy R7: switching notifications off on the last phone or browser also withdraws the
+  // reminders consent (switching on says yes, above). Another device still on keeps it.
+  const [left] = await db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, user.account.id)).limit(1);
+  if (!left && (await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT))) {
+    await batch(c.env, [
+      consentRow(db, user.account.id, NOTIFICATIONS_CONSENT, false),
+      audit(db, user.account.id, "consent.updated", { type: "account", id: user.account.id }, { changed: ["notifications"], via: "push_switch_off" }),
+    ]);
+  }
   return c.json({ ok: true });
 });
 

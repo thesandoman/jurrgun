@@ -260,9 +260,9 @@ async function sendOnce(
       .limit(ids.length),
   ]);
   const done = new Set(already.map((r) => `${r.accountId} ${r.link}`));
-  // No answer at all counts as yes (older accounts never saw the question).
-  const optedOut = new Set(said.filter((c) => !c.granted).map((c) => c.accountId));
-  const todo = due.filter((d) => !optedOut.has(d.accountId) && !done.has(`${d.accountId} ${linkOf(d)}`));
+  // Only a yes counts: no answer at all means no (privacy R7).
+  const optedIn = new Set(said.filter((c) => c.granted).map((c) => c.accountId));
+  const todo = due.filter((d) => optedIn.has(d.accountId) && !done.has(`${d.accountId} ${linkOf(d)}`));
   if (!todo.length) return { sent: 0, pushed: 0 };
   const rows = await Promise.all(
     todo.map(async (d) => ({ id: await clockNotificationId(kind, d.accountId, linkOf(d)), accountId: d.accountId, kind, titleTh: textOf(d, "th"), titleEn: textOf(d, "en"), link: linkOf(d) })),
