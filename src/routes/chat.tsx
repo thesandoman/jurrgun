@@ -18,6 +18,8 @@
  * pairing ends, a connection is removed, someone blocks, or a hangout is a
  * week past. No read receipts, typing indicators or online status.
  */
+import { DayStatusLine } from "../ui/day-of";
+import { shownDayStatus } from "../domain/day-of";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
@@ -58,7 +60,7 @@ export type Thread = {
   /** Every thread key whose messages belong here: one chat per person (owner), so for someone met at several events, all those meetings' threads. */
   keys?: string[];
   /** A hangout's group chat: its event, for the curated icebreakers. */
-  event?: { id: string; startsAt: Date; endsAt: Date };
+  event?: { id: string; startsAt: Date; endsAt: Date; dayStatus: string | null; dayStatusNote: string | null; dayStatusAt: Date | null };
 };
 export const keysOf = (th: Thread) => th.keys ?? [th.key];
 
@@ -178,7 +180,7 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     title: { th: `${e.title} · ${fmtDay(e.startsAt, "th")}`, en: `${e.titleEn ?? e.title} · ${fmtDay(e.startsAt, "en")}` },
     back: `/events/${e.id}`,
     host: e.hostAccountId ?? e.createdBy,
-    event: { id: e.id, startsAt: e.startsAt, endsAt: e.endsAt },
+    event: { id: e.id, startsAt: e.startsAt, endsAt: e.endsAt, dayStatus: e.dayStatus, dayStatusNote: e.dayStatusNote, dayStatusAt: e.dayStatusAt },
   };
 }
 
@@ -418,6 +420,8 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
         <a href={th.back}>{isCircle ? (key.startsWith("table:") ? t("หน้าโต๊ะ", "Table page") : t("หน้ากิจกรรม", "Event page")) : L(lang, th.title)}</a>
       </p>
       <h1>{title}</h1>
+      {/* A hangout on its day: the host's one-line status, the same as on the event page. */}
+      {th.event ? <DayStatusLine t={t} lang={lang} shown={shownDayStatus(th.event, now)} /> : null}
       {c.req.query("notice") === "reported" ? (
         <Notice kind="ok">{t("ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ ถ้าไม่อยากคุยต่อ บล็อกได้จากหน้าคนรู้จัก", "Reported. Our team will review it. You can block them from My people if you'd rather not talk.")}</Notice>
       ) : null}

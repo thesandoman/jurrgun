@@ -242,11 +242,16 @@ function Icon(props: { d: string }) {
   );
 }
 /** Small drawn icons for facts on cards (time, place, language), in the nav's stroke style (Phase 3: emoji stay for warmth, controls and facts get drawn icons). */
-export function FactIcon(props: { name: "time" | "place" | "lang" }) {
+export function FactIcon(props: { name: "time" | "place" | "lang" | "train" | "check" | "pause" | "walk" }) {
   const d = {
     time: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5l3 2",
     place: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Zm0-9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
     lang: "M4 6h16v10H9l-5 4V6Zm4 4h8M8 13h5",
+    // A train seen from the front, on its rails.
+    train: "M8 3h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm-3 7h14M9 14h.01M15 14h.01M9 17l-2 4m8-4 2 4",
+    check: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-4-9 3 3 5-6",
+    pause: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2-12v6m4-6v6",
+    walk: "M13 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 21l2-6 3 3v3m-6-11 3-3 3 3 3 1M12 15l-1-5",
   }[props.name];
   return (
     <svg class="fact-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

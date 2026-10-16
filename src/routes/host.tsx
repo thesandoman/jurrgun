@@ -35,6 +35,8 @@ import { requireUser } from "../lib/session";
 import { accounts, blocks, circleShares, connections, events, type Event, type RegularTable } from "../schema";
 import { hostTable, sendToTable } from "../services/regular-tables";
 import { Button, Card, Choices, Empty, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
+import { VenueFields } from "../ui/day-of";
+import { STATIONS } from "../content/stations";
 
 export const hostRoutes = new Hono<AppEnv>();
 // Hosts only (see the top). Partners and admins don't need a member profile.
@@ -50,7 +52,8 @@ type C = Context<AppEnv>;
 /** Proposals waiting at once, per member: keeps the review queue fair. */
 export const MAX_PENDING = 3;
 
-const ALLOWED = () => ({ districts: values(DISTRICTS), languages: values(LANGUAGES), intensity: values(INTENSITY), tags: values(EVENT_TAGS).filter((x) => x !== "city_quest") });
+const ALLOWED = () => ({ districts: values(DISTRICTS), languages: values(LANGUAGES), intensity: values(INTENSITY), tags: values(EVENT_TAGS).filter((x) => x !== "city_quest"), stations: STATION_KEYS });
+const STATION_KEYS = STATIONS.map((s) => s.key);
 
 function emptyInput(lang: string): ProposalInput {
   return {
@@ -79,6 +82,10 @@ function emptyInput(lang: string): ProposalInput {
     visibility: "public",
     accessibility: "",
     safetyInfo: "",
+    venueNotes: "",
+    venueNotesEn: "",
+    nearestStation: "",
+    walkMinutes: "",
   };
 }
 
@@ -109,6 +116,10 @@ function inputFromEvent(e: Event): ProposalInput {
     visibility: e.visibility,
     accessibility: e.accessibility,
     safetyInfo: e.safetyInfo,
+    venueNotes: e.venueNotes ?? "",
+    venueNotesEn: e.venueNotesEn ?? "",
+    nearestStation: e.nearestStation ?? "",
+    walkMinutes: e.walkMinutes == null ? "" : String(e.walkMinutes),
   };
 }
 
@@ -140,6 +151,10 @@ function inputFromBody(body: Record<string, unknown>): ProposalInput {
     visibility: s("visibility"),
     accessibility: s("accessibility"),
     safetyInfo: s("safetyInfo"),
+    venueNotes: s("venueNotes"),
+    venueNotesEn: s("venueNotesEn"),
+    nearestStation: s("nearestStation"),
+    walkMinutes: s("walkMinutes"),
   };
 }
 
@@ -324,6 +339,7 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <Field label={t("ที่อยู่", "Address")} name="venueAddress" value={d.venueAddress} maxlength={400} />
         <Field label={t("ลิงก์แผนที่ (ไม่บังคับ)", "Map link (optional)")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
         <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
+        <VenueFields v={v} d={d} />
       </Card>
       <Card>
         <h2>{t("ใครมาได้", "Who it's for")}</h2>

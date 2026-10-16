@@ -301,6 +301,17 @@ export const events = pgTable(
     visitBangkokRoute: text("visitbangkok_route"),
     /** A Table Host's hangout for their regular table (social_regular_tables.id): it goes to the table's members. */
     regularTableId: text("regular_table_id"),
+    /** Day-of status set by the host on the event day: on_time | running_late | moved | cancelled. */
+    dayStatus: text("day_status"),
+    /** The host's short note with the day-of status. */
+    dayStatusNote: text("day_status_note"),
+    dayStatusAt: ts("day_status_at"),
+    /** How to find the table inside the venue (Thai), and in English when the host adds it. */
+    venueNotes: text("venue_notes"),
+    venueNotesEn: text("venue_notes_en"),
+    /** A key from src/content/stations.ts (BTS, MRT, Airport Rail Link). */
+    nearestStation: text("nearest_station"),
+    walkMinutes: integer("walk_minutes"),
     createdBy: text("created_by").notNull(),
     createdAt: created(),
   },
@@ -336,6 +347,9 @@ export const registrations = pgTable(
     socialSignal: text("social_signal"),
     signalTopics: jsonb("signal_topics").$type<string[]>(),
     noShowRecorded: boolean("no_show_recorded").notNull().default(false),
+    /** On the event day: running_late | on_my_way, told to the host. */
+    etaStatus: text("eta_status"),
+    etaAt: ts("eta_at"),
     createdAt: created(),
     cancelledAt: ts("cancelled_at"),
   },

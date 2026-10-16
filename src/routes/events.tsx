@@ -31,7 +31,7 @@ import { cleanBio } from "../content/profile";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Child } from "hono/jsx";
-import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, sql } from "drizzle-orm";
+import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   ageOn,
@@ -100,9 +100,12 @@ import {
   type View,
   FactIcon,
   FactTiles,
+  safeNext,
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
-import { canView } from "../domain/hosting";
+import { canView, ownsEvent } from "../domain/hosting";
+import { dayOfOpen, shownDayStatus, shownEta, isEtaStatus } from "../domain/day-of";
+import { DayStatusLine, EtaBox, EtaSummary, FindTheTable } from "../ui/day-of";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
 import { blockedAmong, getTable, hostTable, memberIds, rejoinAfterFor, seatedFor, standing } from "../services/regular-tables";
 
@@ -894,6 +897,18 @@ async function visibleEvent(c: Ctx, id: string): Promise<Event | null> {
   return event;
 }
 
+/** For the host on the day: first names of attendees who said they're running late or on the way (not yet checked in). */
+async function etaNames(db: Db, event: Event, now: Date): Promise<{ late: string[]; onWay: string[] }> {
+  const rows = await db
+    .select({ etaStatus: registrations.etaStatus, etaAt: registrations.etaAt, checkedInAt: registrations.checkedInAt, nickname: profiles.nickname })
+    .from(registrations)
+    .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
+    .where(and(eq(registrations.eventId, event.id), eq(registrations.status, "confirmed"), isNotNull(registrations.etaStatus)))
+    .limit(500);
+  const pick = (k: string) => rows.filter((r) => !r.checkedInAt && shownEta(event, r, now) === k).map((r) => firstName(r.nickname ?? "?"));
+  return { late: pick("running_late"), onWay: pick("on_my_way") };
+}
+
 async function myRegistration(db: Db, eventId: string, accountId: string): Promise<Registration | null> {
   const [reg] = await db
     .select()
@@ -1119,6 +1134,12 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const standing = strikeStanding(standingRows, now);
   // Afterwards: the people I met here, and one way back to them.
   const again = ended && reg?.checkedInAt ? await seeAgain(db, { id: user.account.id, birthDate: user.profile.birthDate }, { eventId: event.id, now }) : null;
+  // On the day: the host's one-line status for people going (and the host), and "running late" / "on my way".
+  const going = reg?.status === "confirmed" && event.status === "published";
+  const hosting = ownsEvent(event, { id: user.account.id, role: user.account.role, partnerOrgId: user.account.partnerOrgId });
+  const dayOf = event.status === "published" && dayOfOpen(event, now);
+  const dayStatus = going || hosting ? shownDayStatus(event, now) : null;
+  const eta = dayOf && hosting ? await etaNames(db, event, now) : null;
 
   return page(
     c,
@@ -1136,6 +1157,15 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <Notice kind="info">🔒 {t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A Regular Table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
       ) : event.visibility === "private" ? (
         <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
+      ) : null}
+      <DayStatusLine t={t} lang={lang} shown={dayStatus} />
+      {going && dayOf && !reg!.checkedInAt ? <EtaBox t={t} eventId={event.id} current={shownEta(event, reg!, now)} next={`/events/${event.id}`} /> : null}
+      {eta ? (
+        <Card class="eta-host">
+          <h2 class="h3">{t("ใครกำลังมา", "Who's on the way")}</h2>
+          <EtaSummary t={t} late={eta.late} onWay={eta.onWay} />
+          <a href={`/admin/events/${event.id}#day-of`}>{t("ตั้งสถานะวันงาน", "Set the day-of status")}</a>
+        </Card>
       ) : null}
       <Cover e={event} src={cover} class="ev-scene" />
       <Card class="ev-sheet">
@@ -1178,6 +1208,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             ) : null}
           </p>
         ) : null}
+        <FindTheTable t={t} lang={lang} e={event} />
         <p class="ev-actions">
           <LinkButton kind="tonal" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
             <span aria-hidden="true">🧭</span> {t("เส้นทาง", "Directions")}
@@ -2128,6 +2159,14 @@ function Essentials(props: { event: Event; hostName: string | null; v: View }) {
             <dd>{event.safetyInfo}</dd>
           </>
         ) : null}
+        {event.nearestStation || event.venueNotes || event.venueNotesEn ? (
+          <>
+            <dt>{t("วิธีหาโต๊ะ", "Finding the table")}</dt>
+            <dd>
+              <FindTheTable t={t} lang={lang} e={event} bare />
+            </dd>
+          </>
+        ) : null}
         <dt>{t("โฮสต์", "Host")}</dt>
         <dd>{props.hostName ? firstName(props.hostName) : t("ทีม Jurrgun", "Jurrgun team")}</dd>
         <dt>{t("สิ่งที่ต้องเตรียม", "What to bring")}</dt>
@@ -2199,11 +2238,14 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
   const [host] = event.hostAccountId
     ? await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, event.hostAccountId)).limit(1)
     : [];
+  const dayOf = dayOfOpen(event, now);
   return page(
     c,
     { title: t("บัตรเข้างาน", "Event pass"), tab: "mine" },
     <>
       <OfflineSavedNote t={t} lang={lang} />
+      <DayStatusLine t={t} lang={lang} shown={shownDayStatus(event, now)} />
+      {dayOf && !reg.checkedInAt ? <EtaBox t={t} eventId={event.id} current={shownEta(event, reg, now)} next={`/me/events/${event.id}/pass`} /> : null}
       <section class={live ? "ticket is-live" : "ticket"} aria-label={t("บัตรเข้างาน", "Event pass")}>
         <div class="ticket-top">
           <p class="eyebrow">{t("บัตรเข้างาน", "Event pass")} · {user.profile.nickname}</p>
@@ -2285,6 +2327,37 @@ export function PassSteps(props: { t: T; checkedIn: boolean }) {
     </ol>
   );
 }
+
+/**
+ * "Running late" / "On my way": a confirmed attendee tells the host, on the
+ * day only. Nobody else sees it; the host sees first names (host tools and
+ * the event page).
+ */
+eventRoutes.post("/events/:id/eta", requireMember, async (c) => {
+  const user = me(c);
+  const id = c.req.param("id");
+  const db = getDb(c.env);
+  const body = await c.req.parseBody();
+  const raw = str(body.eta);
+  const next = safeNext(str(body.next), `/events/${id}`);
+  const [row] = await db
+    .select({ event: events, reg: registrations })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(and(eq(registrations.eventId, id), eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed")))
+    .limit(1);
+  if (!row || row.event.status !== "published") return notFound(c);
+  const now = new Date();
+  if (!dayOfOpen(row.event, now)) {
+    return forbidden(c, "บอกโฮสต์ได้เฉพาะวันงาน ตั้งแต่ไม่กี่ชั่วโมงก่อนเริ่มจนจบงาน", "You can tell the host only on the day, from a few hours before the start until the end.", `/events/${id}`);
+  }
+  if (raw !== "clear" && !isEtaStatus(raw)) return c.redirect(next);
+  await db
+    .update(registrations)
+    .set(raw === "clear" ? { etaStatus: null, etaAt: null } : { etaStatus: raw, etaAt: now })
+    .where(eq(registrations.id, row.reg.id));
+  return c.redirect(next);
+});
 
 /** The pass as a calendar file: only for the member holding a confirmed seat. */
 eventRoutes.get("/me/events/:id/calendar.ics", requireMember, async (c) => {
