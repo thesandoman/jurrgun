@@ -4,3 +4,6 @@ dist/
 .dev.vars
 .env
 .claude/settings.local.json
+
+# Impeccable: per-developer settings stay local
+.impeccable/config.local.json
