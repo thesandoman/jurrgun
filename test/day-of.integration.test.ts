@@ -284,7 +284,9 @@ describe.skipIf(!HAS_DB)("running late tells the host", () => {
 describe.skipIf(!HAS_DB)("venue notes and nearest station", () => {
   it("a host adds them on the form; the event page and the pass show them", async () => {
     const host = await createMember({ role: "host" });
+    // A daytime slot 3 days out (14:00 Bangkok), so a run late in the evening doesn't make a late-night event that goes to review.
     const start = new Date(Date.now() + 3 * DAY);
+    start.setUTCHours(7, 0, 0, 0);
     const form = {
       title: "Board games at Soi Social Club",
       titleEn: "",
