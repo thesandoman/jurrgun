@@ -660,7 +660,7 @@ function TypeFacts(props: { v: View; a: Archetype }) {
     ["🪫", t("อะไรทำให้คุณหมดแรง", "What drains you"), a.drain],
     ["🕰️", t("ช่วงเวลาที่ใช่", "Best time"), a.bestTime],
   ];
-  return <FactTiles cols={3} class="type-facts" facts={facts.map(([icon, label, text]) => ({ icon, label, answer: L(lang, text) }))} />;
+  return <FactTiles cols={3} class="type-facts" facts={facts.map(([icon, label, text]) => ({ icon, label, answer: L(lang, text), wide: [...L(lang, text)].length > 22 }))} />;
 }
 
 /** The type's places as swipeable postcards: classic spots, then hangouts. */

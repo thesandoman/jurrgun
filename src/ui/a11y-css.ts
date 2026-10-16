@@ -618,7 +618,7 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 /* A2 One button family (finalize review): the only .btn definition. Three kinds share one radius and
    48px: solid primary, tonal (class ghost or tonal, soft green fill) and quiet text. Danger and the
    💘 love red are variants. Contrast: primary 5.7:1 light, 9.6:1 dark; tonal 5.0:1 light, 7.1:1 dark. */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 20px;border-radius:16px;border:1.5px solid transparent;font:inherit;font-family:var(--sub);font-weight:700;letter-spacing:-.005em;line-height:1.3;text-align:center;text-decoration:none;cursor:pointer;transition:transform .12s ease,background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 20px;border-radius:16px;border:1.5px solid transparent;font:inherit;font-size:1rem;font-family:var(--sub);font-weight:700;letter-spacing:-.005em;line-height:1.3;text-align:center;text-decoration:none;cursor:pointer;transition:transform .12s ease,background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
 .btn:active{transform:scale(.97)}
 .btn.block{width:100%}
 .btn.primary{background:var(--brand);color:var(--brand-ink);box-shadow:var(--lift)}
@@ -656,4 +656,6 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 .pc-group-h+.fact-tiles{margin-top:8px}
 /* Tiles straight on the page (the quiz result) get the card surface and an edge. */
 .type-facts .fact-tile{background:var(--surface);border:1px solid var(--line)}
+/* The type facts are sentences: one per row on phones, three across from 720px. */
+@media (min-width:720px){.type-facts[data-cols] .ft-wide{grid-column:auto}}
 `);
