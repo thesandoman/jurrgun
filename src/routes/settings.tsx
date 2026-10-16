@@ -166,7 +166,7 @@ settingsRoutes.get("/settings", async (c) => {
   const p = user.profile!;
   const db = getDb(c.env);
   const now = new Date();
-  const [src, vibe, [been], [upcoming], [circle], tables] = await Promise.all([
+  const [src, vibe, [been], [upcoming], [circle], tables, [nextUp]] = await Promise.all([
     photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
     db.select({ n: count() }).from(registrations).where(and(eq(registrations.accountId, user.account.id), isNotNull(registrations.checkedInAt))),
@@ -183,6 +183,14 @@ settingsRoutes.get("/settings", async (c) => {
       .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
     // People can sit at several regular tables; the count gets its own tile.
     myTables(db, user.account.id),
+    // The next table I'm seated at: Me leads with it (owner, Phase 2).
+    db
+      .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt })
+      .from(registrations)
+      .innerJoin(events, eq(events.id, registrations.eventId))
+      .where(and(eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed"), gt(events.startsAt, now), ne(events.status, "cancelled")))
+      .orderBy(asc(events.startsAt))
+      .limit(1),
   ]);
   const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, user.account.id)).limit(1);
   const dates = dating?.mode === "dating" || dating?.mode === "dating_only";
@@ -247,7 +255,7 @@ settingsRoutes.get("/settings", async (c) => {
   const gAcct = t("ความเป็นส่วนตัวและบัญชี", "Privacy and account");
   const paused = isPaused(p, now);
   const quick = (
-    <section class="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
+    <section class="quick" id="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
       <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
       <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies; your people and chats stay")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
@@ -261,8 +269,16 @@ settingsRoutes.get("/settings", async (c) => {
           hint={
             romanceEligible(p)
               ? t("เลือกได้หลังกิจกรรมและกับบัดดี้ จะรู้กันก็ต่อเมื่อเลือกตรงกัน แตะเพื่อกลับไปโหมดเพื่อน", "Choices after events and with buddies, only shown when mutual. Tap to go back to friends only.")
-              : t("สำหรับคนโสด และเป็นความลับเสมอ การแตะคือการเปิดและยินยอมให้เราเก็บข้อมูลเรื่องเดตของคุณ (PDPA)", "For people who are single, always private. Tapping switches it on and agrees to keep your dating details (PDPA).")
+              : t("สำหรับคนโสด และเป็นความลับเสมอ แตะเพื่อดูรายละเอียดก่อนเปิด", "For people who are single, always private. Tap to read what it means before switching on.")
           }
+          consent={{
+            lead: t(
+              "เปิดแล้ว คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' กับคนที่เจอได้ และจะรู้ผลก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน สถานะของคุณจะเป็น 'โสด' ข้อมูลเรื่องเดตเป็นความลับ ทีมงานดูไม่ได้ และถูกลบทันทีเมื่อปิด",
+              "Once on, you can choose 'open to something more' with people you meet, and you only find out if it's mutual. Your status becomes Single. Dating details stay private, staff can't see them, and they're deleted the moment you switch off.",
+            ),
+            tick: t("ฉันโสด และยินยอมให้เก็บข้อมูลเรื่องเดตของฉัน (ข้อมูลอ่อนไหวตาม PDPA)", "I'm single, and I agree to my dating details being stored (sensitive data under PDPA)"),
+            go: t("💘 เปิดเลย", "💘 Switch it on"),
+          }}
         />
       )}
       {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} /> : null}
@@ -295,6 +311,38 @@ settingsRoutes.get("/settings", async (c) => {
         ) : undefined
       }
       interests={p.interests}
+      summary={
+        // One plain sentence instead of four big-number tiles (owner, Phase 2); each number still links to its page.
+        <p class="me-summary">
+          {t("ไปมาแล้ว ", "You've been to ")}
+          <a href="/me/events#past">{t(`${Number(been?.n ?? 0)} กิจกรรม`, `${Number(been?.n ?? 0)} ${Number(been?.n ?? 0) === 1 ? "event" : "events"}`)}</a>
+          {t(" เจอคนรู้จัก ", ", met ")}
+          <a href="/connections">{t(`${Number(circle?.n ?? 0)} คน`, `${Number(circle?.n ?? 0)} ${Number(circle?.n ?? 0) === 1 ? "person" : "people"}`)}</a>
+          {tables.length ? (
+            <>
+              {t(" นั่งโต๊ะประจำ ", ", sit at ")}
+              <a href="/tables">{t(`${tables.length} โต๊ะ`, `${tables.length} Regular ${tables.length === 1 ? "Table" : "Tables"}`)}</a>
+            </>
+          ) : null}
+          {t(" และมีนัด ", " and have ")}
+          <a href="/me/events#upcoming">{t(`${Number(upcoming?.n ?? 0)} งานที่จะถึง`, `${Number(upcoming?.n ?? 0)} coming up`)}</a>
+          {t("", ".")}
+        </p>
+      }
+      next={
+        nextUp ? (
+          <a class="card me-next" href={`/me/events/${nextUp.id}/pass`}>
+            <small>{t("โต๊ะถัดไป", "Your next table")}</small>
+            <b>{lang === "en" ? nextUp.titleEn ?? nextUp.title : nextUp.title}</b>
+            <span>{fmtDate(nextUp.startsAt, lang)}</span>
+          </a>
+        ) : (
+          <a class="card me-next" href="/events">
+            <small>{t("โต๊ะถัดไป", "Your next table")}</small>
+            <b>{t("ยังไม่มีนัด หาโต๊ะสัปดาห์นี้กัน", "Nothing booked yet. Find a table this week")}</b>
+          </a>
+        )
+      }
       stats={[
         { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events#past", tint: "green" },
         {
@@ -366,7 +414,33 @@ settingsRoutes.post("/settings/push/off", async (c) => {
 });
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
-function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean }) {
+function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean; consent?: { lead: string; tick: string; go: string } }) {
+  // Switching on needs a clear yes (PDPA, owner Phase 2): the switch opens a short sheet with an explicit tick. Off stays one tap.
+  if (props.consent && !props.on)
+    return (
+      <details class={props.love ? "qs-sheet love" : "qs-sheet"}>
+        <summary class={props.love ? "qs love" : "qs"} aria-pressed="false">
+          <span aria-hidden="true">{props.emoji}</span>
+          <span>
+            <b>{props.title}</b>
+            <small>{props.hint}</small>
+          </span>
+          <span class="sw" aria-hidden="true" />
+        </summary>
+        <form method="post" action="/settings/quick" class="qs-consent">
+          <input type="hidden" name="key" value={props.k} />
+          <input type="hidden" name="on" value="1" />
+          <p>{props.consent.lead}</p>
+          <label class="toggle">
+            <input type="checkbox" name="consent" value="1" required />
+            <span>{props.consent.tick}</span>
+          </label>
+          <button type="submit" class={props.love ? "btn love" : "btn primary"}>
+            {props.consent.go}
+          </button>
+        </form>
+      </details>
+    );
   return (
     <form method="post" action="/settings/quick">
       <input type="hidden" name="key" value={props.k} />
@@ -388,7 +462,11 @@ settingsRoutes.post("/settings/quick", async (c) => {
   const p = user.profile!;
   const body = await c.req.parseBody();
   const on = str(body.on) === "1";
-  if (str(body.key) === "romance") return romanceQuick(c, on);
+  // Switching on asks for the explicit tick from the consent sheet; an old one-tap post without it goes to the sheet.
+  if (str(body.key) === "romance") {
+    if (on && str(body.consent) !== "1") return c.redirect("/settings#quick");
+    return romanceQuick(c, on);
+  }
   const set: Partial<typeof profiles.$inferInsert> = {};
   switch (str(body.key)) {
     case "pause":

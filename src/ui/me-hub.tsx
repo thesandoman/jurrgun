@@ -26,6 +26,10 @@ export function MeHub(props: {
   newcomer: boolean;
   interests: string[];
   stats: MeStat[];
+  /** One sentence of numbers (each linked) instead of the stat tiles. */
+  summary?: Child;
+  /** The next table, or a way to find one. */
+  next?: Child;
   steps: MeStep[];
   type: Child;
   badge?: Child;
@@ -64,27 +68,32 @@ export function MeHub(props: {
         </a>
       </header>
 
-      <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
-        {props.stats.map((s) => (
-          <a href={s.href} class={`me-stat tint-${s.tint}`}>
-            <span class="me-stat-emoji" aria-hidden="true">{s.emoji}</span>
-            <b>{s.n}</b>
-            <small>{s.label}</small>
-            {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
-          </a>
-        ))}
-      </nav>
+      {props.summary ? (
+        <>
+          {props.next ?? null}
+          {props.summary}
+        </>
+      ) : (
+        <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
+          {props.stats.map((s) => (
+            <a href={s.href} class={`me-stat tint-${s.tint}`}>
+              <span class="me-stat-emoji" aria-hidden="true">{s.emoji}</span>
+              <b>{s.n}</b>
+              <small>{s.label}</small>
+              {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
+            </a>
+          ))}
+        </nav>
+      )}
 
       {props.ask ?? null}
 
       {pct < 100 ? (
         <section class="me-grow">
           <div class="me-grow-head">
-            <strong>{t(`กรอกโปรไฟล์แล้ว ${pct}%`, `Your profile is ${pct}% there`)}</strong>
-            <span aria-hidden="true">{pct < 50 ? "🌱" : "🌿"}</span>
-          </div>
-          <div class="me-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-            <i style={`width:${Math.max(pct, 6)}%`} />
+            {/* What's left, in words: no percentage meter (owner, Phase 2). */}
+            <strong>{t(`ช่วยให้โต๊ะรู้จักคุณ เหลืออีก ${props.steps.length - done} เรื่อง`, `Help your table get to know you: ${props.steps.length - done} ${props.steps.length - done === 1 ? "thing" : "things"} left`)}</strong>
+            <span aria-hidden="true">🌿</span>
           </div>
           <p class="muted">{t("ยิ่งโปรไฟล์ครบ เรายิ่งจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรกได้ดี", "A fuller profile helps us seat a good mix, with something in common to start.")}</p>
           <div class="me-todo">
@@ -95,7 +104,7 @@ export function MeHub(props: {
         </section>
       ) : (
         <section class="me-grow me-grow-done">
-          <strong>🌳 {t("โปรไฟล์ครบแล้ว เยี่ยมมาก!", "Profile complete. Lovely!")}</strong>
+          <strong>🌳 {t("โปรไฟล์พร้อมแล้ว", "Your profile is ready")}</strong>
         </section>
       )}
 

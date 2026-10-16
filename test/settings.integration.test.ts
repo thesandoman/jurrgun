@@ -94,21 +94,23 @@ describe.skipIf(!HAS_DB)("settings", () => {
       { id: newId(), ...pair(me.id, c.id), level: "activity", eventId: ev2 },
     ]);
     const html = await (await req("/settings", { cookie: `${me.cookie}; lang=en` })).text();
-    expect(html).toMatch(/<b>3<\/b><small>My people<\/small><small class="me-stat-sub">met at 2 events<\/small>/);
+    // One sentence of numbers (Phase 2): people, not meetings.
+    expect(html).toMatch(/<a href="\/connections">3 people<\/a>/);
   });
 
   it("shows my numbers and nudges what my profile is missing", async () => {
     const m = await createMember({ nickname: "Nudge" });
     let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Hey Nudge");
-    expect(html).toContain("Events been");
-    expect(html).toContain("My people");
-    const pct = (h: string) => Number(/Your profile is (\d+)% there/.exec(h)?.[1]);
-    const before = pct(html);
-    expect(before).toBeLessThan(100);
+    expect(html).toContain("You&#39;ve been to");
+    expect(html).toContain("Your next table");
+    expect(html).not.toMatch(/\d+% there/);
+    const left = (h: string) => Number(/Help your table get to know you: (\d+) things? left/.exec(h)?.[1]);
+    const before = left(html);
+    expect(before).toBeGreaterThan(0);
     await db().update(profiles).set({ bio: { occupation: "student" } }).where(eq(profiles.accountId, m.id));
     html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
-    expect(pct(html)).toBeGreaterThan(before);
+    expect(left(html) || 0).toBeLessThan(before);
   });
 
   it("edits the profile and validates input", async () => {

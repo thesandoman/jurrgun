@@ -224,6 +224,23 @@ body:has(.view-switch) .discover-list{padding-bottom:0}
 .field:has(#f-photo:focus-visible) .file-btn{outline:3px solid var(--brand);outline-offset:2px}
 .file-name{display:block;font-size:.86rem;margin-top:4px}
 
+/* 💘 switch: tapping it when off opens a short consent sheet (Phase 2). */
+main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:none}
+.qs-sheet>summary{list-style:none;cursor:pointer;width:100%}
+.qs-sheet>summary::-webkit-details-marker{display:none}
+.qs-consent{display:grid;gap:10px;margin:8px 0 4px;padding:14px;border-radius:16px;background:var(--love-soft);border:1px solid color-mix(in srgb,var(--love) 30%,var(--line))}
+.qs-consent p{margin:0;font-size:.92rem}
+.btn.love{background:#c0222f;border-color:#c0222f;color:#fff}
+.btn.love:hover{background:#a51c27;border-color:#a51c27}
+
+/* Me: the next table first, then one sentence of numbers (links inside the sentence). */
+.me-next{display:grid;gap:2px;margin:12px 0 8px;padding:14px 16px;text-decoration:none;color:var(--ink);border-left:0}
+.me-next small{color:var(--ink-2);font-weight:600}
+.me-next b{font-size:1.06rem}
+.me-next span{color:var(--ink-2);font-size:.9rem}
+.me-summary{margin:4px 0 16px;color:var(--ink-2);line-height:1.7}
+.me-summary a{font-weight:700;color:var(--ink);text-underline-offset:3px}
+
 /* Headings break evenly (no lone last word). */
 h1,h2,h3,.flow-title{text-wrap:balance}
 /* Staff chip in the header: on narrow phones it drops to the Me menu's job, so the header never overflows. */

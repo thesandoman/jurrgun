@@ -38,3 +38,22 @@ describe.skipIf(!HAS_DB)("phase 1 pages", () => {
     expect(p.birthDate).toBe("1996-03-05");
   });
 });
+
+describe.skipIf(!HAS_DB)("phase 2: dating consent sheet", () => {
+  it("switching 💘 on needs the explicit tick; switching off stays one tap", async () => {
+    const m = await createMember({ relationship: "single" });
+    const page = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
+    expect(page).toContain('class="qs-sheet love"');
+    expect(page).toContain("I&#39;m single, and I agree");
+    const noTick = await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "1" } });
+    expect(noTick.headers.get("location")).toBe("/settings#quick");
+    let [p] = await db().select({ romanceOn: profiles.romanceOn }).from(profiles).where(eq(profiles.accountId, m.id));
+    expect(p.romanceOn).toBe(false);
+    await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "1", consent: "1" } });
+    [p] = await db().select({ romanceOn: profiles.romanceOn }).from(profiles).where(eq(profiles.accountId, m.id));
+    expect(p.romanceOn).toBe(true);
+    await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "0" } });
+    [p] = await db().select({ romanceOn: profiles.romanceOn }).from(profiles).where(eq(profiles.accountId, m.id));
+    expect(p.romanceOn).toBe(false);
+  });
+});
