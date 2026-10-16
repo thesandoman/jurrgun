@@ -118,7 +118,7 @@ export type ProposalInput = {
   visibility: string;
   accessibility: string;
   safetyInfo: string;
-};
+} & VenueExtrasInput;
 
 export type ProposalValues = {
   title: string;
@@ -146,7 +146,36 @@ export type ProposalValues = {
   visibility: "public" | "private";
   accessibility: string;
   safetyInfo: string;
-};
+} & VenueExtras;
+
+// ------------------------------------------------- finding the table --
+
+/** How to find the table and the nearest station (all optional, typed by the host). */
+export type VenueExtrasInput = { venueNotes?: string; venueNotesEn?: string; nearestStation?: string; walkMinutes?: string };
+export type VenueExtras = { venueNotes: string | null; venueNotesEn: string | null; nearestStation: string | null; walkMinutes: number | null };
+
+export const VENUE_NOTES_MAX = 500;
+export const WALK_MINUTES_MAX = 60;
+
+/** Check the venue notes, station and walk. `stations` is the fixed key list (src/content/stations.ts). */
+export function checkVenueExtras(d: VenueExtrasInput, stations: readonly string[]): { values: VenueExtras; errors: Lang2[] } {
+  const errors: Lang2[] = [];
+  const notes = (d.venueNotes ?? "").trim();
+  const notesEn = (d.venueNotesEn ?? "").trim();
+  const station = (d.nearestStation ?? "").trim();
+  const walkRaw = (d.walkMinutes ?? "").trim();
+  if (notes.length > VENUE_NOTES_MAX || notesEn.length > VENUE_NOTES_MAX) {
+    errors.push({ th: `วิธีหาโต๊ะยาวได้ไม่เกิน ${VENUE_NOTES_MAX} ตัวอักษร`, en: `Notes on finding the table are at most ${VENUE_NOTES_MAX} characters.` });
+  }
+  if (station && !stations.includes(station)) errors.push({ th: "เลือกสถานีจากรายการ", en: "Choose a station from the list." });
+  const walk = walkRaw ? intIn(walkRaw, 0, WALK_MINUTES_MAX) : null;
+  if (walkRaw && walk === null) errors.push({ th: `เวลาเดินต้องอยู่ระหว่าง 0 ถึง ${WALK_MINUTES_MAX} นาที`, en: `The walk must be 0 to ${WALK_MINUTES_MAX} minutes.` });
+  if (walkRaw && !station) errors.push({ th: "เลือกสถานีก่อน แล้วค่อยใส่เวลาเดิน", en: "Choose the station first, then the walk." });
+  return {
+    errors,
+    values: { venueNotes: notes || null, venueNotesEn: notesEn || null, nearestStation: station || null, walkMinutes: station ? walk : null },
+  };
+}
 
 /** Members host smaller events than the team: up to 60 people. */
 export const MEMBER_MAX_CAPACITY = 60;
@@ -179,7 +208,7 @@ function httpsUrl(s: string, max = 500): string | null {
  */
 export function checkProposal(
   d: ProposalInput,
-  allowed: { districts: string[]; languages: string[]; intensity: string[]; tags: string[] },
+  allowed: { districts: string[]; languages: string[]; intensity: string[]; tags: string[]; stations?: readonly string[] },
   now = new Date(),
 ): { values: ProposalValues | null; errors: Lang2[] } {
   const errors: Lang2[] = [];
@@ -226,10 +255,14 @@ export function checkProposal(
   need(d.visibility === "public" || d.visibility === "private", "เลือกว่าใครเห็นกิจกรรมนี้", "Choose who can see this event.");
   need(d.accessibility.length <= 1000 && d.safetyInfo.length <= 1000, "ข้อมูลการเข้าถึง/ความปลอดภัยไม่เกิน 1,000 ตัวอักษร", "Accessibility and safety notes are at most 1,000 characters.");
 
+  const extras = checkVenueExtras(d, allowed.stations ?? []);
+  errors.push(...extras.errors);
+
   if (errors.length) return { values: null, errors };
   return {
     errors,
     values: {
+      ...extras.values,
       title: d.title,
       titleEn: d.titleEn || null,
       description: d.description,
