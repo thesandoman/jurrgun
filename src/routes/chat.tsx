@@ -33,6 +33,7 @@ import { PROMPT_BANK } from "../content/profile";
 import { icebreakersFor, icebreakerWindow } from "../content/icebreakers";
 import { getStatefulObject } from "../state";
 import { blockedAmong, getTable, memberIds, myTables, standing } from "../services/regular-tables";
+import { Sheet } from "../ui/sheet";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
 import { NewBadge, UnreadCount } from "../ui/unread";
 
@@ -339,7 +340,7 @@ function CircleExtras(props: { v: View; k: string; met: boolean }) {
       ) : (
         <p class="muted">📷 {t("แชร์รูปได้เมื่อแฮงเอาต์เริ่มแล้ว", "Photos open once the hangout starts.")}</p>
       )}
-      <details class="chat-poll-new">
+      <details class="how chat-poll-new">
         <summary>📊 {t("สร้างโพล", "Start a poll")}</summary>
         <form method="post" action={`/chat/${props.k}/poll`}>
           <input type="text" name="question" maxlength={120} required placeholder={t("เช่น วันไหนดี?", "e.g. Which Sunday works?")} aria-label={t("คำถาม", "Question")} />
@@ -413,7 +414,8 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
     <>
       <p class="spread">
         <a href="/chat">← {t("แชต", "Chats")}</a>
-        <a href={th.back}>{L(lang, th.title)}</a>
+        {/* Group chats: the name is the heading below, so this link names the page it goes to (it showed the name twice). */}
+        <a href={th.back}>{isCircle ? (key.startsWith("table:") ? t("หน้าโต๊ะ", "Table page") : t("หน้ากิจกรรม", "Event page")) : L(lang, th.title)}</a>
       </p>
       <h1>{title}</h1>
       {c.req.query("notice") === "reported" ? (
@@ -435,7 +437,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       ) : null}
       <ol class="chat-msgs" id="msgs">
         {visible.map((m) => (
-          <li class={m.sender === me ? "mine" : undefined}>
+          <li class={m.sender === me ? "mine" : undefined} data-sheet-hold={m.sender !== me ? "" : undefined}>
             {m.sender !== me && th.members.length > 2 ? (
               <small class="who">
                 {nameOf.get(m.sender) ?? "?"}
@@ -455,62 +457,90 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
             ) : (
               <p class="bubble">{m.body}</p>
             )}
-            <small class="when">
-              {fmtDate(m.createdAt, lang)}
+            <div class="msg-meta">
+              <small class="when">{fmtDate(m.createdAt, lang)}</small>
               {m.sender !== me ? (
-                <form method="post" action={`/chat/${key}/report/${m.id}`} class="inline">
-                  <button class="linkish">{t("รายงาน", "Report")}</button>
-                </form>
+                // B3: Report sits behind a ⋯ that shows on a focused, hovered or long-pressed bubble.
+                <Sheet
+                  t={t}
+                  title={t(`ข้อความจาก ${nameOf.get(m.sender) ?? "?"}`, `Message from ${nameOf.get(m.sender) ?? "?"}`)}
+                  trigger={<span aria-hidden="true">⋯</span>}
+                  triggerClass="bubble-more"
+                  triggerLabel={t(`ตัวเลือกสำหรับข้อความจาก ${nameOf.get(m.sender) ?? "?"}`, `Options for the message from ${nameOf.get(m.sender) ?? "?"}`)}
+                  align="start"
+                >
+                  <form method="post" action={`/chat/${key}/report/${m.id}`}>
+                    <button class="sheet-item danger">
+                      <span aria-hidden="true">🚩</span> {t("รายงานข้อความนี้", "Report this message")}
+                    </button>
+                  </form>
+                </Sheet>
               ) : null}
-            </small>
+            </div>
           </li>
         ))}
       </ol>
-      {visible.length === 0 ? <p class="muted">{t("เริ่มด้วยคำถามข้างล่างก็ได้", "Start with one of these.")}</p> : null}
-      {ice ? (
-        // A hangout's group chat, in the days before and on the day: the event's curated icebreakers,
-        // one tap sends one to the group. Optional, and folded away once the chat is going.
-        <details class="chat-ice" open={visible.length < 3}>
-          <summary>
-            <span aria-hidden="true">💬</span> {t("คำถามชวนคุย แตะเพื่อส่ง", "Icebreakers: tap one to send")}
-          </summary>
-          <ul>
-            {ice.map((x) => {
-              const text = lang === "en" ? x.en : x.th;
-              return (
-                <li>
-                  <form method="post" action={`/chat/${key}`}>
-                    <button name="body" value={text}>
-                      <span aria-hidden="true">{x.emoji}</span> <span class="sr-only">{t("ส่งคำถามนี้: ", "Send: ")}</span>
-                      {text}
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        </details>
-      ) : null}
+      {visible.length === 0 && th.open ? <p class="muted">{t("แตะ + เพื่อเลือกคำถามเริ่มคุย", "Tap + for a question to start with.")}</p> : null}
       {th.open ? (
-        <form method="post" action={`/chat/${key}`} class="chat-send">
-          {visible.length < 3 && !ice ? (
-          <p class="chat-starters">
-            {starters(key, now).map((p) => (
-              <button type="button" data-starter={lang === "en" ? p.en : p.th}>
-                {p.emoji} {lang === "en" ? p.en : p.th}
-              </button>
-            ))}
-          </p>
-          ) : null}
-          {error ? <Notice kind="warn">{L(lang, error)}</Notice> : null}
-          {/* ?say= prefills a suggested first line (e.g. from "Invite to a table"); the member still decides to send it. */}
-          <textarea name="body" rows={1} maxlength={500} required aria-label={t("ข้อความ", "Message")} placeholder={t("พิมพ์ข้อความ…", "Write a message…")}>
-            {(c.req.query("say") ?? "").slice(0, 200)}
-          </textarea>
-          <Button>{t("ส่ง", "Send")}</Button>
-        </form>
+        // B3: one row, "+" (photo, poll, icebreakers), the text field, then Send.
+        <div class="chat-compose">
+          <Sheet
+            t={t}
+            title={isCircle ? t("เพิ่มในแชต", "Add to the chat") : t("คำถามชวนคุย", "Icebreakers")}
+            trigger={<span aria-hidden="true">+</span>}
+            triggerClass="sheet-more chat-plus"
+            triggerLabel={isCircle ? t("เพิ่มรูป โพล หรือคำถามชวนคุย", "Add a photo, poll or icebreaker") : t("คำถามชวนคุย", "Icebreakers")}
+            align="start"
+          >
+            {isCircle ? <CircleExtras v={v} k={key} met={th.met} /> : null}
+            {ice ? (
+              // A hangout's group chat, in the days before and on the day: the event's curated icebreakers, one tap sends one.
+              <details class="how chat-ice" open>
+                <summary>
+                  <span aria-hidden="true">💬</span> {t("คำถามชวนคุย แตะเพื่อส่ง", "Icebreakers: tap one to send")}
+                </summary>
+                <ul>
+                  {ice.map((x) => {
+                    const text = lang === "en" ? x.en : x.th;
+                    return (
+                      <li>
+                        <form method="post" action={`/chat/${key}`}>
+                          <button name="body" value={text}>
+                            <span aria-hidden="true">{x.emoji}</span> <span class="sr-only">{t("ส่งคำถามนี้: ", "Send: ")}</span>
+                            {text}
+                          </button>
+                        </form>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
+            ) : (
+              // Everyday starters: with JS a tap puts it in the text field to edit; without JS it sends.
+              <div class="chat-starters">
+                {starters(key, now).map((p) => {
+                  const text = lang === "en" ? p.en : p.th;
+                  return (
+                    <form method="post" action={`/chat/${key}`}>
+                      <button class="sheet-item" name="body" value={text} data-starter={text}>
+                        <span aria-hidden="true">{p.emoji}</span> {text}
+                      </button>
+                    </form>
+                  );
+                })}
+              </div>
+            )}
+          </Sheet>
+          <form method="post" action={`/chat/${key}`} class="chat-send">
+            {error ? <Notice kind="warn">{L(lang, error)}</Notice> : null}
+            {/* ?say= prefills a suggested first line (e.g. from "Invite to a table"); the member still decides to send it. */}
+            <textarea name="body" rows={1} maxlength={500} required aria-label={t("ข้อความ", "Message")} placeholder={t("พิมพ์ข้อความ…", "Write a message…")}>
+              {(c.req.query("say") ?? "").slice(0, 200)}
+            </textarea>
+            <Button>{t("ส่ง", "Send")}</Button>
+          </form>
+        </div>
       ) : null}
-      {th.open && isCircle ? <CircleExtras v={v} k={key} met={th.met} /> : null}
       {th.open ? null : (
         <Notice kind="info">{t("แชตนี้ปิดแล้ว อ่านย้อนหลังได้", "This chat has closed. You can still read it.")}</Notice>
       )}
@@ -698,9 +728,9 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
  * "chat.changed" signal and when the tab becomes visible. If the connection
  * can't open, retry a few times with a growing delay, then stop.
  */
-const CHAT_JS = `(function(){var ta=document.querySelector(".chat-send textarea");document.querySelectorAll("[data-starter]").forEach(function(b){b.addEventListener("click",function(){if(ta){ta.value=b.dataset.starter;ta.focus()}})});
+const CHAT_JS = `(function(){var ta=document.querySelector(".chat-send textarea");document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-starter]");if(!b||!ta)return;e.preventDefault();ta.value=b.dataset.starter;var d=b.closest("details.sheet");if(d&&window.jgSheet)jgSheet.shut(d,true);ta.focus()});
 var box=document.getElementById("msgs");if(!box)return;box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"});
-function refetch(){fetch(location.pathname,{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(h){var d=new DOMParser().parseFromString(h,"text/html").getElementById("msgs");if(d&&d.innerHTML!==box.innerHTML){box.innerHTML=d.innerHTML;box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"})}}).catch(function(){})}
+function refetch(){if(box.querySelector("details.sheet[open]"))return;fetch(location.pathname,{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(h){var d=new DOMParser().parseFromString(h,"text/html").getElementById("msgs");if(d&&d.innerHTML!==box.innerHTML){box.innerHTML=d.innerHTML;box.lastElementChild&&box.lastElementChild.scrollIntoView({block:"end"})}}).catch(function(){})}
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")refetch()});
 var tries=0;function live(){if(!("WebSocket" in window)||tries>5)return;var ws=new WebSocket(location.origin.replace(/^http/,"ws")+location.pathname+"/live");var ka;
 ws.onopen=function(){tries=0;refetch();ka=setInterval(function(){ws.readyState===1&&ws.send("ping")},30000)};

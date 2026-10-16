@@ -116,7 +116,8 @@ import { myTables } from "../services/regular-tables";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, withGenderSelf } from "./onboarding";
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
-import { fmtDate, L } from "../lib/i18n";
+import { fmtDate, L, type T } from "../lib/i18n";
+import { Sheet } from "../ui/sheet";
 import { releaseUpcomingSeats } from "../services/events";
 
 export const settingsRoutes = new Hono<AppEnv>();
@@ -266,6 +267,7 @@ settingsRoutes.get("/settings", async (c) => {
               : t("สำหรับคนโสด เป็นความลับเสมอ", "For singles. Always private.")
           }
           consent={{
+            t,
             lead: t(
               "เปิดแล้ว คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' กับคนที่เจอได้ และจะรู้ผลก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน สถานะของคุณจะเป็น 'โสด' ข้อมูลเรื่องเดตเป็นความลับ ทีมงานดูไม่ได้ และถูกลบทันทีเมื่อปิด",
               "Once on, you can choose 'open to something more' with people you meet, and you only find out if it's mutual. Your status becomes Single. Dating details stay private, staff can't see them, and they're deleted the moment you switch off.",
@@ -391,19 +393,27 @@ settingsRoutes.post("/settings/push/off", async (c) => {
 });
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
-function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean; consent?: { lead: string; tick: string; go: string } }) {
+function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean; consent?: { t: T; lead: string; tick: string; go: string } }) {
   // Switching on needs a clear yes (PDPA, owner Phase 2): the switch opens a short sheet with an explicit tick. Off stays one tap.
   if (props.consent && !props.on)
     return (
-      <details class={props.love ? "qs-sheet love" : "qs-sheet"}>
-        <summary class={props.love ? "qs love" : "qs"} aria-pressed="false">
-          <span aria-hidden="true">{props.emoji}</span>
-          <span>
-            <b>{props.title}</b>
-            <small>{props.hint}</small>
-          </span>
-          <span class="sw" aria-hidden="true" />
-        </summary>
+      // The consent sheet is the shared Sheet (B2): a bottom sheet on phones, a popover on laptops.
+      <Sheet
+        t={props.consent.t}
+        class={props.love ? "qs-sheet love" : "qs-sheet"}
+        title={props.title}
+        triggerClass={props.love ? "qs love" : "qs"}
+        trigger={
+          <>
+            <span aria-hidden="true">{props.emoji}</span>
+            <span>
+              <b>{props.title}</b>
+              <small>{props.hint}</small>
+            </span>
+            <span class="sw" aria-hidden="true" />
+          </>
+        }
+      >
         <form method="post" action="/settings/quick" class="qs-consent">
           <input type="hidden" name="key" value={props.k} />
           <input type="hidden" name="on" value="1" />
@@ -416,7 +426,7 @@ function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: stri
             {props.consent.go}
           </button>
         </form>
-      </details>
+      </Sheet>
     );
   return (
     <form method="post" action="/settings/quick">

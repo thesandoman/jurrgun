@@ -97,4 +97,5 @@ var x0=e.clientX,y0=e.clientY;hold={x:x0,y:y0,id:setTimeout(function(){var d=h.q
 function cancel(e){if(!hold)return;if(e.type==="pointermove"&&Math.abs(e.clientX-hold.x)<10&&Math.abs(e.clientY-hold.y)<10)return;clearTimeout(hold.id);hold=null}
 D.addEventListener("pointermove",cancel);D.addEventListener("pointerup",cancel);D.addEventListener("pointercancel",cancel);
 D.addEventListener("contextmenu",function(e){if(e.target.closest&&e.target.closest("[data-sheet-hold]")&&matchMedia("(hover:none)").matches)e.preventDefault()});
+window.jgSheet={open:open,shut:shut};
 D.addEventListener("DOMContentLoaded",function(){var d=D.querySelector("details.sheet[open]");if(d)lift(d)})})();`;

@@ -127,14 +127,6 @@ html[lang="th"] body{line-height:1.7}
 .pf-section{scroll-margin-top:130px}
 @media (min-width:1024px){.pf-jump{top:72px}}
 
-/* Person cards: Report, then a "⋯ More" menu holding Remove and Block. */
-.safety-row{justify-content:space-between;align-items:center}
-main details.more-menu{position:relative;margin:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
-.more-menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);font-weight:600;color:var(--ink-2)}
-.more-menu>summary::-webkit-details-marker{display:none}
-.more-menu>div{position:absolute;right:0;bottom:calc(100% + 6px);z-index:6;display:grid;gap:8px;min-width:220px;padding:10px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.16)}
-.more-menu>div form{margin:0}
-.more-menu>div .btn{width:100%}
 
 /* Notifications page: the inbox list, unread rows tinted, with room between rows. */
 .notif-page{gap:8px;margin-top:8px}
@@ -162,7 +154,7 @@ main :is(h2,h3)>a,.me-h a,.me-todo a,.me-type>a,main h2.spread>a{display:inline-
 .thanks-starters button,.chat-starters button{min-height:44px}
 main details>summary{min-height:44px;display:flex;align-items:center}
 .me-peek,.me-lang a{display:inline-flex;align-items:center;min-height:44px}
-.passport-card>a,details.how li>a,.safety-row>a{display:inline-flex;align-items:center;min-height:44px}
+.passport-card>a,details.how li>a{display:inline-flex;align-items:center;min-height:44px}
 
 /* My people: a friendship milestone with one next step. */
 div.grad{display:grid;gap:8px;justify-items:start;margin:10px 0;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--lime) 22%,var(--surface))}
@@ -253,11 +245,6 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .notif-count{color:var(--brand)}
 .notif-page li.unread .notif-title{font-weight:700}
 
-/* Person cards: Chat is the one primary action; thank-you and share contact become quiet rows (Phase 3). */
-main .card:has(.safety-row) details.how{margin:2px 0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
-main .card:has(.safety-row) details.how>summary{min-height:44px;padding:0;font-weight:600;color:var(--brand);background:none;border:0}
-main .card:has(.safety-row) details.how[open]>summary{color:var(--ink)}
-main .card:has(.safety-row) details.how>form{padding:4px 0 8px}
 
 /* Host list: the title is the link; status badges don't wrap. */
 .host-ev-title{font-weight:700;color:var(--ink);text-decoration:none}
@@ -721,4 +708,25 @@ details.sheet[open]>.sheet-more{background:var(--surface-2)}
 .sheet-body .card{margin:8px 0;padding:12px;box-shadow:none}
 .sheet-body .buddy-safety ul{padding-left:0}
 .chips2 .quest-who.done{background:var(--ok-soft);color:var(--ink);font-weight:700}
+/* B3 chat composer: one row, + (photo, poll, icebreakers), the text field, then Send. */
+.chat-compose{position:sticky;bottom:calc(104px + env(safe-area-inset-bottom));z-index:3;display:flex;align-items:flex-end;gap:8px;padding:8px 0;background:linear-gradient(to top,var(--bg) 80%,transparent)}
+@media (min-width:1024px){.chat-compose{bottom:0}}
+html:not(.sheet-js) .chat-compose{position:static}
+.chat-compose>.chat-send{position:static;flex:1;min-width:0;padding:0;background:none}
+.chat-compose>details.sheet{flex:none}
+.sheet-more.chat-plus{min-width:46px;min-height:46px;padding:0;font-size:1.6rem;font-weight:500;color:var(--brand)}
+.sheet-body .chat-extras{display:grid;gap:8px;margin:0}
+.sheet-body .chat-photo-form{padding:4px 0}
+.sheet-body .chat-poll-new form{display:grid;gap:8px}
+.sheet-body .chat-starters{display:grid;gap:4px}
+.sheet-body .chat-starters .sheet-item{font-weight:500;line-height:1.35;padding:10px 12px}
+.sheet-body .chat-ice{padding:0 12px}
+/* B3 bubbles: Report moved into a ⋯ shown on a hovered, focused or long-pressed message. */
+.msg-meta{display:flex;align-items:center;gap:2px}
+.msg-meta .when{margin:2px 6px;font-size:.75rem}
+.bubble-more{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:-12px 0;border-radius:999px;color:var(--ink-2);font-weight:700;font-size:1.1rem;opacity:0;transition:opacity .15s ease}
+.chat-msgs li:hover .bubble-more,.chat-msgs li:focus-within .bubble-more,.bubble-more:focus-visible,details.sheet[open]>.bubble-more{opacity:1}
+.bubble-more:focus-visible{outline:3px solid var(--ink);outline-offset:-6px}
+@media (hover:none){.chat-msgs li[data-sheet-hold]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}}
+@media (prefers-reduced-motion:reduce){.bubble-more{transition:none}}
 `);
