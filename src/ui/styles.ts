@@ -398,7 +398,7 @@ h2{font-weight:700}
 .topbar{background:var(--deep);color:var(--on-deep);border-bottom:none;backdrop-filter:none;padding:12px 16px 14px}
 .topbar .brand{color:var(--on-deep);font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
 .topbar .brand small{color:var(--lime);font-weight:600;letter-spacing:0}
-.topbar .brand-mark svg rect:first-child{fill:var(--fresh)}
+.topbar .brand-mark svg>rect:first-child{fill:var(--fresh)}
 .topbar .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:var(--on-deep)}
 .topbar .icon-link{color:var(--on-deep)}
 .proto-banner{background:var(--lime);color:var(--deep);font-weight:600}
