@@ -168,7 +168,7 @@ onboarding.get("/welcome", (c) => {
       <p class="muted">🔒 {t("เปลี่ยนได้ทุกเมื่อ เรื่องเดตเป็นความลับเสมอ", "Change it anytime. Dating stays private.")}</p>
       {/* The quiz's own intro screen is folded in here, so the quiz starts at question 1. */}
       <p class="welcome-next">
-        🧭 {t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ 16 สถานการณ์สั้น ๆ บางคนได้เพิ่มอีก 1 หรือ 2 ข้อ ราว 3 นาที ตอบตามความรู้สึกแรก มีแค่คุณที่เห็นคำตอบ", "Next: your Bangkok Type. 16 quick Bangkok moments, sometimes 1 or 2 more, about 3 minutes. Go with your gut; only you see your answers.")}
+        🧭 {t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ 16 สถานการณ์สั้น ๆ อาจมีเพิ่มอีก 1 ถึง 2 ข้อ ใช้เวลาราว 3 นาที ตอบตามความรู้สึกแรก มีแค่คุณที่เห็นคำตอบ", "Next: your Bangkok Type. 16 quick Bangkok moments, sometimes 1 or 2 more, about 3 minutes. Go with your gut; only you see your answers.")}
       </p>
       <div class="flow-bar">
         <button type="submit" class="btn primary">{t("ไปกันเลย", "Let's go")}</button>
