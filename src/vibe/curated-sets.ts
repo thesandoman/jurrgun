@@ -99,11 +99,11 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "le-east-side",
-        codes: ["CFMN", "BDSH", "CDMH", "BFSN"],
+        codes: ["BDSH", "CFMN", "CDMH", "BFSN"],
       },
       {
         scenario: "er-cafe-closed",
-        codes: ["CDSN", "CFMH", "BDSN", "BFMH"],
+        codes: ["BFMH", "CFMH", "BDSN", "CDSN"],
       },
       {
         scenario: "lc-your-side",
@@ -200,7 +200,7 @@ export const CURATED_SETS: CuratedSets = {
     followUps: [
       {
         scenario: "drive-party-one-friend",
-        codes: ["BDSH", "BFSN", "CFMN", "CDMH"],
+        codes: ["CDMH", "BFSN", "CFMN", "BDSH"],
       },
       {
         scenario: "sunset-date",
@@ -212,7 +212,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "funny-songkran-splash",
-        codes: ["CDSH", "CFMH", "BDSN", "BFMN"],
+        codes: ["BDSN", "CFMH", "CDSH", "BFMN"],
       },
     ],
   },
@@ -313,7 +313,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "drive-proud",
-        codes: ["BFMH", "BDSN", "CFMH", "CDSN"],
+        codes: ["CDSN", "BDSN", "CFMH", "BFMH"],
       },
       {
         scenario: "drive-rough-week",

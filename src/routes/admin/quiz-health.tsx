@@ -145,6 +145,31 @@ export function retakeStability(rows: { group: string; prev: string; now: string
   return out;
 }
 
+export type LanguageGap = { scenario: string; th: { n: number; none: number }; en: { n: number; none: number }; flag: boolean };
+
+/**
+ * "None of these" per question for Thai and English readers. Flagged when both
+ * have 10+ answers and their 95% ranges don't overlap: a likely translation
+ * problem, not a personality difference (skill section 3).
+ */
+export function languageGaps(rows: { scenario: string; lang: string; none: boolean; count: number }[]): LanguageGap[] {
+  const by = new Map<string, LanguageGap>();
+  for (const r of rows) {
+    if (r.lang !== "th" && r.lang !== "en") continue;
+    const g = by.get(r.scenario) ?? { scenario: r.scenario, th: { n: 0, none: 0 }, en: { n: 0, none: 0 }, flag: false };
+    g[r.lang].n += r.count;
+    if (r.none) g[r.lang].none += r.count;
+    by.set(r.scenario, g);
+  }
+  for (const g of by.values()) {
+    if (safeCount(g.th.n) === null || safeCount(g.en.n) === null) continue;
+    const [tl, th] = wilson(g.th.none, g.th.n);
+    const [el, eh] = wilson(g.en.none, g.en.n);
+    g.flag = th < el || eh < tl;
+  }
+  return [...by.values()].sort((a, b) => Number(b.flag) - Number(a.flag) || b.th.n + b.en.n - (a.th.n + a.en.n));
+}
+
 function rowsOf(res: unknown): unknown[][] {
   return (res as unknown[]).map((r) => (Array.isArray(r) ? r : Object.values(r as Record<string, unknown>)));
 }
@@ -155,7 +180,7 @@ const BLEND = sql`(case when jsonb_typeof(v.blend) = 'string' then (v.blend #>> 
 adminQuizHealth.get("/", async (c) => {
   const { t, lang } = view(c);
   const db = getDb(c.env);
-  const [feelByType, feelBySegment, picks, retakes] = await Promise.all([
+  const [feelByType, feelBySegment, picks, retakes, feelByLang, picksByLang] = await Promise.all([
     db.execute(sql`select v.archetype, ${BLEND}->>'feel', count(*) from social_vibes v where ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`select ${SEGMENT_SQL}, ${BLEND}->>'feel', count(*) from social_vibes v join social_profiles p on p.account_id = v.account_id where ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`
@@ -169,6 +194,13 @@ adminQuizHealth.get("/", async (c) => {
       left join social_profiles p on p.account_id = v.account_id
       where ${BLEND} ? 'prev'
         and v.taken_at - (${BLEND}->'prev'->>'at')::timestamptz between ${`${RETAKE_DAYS.min} days`}::interval and ${`${RETAKE_DAYS.max} days`}::interval
+      group by 1, 2, 3`),
+    db.execute(sql`select ${BLEND}->>'lang', ${BLEND}->>'feel', count(*) from social_vibes v where ${BLEND} ? 'feel' and ${BLEND} ? 'lang' group by 1, 2`),
+    db.execute(sql`
+      select e->>0, ${BLEND}->>'lang', (e->>1) = 'none', count(*)
+      from social_vibes v
+      cross join lateral jsonb_array_elements(case when jsonb_typeof(${BLEND}->'picks') = 'array' then ${BLEND}->'picks' else '[]'::jsonb end) e
+      where ${BLEND} ? 'lang'
       group by 1, 2, 3`),
   ]);
 
@@ -189,6 +221,8 @@ adminQuizHealth.get("/", async (c) => {
   const questions = questionHealth(rowsOf(picks).map(([scenario, pick, archetype, n]) => ({ scenario: String(scenario), pick: String(pick), archetype: String(archetype), count: Number(n) })));
   const stable = retakeStability(rowsOf(retakes).map(([group, prev, now, n]) => ({ group: String(group), prev: String(prev), now: String(now), count: Number(n) })));
   const stableAll = mergeStability([...stable.values()]);
+  const byLang = tally(feelByLang);
+  const gaps = languageGaps(rowsOf(picksByLang).map(([scenario, lang, none, n]) => ({ scenario: String(scenario), lang: String(lang), none: none === true || none === "t", count: Number(n) })));
   const prompt = (id: string) => {
     const s = SCENARIOS.find((x) => x.id === id);
     return s ? L(lang, s.prompt) : id;
@@ -266,6 +300,50 @@ adminQuizHealth.get("/", async (c) => {
           </table>
         </div>
       </details>
+
+      <h2 id="language">{t("ไทยกับอังกฤษ", "Thai vs English")}</h2>
+      <p class="muted">
+        {t(
+          "เทียบคนที่ทำแบบทดสอบเป็นภาษาไทยกับภาษาอังกฤษ ถ้าข้อไหนตอบ \"ไม่มีข้อไหน\" ต่างกันจนช่วง 95% ไม่ทับกัน มักเป็นปัญหาการแปล",
+          "Thai and English readers side by side. A question whose \"None of these\" ranges don't overlap usually has a translation problem.",
+        )}
+      </p>
+      <div class="table-wrap">
+        <table>
+          {feelHead}
+          <tbody>
+            <FeelRow label="ไทย" f={byLang.get("th") ?? emptyFeel()} />
+            <FeelRow label="English" f={byLang.get("en") ?? emptyFeel()} />
+          </tbody>
+        </table>
+      </div>
+      {gaps.length > 0 && (
+        <details open={gaps.some((g) => g.flag)}>
+          <summary>{t("\"ไม่มีข้อไหน\" รายข้อ แยกภาษา", "\"None of these\" by question and language")}</summary>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{t("คำถาม", "Question")}</th>
+                  <th scope="col">ไทย</th>
+                  <th scope="col">English</th>
+                  <th scope="col">{t("ธง", "Flag")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gaps.map((g) => (
+                  <tr data-lang-gap={g.scenario}>
+                    <th scope="row" style="font-weight:normal">{prompt(g.scenario)}</th>
+                    <td>{share(g.th.none, g.th.n)}</td>
+                    <td>{share(g.en.none, g.en.n)}</td>
+                    <td>{g.flag ? t("อาจแปลไม่ตรง", "Check the translation") : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
 
       <h2 id="retakes">{t(`ทำซ้ำ (${RETAKE_DAYS.min} ถึง ${RETAKE_DAYS.max} วันต่อมา)`, `Retakes (${RETAKE_DAYS.min} to ${RETAKE_DAYS.max} days later)`)}</h2>
       <p class="muted">

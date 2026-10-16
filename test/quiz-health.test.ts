@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
 import { vibes } from "../src/schema";
-import { FLAGS, RETAKE_DAYS, kappa, mergeStability, questionHealth, retakeStability, wilson } from "../src/routes/admin/quiz-health";
+import { FLAGS, RETAKE_DAYS, kappa, languageGaps, mergeStability, questionHealth, retakeStability, wilson } from "../src/routes/admin/quiz-health";
 import { personalOf, quizQuestions, quizSeed } from "../src/routes/quiz";
 import { isStyleQuestion } from "../src/vibe/generator";
 
@@ -57,6 +57,24 @@ describe("intervals and kappa", () => {
   });
 });
 
+describe("languageGaps", () => {
+  it("flags a question only when Thai and English 'none' ranges don't overlap, with 10+ each", () => {
+    const g = Object.fromEntries(
+      languageGaps([
+        // 5% vs 50%: a translation problem
+        { scenario: "q8", lang: "th", none: true, count: 2 }, { scenario: "q8", lang: "th", none: false, count: 38 },
+        { scenario: "q8", lang: "en", none: true, count: 20 }, { scenario: "q8", lang: "en", none: false, count: 20 },
+        // similar rates
+        { scenario: "q1", lang: "th", none: true, count: 4 }, { scenario: "q1", lang: "th", none: false, count: 36 },
+        { scenario: "q1", lang: "en", none: true, count: 5 }, { scenario: "q1", lang: "en", none: false, count: 35 },
+        // too few English answers
+        { scenario: "q2", lang: "th", none: false, count: 40 }, { scenario: "q2", lang: "en", none: true, count: 9 },
+      ]).map((x) => [x.scenario, x.flag]),
+    );
+    expect(g).toEqual({ q8: true, q1: false, q2: false });
+  });
+});
+
 describe("retakeStability", () => {
   it("counts same type and 3+ shared letters per group, skipping older non-letter types", () => {
     const s = retakeStability([
@@ -107,6 +125,8 @@ describe.skipIf(!HAS_DB)("quiz health page and saved picks", () => {
     expect(html).toContain("Bangkok Type quiz health");
     expect(html).toContain("&lt;10");
     expect(html).toContain("Retakes (14 to 30 days later)");
+    expect(html).toContain("Thai vs English");
+    expect((saved.blend as unknown as { lang?: string }).lang).toMatch(/^(th|en)$/);
 
     // A retake keeps only the last type, its unsure letters and when it was taken.
     const before = saved;

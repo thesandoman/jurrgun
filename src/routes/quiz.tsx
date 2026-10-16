@@ -927,7 +927,7 @@ quizRoutes.post("/quiz", async (c) => {
   // A retake keeps only the last type (owner card 10-16), so staff can count how many
   // get the same type again (Quiz health, totals of 10+). Never a full history.
   const prev = row ? { archetype: row.archetype, unsure: row.blend?.unsure ?? [], at: row.takenAt.toISOString() } : undefined;
-  const blend: TypeResult & { why: Why; picks: [string, string][]; prev?: typeof prev } = {
+  const blend: TypeResult & { why: Why; picks: [string, string][]; prev?: typeof prev; lang: "th" | "en" } = {
     types,
     unsure: result.unsure,
     consistency: result.consistency,
@@ -936,6 +936,8 @@ quizRoutes.post("/quiz", async (c) => {
     why: whyOf(typeQuestions(questions), answers, archetype),
     picks: picksOf(questions, answers, none),
     ...(prev ? { prev } : {}),
+    // The language the quiz was read in (owner card 10-16), so staff can spot a translation problem in totals.
+    lang: v.lang,
     ...(result.moves ? { moves: result.moves } : {}),
   };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);

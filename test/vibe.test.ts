@@ -144,6 +144,9 @@ describe("the curated quiz (owner D26, quiz-curated.md)", () => {
     for (const segment of ["local", "newcomer", "international"] as const) {
       const first = session("s", { personal: { segment }, month: 10 }).map((q) => q.options[0].type);
       for (let i = 0; i < 4; i++) expect(first.filter((t) => t[i] === "BDMN"[i]).length, `${segment} letter ${i + 1}`).toBe(first.length / 2);
+      // The follow-ups too (the bias benchmark caught the local ones all starting quiet).
+      const fu = followUpQuestions({ segment }).map((q) => q.options[0].type);
+      for (let i = 0; i < 4; i++) expect(fu.filter((t) => t[i] === "BDMN"[i]).length, `${segment} follow-up letter ${i + 1}`).toBe(fu.length / 2);
     }
   });
 
