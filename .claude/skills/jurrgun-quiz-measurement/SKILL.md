@@ -40,6 +40,7 @@ For each curated question and its four answers:
 - At the result: "Does this feel like you? What's off?"
 - Log one row per problem: question id, what they said, the type of problem (wording, missing answer, translation, social pressure), and a proposed fix.
 - A question with the same problem from 2 or more people gets rewritten before the next round.
+- **Two coders** (research/data-analysis, coding reliability): two people sort the same notes into the problem types on their own, then compare. Agreement κ of 0.61 or more means the types are clear; lower means tighten the type definitions before counting anything.
 
 ## 3. Question health from live answers
 
@@ -52,6 +53,18 @@ Totals per curated question (and per follow-up), from members who finished the q
 | Pick spread across the 4 answers | one answer above 60% | one answer is the "obvious" choice (social desirability) |
 | Median time to answer | above 2x the quiz median | confusing or too long |
 | Gap between Thai and English readers on any of the above | large and consistent | a translation problem, not a personality difference |
+
+**Flags use the 95% interval, not the bare share** (src/routes/admin/quiz-health.tsx `wilson`): "none" fires only when the whole interval is above 20%, "top" above 60%, "agreement" when its whole interval is 15 points under the quiz average. With about 60 checks on the page, bare shares would raise false alarms by chance (the multiple-comparisons problem); the interval rule keeps a flag meaning something. The page shows each share with its range, e.g. "40% (22–61)".
+
+Answers a question needs before a flag can fire at all:
+
+| True rate | "None" (line 20%) | True top share | "Top" (line 60%) |
+|---|---|---|---|
+| 30% | about 55 | 70% | about 88 |
+| 35% | about 25 | 75% | about 34 |
+| 40% | about 14 | 80% | about 22 |
+
+And a 70% "Yes" share reads 52–83% at 30 people, 60–78% at 100, 63–76% at 200. So: a week-one page full of wide ranges is normal; read it, don't act on it.
 
 Use the flags to pick the next rewrites. Re-curate with scripts/curate-quiz.ts and re-run both simulations after any change.
 
@@ -70,6 +83,7 @@ The questions are fixed, so a retake is a real re-measurement.
 - **Measure:** among members who retake within 14 to 30 days, the share whose type stays the same, and how many letters changed. Changes on close letters are expected; changes on clear letters are not.
 - **Expect:** about 70% or more keep the same type, and nearly all keep 3 or more letters.
 - **Act on lower:** it means ambiguous questions; cross-check with the question health flags.
+- **Beyond chance (κ):** the page also shows Cohen's kappa for the type, which takes out agreement that the type mix alone would give by luck. 0.61 or more is substantial; read it beside "Same type".
 - **Where:** a retake keeps only the last type, its unsure letters and date (`blend.prev`, owner card 10-16, never a full history); the Retakes table on /admin/quiz-health counts it per segment, 10 or more only.
 
 ## 6. Fairness across groups
@@ -82,6 +96,16 @@ Compare locals, newcomers and internationals, and Thai and English readers, on:
 - the share with a "not sure yet" letter.
 
 A group that consistently feels less seen, or passes more, needs its own segment wording or scenario swaps (curated-sets supports up to 4 swaps per segment).
+
+## 7. Analysis plan (written before the data, so we can't fool ourselves)
+
+From research/quantitative-methods: state the questions and the decision rules before looking, report every check (not only the ones that moved), and always give the interval.
+
+1. **Accuracy:** is the "Yes" share 70% or more overall? Decide at 100 answers; the interval must sit above 60%.
+2. **Fairness:** does any group's "Yes" interval sit wholly below another's? If so, that group's wording or swaps come first.
+3. **Questions:** which questions carry an interval-based flag at 50+ answers? Those, and only those, go to rewrite cards.
+4. **Stability:** at 30+ retakes, same type 70% or more and κ 0.61 or more.
+5. **No fishing:** don't add new splits or thresholds after seeing the numbers. A new idea becomes the next round's plan, written here first.
 
 ## Output
 

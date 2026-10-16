@@ -48,6 +48,19 @@ export type QuestionHealth = {
   flags: ("none" | "agreement" | "top")[];
 };
 
+/**
+ * 95% Wilson interval for k of n (research/quantitative-methods: report intervals,
+ * not bare shares). Honest at small n, where a plain ± interval would leave 0 to 100%.
+ */
+export function wilson(k: number, n: number, z = 1.96): [number, number] {
+  if (n === 0) return [0, 1];
+  const p = k / n;
+  const d = 1 + (z * z) / n;
+  const mid = (p + (z * z) / (2 * n)) / d;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
+  return [Math.max(0, mid - half), Math.min(1, mid + half)];
+}
+
 const shared = (a: string, b: string) => [0, 1, 2, 3].filter((i) => a[i] === b[i]).length;
 
 /**
@@ -73,9 +86,11 @@ export function questionHealth(rows: { scenario: string; pick: string; archetype
   const avg = shown.length ? shown.reduce((t, q) => t + q.agree / q.picked, 0) / shown.length : 0;
   for (const q of out) {
     if (safeCount(q.n) === null) continue;
-    if (q.none / q.n > FLAGS.none) q.flags.push("none");
-    if (safeCount(q.picked) !== null && q.agree / q.picked < avg - FLAGS.agreementGap) q.flags.push("agreement");
-    if (safeCount(q.picked) !== null && q.top / q.picked > FLAGS.topPick) q.flags.push("top");
+    // A flag needs the whole 95% interval past the line, not just the share: with 20
+    // questions and 3 checks each, bare shares would raise false alarms by chance.
+    if (wilson(q.none, q.n)[0] > FLAGS.none) q.flags.push("none");
+    if (safeCount(q.picked) !== null && wilson(q.agree, q.picked)[1] < avg - FLAGS.agreementGap) q.flags.push("agreement");
+    if (safeCount(q.picked) !== null && wilson(q.top, q.picked)[0] > FLAGS.topPick) q.flags.push("top");
   }
   return out.sort((a, b) => b.flags.length - a.flags.length || b.n - a.n);
 }
@@ -83,7 +98,32 @@ export function questionHealth(rows: { scenario: string; pick: string; archetype
 /** Retakes counted for stability: 14 to 30 days after the last result (skill section 5). */
 export const RETAKE_DAYS = { min: 14, max: 30 } as const;
 
-export type Stability = { n: number; same: number; kept3: number };
+export type Stability = { n: number; same: number; kept3: number; prevBy: Record<string, number>; nowBy: Record<string, number> };
+
+export const emptyStability = (): Stability => ({ n: 0, same: 0, kept3: 0, prevBy: {}, nowBy: {} });
+
+/** Several groups' retakes as one (for "Everyone"). */
+export function mergeStability(all: Stability[]): Stability {
+  const out = emptyStability();
+  for (const s of all) {
+    out.n += s.n;
+    out.same += s.same;
+    out.kept3 += s.kept3;
+    for (const [k, v] of Object.entries(s.prevBy)) out.prevBy[k] = (out.prevBy[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(s.nowBy)) out.nowBy[k] = (out.nowBy[k] ?? 0) + v;
+  }
+  return out;
+}
+
+/**
+ * Cohen's kappa: same-type agreement beyond what the type mix alone would give by
+ * luck (0 = luck, 1 = always the same; 0.61+ is substantial). Null when undefined.
+ */
+export function kappa(s: Stability): number | null {
+  if (s.n === 0) return null;
+  const chance = Object.entries(s.prevBy).reduce((t, [k, v]) => t + (v / s.n) * ((s.nowBy[k] ?? 0) / s.n), 0);
+  return chance >= 1 ? null : (s.same / s.n - chance) / (1 - chance);
+}
 
 /**
  * Retake stability per group from grouped rows (group, previous type, new type,
@@ -94,7 +134,9 @@ export function retakeStability(rows: { group: string; prev: string; now: string
   const out = new Map<string, Stability>();
   for (const r of rows) {
     if (!keys.has(r.prev) || !keys.has(r.now)) continue;
-    const s = out.get(r.group) ?? { n: 0, same: 0, kept3: 0 };
+    const s = out.get(r.group) ?? emptyStability();
+    s.prevBy[r.prev] = (s.prevBy[r.prev] ?? 0) + r.count;
+    s.nowBy[r.now] = (s.nowBy[r.now] ?? 0) + r.count;
     s.n += r.count;
     if (r.prev === r.now) s.same += r.count;
     if (shared(r.prev, r.now) >= 3) s.kept3 += r.count;
@@ -146,13 +188,19 @@ adminQuizHealth.get("/", async (c) => {
   const overall = [...byType.values()].reduce((a, f) => ({ yes: a.yes + f.yes, partly: a.partly + f.partly, no: a.no + f.no, n: a.n + f.n }), emptyFeel());
   const questions = questionHealth(rowsOf(picks).map(([scenario, pick, archetype, n]) => ({ scenario: String(scenario), pick: String(pick), archetype: String(archetype), count: Number(n) })));
   const stable = retakeStability(rowsOf(retakes).map(([group, prev, now, n]) => ({ group: String(group), prev: String(prev), now: String(now), count: Number(n) })));
-  const stableAll = [...stable.values()].reduce((a, s) => ({ n: a.n + s.n, same: a.same + s.same, kept3: a.kept3 + s.kept3 }), { n: 0, same: 0, kept3: 0 });
+  const stableAll = mergeStability([...stable.values()]);
   const prompt = (id: string) => {
     const s = SCENARIOS.find((x) => x.id === id);
     return s ? L(lang, s.prompt) : id;
   };
 
-  const share = (k: number, n: number) => (safeCount(n) === null || n === 0 ? "<10" : `${Math.round((k / n) * 100)}%`);
+  const pct = (x: number) => Math.round(x * 100);
+  // The share with its 95% interval, e.g. "40% (22–61)"; "<10" under k.
+  const share = (k: number, n: number) => {
+    if (safeCount(n) === null || n === 0) return "<10";
+    const [lo, hi] = wilson(k, n);
+    return `${pct(k / n)}% (${pct(lo)}–${pct(hi)})`;
+  };
   const count = (n: number) => (safeCount(n) === null ? "<10" : String(n));
   const FLAG_TEXT: Record<QuestionHealth["flags"][number], string> = {
     none: t('"ไม่มีข้อไหนเป็นฉัน" เยอะ', 'Many say "None of these"'),
@@ -188,8 +236,8 @@ adminQuizHealth.get("/", async (c) => {
       <h1>{t("สุขภาพแบบทดสอบไทป์กรุงเทพฯ", "Bangkok Type quiz health")}</h1>
       <p class="muted">
         {t(
-          "ผลรวมเท่านั้น ไม่มีข้อมูลรายคน ช่องที่มีน้อยกว่า 10 คนแสดงเป็น <10 ใช้หาข้อที่ควรเขียนใหม่ (สกิล jurrgun-quiz-measurement)",
-          "Totals only, never a person. Anything under 10 people shows as <10. Use it to pick which questions to rewrite (skill jurrgun-quiz-measurement).",
+          "ผลรวมเท่านั้น ไม่มีข้อมูลรายคน ช่องที่มีน้อยกว่า 10 คนแสดงเป็น <10 ตัวเลขในวงเล็บคือช่วง 95% ถ้าคนยังน้อยช่วงจะกว้าง อย่าเพิ่งตัดสินใจ ใช้หาข้อที่ควรเขียนใหม่ (สกิล jurrgun-quiz-measurement)",
+          "Totals only, never a person. Anything under 10 people shows as <10. Brackets are the 95% range: with few people it's wide, so don't act on it yet. Use it to pick which questions to rewrite (skill jurrgun-quiz-measurement).",
         )}
       </p>
 
@@ -222,8 +270,8 @@ adminQuizHealth.get("/", async (c) => {
       <h2 id="retakes">{t(`ทำซ้ำ (${RETAKE_DAYS.min} ถึง ${RETAKE_DAYS.max} วันต่อมา)`, `Retakes (${RETAKE_DAYS.min} to ${RETAKE_DAYS.max} days later)`)}</h2>
       <p class="muted">
         {t(
-          "คำถามไม่เปลี่ยน การทำซ้ำจึงเป็นการวัดครั้งที่สอง ควรได้ไทป์เดิมราว 70% ขึ้นไป และเกือบทุกคนได้ตัวอักษรเดิม 3 ใน 4 ตัว",
-          "The questions are fixed, so a retake is a second measurement. Expect about 70% or more on the same type, and nearly everyone keeping 3 of 4 letters.",
+          "คำถามไม่เปลี่ยน การทำซ้ำจึงเป็นการวัดครั้งที่สอง ควรได้ไทป์เดิมราว 70% ขึ้นไป และเกือบทุกคนได้ตัวอักษรเดิม 3 ใน 4 ตัว κ ตัดส่วนที่ตรงกันโดยบังเอิญออก 0.61 ขึ้นไปถือว่าดี",
+          "The questions are fixed, so a retake is a second measurement. Expect about 70% or more on the same type, and nearly everyone keeping 3 of 4 letters. κ takes out agreement by luck: 0.61 or more is substantial.",
         )}
       </p>
       <div class="table-wrap">
@@ -234,17 +282,20 @@ adminQuizHealth.get("/", async (c) => {
               <th scope="col">{t("คนทำซ้ำ", "Retook")}</th>
               <th scope="col">{t("ไทป์เดิม", "Same type")}</th>
               <th scope="col">{t("ตัวอักษรเดิม 3 ตัวขึ้นไป", "3+ letters same")}</th>
+              <th scope="col">{t("เกินกว่าบังเอิญ (κ)", "Beyond chance (κ)")}</th>
             </tr>
           </thead>
           <tbody>
             {([["all", t("ทั้งหมด", "Everyone")], ...(["local", "newcomer", "international"] as const).map((s) => [s, SEG[s]])] as [string, string][]).map(([k, label]) => {
-              const s = k === "all" ? stableAll : (stable.get(k) ?? { n: 0, same: 0, kept3: 0 });
+              const s = k === "all" ? stableAll : (stable.get(k) ?? emptyStability());
+              const kp = safeCount(s.n) === null ? null : kappa(s);
               return (
                 <tr data-retakes={k}>
                   <th scope="row" style="font-weight:normal">{label}</th>
                   <td>{count(s.n)}</td>
                   <td>{share(s.same, s.n)}</td>
                   <td>{share(s.kept3, s.n)}</td>
+                  <td>{safeCount(s.n) === null ? "<10" : kp === null ? "–" : kp.toFixed(2)}</td>
                 </tr>
               );
             })}
@@ -255,8 +306,8 @@ adminQuizHealth.get("/", async (c) => {
       <h2 id="questions">{t("รายข้อ", "Question by question")}</h2>
       <p class="muted">
         {t(
-          `ธงขึ้นเมื่อ: ตอบ "ไม่มีข้อไหนเป็นฉัน" เกิน ${FLAGS.none * 100}% · คำตอบตรงกับไทป์สุดท้ายต่ำกว่าค่าเฉลี่ย ${FLAGS.agreementGap * 100} จุด · คำตอบเดียวได้เกิน ${FLAGS.topPick * 100}%`,
-          `Flagged when: over ${FLAGS.none * 100}% say "None of these" · picks match the final type ${FLAGS.agreementGap * 100} points below the quiz average · one answer takes over ${FLAGS.topPick * 100}%`,
+          `ธงขึ้นเมื่อ: ตอบ "ไม่มีข้อไหนเป็นฉัน" เกิน ${FLAGS.none * 100}% · คำตอบตรงกับไทป์สุดท้ายต่ำกว่าค่าเฉลี่ย ${FLAGS.agreementGap * 100} จุด · คำตอบเดียวได้เกิน ${FLAGS.topPick * 100}% (ทั้งช่วง 95% ต้องเลยเส้น ไม่ใช่แค่ตัวเลขกลาง)`,
+          `Flagged when: over ${FLAGS.none * 100}% say "None of these" · picks match the final type ${FLAGS.agreementGap * 100} points below the quiz average · one answer takes over ${FLAGS.topPick * 100}% (the whole 95% range must be past the line, not just the share)`,
         )}
       </p>
       {questions.length === 0 ? (

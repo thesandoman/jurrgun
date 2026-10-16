@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
 import { vibes } from "../src/schema";
-import { FLAGS, RETAKE_DAYS, questionHealth, retakeStability } from "../src/routes/admin/quiz-health";
+import { FLAGS, RETAKE_DAYS, kappa, mergeStability, questionHealth, retakeStability, wilson } from "../src/routes/admin/quiz-health";
 import { personalOf, quizQuestions, quizSeed } from "../src/routes/quiz";
 import { isStyleQuestion } from "../src/vibe/generator";
 
@@ -33,6 +33,30 @@ describe("questionHealth", () => {
   });
 });
 
+describe("intervals and kappa", () => {
+  it("wilson gives the standard 95% interval and stays inside 0..1", () => {
+    const [lo, hi] = wilson(8, 20);
+    expect(lo).toBeCloseTo(0.2188, 3);
+    expect(hi).toBeCloseTo(0.6134, 3);
+    expect(wilson(0, 10)[0]).toBe(0);
+    expect(wilson(10, 10)[1]).toBe(1);
+  });
+
+  it("kappa is 1 for perfect agreement across a mixed type spread", () => {
+    const s = retakeStability([
+      { group: "g", prev: "BDSH", now: "BDSH", count: 6 },
+      { group: "g", prev: "CFMN", now: "CFMN", count: 6 },
+    ]).get("g")!;
+    expect(kappa(s)).toBeCloseTo(1, 5);
+  });
+
+  it("a share barely over a line on few answers is not flagged", () => {
+    // 3 of 12 say none (25% > 20%), but the 95% range starts near 9%: noise, not a flag.
+    const h = questionHealth([row("q", "none", "BDSH", 3), row("q", "BDSH", "BDSH", 5), row("q", "BDSN", "BDSH", 4)]);
+    expect(h[0].flags).toEqual([]);
+  });
+});
+
 describe("retakeStability", () => {
   it("counts same type and 3+ shared letters per group, skipping older non-letter types", () => {
     const s = retakeStability([
@@ -41,7 +65,10 @@ describe("retakeStability", () => {
       { group: "local", prev: "BDSH", now: "CFMN", count: 1 },
       { group: "local", prev: "rhythm+", now: "BDSH", count: 5 },
     ]);
-    expect(s.get("local")).toEqual({ n: 10, same: 7, kept3: 9 });
+    expect(s.get("local")).toMatchObject({ n: 10, same: 7, kept3: 9 });
+    // Chance agreement: everyone was BDSH before, 7 of 10 are now, so luck alone gives 0.7 and κ is 0.
+    expect(kappa(s.get("local")!)).toBeCloseTo(0, 5);
+    expect(mergeStability([s.get("local")!, s.get("local")!])).toMatchObject({ n: 20, same: 14 });
     expect(RETAKE_DAYS).toEqual({ min: 14, max: 30 });
   });
 });
