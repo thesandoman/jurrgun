@@ -1,6 +1,6 @@
 ---
 name: jurrgun-ui
-description: Jurrgun's own UI review-and-ship loop. Screenshots member pages at 375 and 1280 px (light and dark), checks them against UX heuristics, cognitive load, WCAG 2.2 AA, the spacing scale and Jurrgun's house rules, fixes plain bugs straight away, sends everything else to the owner as decision cards, builds only what is approved, verifies it, runs the full suite and pushes. Use for "review the UI", "comb through the app", "find UX issues", "too much space", "polish this page", "decision cards", "make it more inclusive", "/jurrgun-ui", or any UI or UX change to this repo. Not for new features (the app is in a feature freeze: QOL only).
+description: Jurrgun's own UI review-and-ship loop. Screenshots member pages at 375 and 1280 px (light and dark), checks them against UX heuristics, cognitive load, WCAG 2.2 AA, the spacing scale and Jurrgun's house rules, fixes plain bugs straight away, sends everything else to the owner as decision cards, builds only what is approved, verifies it, runs the full suite and pushes. Use for "review the UI", "comb through the app", "find UX issues", "too much space", "polish this page", "decision cards", "make it more inclusive", "/jurrgun-ui", or any UI or UX change to this repo. New features go through the same loop: proposed on decision cards, built once approved.
 ---
 
 # Jurrgun UI: review, decide, ship
@@ -92,7 +92,7 @@ Anything that changes how a page looks or works beyond a repair goes to the owne
 - Every control has a visible label; every image that means something has alt text.
 
 **Process**
-- Feature freeze: QOL, fixes and owner-approved cards only. No new features, tables or settings.
+- New features are allowed again (owner lifted the freeze, 2026-10-16), but only once approved on a decision card. Schema changes still need the owner and a planned migration before code that uses them goes live.
 - Never touch the production database. Schema changes need the owner; prefer storing small private extras in existing fields when the owner has not asked for a migration.
 - `test/staff-privacy.integration.test.ts` must stay green: staff pages never show romance, relationship, gender or dating data.
 - Never use bare `git stash` (the stash is shared between chats).

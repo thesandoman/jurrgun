@@ -38,7 +38,7 @@ Jurrgun is an independent app run by its founder. The BMA is its main host, mode
 - **Friends first (D4).** Dating is an opt-in, 💘 เปิดใจมากกว่าเพื่อน / Open to something more: private, only visible to others who also opted in, deleted when switched off, never the lead in any surface or film.
 - **Seating mixes people (D28, D31):** shared language and a practical anchor first, then a deliberate mix of Bangkok Types. Never a compatibility percentage, "top matches", browsable tablemates, or any score a member can see.
 - **The quiz is human, not a game (D26):** plain scenarios, a fixed curated set, "none of these" on every question, no cheering or badges, and the result is a starting point, never a fixed label.
-- **Feature freeze:** quality-of-life work only; no new features without the owner.
+- **New features are open again** (owner lifted the feature freeze, 2026-10-16). New features still go to the owner as decision cards before they are built, and must keep every principle and constraint here.
 - **Privacy:** PDPA consents; sensitive data (gender, relationship, romance) is private, never shown to staff; women-only options exist only for women and non-binary members.
 - Sign-up area: Bangkok and surrounding provinces.
 - Stack and hosting: Hono server-rendered JSX on SV Cloud (Cloudflare Workers, Postgres). See SVAGENTS.md.
