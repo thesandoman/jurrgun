@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { HAS_DB, createMember, db, req } from "./helpers";
+import { HAS_DB, attendedOnce, createMember, db, req } from "./helpers";
 import { buddyMatches, chatMessages, connections, events, weeklyPlans } from "../src/schema";
 import { newId } from "../src/lib/crypto";
 import { weekKey } from "../src/domain/buddy";
@@ -75,6 +75,7 @@ describe.skipIf(!HAS_DB)("no repeats, round two", () => {
 
   it("Me tiles open Upcoming and Past, and Learn lists each source once", async () => {
     const m = await createMember();
+    await attendedOnce(m.id); // the tiles show from a first event
     const hub = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
     expect(hub).toContain('href="/me/events#past"');
     expect(hub).toContain('href="/me/events#upcoming"');

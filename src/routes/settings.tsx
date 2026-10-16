@@ -334,7 +334,8 @@ settingsRoutes.get("/settings", async (c) => {
           </a>
         )
       }
-      stats={[
+      // No tiles until a first check-in or a first person in My people (owner card).
+      stats={Number(been?.n ?? 0) + Number(circle?.n ?? 0) === 0 ? [] : [
         { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events#past", tint: "green" },
         {
           emoji: "🤝",

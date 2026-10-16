@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { and, eq, isNull, or } from "drizzle-orm";
-import { HAS_DB, createMember, db, req } from "./helpers";
+import { HAS_DB, attendedOnce, createMember, db, req } from "./helpers";
 import { connections, events, regularTableMembers, regularTables } from "../src/schema";
 import { newId } from "../src/lib/crypto";
 
@@ -56,6 +56,7 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
       await db().insert(regularTables).values({ id, hostAccountId: host.id, name, district: "bang_rak", joinToken: newId() });
       await db().insert(regularTableMembers).values({ id: newId(), tableId: id, accountId: me.id });
     }
+    await attendedOnce(me.id);
     const hub = await (await req("/settings?lang=en", { cookie: me.cookie })).text();
     expect(hub).toMatch(/<a href="\/tables" class="me-stat[^"]*"><span[^>]*>🪑<\/span><b>3<\/b><small>Tables<\/small>/);
     const prof = await (await req("/me/profile?lang=en", { cookie: me.cookie })).text();

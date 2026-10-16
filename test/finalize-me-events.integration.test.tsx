@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { HAS_DB, createMember, db, req } from "./helpers";
+import { HAS_DB, attendedOnce, createMember, db, req } from "./helpers";
 import { accounts, events, profiles, registrations, vibes } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
 import { byMonth, PassSteps } from "../src/routes/events";
@@ -63,6 +63,7 @@ describe.skipIf(!HAS_DB)("finalize review: pages", () => {
   it("Me: neutral cards, the type as a link only, and the toggle and retake on the quiz result", async () => {
     const m = await createMember();
     await db().insert(vibes).values({ accountId: m.id, vector: {}, archetype: "BDMN", visible: false });
+    await attendedOnce(m.id);
     const me = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
     expect(me).not.toMatch(/class="me-(stat|row) tint-/);
     expect(me).toMatch(/class="me-stat-emoji tint-/);
@@ -87,7 +88,10 @@ describe.skipIf(!HAS_DB)("finalize review: pages", () => {
     expect(html).toContain("Still new to Bangkok?");
     expect(html).not.toContain("Help your table get to know you");
     // The tiles, then the next table, then the one prompt.
+    await attendedOnce(m.id);
+    html = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
     const order = ['class="me-stats"', "Your next table", "Still new to Bangkok?"].map((s) => html.indexOf(s));
+    expect(order[0]).toBeGreaterThan(-1);
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 

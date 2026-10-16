@@ -9,7 +9,7 @@ import postgres from "postgres";
 import app from "../src/index";
 import { getDb } from "../src/db";
 import { hashPassword, newId, randomToken, sha256 } from "../src/lib/crypto";
-import { accounts, consents, profiles, sessions, type Role } from "../src/schema";
+import { accounts, consents, events, profiles, registrations, sessions, type Role } from "../src/schema";
 
 export const ENV = { DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/cloud_dev", NO_EXTERNAL: "1" };
 
@@ -110,4 +110,13 @@ export async function req(
     headers["content-type"] = "application/json";
   }
   return app.request(path, { method: opts.method ?? (body ? "POST" : "GET"), headers, body }, ENV);
+}
+
+/** A past event the member checked in to, so pages that wait for a first event (the tiles on Me) show. */
+export async function attendedOnce(accountId: string): Promise<string> {
+  const id = newId();
+  const startsAt = new Date(Date.now() - 3 * 86_400_000);
+  await db().insert(events).values({ id, title: `PAST-${id.slice(0, 8)}`, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3_600_000), venueName: "Lumphini Park", district: "pathum_wan", capacity: 10, status: "published", createdBy: "test" });
+  await db().insert(registrations).values({ id: newId(), eventId: id, accountId, status: "confirmed", passToken: randomToken(18), checkedInAt: startsAt });
+  return id;
 }

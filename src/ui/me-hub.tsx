@@ -69,17 +69,20 @@ export function MeHub(props: {
         </a>
       </header>
 
-      {/* The number tiles sit right under the photo and name (owner, 2026-10-16: the one-sentence version read as plain text). */}
-      <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
-        {props.stats.map((s) => (
-          <a href={s.href} class="me-stat">
-            <span class={`me-stat-emoji tint-${s.tint}`} aria-hidden="true">{s.emoji}</span>
-            <b>{s.n}</b>
-            <small>{s.label}</small>
-            {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
-          </a>
-        ))}
-      </nav>
+      {/* The number tiles sit right under the photo and name (owner, 2026-10-16: the one-sentence version read as plain text).
+          None until the member has been out (owner card): a row of zeros reads as a score on day one. */}
+      {props.stats.length ? (
+        <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
+          {props.stats.map((s) => (
+            <a href={s.href} class="me-stat">
+              <span class={`me-stat-emoji tint-${s.tint}`} aria-hidden="true">{s.emoji}</span>
+              <b>{s.n}</b>
+              <small>{s.label}</small>
+              {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
+            </a>
+          ))}
+        </nav>
+      ) : null}
       {props.next ?? null}
 
       {/* One next-step slot (owner, C1): the most urgent ask only. The one-time question first, then what the profile is missing. */}

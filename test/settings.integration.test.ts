@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { and, desc, eq } from "drizzle-orm";
-import { ENV, HAS_DB, TEST_PASSWORD, createMember, db, req } from "./helpers";
+import { ENV, HAS_DB, TEST_PASSWORD, attendedOnce, createMember, db, req } from "./helpers";
 import app from "../src/index";
 import { accounts, auditLog, connections, consents, events, oauthLinks, profiles, registrations, pulseQuestions, pulseResponses, sessions } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
@@ -102,7 +102,8 @@ describe.skipIf(!HAS_DB)("settings", () => {
     const m = await createMember({ nickname: "Nudge" });
     let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Hey Nudge");
-    expect(html).toContain(`class="me-stats"`);
+    // No row of zeros before a first event (owner card).
+    expect(html).not.toContain(`class="me-stats"`);
     expect(html).not.toContain("You&#39;ve been to");
     expect(html).toContain("Your next table");
     // Nothing booked: the action line is the link, with an arrow (owner card).
@@ -114,6 +115,10 @@ describe.skipIf(!HAS_DB)("settings", () => {
     await db().update(profiles).set({ bio: { occupation: "student" } }).where(eq(profiles.accountId, m.id));
     html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(left(html) || 0).toBeLessThan(before);
+    await attendedOnce(m.id);
+    html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain(`class="me-stats"`);
+    expect(html).toMatch(/🎉<\/span><b>1<\/b><small>Events been<\/small>/);
   });
 
   it("edits the profile and validates input", async () => {
