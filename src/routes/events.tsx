@@ -1989,8 +1989,6 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         .limit(200)
     : [];
   const gaveFeedback = new Set(given.map((g) => g.eventId));
-  // One card for the latest event with people to see again, not one per event.
-  const again = past.some((r) => r.reg.checkedInAt) ? await seeAgain(db, { id: user.account.id, birthDate: user.profile.birthDate }, { now }) : null;
   const standing = strikeStanding(strikeRows, now);
   const activeStrikes = strikeRows.filter((s) => !s.waivedBy && s.expiresAt.getTime() > now.getTime());
 
@@ -2077,7 +2075,6 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       )}
 
       <h2 id="past">{t("ที่ผ่านมา", "Past")}</h2>
-      {again ? <SeeAgainCard v={v} data={again} /> : null}
       {past.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ผ่านมา", "No past events yet.")}</Empty>
       ) : (

@@ -658,4 +658,62 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 .type-facts .fact-tile{background:var(--surface);border:1px solid var(--line)}
 /* The type facts are sentences: one per row on phones, three across from 720px. */
 @media (min-width:720px){.type-facts[data-cols] .ft-wide{grid-column:auto}}
+/* B2 Sheet (src/ui/sheet.tsx): a bottom sheet on phones, a popover by its trigger on laptops. */
+main details.sheet,details.sheet{margin:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
+details.sheet>summary{list-style:none;cursor:pointer}
+details.sheet>summary::-webkit-details-marker{display:none}
+.sheet-panel{box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);padding:8px 16px 16px;overflow:auto;overscroll-behavior:contain;text-align:left;text-shadow:none;font-size:1rem;font-weight:400}
+.sheet-panel[popover]{margin:0;inset:auto}
+.sheet-panel:focus{outline:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin-bottom:4px}
+.sheet-head strong{font-size:1.02rem;line-height:1.3}
+.sheet-x{display:none;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1rem;cursor:pointer}
+html.sheet-js .sheet-x{display:inline-flex}
+.sheet-x:focus-visible,.sheet-item:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.sheet-body{display:grid;gap:4px}
+.sheet-body form{margin:0}
+.sheet-body details.how{margin:0;padding:0 12px;border-radius:12px;background:var(--surface-2);border:0}
+.sheet-body details.how[open]{padding-bottom:12px}
+.sheet-body details.how>summary{min-height:48px}
+.sheet-body .muted{margin:4px 0}
+.sheet-body>.muted,.sheet-body>.chips2,.sheet-body>.notice{margin-left:12px;margin-right:12px}
+.sheet-sep{height:1px;background:var(--line);margin:6px 0}
+a.sheet-item,button.sheet-item{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 12px;border:0;border-radius:12px;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;text-decoration:none;cursor:pointer}
+a.sheet-item:hover,button.sheet-item:hover{background:var(--surface-2)}
+.sheet-item>span[aria-hidden]{flex:0 0 24px;text-align:center}
+.sheet-item.danger{color:var(--err)}
+.sheet-more{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:700;font-size:1.2rem;line-height:1}
+.sheet-more:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+details.sheet[open]>.sheet-more{background:var(--surface-2)}
+@media (max-width:1023px){
+  details.sheet[open]>.sheet-panel{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;width:auto;max-width:none;max-height:85vh;max-height:85dvh;border-radius:20px 20px 0 0;border-bottom:0;padding-bottom:calc(16px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.25)}
+  details.sheet[open]>.sheet-panel::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 4px}
+  html:not(.sheet-js) details.sheet[open]>summary::before{content:"";position:fixed;inset:0;z-index:59;background:rgba(8,20,12,.45);cursor:default}
+  .sheet-panel::backdrop{background:rgba(8,20,12,.45)}
+  html:has(details.sheet[open]){overflow:hidden}
+}
+@media (min-width:1024px){
+  details.sheet{position:relative}
+  details.sheet[open]>.sheet-panel{position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:max-content;min-width:260px;max-width:360px;max-height:70vh;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+  details.sheet.sheet-start[open]>.sheet-panel{left:0;right:auto}
+  details.sheet.lifted[open]>.sheet-panel{position:fixed;right:auto;bottom:auto}
+  .sheet-panel::backdrop{background:transparent}
+}
+@media (prefers-color-scheme:dark){.sheet-panel{box-shadow:0 -12px 40px rgba(0,0,0,.5)}}
+/* B1 person cards on My people: avatar, name, one last-met line, Chat and ⋯ (no empty band above the name). */
+.card.person-card{display:grid;gap:12px}
+.pc-row{display:flex;align-items:center;gap:12px;min-width:0}
+.pc-av{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:0 0 48px;background:var(--surface-2)}
+.pc-row .avstack{flex:0 0 auto;margin:0}
+.pc-main{min-width:0}
+.card.person-card h2.pc-name{margin:0;font-size:1.15rem;line-height:1.3}
+.pc-met{margin:2px 0 0;color:var(--ink-2);font-size:.9rem;line-height:1.45}
+.pc-acts{display:flex;align-items:center;gap:8px}
+.pc-acts .btn{min-height:44px;margin:0}
+@media (min-width:640px){.card.person-card{grid-template-columns:1fr auto;align-items:center}}
+/* B1: the full meeting history now sits on the person's profile. */
+.card.met-at h2.eyebrow{margin:0 0 6px;font-size:.8rem}
+.met-at ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.met-at li{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.met-at li a{display:inline-flex;align-items:center;min-height:44px}
 `);

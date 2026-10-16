@@ -70,6 +70,7 @@ import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
 import { SeeAgainCard } from "../ui/see-again";
+import { Sheet } from "../ui/sheet";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -498,7 +499,7 @@ type CircleRow = {
   level: string;
   createdAt: Date;
   /** name: nickname with pronouns, for headings; nickname: bare, for use inside sentences. */
-  other: { id: string; name: string; nickname: string; resident: boolean; vibe?: VibeInfo };
+  other: { id: string; name: string; nickname: string; resident: boolean; vibe?: VibeInfo; photo?: boolean };
   event: { id: string; title: string; startsAt: Date } | null;
   /** A Bangkok Buddy connection rather than one from an event. */
   buddy?: boolean;
@@ -563,6 +564,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
         pronouns: profiles.pronouns,
         showPronouns: profiles.showPronouns,
         showResidentBadge: profiles.showResidentBadge,
+        photoKey: profiles.photoKey,
       })
       .from(accounts)
       .innerJoin(profiles, eq(profiles.accountId, accounts.id))
@@ -590,7 +592,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
       id: r.id,
       level: r.level,
       createdAt: r.createdAt,
-      other: { id: otherId, name: displayName(p), nickname: p.nickname, resident: showsResidentBadge(p, p), vibe: vibeMap.get(otherId) },
+      other: { id: otherId, name: displayName(p), nickname: p.nickname, resident: showsResidentBadge(p, p), vibe: vibeMap.get(otherId), photo: !!p.photoKey },
       event: e ? { id: e.id, title: eventTitle(e, lang), startsAt: e.startsAt } : null,
       buddy: r.eventId.startsWith("buddy:"),
       mine: mine ? { method: mine.method, value: mine.value } : null,
@@ -823,9 +825,125 @@ function CircleGroups(props: { v: View; extras: CircleExtras }) {
   );
 }
 
-function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras; again?: SeeAgain | null }) {
+/**
+ * One person on My people (finalize review B1 + C2): avatar, name, one "last met"
+ * line, Chat, and one ⋯ that opens the Sheet with everything else. The
+ * conversation spark and the full meeting history live on their profile.
+ */
+function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
   const { t, lang } = props.v;
+  const { r } = props;
   const method = (m: string) => label(CONTACT_METHODS, m, lang);
+  const times = Math.max(2, r.meets ?? 2);
+  const met = r.event
+    ? t(`เจอล่าสุดที่ ${r.event.title} · ${fmtDay(r.event.startsAt, lang)}`, `Last met at ${r.event.title} · ${fmtDay(r.event.startsAt, lang)}`)
+    : r.buddy
+      ? t("🤝 บัดดี้กรุงเทพฯ", "🤝 Bangkok Buddy")
+      : "";
+  const vibe = r.other.vibe?.visible ? ARCHETYPES[r.other.vibe.archetype] : null;
+  return (
+    <Card class="person-card">
+      <div class="pc-row">
+        {r.other.photo ? (
+          <img class="pc-av" src={`/people/${r.other.id}/photo/main`} alt="" width={48} height={48} loading="lazy" />
+        ) : (
+          <AvatarStack items={[{ label: r.other.nickname, emoji: vibe?.emoji, seed: r.other.id }]} size={48} />
+        )}
+        <div class="pc-main">
+          <h2 class="pc-name">
+            <a href={`/people/${r.other.id}`}>{r.other.name}</a>
+            {r.other.resident ? (
+              <>
+                {" "}
+                <ResidentTag v={props.v} />
+              </>
+            ) : null}
+          </h2>
+          <p class="pc-met" data-celebrate={r.celebrate ? "" : undefined}>
+            {r.graduated ? <>{t(`🎉 เจอกันมา ${times} ครั้ง`, `🎉 Met ${times} times`)} · </> : null}
+            {met}
+          </p>
+        </div>
+      </div>
+      <div class="pc-acts">
+        <a class="btn primary" href={`/chat/conn:${r.id}`}>💬 {t("แชต", "Chat")}</a>
+        <Sheet
+          t={t}
+          title={r.other.nickname}
+          trigger={<span aria-hidden="true">⋯</span>}
+          triggerClass="sheet-more"
+          triggerLabel={t(`ตัวเลือกเพิ่มเติมสำหรับ ${r.other.nickname}`, `More options for ${r.other.nickname}`)}
+          open={!!props.error}
+        >
+          {/* Pinky slot: the quiet "เกี่ยวก้อย · Pinky" row for members with 💘 on goes first here, never on the card face. */}
+          {r.graduated ? (
+            <a class="sheet-item" href={`/chat/conn:${r.id}?say=${encodeURIComponent(t("สัปดาห์นี้ไปโต๊ะด้วยกันไหม 🙂", "Want to come to a table with me this week? 🙂"))}`}>
+              <span aria-hidden="true">🍽️</span> {t(`ชวน ${r.other.nickname} ไปโต๊ะด้วยกัน`, `Invite ${r.other.nickname} to a table`)}
+            </a>
+          ) : null}
+          {r.iThanked ? (
+            <p class="muted">💌 {t("ส่งคำขอบคุณแล้ว", "Thank-you sent")}</p>
+          ) : (
+            <details class="how">
+              <summary>💌 {t("ส่งคำขอบคุณสั้น ๆ", "Send a short thank-you")}</summary>
+              <form method="post" action={`/connections/${r.id}/thanks`}>
+                <p class="chips2 thanks-starters">
+                  {THANK_STARTERS.map((x) => (
+                    <button type="button" data-thanks={lang === "en" ? x.en : x.th}>
+                      {lang === "en" ? x.en : x.th}
+                    </button>
+                  ))}
+                </p>
+                <Field label={t("ข้อความ (ส่วนตัว)", "Your note (private)")} name="body" maxlength={THANKS_MAX} required />
+                <Button kind="ghost">{t("ส่ง", "Send")}</Button>
+              </form>
+            </details>
+          )}
+          {r.mine || r.theirs ? (
+            <p class="chips2">
+              <span>{t("คุณแชร์", "You shared")}: {r.mine ? `${method(r.mine.method)} ${r.mine.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
+              <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
+            </p>
+          ) : null}
+          {props.error ? <Notice kind="error">{props.error}</Notice> : null}
+          <details class="how" open={!!props.error}>
+            <summary>📇 {r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</summary>
+            <form method="post" action={`/connections/${r.id}/share`}>
+              <Select label={t("ช่องทาง", "Method")} name="method" options={CONTACT_METHODS} value={r.mine?.method ?? "line"} lang={lang} required />
+              <Field
+                label={t("ไอดี / ชื่อผู้ใช้", "ID / handle")}
+                name="value"
+                value={r.mine?.value}
+                required
+                maxlength={60}
+                hint={t("ตัวอักษร ตัวเลข _ . - เท่านั้น", "Letters, numbers, _ . - only")}
+              />
+              <Button kind="ghost">{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</Button>
+            </form>
+          </details>
+          <div class="sheet-sep" role="separator" />
+          <a class="sheet-item" href={`/report?account=${r.other.id}${r.event ? `&event=${r.event.id}` : ""}`}>
+            <span aria-hidden="true">🚩</span> {t("รายงาน", "Report")}
+          </a>
+          <form method="post" action={`/block/${r.other.id}`}>
+            <input type="hidden" name="back" value="/connections" />
+            <button class="sheet-item danger">
+              <span aria-hidden="true">⛔</span> {t("บล็อก", "Block")}
+            </button>
+          </form>
+          <form method="post" action={`/connections/${r.id}/remove`}>
+            <button class="sheet-item">
+              <span aria-hidden="true">👋</span> {t("ลบออกจากคนรู้จัก", "Remove connection")}
+            </button>
+          </form>
+        </Sheet>
+      </div>
+    </Card>
+  );
+}
+
+function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras; again?: SeeAgain | null }) {
+  const { t } = props.v;
   return (
     <>
       {props.extras ? null : (
@@ -868,96 +986,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
           <LinkButton href="/events">{t("ดูกิจกรรม", "Find an event")}</LinkButton>
         </Card>
       ) : (
-        props.rows.map((r) => (
-          <Card>
-            <h2>
-              <a href={`/people/${r.other.id}`}>{r.other.name}</a>
-              {r.other.resident ? (
-                <>
-                  {" "}
-                  <ResidentTag v={props.v} />
-                </>
-              ) : null}
-            </h2>
-            <TypeSpark v={props.v} theirs={r.other.vibe} mine={props.myVibe} />
-            <p class="muted">
-              {r.event ? `${r.event.title} · ${fmtDay(r.event.startsAt, lang)}` : r.buddy ? t("🤝 บัดดี้กรุงเทพฯ", "🤝 Bangkok Buddy") : ""} · {label(CHOICE_LABELS, r.level, lang)}
-            </p>
-            {r.alsoMet?.length ? (
-              <p class="muted">
-                {t("เจอกันที่", "Also met at")}: {r.alsoMet.map((e) => `${e.title} · ${fmtDay(e.startsAt, lang)}`).join(", ")}
-              </p>
-            ) : null}
-            {r.graduated ? (
-              <div class="grad" data-celebrate={r.celebrate ? "" : undefined}>
-                <p>🎉 {t(`คุณกับ ${r.other.nickname} เจอกันมา ${Math.max(2, r.meets ?? 2)} ครั้งแล้ว นี่แหละมิตรภาพ`, `You and ${r.other.nickname} have met ${Math.max(2, r.meets ?? 2)} times. That's a friendship.`)}</p>
-                <a class="btn ghost" href={`/chat/conn:${r.id}?say=${encodeURIComponent(t("สัปดาห์นี้ไปโต๊ะด้วยกันไหม 🙂", "Want to come to a table with me this week? 🙂"))}`}>
-                  {t(`ชวน ${r.other.nickname} ไปโต๊ะด้วยกัน`, `Invite ${r.other.nickname} to a table`)}
-                </a>
-              </div>
-            ) : null}
-            <p class="acts">
-              <a class="btn primary" href={`/chat/conn:${r.id}`}>💬 {t("แชต", "Chat")}</a>
-            </p>
-            {r.iThanked ? (
-              <p class="muted">💌 {t("ส่งคำขอบคุณแล้ว", "Thank-you sent")}</p>
-            ) : (
-              <details class="how">
-                <summary>💌 {t("ส่งคำขอบคุณสั้น ๆ", "Send a short thank-you")}</summary>
-                <form method="post" action={`/connections/${r.id}/thanks`}>
-                  <p class="chips2 thanks-starters">
-                    {THANK_STARTERS.map((x) => (
-                      <button type="button" data-thanks={lang === "en" ? x.en : x.th}>
-                        {lang === "en" ? x.en : x.th}
-                      </button>
-                    ))}
-                  </p>
-                  <Field label={t("ข้อความ (ส่วนตัว)", "Your note (private)")} name="body" maxlength={THANKS_MAX} required />
-                  <Button kind="ghost">{t("ส่ง", "Send")}</Button>
-                </form>
-              </details>
-            )}
-            {/* Only once something is shared: "nothing yet" twice on every card was noise. */}
-            {r.mine || r.theirs ? (
-              <p class="chips2">
-                <span>{t("คุณแชร์", "You shared")}: {r.mine ? `${method(r.mine.method)} ${r.mine.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
-                <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
-              </p>
-            ) : null}
-            {props.error?.id === r.id ? <Notice kind="error">{props.error.text}</Notice> : null}
-            <details class="how" open={props.error?.id === r.id}>
-              <summary>{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</summary>
-            <form method="post" action={`/connections/${r.id}/share`}>
-              <Select label={t("ช่องทาง", "Method")} name="method" options={CONTACT_METHODS} value={r.mine?.method ?? "line"} lang={lang} required />
-              <Field
-                label={t("ไอดี / ชื่อผู้ใช้", "ID / handle")}
-                name="value"
-                value={r.mine?.value}
-                required
-                maxlength={60}
-                hint={t("ตัวอักษร ตัวเลข _ . - เท่านั้น", "Letters, numbers, _ . - only")}
-              />
-              <Button kind="ghost">{r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</Button>
-            </form>
-            </details>
-            {/* Report stays one tap away; Remove and Block sit behind "More" so they aren't hit by mistake. */}
-            <div class="row safety-row">
-              <a href={`/report?account=${r.other.id}${r.event ? `&event=${r.event.id}` : ""}`}>{t("รายงาน", "Report")}</a>
-              <details class="more-menu">
-                <summary aria-label={t(`ตัวเลือกเพิ่มเติมสำหรับ ${r.other.nickname}`, `More options for ${r.other.nickname}`)}>⋯ {t("เพิ่มเติม", "More")}</summary>
-                <div>
-                  <form method="post" action={`/connections/${r.id}/remove`}>
-                    <Button kind="ghost">{t("ลบออกจากคนรู้จัก", "Remove connection")}</Button>
-                  </form>
-                  <form method="post" action={`/block/${r.other.id}`}>
-                    <input type="hidden" name="back" value="/connections" />
-                    <Button kind="danger">{t("บล็อก", "Block")}</Button>
-                  </form>
-                </div>
-              </details>
-            </div>
-          </Card>
-        ))
+        props.rows.map((r) => <PersonCard v={props.v} r={r} error={props.error?.id === r.id ? props.error.text : undefined} />)
       )}
       {props.extras ? <CircleGroups v={props.v} extras={props.extras} /> : null}
     </>

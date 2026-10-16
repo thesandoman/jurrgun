@@ -15,6 +15,7 @@ import { LAYOUT_CSS } from "./layout";
 import { NATIVE_CSS } from "./native";
 import { ALIVE_CSS, ALIVE_JS } from "./alive";
 import { SPRING_JS } from "./spring";
+import { SHEET_JS } from "./sheet";
 import { WARM_CSS } from "./warm";
 import { themed } from "./styles";
 
@@ -169,7 +170,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
             __html: A11Y_HEAD_JS,
           }}
         />
-        <script dangerouslySetInnerHTML={{ __html: SPRING_JS }} />
+        <script dangerouslySetInnerHTML={{ __html: SPRING_JS + ";" + SHEET_JS }} />
       </head>
       <body class={[opts.admin && "admin", opts.bare && "bare", opts.fullscreen && "fullmap-body"].filter(Boolean).join(" ") || undefined}>
         {opts.fullscreen ? (

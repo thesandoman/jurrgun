@@ -14,15 +14,15 @@
  * Mounted at "/", so middleware is attached per route, never with use("*").
  */
 import { Hono, type Context } from "hono";
-import { and, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { cleanBio, currentDatingDeck, currentDeck, universityKey, withoutDating } from "../content/profile";
 import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, connections, profiles, registrations, type Account, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, connections, events, profiles, registrations, type Account, type Profile } from "../schema";
 import { clickReason } from "../domain/buddy";
 import { ARCHETYPES } from "../vibe/archetypes";
-import { L } from "../lib/i18n";
+import { fmtDay, L } from "../lib/i18n";
 import { getObject, getObjectUrl } from "../storage";
 import { LinkButton, page, view } from "../ui/kit";
 import { datingPromptsShown, datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
@@ -156,6 +156,22 @@ function Together(props: { v: ReturnType<typeof view>; mine: keyof typeof ARCHET
   );
 }
 
+/** Events where the two of you chose each other (moved here from the My people card, B1), newest first. */
+async function whereWeMet(db: Db, me: string, them: string) {
+  return db
+    .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt })
+    .from(connections)
+    .innerJoin(events, eq(events.id, connections.eventId))
+    .where(
+      and(
+        isNull(connections.removedAt),
+        or(and(eq(connections.aAccount, me), eq(connections.bAccount, them)), and(eq(connections.aAccount, them), eq(connections.bAccount, me))),
+      ),
+    )
+    .orderBy(desc(events.startsAt))
+    .limit(20);
+}
+
 async function renderCard(c: Ctx, target: { account: Account; profile: Profile }, self: boolean) {
   const v = view(c);
   const { t } = v;
@@ -164,9 +180,10 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   const person = cardPerson(target.profile, me.profile);
   // The card itself is only reachable by connected viewers and the member (visibleProfile), and
   // regularAt drops tables this viewer couldn't join (women-only) or whose host they're blocked with.
-  const [vibes, tables] = await Promise.all([
+  const [vibes, tables, metAt] = await Promise.all([
     vibesFor(db, self ? [me.account.id] : [target.account.id, me.account.id]),
     regularAt(db, target.account.id, { id: me.account.id, gender: me.profile?.gender }),
+    self ? Promise.resolve([]) : whereWeMet(db, me.account.id, target.account.id),
   ]);
   const theirVibe = vibes.get(target.account.id);
   const resident = showsResidentBadge(target.account, target.profile);
@@ -208,6 +225,18 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         }
       />
       {!self && theirVibe?.visible && vibes.get(me.account.id) ? <Together v={v} mine={vibes.get(me.account.id)!.archetype} theirs={theirVibe.archetype} /> : null}
+      {metAt.length ? (
+        <section class="card met-at" aria-labelledby="met-at-h">
+          <h2 id="met-at-h" class="eyebrow">{t("เจอกันที่", "Where you've met")}</h2>
+          <ul>
+            {metAt.map((e) => (
+              <li>
+                <a href={`/events/${e.id}`}>{v.lang === "en" ? e.titleEn || e.title : e.title}</a> <span class="muted">· {fmtDay(e.startsAt, v.lang)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {self ? null : (
         <p class="row muted">
           <a href={`/report?account=${encodeURIComponent(target.account.id)}`}>{t("รายงาน", "Report")}</a>
