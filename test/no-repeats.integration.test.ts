@@ -32,7 +32,7 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     expect(html).not.toContain("Board games night");
     // The full history lives on their profile (B1), newest first.
     const prof = await (await req(`/people/${them.id}?lang=en`, { cookie: me.cookie })).text();
-    expect(prof).toContain("Where you've met");
+    expect(prof).toContain("Where you&#39;ve met");
     expect(prof.indexOf("Night food crawl")).toBeGreaterThan(0);
     expect(prof.indexOf("Night food crawl")).toBeLessThan(prof.indexOf("Board games night"));
     expect(html).not.toContain("nothing yet");

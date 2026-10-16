@@ -43,7 +43,7 @@ describe.skipIf(!HAS_DB)("phase 2: dating consent sheet", () => {
   it("switching 💘 on needs the explicit tick; switching off stays one tap", async () => {
     const m = await createMember({ relationship: "single" });
     const page = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
-    expect(page).toContain('class="qs-sheet love"');
+    expect(page).toContain('class="sheet qs-sheet love"');
     expect(page).toContain("I&#39;m single, and I agree");
     const noTick = await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "1" } });
     expect(noTick.headers.get("location")).toBe("/settings#quick");
