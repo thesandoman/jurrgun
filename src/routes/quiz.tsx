@@ -532,6 +532,23 @@ function Matches(props: { v: View; archetype: ArchetypeKey; /** Types already on
   );
 }
 
+/**
+ * What was picked on each type question (the 16 and any follow-ups): the
+ * scenario and the chosen answer's type code, or "none". Kept with the result
+ * so staff can see, in totals of 10 or more only, which questions work
+ * (/admin/quiz-health). Style answers (how you date or host) are never kept here.
+ */
+export function picksOf(questions: AnyQuestion[], answers: Answers, none: number[]): [string, string][] {
+  const out: [string, string][] = [];
+  questions.forEach((q, i) => {
+    if (isStyleQuestion(q)) return;
+    const a = answers[q.id];
+    if (none.includes(i)) out.push([q.scenario, "none"]);
+    else if (typeof a === "number" && q.options[a]) out.push([q.scenario, q.options[a].type]);
+  });
+  return out;
+}
+
 /** "Does this feel like you?" answers, kept with the result and only ever counted in totals. */
 export const FEELS = ["yes", "partly", "no"] as const;
 export type Feel = (typeof FEELS)[number];
@@ -904,13 +921,14 @@ quizRoutes.post("/quiz", async (c) => {
     }
   }
   const { archetype, modifier, blend: types } = typeOf(result.vector, result.affinity, result.unsure);
-  const blend: TypeResult & { why: Why } = {
+  const blend: TypeResult & { why: Why; picks: [string, string][] } = {
     types,
     unsure: result.unsure,
     consistency: result.consistency,
     margin: result.margin,
     answered: result.answered,
     why: whyOf(typeQuestions(questions), answers, archetype),
+    picks: picksOf(questions, answers, none),
     ...(result.moves ? { moves: result.moves } : {}),
   };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);

@@ -245,6 +245,7 @@ adminDashboard.get("/", async (c) => {
             <LinkButton href="/admin/moderation" kind="ghost">{t("คิวรายงาน", "Moderation queue")}</LinkButton>
             <LinkButton href="/admin/insights" kind="ghost">{t("ข้อมูลเชิงลึก", "City Insight")}</LinkButton>
             <LinkButton href="/admin/pulse" kind="ghost">City Pulse</LinkButton>
+            <LinkButton href="/admin/quiz-health" kind="ghost">{t("สุขภาพแบบทดสอบ", "Quiz health")}</LinkButton>
           </div>
           {trend ? <TrendCard weeks={trend} suppress={false} t={t} lang={lang} /> : null}
           <RetentionCard run={retention} t={t} lang={lang} />

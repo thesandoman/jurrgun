@@ -54,7 +54,7 @@ type Db = ReturnType<typeof getDb>;
  * unwrap it first, as events.tsx jsonHas does.
  */
 const STORY_SQL = sql`(case when jsonb_typeof(p.bio) = 'string' then (p.bio #>> '{}')::jsonb else p.bio end)->>'story'`;
-const SEGMENT_SQL = sql`case
+export const SEGMENT_SQL = sql`case
   when ${STORY_SQL} in (${sql.join(INTERNATIONAL_STORIES.map((x) => sql`${x}`), sql`, `)}) then 'international'
   when p.newcomer or ${STORY_SQL} in (${sql.join(NEWCOMER_STORIES.map((x) => sql`${x}`), sql`, `)}) then 'newcomer'
   else 'local' end`;
