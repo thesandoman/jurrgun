@@ -206,6 +206,73 @@ describe.skipIf(!HAS_DB)("running late / on my way", () => {
   });
 });
 
+describe.skipIf(!HAS_DB)("running late tells the host", () => {
+  const hostNotes = (hostId: string) => db().select().from(notifications).where(and(eq(notifications.accountId, hostId), eq(notifications.kind, "eta_late")));
+
+  it("one quiet notification with the first name, to the host only, never the event title", async () => {
+    const host = await createMember({ role: "host" });
+    const [late, other] = await Promise.all([createMember({ nickname: "Ploy K" }), createMember({ nickname: "Other" })]);
+    const id = await mkEvent(host.id, HOUR);
+    await reg(id, late.id);
+    await reg(id, other.id);
+    expect((await req(`/events/${id}/eta`, { cookie: late.cookie, form: { eta: "running_late" } })).status).toBe(302);
+    const notes = await hostNotes(host.id);
+    expect(notes).toHaveLength(1);
+    expect(notes[0].titleTh).toBe("Ploy จะไปสายนิดหน่อย");
+    expect(notes[0].titleEn).toBe("Ploy is running a little late");
+    expect(notes[0].link).toBe(`/admin/events/${id}#day-of`);
+    const [ev] = await db().select().from(events).where(eq(events.id, id));
+    for (const text of [notes[0].titleTh, notes[0].titleEn]) {
+      expect(text).not.toContain(ev.title);
+      expect(text).not.toContain("K");
+    }
+    // Nobody but the host hears about it.
+    for (const m of [late, other]) {
+      expect(await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), eq(notifications.kind, "eta_late")))).toEqual([]);
+    }
+  });
+
+  it("on my way sends nothing", async () => {
+    const host = await createMember({ role: "host" });
+    const m = await createMember({ nickname: "Ken" });
+    const id = await mkEvent(host.id, HOUR);
+    await reg(id, m.id);
+    expect((await req(`/events/${id}/eta`, { cookie: m.cookie, form: { eta: "on_my_way" } })).status).toBe(302);
+    expect(await hostNotes(host.id)).toEqual([]);
+    expect(await db().select().from(notifications).where(eq(notifications.accountId, host.id))).toEqual([]);
+  });
+
+  it("an undo and a second tap, or two taps at once, never send it twice", async () => {
+    const host = await createMember({ role: "host" });
+    const m = await createMember({ nickname: "Mai" });
+    const id = await mkEvent(host.id, HOUR);
+    await reg(id, m.id);
+    await req(`/events/${id}/eta`, { cookie: m.cookie, form: { eta: "running_late" } });
+    await req(`/events/${id}/eta`, { cookie: m.cookie, form: { eta: "running_late" } });
+    await req(`/events/${id}/eta`, { cookie: m.cookie, form: { eta: "clear" } });
+    await req(`/events/${id}/eta`, { cookie: m.cookie, form: { eta: "on_my_way" } });
+    await Promise.all([1, 2].map(() => req(`/events/${id}/eta`, { cookie: m.cookie, form: { eta: "running_late" } })));
+    expect(await hostNotes(host.id)).toHaveLength(1);
+    // A second attendee running late is a second notification.
+    const m2 = await createMember({ nickname: "Nok" });
+    await reg(id, m2.id);
+    await req(`/events/${id}/eta`, { cookie: m2.cookie, form: { eta: "running_late" } });
+    expect((await hostNotes(host.id)).map((n) => n.titleEn).sort()).toEqual(["Mai is running a little late", "Nok is running a little late"]);
+  });
+
+  it("outside the day, or without a confirmed seat, nothing is sent", async () => {
+    const host = await createMember({ role: "host" });
+    const [m, waiting] = await Promise.all([createMember(), createMember()]);
+    const tomorrow = await mkEvent(host.id, DAY);
+    await reg(tomorrow, m.id);
+    await req(`/events/${tomorrow}/eta`, { cookie: m.cookie, form: { eta: "running_late" } });
+    const today = await mkEvent(host.id, HOUR);
+    await reg(today, waiting.id, "waitlisted");
+    await req(`/events/${today}/eta`, { cookie: waiting.cookie, form: { eta: "running_late" } });
+    expect(await hostNotes(host.id)).toEqual([]);
+  });
+});
+
 describe.skipIf(!HAS_DB)("venue notes and nearest station", () => {
   it("a host adds them on the form; the event page and the pass show them", async () => {
     const host = await createMember({ role: "host" });
