@@ -22,6 +22,8 @@
  */
 import { TableIntroPrompt } from "../ui/table-intro";
 import { OfflineSavedNote, SaveNext } from "../ui/offline-next";
+import { IcebreakerCard } from "../ui/icebreakers";
+import { icebreakersFor, icebreakerWindow } from "../content/icebreakers";
 import { segmentOf, type Segment } from "../domain/segment";
 import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
@@ -1213,6 +1215,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           <p style="white-space:pre-line">{description(event, lang)}</p>
         )}
       </Card>
+      {reg?.status === "confirmed" && event.status === "published" && icebreakerWindow(event.startsAt, event.endsAt, now) ? (
+        <IcebreakerCard v={v} eventId={event.id} chatKey={event.visibility === "private" ? `circle:${event.id}` : null} />
+      ) : null}
 
       <Card>
         <h2>{t("รายละเอียด", "Details")}</h2>
@@ -2169,9 +2174,8 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
   if (reg.checkedInAt && now < event.endsAt && c.req.query("show") !== "pass") {
     const prompts: [string, string][] = [
       ...(event.activePrompt ? [[event.activePrompt, event.activePrompt] as [string, string]] : []),
-      ["ย่านไหนในกรุงเทพฯ ที่ชอบที่สุด เพราะอะไร?", "Which part of Bangkok do you love most, and why?"],
-      ["ช่วงนี้มีอะไรที่ทำให้ยิ้มได้บ้าง?", "What's made you smile lately?"],
-      ["ถ้ามีวันว่างหนึ่งวัน จะพาเพื่อนใหม่ไปไหน?", "A free day with a new friend: where would you take them?"],
+      // The same curated icebreakers this table saw on the event page.
+      ...icebreakersFor(event.id).map((x): [string, string] => [x.th, x.en]),
     ];
     return page(
       c,

@@ -30,6 +30,7 @@ import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, chatVotes, circleHeadRequests, connections, events, notifications, profiles, registrations, reports } from "../schema";
 import { getObject, getObjectUrl, putObject } from "../storage";
 import { PROMPT_BANK } from "../content/profile";
+import { icebreakersFor, icebreakerWindow } from "../content/icebreakers";
 import { getStatefulObject } from "../state";
 import { blockedAmong, getTable, memberIds, myTables, standing } from "../services/regular-tables";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
@@ -55,6 +56,8 @@ export type Thread = {
   host?: string;
   /** Every thread key whose messages belong here: one chat per person (owner), so for someone met at several events, all those meetings' threads. */
   keys?: string[];
+  /** A hangout's group chat: its event, for the curated icebreakers. */
+  event?: { id: string; startsAt: Date; endsAt: Date };
 };
 export const keysOf = (th: Thread) => th.keys ?? [th.key];
 
@@ -174,6 +177,7 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     title: { th: `${e.title} · ${fmtDay(e.startsAt, "th")}`, en: `${e.titleEn ?? e.title} · ${fmtDay(e.startsAt, "en")}` },
     back: `/events/${e.id}`,
     host: e.hostAccountId ?? e.createdBy,
+    event: { id: e.id, startsAt: e.startsAt, endsAt: e.endsAt },
   };
 }
 
@@ -402,6 +406,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
   const counted = new Set(cleared.filter((r) => r.createdAt.getTime() <= now.getTime()).map((r) => r.link)).size;
   c.var.user!.chatUnread = Math.max(0, (c.var.user!.chatUnread ?? 0) - counted);
   const title = isCircle ? L(lang, th.title) : others.map((x) => nameOf.get(x) ?? "?").join(", ");
+  const ice = th.open && th.event && icebreakerWindow(th.event.startsAt, th.event.endsAt, now) ? icebreakersFor(th.event.id) : null;
   return page(
     c,
     { title: t("แชต", "Chat"), tab: "connections", status },
@@ -462,9 +467,33 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
         ))}
       </ol>
       {visible.length === 0 ? <p class="muted">{t("เริ่มด้วยคำถามข้างล่างก็ได้", "Start with one of these.")}</p> : null}
+      {ice ? (
+        // A hangout's group chat, in the days before and on the day: the event's curated icebreakers,
+        // one tap sends one to the group. Optional, and folded away once the chat is going.
+        <details class="chat-ice" open={visible.length < 3}>
+          <summary>
+            <span aria-hidden="true">💬</span> {t("คำถามชวนคุย แตะเพื่อส่ง", "Icebreakers: tap one to send")}
+          </summary>
+          <ul>
+            {ice.map((x) => {
+              const text = lang === "en" ? x.en : x.th;
+              return (
+                <li>
+                  <form method="post" action={`/chat/${key}`}>
+                    <button name="body" value={text}>
+                      <span aria-hidden="true">{x.emoji}</span> <span class="sr-only">{t("ส่งคำถามนี้: ", "Send: ")}</span>
+                      {text}
+                    </button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      ) : null}
       {th.open ? (
         <form method="post" action={`/chat/${key}`} class="chat-send">
-          {visible.length < 3 ? (
+          {visible.length < 3 && !ice ? (
           <p class="chat-starters">
             {starters(key, now).map((p) => (
               <button type="button" data-starter={lang === "en" ? p.en : p.th}>

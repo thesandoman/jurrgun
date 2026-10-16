@@ -519,4 +519,21 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 .chat-list a.unread strong,.notif-list li.unread .notif-title{color:var(--ink);font-weight:800}
 .notif-list small .unread-badge{margin-right:4px}
 .unread-sum{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-weight:700;color:var(--ink)}
+/* Curated icebreakers: three questions on the event page, and in a hangout's group chat as full-width
+   tap-to-send rows (44px+ each, text wraps instead of running off a 320px screen). */
+.icebreakers{margin:16px 0}
+.ice-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.ice-list li{display:flex;gap:8px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--surface-2);color:var(--ink);line-height:1.5}
+.ice-chat{margin:12px 0 0}
+.ice-chat a{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
+.chat-ice{margin:12px 0;padding:4px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.chat-ice summary{min-height:44px;display:flex;align-items:center;gap:8px;font-weight:700;color:var(--ink);cursor:pointer;list-style:none}
+.chat-ice summary::-webkit-details-marker{display:none}
+.chat-ice summary::after{content:"";flex:none;margin:0 4px 4px auto;width:8px;height:8px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg)}
+.chat-ice[open] summary::after{transform:rotate(-135deg);margin:4px 4px 0 auto}
+.chat-ice ul{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.chat-ice form{margin:0}
+.chat-ice button{display:flex;gap:8px;align-items:flex-start;width:100%;min-height:44px;padding:10px 14px;border-radius:14px;border:1.5px solid var(--brand);background:var(--surface);color:var(--ink);font:inherit;text-align:left;line-height:1.45;white-space:normal;cursor:pointer}
+.chat-ice button:hover{background:var(--brand-soft)}
+.chat-ice button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 `);
