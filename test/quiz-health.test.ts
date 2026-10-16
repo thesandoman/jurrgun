@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
 import { vibes } from "../src/schema";
-import { FLAGS, questionHealth } from "../src/routes/admin/quiz-health";
+import { FLAGS, RETAKE_DAYS, questionHealth, retakeStability } from "../src/routes/admin/quiz-health";
 import { personalOf, quizQuestions, quizSeed } from "../src/routes/quiz";
 import { isStyleQuestion } from "../src/vibe/generator";
 
@@ -30,6 +30,19 @@ describe("questionHealth", () => {
     expect(h.lopsided.flags).toContain("top");
     expect(h.tiny.flags).toEqual([]);
     expect(FLAGS).toEqual({ none: 0.2, agreementGap: 0.15, topPick: 0.6 });
+  });
+});
+
+describe("retakeStability", () => {
+  it("counts same type and 3+ shared letters per group, skipping older non-letter types", () => {
+    const s = retakeStability([
+      { group: "local", prev: "BDSH", now: "BDSH", count: 7 },
+      { group: "local", prev: "BDSH", now: "BDSN", count: 2 },
+      { group: "local", prev: "BDSH", now: "CFMN", count: 1 },
+      { group: "local", prev: "rhythm+", now: "BDSH", count: 5 },
+    ]);
+    expect(s.get("local")).toEqual({ n: 10, same: 7, kept3: 9 });
+    expect(RETAKE_DAYS).toEqual({ min: 14, max: 30 });
   });
 });
 
@@ -66,5 +79,25 @@ describe.skipIf(!HAS_DB)("quiz health page and saved picks", () => {
     const html = await page.text();
     expect(html).toContain("Bangkok Type quiz health");
     expect(html).toContain("&lt;10");
+    expect(html).toContain("Retakes (14 to 30 days later)");
+
+    // A retake keeps only the last type, its unsure letters and when it was taken.
+    const before = saved;
+    const seed2 = quizSeed(m.id, saved);
+    const qs2 = quizQuestions(seed2, saved, member);
+    const f2: Record<string, string> = { seed: seed2 };
+    qs2.forEach((_, i) => (f2[`a${i}`] = "1"));
+    const again = await req("/quiz", { cookie: m.cookie, form: f2 });
+    if (again.status === 200) {
+      const fu = /name="fu" value="([^"]*)"/.exec(await again.text())?.[1] ?? "";
+      const g: Record<string, string> = { ...f2, fu };
+      fu.split(",").forEach((_, k) => (g[`a${qs2.length + k}`] = "1"));
+      expect((await req("/quiz", { cookie: m.cookie, form: g })).status).toBe(302);
+    } else expect(again.status).toBe(302);
+    const [after] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    const prev = (after.blend as unknown as { prev?: { archetype: string; unsure: string[]; at: string; prev?: unknown } }).prev;
+    expect(prev?.archetype).toBe(before.archetype);
+    expect(prev?.at).toBe(before.takenAt.toISOString());
+    expect(prev).not.toHaveProperty("prev");
   });
 });

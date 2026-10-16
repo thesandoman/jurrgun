@@ -921,7 +921,10 @@ quizRoutes.post("/quiz", async (c) => {
     }
   }
   const { archetype, modifier, blend: types } = typeOf(result.vector, result.affinity, result.unsure);
-  const blend: TypeResult & { why: Why; picks: [string, string][] } = {
+  // A retake keeps only the last type (owner card 10-16), so staff can count how many
+  // get the same type again (Quiz health, totals of 10+). Never a full history.
+  const prev = row ? { archetype: row.archetype, unsure: row.blend?.unsure ?? [], at: row.takenAt.toISOString() } : undefined;
+  const blend: TypeResult & { why: Why; picks: [string, string][]; prev?: typeof prev } = {
     types,
     unsure: result.unsure,
     consistency: result.consistency,
@@ -929,6 +932,7 @@ quizRoutes.post("/quiz", async (c) => {
     answered: result.answered,
     why: whyOf(typeQuestions(questions), answers, archetype),
     picks: picksOf(questions, answers, none),
+    ...(prev ? { prev } : {}),
     ...(result.moves ? { moves: result.moves } : {}),
   };
   const seen = [...new Set([...(row?.seen ?? []), ...questions.map((q) => q.id)])].slice(-SEEN_MAX);

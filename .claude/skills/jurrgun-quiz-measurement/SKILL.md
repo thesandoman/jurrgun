@@ -70,6 +70,7 @@ The questions are fixed, so a retake is a real re-measurement.
 - **Measure:** among members who retake within 14 to 30 days, the share whose type stays the same, and how many letters changed. Changes on close letters are expected; changes on clear letters are not.
 - **Expect:** about 70% or more keep the same type, and nearly all keep 3 or more letters.
 - **Act on lower:** it means ambiguous questions; cross-check with the question health flags.
+- **Where:** a retake keeps only the last type, its unsure letters and date (`blend.prev`, owner card 10-16, never a full history); the Retakes table on /admin/quiz-health counts it per segment, 10 or more only.
 
 ## 6. Fairness across groups
 

@@ -13,6 +13,8 @@
  *    "None of these" rate, how often a pick agrees with the person's final
  *    type (3+ letters shared), and the busiest answer's share. Flags follow
  *    the jurrgun-quiz-measurement skill.
+ *  - Retakes (blend.prev: only the last type, owner card 10-16): of people who
+ *    retook 14 to 30 days later, how many got the same type or kept 3+ letters.
  */
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
@@ -78,6 +80,29 @@ export function questionHealth(rows: { scenario: string; pick: string; archetype
   return out.sort((a, b) => b.flags.length - a.flags.length || b.n - a.n);
 }
 
+/** Retakes counted for stability: 14 to 30 days after the last result (skill section 5). */
+export const RETAKE_DAYS = { min: 14, max: 30 } as const;
+
+export type Stability = { n: number; same: number; kept3: number };
+
+/**
+ * Retake stability per group from grouped rows (group, previous type, new type,
+ * count). Only today's four-letter types count; older results ("rhythm+") are skipped.
+ */
+export function retakeStability(rows: { group: string; prev: string; now: string; count: number }[]): Map<string, Stability> {
+  const keys = new Set<string>(ARCHETYPE_KEYS);
+  const out = new Map<string, Stability>();
+  for (const r of rows) {
+    if (!keys.has(r.prev) || !keys.has(r.now)) continue;
+    const s = out.get(r.group) ?? { n: 0, same: 0, kept3: 0 };
+    s.n += r.count;
+    if (r.prev === r.now) s.same += r.count;
+    if (shared(r.prev, r.now) >= 3) s.kept3 += r.count;
+    out.set(r.group, s);
+  }
+  return out;
+}
+
 function rowsOf(res: unknown): unknown[][] {
   return (res as unknown[]).map((r) => (Array.isArray(r) ? r : Object.values(r as Record<string, unknown>)));
 }
@@ -88,13 +113,20 @@ const BLEND = sql`(case when jsonb_typeof(v.blend) = 'string' then (v.blend #>> 
 adminQuizHealth.get("/", async (c) => {
   const { t, lang } = view(c);
   const db = getDb(c.env);
-  const [feelByType, feelBySegment, picks] = await Promise.all([
+  const [feelByType, feelBySegment, picks, retakes] = await Promise.all([
     db.execute(sql`select v.archetype, ${BLEND}->>'feel', count(*) from social_vibes v where ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`select ${SEGMENT_SQL}, ${BLEND}->>'feel', count(*) from social_vibes v join social_profiles p on p.account_id = v.account_id where ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`
       select e->>0, e->>1, v.archetype, count(*)
       from social_vibes v
       cross join lateral jsonb_array_elements(case when jsonb_typeof(${BLEND}->'picks') = 'array' then ${BLEND}->'picks' else '[]'::jsonb end) e
+      group by 1, 2, 3`),
+    db.execute(sql`
+      select case when p.account_id is null then 'none' else ${SEGMENT_SQL} end, ${BLEND}->'prev'->>'archetype', v.archetype, count(*)
+      from social_vibes v
+      left join social_profiles p on p.account_id = v.account_id
+      where ${BLEND} ? 'prev'
+        and v.taken_at - (${BLEND}->'prev'->>'at')::timestamptz between ${`${RETAKE_DAYS.min} days`}::interval and ${`${RETAKE_DAYS.max} days`}::interval
       group by 1, 2, 3`),
   ]);
 
@@ -113,6 +145,8 @@ adminQuizHealth.get("/", async (c) => {
   const bySegment = tally(feelBySegment);
   const overall = [...byType.values()].reduce((a, f) => ({ yes: a.yes + f.yes, partly: a.partly + f.partly, no: a.no + f.no, n: a.n + f.n }), emptyFeel());
   const questions = questionHealth(rowsOf(picks).map(([scenario, pick, archetype, n]) => ({ scenario: String(scenario), pick: String(pick), archetype: String(archetype), count: Number(n) })));
+  const stable = retakeStability(rowsOf(retakes).map(([group, prev, now, n]) => ({ group: String(group), prev: String(prev), now: String(now), count: Number(n) })));
+  const stableAll = [...stable.values()].reduce((a, s) => ({ n: a.n + s.n, same: a.same + s.same, kept3: a.kept3 + s.kept3 }), { n: 0, same: 0, kept3: 0 });
   const prompt = (id: string) => {
     const s = SCENARIOS.find((x) => x.id === id);
     return s ? L(lang, s.prompt) : id;
@@ -184,6 +218,39 @@ adminQuizHealth.get("/", async (c) => {
           </table>
         </div>
       </details>
+
+      <h2 id="retakes">{t(`ทำซ้ำ (${RETAKE_DAYS.min} ถึง ${RETAKE_DAYS.max} วันต่อมา)`, `Retakes (${RETAKE_DAYS.min} to ${RETAKE_DAYS.max} days later)`)}</h2>
+      <p class="muted">
+        {t(
+          "คำถามไม่เปลี่ยน การทำซ้ำจึงเป็นการวัดครั้งที่สอง ควรได้ไทป์เดิมราว 70% ขึ้นไป และเกือบทุกคนได้ตัวอักษรเดิม 3 ใน 4 ตัว",
+          "The questions are fixed, so a retake is a second measurement. Expect about 70% or more on the same type, and nearly everyone keeping 3 of 4 letters.",
+        )}
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t("กลุ่ม", "Group")}</th>
+              <th scope="col">{t("คนทำซ้ำ", "Retook")}</th>
+              <th scope="col">{t("ไทป์เดิม", "Same type")}</th>
+              <th scope="col">{t("ตัวอักษรเดิม 3 ตัวขึ้นไป", "3+ letters same")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {([["all", t("ทั้งหมด", "Everyone")], ...(["local", "newcomer", "international"] as const).map((s) => [s, SEG[s]])] as [string, string][]).map(([k, label]) => {
+              const s = k === "all" ? stableAll : (stable.get(k) ?? { n: 0, same: 0, kept3: 0 });
+              return (
+                <tr data-retakes={k}>
+                  <th scope="row" style="font-weight:normal">{label}</th>
+                  <td>{count(s.n)}</td>
+                  <td>{share(s.same, s.n)}</td>
+                  <td>{share(s.kept3, s.n)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <h2 id="questions">{t("รายข้อ", "Question by question")}</h2>
       <p class="muted">
