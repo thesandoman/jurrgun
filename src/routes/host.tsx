@@ -216,13 +216,17 @@ hostRoutes.get("/host", async (c) => {
       <p>
         <LinkButton href="/host/new">＋ {t("เสนอกิจกรรม", "Propose an event")}</LinkButton>
       </p>
+      {/* Said once, above the list, instead of under every live event (Phase 3). */}
+      {mine.some((e) => e.status === "published") ? (
+        <p class="muted">{t("ถ้าอยากแก้ไขหรือยกเลิกกิจกรรมที่เผยแพร่แล้ว ติดต่อทีมงานได้เลย", "To change or cancel a live event, contact the team.")}</p>
+      ) : null}
       {mine.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่คุณจัด", "You haven't hosted anything yet.")}</Empty>
       ) : (
         mine.map((e) => (
           <Card>
             <div class="spread">
-              <strong>{lang === "en" && e.titleEn ? e.titleEn : e.title}</strong>
+              <a class="host-ev-title" href={`/events/${e.id}`}>{lang === "en" && e.titleEn ? e.titleEn : e.title}</a>
               {statusTag(t, e.status)}
             </div>
             <p class="muted" style="margin:4px 0">
@@ -244,7 +248,7 @@ hostRoutes.get("/host", async (c) => {
             ) : null}
             <div class="row">
               <LinkButton href={`/events/${e.id}`} kind="ghost">
-                {t("ดู", "View")}
+                {t("ดูหน้ากิจกรรม", "View event page")}
               </LinkButton>
               {memberCanEdit(e) ? (
                 <LinkButton href={`/host/${e.id}/edit`} kind="ghost">
@@ -275,11 +279,6 @@ hostRoutes.get("/host", async (c) => {
                 </form>
               ) : null}
             </div>
-            {e.status === "published" ? (
-              <p class="muted" style="margin:6px 0 0">
-                {t("ถ้าอยากแก้ไขหรือยกเลิกกิจกรรมที่เผยแพร่แล้ว ติดต่อทีมงานได้เลย", "To change or cancel a live event, contact the team.")}
-              </p>
-            ) : null}
           </Card>
         ))
       )}

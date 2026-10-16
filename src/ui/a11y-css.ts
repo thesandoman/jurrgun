@@ -266,6 +266,23 @@ main .card:has(.safety-row) details.how>summary{min-height:44px;padding:0;font-w
 main .card:has(.safety-row) details.how[open]>summary{color:var(--ink)}
 main .card:has(.safety-row) details.how>form{padding:4px 0 8px}
 
+/* Host list: the title is the link; status badges don't wrap. */
+.host-ev-title{font-weight:700;color:var(--ink);text-decoration:none}
+.spread>.tag,.spread>.badge{white-space:nowrap;flex:none}
+
+/* Neutral elevation, no coloured glows (craft, Phase 3). */
+:root{--lift:0 1px 2px rgba(20,30,24,.08),0 6px 16px rgba(20,30,24,.08)}
+/* !important: the warm layer nests these under a theme selector that outranks plain classes. */
+.card.link:hover,a.card:hover{box-shadow:var(--lift)!important}
+.tabbar a.center{box-shadow:0 0 0 5px var(--bg),var(--lift)!important}
+.tabbar a.center.on{box-shadow:0 0 0 5px var(--bg),0 0 0 8px var(--brand),var(--lift)!important}
+.btn.primary{box-shadow:var(--lift)}
+
+/* Wide staff tables on phones: a shadow at the edge shows there is more to scroll sideways (1.4.10 cue). */
+@media (max-width:600px){
+  .table-wrap{background:linear-gradient(to right,var(--surface) 30%,transparent),linear-gradient(to left,var(--surface) 30%,transparent) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.18),transparent),radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.18),transparent) 100% 0;background-repeat:no-repeat;background-size:40px 100%,40px 100%,14px 100%,14px 100%;background-attachment:local,local,scroll,scroll}
+}
+
 /* Headings break evenly (no lone last word). */
 h1,h2,h3,.flow-title{text-wrap:balance}
 /* Staff chip in the header: on narrow phones it drops to the Me menu's job, so the header never overflows. */
