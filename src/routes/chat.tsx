@@ -24,7 +24,7 @@ import { getDb } from "../db";
 import { EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
-import { fmtDate, L } from "../lib/i18n";
+import { fmtDate, fmtDay, L } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, chatVotes, circleHeadRequests, connections, events, notifications, profiles, registrations, reports } from "../schema";
@@ -169,7 +169,8 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     members,
     open: now.getTime() < e.endsAt.getTime() + HANGOUT_OPEN_DAYS * DAY,
     met: now.getTime() >= e.startsAt.getTime(),
-    title: { th: e.title, en: e.titleEn ?? e.title },
+    // The date too: a recurring hangout's chats would otherwise share one title in the list.
+    title: { th: `${e.title} · ${fmtDay(e.startsAt, "th")}`, en: `${e.titleEn ?? e.title} · ${fmtDay(e.startsAt, "en")}` },
     back: `/events/${e.id}`,
     host: e.hostAccountId ?? e.createdBy,
   };
