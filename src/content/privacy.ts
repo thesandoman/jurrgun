@@ -191,8 +191,8 @@ export const PROCESSORS: Processor[] = [
   },
   {
     name: "Google · LINE",
-    does: { th: "ให้เข้าสู่ระบบ ถ้าคุณเลือกใช้", en: "Sign-in, if you choose it" },
-    sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขออีเมลหรือรายชื่อเพื่อน", en: "That you use Jurrgun. We only ask for an account ID, never your email or friends" },
+    does: { th: "ให้เข้าสู่ระบบ ถ้าคุณเลือกใช้ และแชร์ลงใน LINE เมื่อคุณแตะ", en: "Sign-in, if you choose it, and sharing to LINE when you tap it" },
+    sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขออีเมลหรือรายชื่อเพื่อน และสิ่งที่คุณเลือกแชร์", en: "That you use Jurrgun (we only ask for an account ID, never your email or friends), and whatever you choose to share" },
   },
   {
     name: "Resend · Postmark",

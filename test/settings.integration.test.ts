@@ -202,25 +202,25 @@ describe.skipIf(!HAS_DB)("settings", () => {
 
   it("privacy toggles append consent rows and the page shows the latest state", async () => {
     const m = await createMember({ research: true });
-    let page = await (await req("/settings/privacy", { cookie: m.cookie })).text();
+    let page = await (await req("/settings/consents", { cookie: m.cookie })).text();
     expect(page).toMatch(/name="consent_research" value="1" checked/);
     const before = await db().select().from(consents).where(eq(consents.accountId, m.id));
 
     // Withdraw research + notifications, keep personalization.
-    let r = await req("/settings/privacy", { cookie: m.cookie, form: { present: "1", consent_personalization: "1" } });
-    expect(r.headers.get("location")).toBe("/settings/privacy?notice=saved");
+    let r = await req("/settings/consents", { cookie: m.cookie, form: { present: "1", consent_personalization: "1" } });
+    expect(r.headers.get("location")).toBe("/settings/consents?notice=saved");
     const after = await db().select().from(consents).where(eq(consents.accountId, m.id));
     expect(after.length).toBe(before.length + 2);
     expect((await latestConsent(m.id, "research")).granted).toBe(false);
     expect((await latestConsent(m.id, "notifications")).granted).toBe(false);
     expect((await latestConsent(m.id, "service")).granted).toBe(true); // required: unchanged
-    page = await (await req("/settings/privacy", { cookie: m.cookie })).text();
+    page = await (await req("/settings/consents", { cookie: m.cookie })).text();
     expect(page).not.toMatch(/name="consent_research" value="1" checked/);
     expect(page).not.toContain('name="consent_service"');
 
     // Grant research again: a third row for it, old rows untouched.
     await new Promise((res) => setTimeout(res, 5));
-    r = await req("/settings/privacy", { cookie: m.cookie, form: { present: "1", consent_personalization: "1", consent_research: "1" } });
+    r = await req("/settings/consents", { cookie: m.cookie, form: { present: "1", consent_personalization: "1", consent_research: "1" } });
     expect((await latestConsent(m.id, "research")).granted).toBe(true);
     const research = await db().select().from(consents).where(and(eq(consents.accountId, m.id), eq(consents.category, "research")));
     expect(research.length).toBe(3);
@@ -229,9 +229,9 @@ describe.skipIf(!HAS_DB)("settings", () => {
   it("withdrawing romance data switches romance mode off", async () => {
     const m = await createMember({ relationship: "single" });
     await req("/settings/connections", { cookie: m.cookie, form: { relationship: "single", romanceOn: "1", romanceConsent: "1", genderIdentity: "woman", romanceOpenTo: "everyone" } });
-    const page = await (await req("/settings/privacy", { cookie: m.cookie })).text();
+    const page = await (await req("/settings/consents", { cookie: m.cookie })).text();
     expect(page).toContain('name="consent_romance_data"');
-    await req("/settings/privacy", { cookie: m.cookie, form: { present: "1", consent_personalization: "1", consent_notifications: "1" } });
+    await req("/settings/consents", { cookie: m.cookie, form: { present: "1", consent_personalization: "1", consent_notifications: "1" } });
     const p = await profileOf(m.id);
     expect(p.romanceOn).toBe(false);
     expect(p.genderIdentity).toBeNull();
