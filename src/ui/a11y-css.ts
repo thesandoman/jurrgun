@@ -453,4 +453,27 @@ body:has(.disc) .discover-list{padding-bottom:0}
   html:not(.a11y-motion) .disc .discover-list>:nth-child(n+6){animation-delay:.2s}
 }
 @keyframes rise-sm{from{transform:translateY(8px)}}
+/* Ticket cards read as one piece (owner: "card view is a bit disjoined"): one calm tint per category
+   on the stub instead of two colour blocks, the date and the emoji as one block inside it, and facts
+   that wrap without a dangling dot. */
+.ev-card .event-cover{background:var(--stub-bg,#eef4ef)}
+.ev-card .event-cover.scene-food{--stub-bg:#fff0d4}
+.ev-card .event-cover.scene-park{--stub-bg:#e2f3e7}
+.ev-card .event-cover.scene-river{--stub-bg:#def0f4}
+.ev-card .event-cover.scene-art{--stub-bg:#fbeacb}
+.ev-card .event-cover.scene-play{--stub-bg:#e8f5dc}
+.ev-card .event-cover.scene-city{--stub-bg:#e6efe9}
+@media (prefers-color-scheme:dark){
+  .ev-card .event-cover{--stub-bg:#1d2a22}
+  .ev-card .event-cover.scene-food,.ev-card .event-cover.scene-art{--stub-bg:#33291a}
+  .ev-card .event-cover.scene-park,.ev-card .event-cover.scene-play{--stub-bg:#1c3324}
+  .ev-card .event-cover.scene-river{--stub-bg:#17303a}
+}
+.ev-card .event-cover{flex-direction:column-reverse;justify-content:flex-start;gap:6px;padding:14px 6px}
+.ev-card .ev-date{background:none;border:0;box-shadow:none;padding:0;min-width:0;color:var(--ink);display:grid;justify-items:center;line-height:1.05}
+.ev-card .ev-date b{font-size:1.5rem}
+.ev-card .ev-date small{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--ink-2)}
+.ev-card .event-cover .scene-badge{width:34px;height:34px;border-radius:11px;font-size:1.1rem;box-shadow:none;background:color-mix(in srgb,var(--surface) 80%,transparent)}
+.ev-card .chips2{gap:2px 12px}
+.ev-card .chips2 span:not(:last-child)::after{content:none}
 `);
