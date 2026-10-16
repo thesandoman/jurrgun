@@ -943,7 +943,17 @@ function notFound(c: Ctx) {
     { title: t("ไม่พบกิจกรรม", "Event not found"), tab: "events", status: 404 },
     <>
       <h1>{t("ไม่พบกิจกรรมนี้", "We couldn't find that event")}</h1>
-      <LinkButton href="/events" kind="ghost">{t("← กลับไปหน้ากิจกรรม", "← Back to events")}</LinkButton>
+      {/* Say why, then two ways on, so a dead link still leads to a table (Phase 3). */}
+      <p class="muted">
+        {t(
+          "อาจจบไปแล้ว ถูกยกเลิก เป็นกิจกรรมส่วนตัว หรือลิงก์ไม่ครบ ลองดูโต๊ะที่เปิดอยู่สัปดาห์นี้แทน",
+          "It may have ended, been cancelled or be private, or the link may be incomplete. Here's what's open this week instead.",
+        )}
+      </p>
+      <div class="row">
+        <LinkButton href="/events?when=week">{t("กิจกรรมสัปดาห์นี้", "This week's events")}</LinkButton>
+        <LinkButton href="/plan" kind="ghost">{t("แผนสัปดาห์นี้ของฉัน", "My plan this week")}</LinkButton>
+      </div>
     </>,
   );
 }

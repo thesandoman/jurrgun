@@ -241,6 +241,25 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .me-summary{margin:4px 0 16px;color:var(--ink-2);line-height:1.7}
 .me-summary a{font-weight:700;color:var(--ink);text-underline-offset:3px}
 
+/* Event scene colours stay in the palette (Phase 3): "play" was violet, "art" coral. */
+.scene-play{--scene:linear-gradient(180deg,#dff5c8 0 55%,#4f9d2f 55% 100%)}
+.scene-art{--scene:linear-gradient(180deg,#ffe7b8 0 55%,#d18a1c 55% 100%)}
+@media (prefers-color-scheme:dark){
+  .scene-play{--scene:linear-gradient(180deg,#24401d 0 55%,#2f6b1f 55% 100%)}
+  .scene-art{--scene:linear-gradient(180deg,#4a3a17 0 55%,#7a5512 55% 100%)}
+}
+
+/* Notifications: day headings, a count for repeats, a chevron on rows that open something. */
+.notif-day h2{margin:18px 0 6px}
+.notif-page a{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+.notif-page a>.notif-title,.notif-page a>small{flex:none}
+.notif-page a{display:grid;grid-template-columns:1fr auto;grid-template-areas:"t go" "s go"}
+.notif-page a>.notif-title{grid-area:t}
+.notif-page a>small{grid-area:s}
+.notif-go{grid-area:go;font-size:1.4rem;color:var(--ink-3)}
+.notif-count{color:var(--brand)}
+.notif-page li.unread .notif-title{font-weight:700}
+
 /* Headings break evenly (no lone last word). */
 h1,h2,h3,.flow-title{text-wrap:balance}
 /* Staff chip in the header: on narrow phones it drops to the Me menu's job, so the header never overflows. */

@@ -248,7 +248,8 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
   const items: [Tab, string, Child, string][] = [
     ["events", "/events", TAB_ICONS.events, t("ค้นหา", "Discover")],
     ["buddy", "/buddy", TAB_ICONS.buddy, t("บัดดี้", "Buddy")],
-    ["mine", "/me/events", TAB_ICONS.mine, t("ของฉัน", "My events")],
+    // "นัดของฉัน", not "ของฉัน": it sat next to "ฉัน" (Me) and read as the same word (Phase 3).
+    ["mine", "/me/events", TAB_ICONS.mine, t("นัดของฉัน", "My events")],
     ["connections", "/connections", TAB_ICONS.connections, t("คนรู้จัก", "My people")],
     // City Pulse lives under Me (and in the Discover ticker).
     ["me", "/settings", TAB_ICONS.me, t("ฉัน", "Me")],

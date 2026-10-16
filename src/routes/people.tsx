@@ -105,6 +105,31 @@ function displayName(p: Pick<Profile, "nickname" | "pronouns" | "showPronouns">)
   return p.showPronouns && p.pronouns ? `${p.nickname} (${p.pronouns})` : p.nickname;
 }
 
+type NotifRow = typeof notifications.$inferSelect;
+/** Today / Yesterday / Earlier, newest first; same title and link on the same day folds into one row. */
+function groupNotifications(rows: NotifRow[], lang: "th" | "en") {
+  const dayKey = (d: Date) => new Date(d.getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
+  const today = dayKey(new Date());
+  const yesterday = dayKey(new Date(Date.now() - 86_400_000));
+  const groups: { key: string; th: string; en: string; items: { n: NotifRow; count: number }[] }[] = [];
+  for (const n of rows) {
+    const d = dayKey(n.createdAt);
+    const key = d === today ? "today" : d === yesterday ? "yesterday" : "earlier";
+    let g = groups.find((x) => x.key === key);
+    if (!g) {
+      g = { key, th: key === "today" ? "วันนี้" : key === "yesterday" ? "เมื่อวาน" : "ก่อนหน้านี้", en: key === "today" ? "Today" : key === "yesterday" ? "Yesterday" : "Earlier", items: [] };
+      groups.push(g);
+    }
+    const title = lang === "en" ? n.titleEn : n.titleTh;
+    const same = g.items.find((x) => (lang === "en" ? x.n.titleEn : x.n.titleTh) === title && x.n.link === n.link && dayKey(x.n.createdAt) === d);
+    if (same) {
+      same.count++;
+      if (!n.readAt) same.n = { ...same.n, readAt: null };
+    } else g.items.push({ n, count: 1 });
+  }
+  return groups;
+}
+
 /** Ids of everyone I blocked or who blocked me. */
 async function blockedSet(db: Db, me: string): Promise<Set<string>> {
   const rows = await db
@@ -1281,22 +1306,42 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีการแจ้งเตือน", "No notifications yet.")}</Empty>
       ) : (
-        <ul class="notif-list notif-page">
-          {rows.map((n) => {
-            const title = lang === "en" ? n.titleEn : n.titleTh;
-            const href = n.link && safeNext(n.link, "") ? n.link : undefined;
-            const body = (
-              <>
-                <span class="notif-title">{title}</span>
-                <small>
-                  {!n.readAt ? <b class="notif-new">{t("ใหม่", "New")} · </b> : null}
-                  {fmtDate(n.createdAt, lang)}
-                </small>
-              </>
-            );
-            return <li class={n.readAt ? undefined : "unread"}>{href ? <a href={href}>{body}</a> : <div>{body}</div>}</li>;
-          })}
-        </ul>
+        // Grouped by day, and the same message on the same day folds into one row with a count (Phase 3).
+        groupNotifications(rows, lang).map((g) => (
+          <section class="notif-day">
+            <h2 class="h3">{t(g.th, g.en)}</h2>
+            <ul class="notif-list notif-page">
+              {g.items.map(({ n, count }) => {
+                const title = lang === "en" ? n.titleEn : n.titleTh;
+                const href = n.link && safeNext(n.link, "") ? n.link : undefined;
+                const body = (
+                  <>
+                    <span class="notif-title">
+                      {title}
+                      {count > 1 ? <b class="notif-count"> ×{count}</b> : null}
+                    </span>
+                    <small>
+                      {!n.readAt ? <b class="notif-new">{t("ใหม่", "New")} · </b> : null}
+                      {fmtDate(n.createdAt, lang)}
+                    </small>
+                  </>
+                );
+                return (
+                  <li class={n.readAt ? undefined : "unread"}>
+                    {href ? (
+                      <a href={href}>
+                        {body}
+                        <span class="notif-go" aria-hidden="true">›</span>
+                      </a>
+                    ) : (
+                      <div>{body}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))
       )}
     </>,
   );
