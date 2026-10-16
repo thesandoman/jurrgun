@@ -484,4 +484,8 @@ body:has(.disc) .discover-list{padding-bottom:0}
 }
 html.a11y-motion *,html.a11y-motion *::before,html.a11y-motion *::after{transition-property:color,background-color,border-color,opacity,box-shadow!important}
 html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animation:none!important}
+/* See them again: one calm card with one next step, styled like the table-intro card. */
+.see-again{margin:16px 0;border:1.5px solid color-mix(in srgb,var(--brand) 35%,var(--line))}
+.see-again .see-again-names{font-weight:600;margin:4px 0 4px;overflow-wrap:anywhere}
+.see-again .muted{margin:0 0 12px}
 `);

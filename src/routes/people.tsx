@@ -66,6 +66,8 @@ import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, 
 import { NotifItems } from "../ui/notif-menu";
 import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
+import { seeAgain, type SeeAgain } from "../services/see-again";
+import { SeeAgainCard } from "../ui/see-again";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -819,7 +821,7 @@ function CircleGroups(props: { v: View; extras: CircleExtras }) {
   );
 }
 
-function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras }) {
+function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras; again?: SeeAgain | null }) {
   const { t, lang } = props.v;
   const method = (m: string) => label(CONTACT_METHODS, m, lang);
   return (
@@ -840,6 +842,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         {t("คนที่เลือกกันและกัน บัดดี้ และนัดจากคนรู้จัก", "People you chose each other with, your buddy, and plans from your people.")}
       </p>
       {props.extras ? <CircleTop v={props.v} extras={props.extras} /> : null}
+      {props.again ? <SeeAgainCard v={props.v} data={props.again} /> : null}
       {props.extras ? (
         <h2 class="people-h">
           🫂 {t("คนรู้จักของคุณ", "Your people")}{" "}
@@ -962,8 +965,12 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
 peopleRoutes.get("/connections", requireMember, async (c) => {
   const v = view(c);
   const { rows, myVibe } = await loadCircle(c);
-  const extras = await loadCircleExtras(c, rows, myVibe);
-  return page(c, { title: v.t("คนรู้จัก", "My people"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} />);
+  const user = c.var.user!;
+  const [extras, again] = await Promise.all([
+    loadCircleExtras(c, rows, myVibe),
+    rows.length ? seeAgain(getDb(c.env), { id: user.account.id, birthDate: user.profile!.birthDate }) : Promise.resolve(null),
+  ]);
+  return page(c, { title: v.t("คนรู้จัก", "My people"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} again={again} />);
 });
 
 /** The connection, if I'm one of its two people and it's still active. */

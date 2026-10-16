@@ -52,6 +52,8 @@ import type { AppEnv, CurrentUser } from "../lib/env";
 import { fmtDate, fmtParts, type Lang, type T } from "../lib/i18n";
 import { eventPlace } from "../lib/places";
 import { qrSvg, shortCode } from "../lib/qr";
+import { seeAgain } from "../services/see-again";
+import { SeeAgainCard } from "../ui/see-again";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
 import {
@@ -447,6 +449,9 @@ function jsonHas(col: AnyColumn, value: string) {
 
 // ------------------------------------------------------------ discover --
 
+/** Small tables filter: at most this many seats in the whole event (the host form's default size). */
+export const SMALL_TABLE_MAX = 8;
+
 const WHEN_OPTS = [
   { value: "all", th: "ทั้งหมด", en: "Any time" },
   { value: "today", th: "วันนี้", en: "Today" },
@@ -472,6 +477,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     tag: c.req.query("tag") ?? "",
     free: c.req.query("free") === "1",
     short: c.req.query("short") === "1",
+    small: c.req.query("small") === "1",
     language: c.req.query("language") ?? "",
     intensity: c.req.query("intensity") ?? "",
     plusOne: c.req.query("plusOne") === "1",
@@ -494,6 +500,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (q.free) where.push(eq(events.costThb, 0));
   // Short and sweet: 90 minutes or less, for carers and long work days.
   if (q.short) where.push(sql`${events.endsAt} - ${events.startsAt} <= interval '90 minutes'`);
+  // Small tables: the whole event is one table, for members who find a big room a lot.
+  if (q.small) where.push(lte(events.capacity, SMALL_TABLE_MAX));
   if (values(LANGUAGES).includes(q.language)) where.push(jsonHas(events.languages, q.language));
   if (values(INTENSITY).includes(q.intensity)) where.push(eq(events.intensity, q.intensity));
   if (q.plusOne) where.push(eq(events.plusOneAllowed, true));
@@ -530,7 +538,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const picked = new Set(((plan?.picks ?? []) as { kind: string; ref: string }[]).filter((x) => x.kind === "event").map((x) => x.ref));
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
-  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
+  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.small || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
   // The same filters, in list or map view.
   const params = new URLSearchParams(c.req.query());
   params.delete("view");
@@ -554,6 +562,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <Select label={t("ความคึกคัก", "Social intensity")} name="intensity" options={INTENSITY} value={q.intensity} lang={lang} blank={t("ทุกแบบ", "Any")} />
       <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
       <Toggle name="short" label={t("สั้น ๆ ไม่เกิน 90 นาที", "Short: 90 minutes or less")} checked={q.short} />
+      <Toggle name="small" label={t(`โต๊ะเล็ก ไม่เกิน ${SMALL_TABLE_MAX} คน`, `Small tables: ${SMALL_TABLE_MAX} people or fewer`)} checked={q.small} />
       <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
       <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
       <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
@@ -592,7 +601,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
     );
   };
   const cards = cardList();
-  const filterCount = [q.district, q.tag, q.free, q.short, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
+  const filterCount = [q.district, q.tag, q.free, q.short, q.small, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
   const forYouHidden = getCookie(c, FOR_YOU_COOKIE) === "hide";
   const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
 
@@ -1115,6 +1124,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const ended = event.endsAt.getTime() <= now.getTime();
   const quest = questLabel(event, lang);
   const standing = strikeStanding(standingRows, now);
+  // Afterwards: the people I met here, and one way back to them.
+  const again = ended && reg?.checkedInAt ? await seeAgain(db, { id: user.account.id, birthDate: user.profile.birthDate }, { eventId: event.id, now }) : null;
 
   return page(
     c,
@@ -1296,6 +1307,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           {canInvite(event, reg, now) ? <InviteBox event={event} url={inviteUrl} v={v} /> : null}
         </Card>
       )}
+      {again ? <SeeAgainCard v={v} data={again} here /> : null}
       {event.status === "published" && !started && (!reg || reg.status === "cancelled" || reg.status === "late_cancelled") ? (
         <StickyRsvp t={t} left={left} />
       ) : null}
@@ -1944,6 +1956,8 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         .limit(200)
     : [];
   const gaveFeedback = new Set(given.map((g) => g.eventId));
+  // One card for the latest event with people to see again, not one per event.
+  const again = past.some((r) => r.reg.checkedInAt) ? await seeAgain(db, { id: user.account.id, birthDate: user.profile.birthDate }, { now }) : null;
   const standing = strikeStanding(strikeRows, now);
   const activeStrikes = strikeRows.filter((s) => !s.waivedBy && s.expiresAt.getTime() > now.getTime());
 
@@ -2028,6 +2042,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       )}
 
       <h2 id="past">{t("ที่ผ่านมา", "Past")}</h2>
+      {again ? <SeeAgainCard v={v} data={again} /> : null}
       {past.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ผ่านมา", "No past events yet.")}</Empty>
       ) : (
