@@ -938,4 +938,6 @@ main .open-sec>details.how:last-child{border-bottom:0}
 .consent-centre form>.toggle{margin:0;padding:12px 0;border-bottom:1px solid var(--line)}
 .consent-centre form>.btn{margin-top:16px;justify-self:start}
 .consent-row small a{display:inline-flex;align-items:center;min-height:44px}
+/* A toggle's checkbox kept shrinking beside a long two-line hint: it now keeps its 22px. */
+.toggle input[type=checkbox]{flex:0 0 22px}
 `);

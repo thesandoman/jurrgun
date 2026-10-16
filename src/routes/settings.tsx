@@ -1361,7 +1361,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</h1>
-      <p class="muted">{t("คุณเลือกเองว่าจะให้ใช้ข้อมูลอะไร ทุกครั้งที่เปลี่ยน เราจะบันทึกไว้พร้อมวันที่", "You decide how your data is used. Every change is kept as a dated record.")}</p>
+      <p class="muted">{t("ข้อมูลของคุณ: ดูว่าเก็บที่ไหน ดาวน์โหลด หรือปิดบัญชี", "Your data: where it lives, download it, or close your account.")}</p>
       <p class="row">
         <a class="btn ghost" href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")} <span aria-hidden="true">→</span></a>
         <a class="btn ghost" href="/privacy">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a>

@@ -37,8 +37,12 @@ function Row(props: { v: View; cat: ConsentCategory; now?: LatestConsent }) {
   const { cat, now } = props;
   const on = !!now?.granted;
   const title = L(lang, cat.title);
-  const when = now ? `${on ? t("ให้ไว้เมื่อ", "Given") : t("ปิดเมื่อ", "Turned off")} ${fmtDay(now.at, lang)}` : t("ยังไม่ได้ให้", "Not given");
-  const hint = `${L(lang, cat.hint)} · ${when}`;
+  const when = now
+    ? `${on ? (cat.control === "record" ? t("ยอมรับเมื่อ", "Agreed") : t("ให้ไว้เมื่อ", "Given")) : t("ปิดเมื่อ", "Turned off")} ${fmtDay(now.at, lang)}`
+    : cat.control === "record"
+      ? ""
+      : t("ยังไม่ได้ให้", "Not given");
+  const hint = when ? `${L(lang, cat.hint)} · ${when}` : L(lang, cat.hint);
   if (cat.control === "toggle" || (cat.control === "withdraw" && on)) {
     return <Toggle name={`consent_${cat.key}`} label={title} hint={hint} checked={on} />;
   }

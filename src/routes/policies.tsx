@@ -122,7 +122,7 @@ policyRoutes.get("/privacy", (c) => {
           <li>
             <strong>{T(r.what)}</strong>
             <span>
-              {T(r.keep)}
+              {T(r.keep).charAt(0).toUpperCase() + T(r.keep).slice(1)}
               {r.period ? ` ${T(periodText(r.period))}` : ""}
             </span>
           </li>
