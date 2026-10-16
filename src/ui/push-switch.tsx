@@ -19,7 +19,7 @@ type T = (th: string, en: string) => string;
 export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
   const { t } = props;
   const text = {
-    off: t("เตือนก่อนวันงาน และตอนที่เลือกคนที่อยากเจออีกได้", "The day before a table, and when you can choose who to meet again"),
+    off: t("เตือนก่อนวันงาน และตอนเลือกคนที่อยากเจออีก", "Day-before and meet-again reminders"),
     on: t("เปิดอยู่บนเครื่องนี้ แตะเพื่อปิด", "On for this phone. Tap to turn off."),
     blocked: t(
       "ถูกบล็อกไว้ Android: แตะไอคอนแม่กุญแจข้างที่อยู่เว็บ แล้วอนุญาตการแจ้งเตือน iPhone: การตั้งค่า > การแจ้งเตือน > Jurrgun",

@@ -572,4 +572,20 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 }
 /* E3 fact tiles: labels and sub-lines in sentence case, not small capitals (place names were shouting). */
 .fact small{text-transform:none;letter-spacing:0;font-weight:600}
+/* One short helper line, the rest behind a small info button (owner, 2026-10-16) */
+.with-info{margin:4px 0 8px}
+main details.more-info{display:inline;margin:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
+main details.more-info>summary{list-style:none;cursor:pointer;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:-10px 0;padding:0;border-radius:999px;color:var(--brand);font-size:1.1rem;font-weight:700;background:none;border:0}
+details.more-info>summary::-webkit-details-marker{display:none}
+details.more-info>summary:focus-visible{outline:3px solid var(--ink);outline-offset:-4px}
+details.more-info[open]>summary{color:var(--ink)}
+.more-info-body{display:block;margin:6px 0 4px;padding:10px 12px;border-radius:12px;background:var(--surface-2);color:var(--ink);font-size:.9rem;line-height:1.5}
+/* Long host text: about 4 lines, then Read more */
+.host-text{margin:8px 0 0}
+.host-text p{white-space:pre-line;margin:0}
+main details.host-text-more{margin:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
+.host-text-more>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;font-weight:600;color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+.host-text-more>summary::-webkit-details-marker{display:none}
+.host-text-more[open]>summary,.host-text:has(.host-text-more[open]) .host-text-dots{display:none}
+.host-text-more[open]>p{margin-top:0}
 `);

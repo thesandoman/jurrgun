@@ -533,6 +533,22 @@ export function Toggle(props: { name: string; label: string; checked?: boolean; 
   );
 }
 
+/**
+ * A small ⓘ that opens one or two extra lines: helper text stays one short
+ * line, and anything longer waits behind this (owner, 2026-10-16).
+ */
+export function MoreInfo(props: { t: T; children: Child }) {
+  return (
+    <details class="more-info">
+      <summary>
+        <span aria-hidden="true">ⓘ</span>
+        <span class="sr-only">{props.t("เพิ่มเติม", "More about this")}</span>
+      </summary>
+      <div class="more-info-body">{props.children}</div>
+    </details>
+  );
+}
+
 export function Button(props: { children: Child; kind?: "primary" | "ghost" | "danger"; name?: string; value?: string; formaction?: string }) {
   return (
     <button type="submit" class={`btn ${props.kind ?? "primary"}`} name={props.name} value={props.value} formaction={props.formaction}>

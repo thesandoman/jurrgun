@@ -257,7 +257,7 @@ settingsRoutes.get("/settings", async (c) => {
   const quick = (
     <section class="quick" id="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
       <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
-      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies; your people and chats stay")} />
+      <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies. People and chats stay.")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
         <QuickSwitch
@@ -268,8 +268,8 @@ settingsRoutes.get("/settings", async (c) => {
           title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")}
           hint={
             romanceEligible(p)
-              ? t("เลือกได้หลังกิจกรรมและกับบัดดี้ จะรู้กันก็ต่อเมื่อเลือกตรงกัน แตะเพื่อกลับไปโหมดเพื่อน", "Choices after events and with buddies, only shown when mutual. Tap to go back to friends only.")
-              : t("สำหรับคนโสด และเป็นความลับเสมอ แตะเพื่อดูรายละเอียดก่อนเปิด", "For people who are single, always private. Tap to read what it means before switching on.")
+              ? t("รู้กันเฉพาะเมื่อเลือกตรงกัน", "Only shown when it's mutual.")
+              : t("สำหรับคนโสด เป็นความลับเสมอ", "For singles. Always private.")
           }
           consent={{
             lead: t(
@@ -301,7 +301,7 @@ settingsRoutes.get("/settings", async (c) => {
           <form method="post" action="/settings/newcomer" class="card me-ask">
             <p>
               <strong>🌱 {t("ยังรู้สึกว่าเพิ่งมากรุงเทพฯ อยู่ไหม?", "Still new to Bangkok?")}</strong>
-              <small class="muted">{t(`อยู่กับเรามา ${memberSince} แล้ว ถ้าไม่ใช่ เราจะเอาป้าย "มาใหม่" ออกให้`, `You've been here since ${memberSince}. If not, we'll take off the "New to Bangkok" label.`)}</small>
+              <small class="muted">{t(`ไม่ใหม่แล้ว? เราจะเอาป้าย "มาใหม่" ออก`, `Not anymore? We'll drop the "New" label.`)}</small>
             </p>
             <div class="row">
               <button class="btn ghost" name="still" value="1">{t("ยังใหม่อยู่", "Yes, still new")}</button>
@@ -346,8 +346,8 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky", group: gOut },
         { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
         canHost(user.account, true)
-          ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
-          : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table"), hint: t("ขอเป็นเจ้าภาพโต๊ะเพื่อจัดแฮงเอาต์", "Ask to become a Table Host and run hangouts"), tint: "lime" as const, group: gOut },
+          ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("ฟรี หรือจ่ายที่สถานที่", "Free or pay at the venue"), tint: "lime" as const, group: gOut }
+          : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table"), hint: t("จัดแฮงเอาต์ของคุณเอง", "Run your own hangouts"), tint: "lime" as const, group: gOut },
         ...(dates
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดตแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),
@@ -355,7 +355,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/thanks", emoji: "💌", title: t("คำขอบคุณ", "Thank-yous"), hint: t("ข้อความส่วนตัวจากคนที่เจอ", "Private notes from people you met"), tint: "sun", group: gOut },
         { href: "/settings/habits", emoji: "🌿", title: t("นิสัยดี ๆ และการพัก", "Healthy habits"), hint: isPaused(p, now) ? t("กำลังพักอยู่", "On a break") : t("นัดต่อสัปดาห์ พัก Jurrgun", "Plans a week, take a break"), tint: "mint", group: gYou },
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green", group: gYou },
-        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน เกี่ยวกับชีวิตในกรุงเทพฯ", "Quick anonymous questions about life in Bangkok"), tint: "sky", group: gAcct },
+        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน", "Quick, anonymous city questions"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
         { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint", group: gAcct },
         // Google / LINE accounts have no password to change.

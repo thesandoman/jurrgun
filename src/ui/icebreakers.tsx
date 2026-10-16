@@ -15,7 +15,7 @@ export function IcebreakerCard(props: { v: View; eventId: string; chatKey?: stri
       <h2 id="ice-h" class="h3">
         <span aria-hidden="true">💬</span> {t("คำถามชวนคุยสำหรับโต๊ะนี้", "Icebreakers for your table")}
       </h2>
-      <p class="muted">{t("ไม่ต้องเตรียมอะไร ถ้าโต๊ะเงียบเมื่อไหร่ ลองหยิบสักข้อ", "Nothing to prepare. If the table goes quiet, try one.")}</p>
+      <p class="muted">{t("ไว้หยิบใช้ตอนโต๊ะเงียบ", "For when the table goes quiet.")}</p>
       <ul class="ice-list">
         {list.map((x) => (
           <li>

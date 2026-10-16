@@ -89,7 +89,7 @@ export function MeHub(props: {
             <strong>{t(`ช่วยให้โต๊ะรู้จักคุณ เหลืออีก ${props.steps.length - done} เรื่อง`, `Help your table get to know you: ${props.steps.length - done} ${props.steps.length - done === 1 ? "thing" : "things"} left`)}</strong>
             <span aria-hidden="true">🌿</span>
           </div>
-          <p class="muted">{t("ยิ่งโปรไฟล์ครบ เรายิ่งจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรกได้ดี", "A fuller profile helps us seat a good mix, with something in common to start.")}</p>
+          <p class="muted">{t("ช่วยให้เราจัดโต๊ะที่มีเรื่องคุยกัน", "Helps us seat you with common ground.")}</p>
           <div class="me-todo">
             {todo.map((s) => (
               <a href={s.href}>+ {s.label}</a>

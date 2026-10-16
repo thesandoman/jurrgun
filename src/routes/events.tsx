@@ -86,6 +86,7 @@ import {
   Empty,
   Field,
   LinkButton,
+  MoreInfo,
   Notice,
   page,
   Select,
@@ -1011,6 +1012,42 @@ async function buddyNicknames(db: Db, event: Event, accountId: string, now = new
   return rows.map((r) => r.nickname);
 }
 
+/** Where a long host text breaks: about 4 lines, at a line or a space, never inside a Thai syllable. */
+export function hostTextLead(text: string, maxChars = 200, maxLines = 4): [string, string] | null {
+  const lines = text.split("\n");
+  if (text.length <= maxChars + 60 && lines.length <= maxLines + 1) return null;
+  let lead = lines.slice(0, maxLines).join("\n");
+  if (lead.length > maxChars) {
+    const space = lead.lastIndexOf(" ", maxChars);
+    let cut = space > maxChars * 0.5 ? space : maxChars;
+    // Thai vowels and tone marks above or below belong to the letter before them.
+    while (cut < lead.length && /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/.test(lead[cut])) cut++;
+    lead = lead.slice(0, cut);
+  }
+  const rest = text.slice(lead.length).trim();
+  return rest ? [lead.trimEnd(), rest] : null;
+}
+
+/** Host-written text as written; a long one shows about 4 lines, then "Read more". */
+function HostText(props: { text: string; t: T }) {
+  const { text, t } = props;
+  if (!text) return null;
+  const split = hostTextLead(text);
+  if (!split) return <p style="white-space:pre-line">{text}</p>;
+  return (
+    <div class="host-text">
+      <p class="host-text-lead">
+        {split[0]}
+        <span class="host-text-dots" aria-hidden="true">…</span>
+      </p>
+      <details class="host-text-more">
+        <summary>{t("อ่านต่อ", "Read more")}</summary>
+        <p>{split[1]}</p>
+      </details>
+    </div>
+  );
+}
+
 function BuddyBox(props: { names: string[] | null; event: Event; t: T }) {
   const { names, t } = props;
   if (!names || names.length === 0) return null;
@@ -1070,7 +1107,7 @@ function TableBox(props: { box: TableBoxData; t: T }) {
         </LinkButton>
       ) : (
         <form method="post" action={`/tables/${box.id}/join`}>
-          <p class="muted">{t("สนุกไหม อยากเจอกันอีกก็นั่งโต๊ะนี้ประจำเลย เจ้าภาพจะชวนไปแฮงเอาต์ครั้งต่อไป", "Had a good time? Join the Regular Table and the host will invite you to the next hangout.")}</p>
+          <p class="muted">{t("เข้าร่วมแล้ว เจ้าภาพจะชวนไปครั้งหน้า", "Join, and the host invites you next time.")}</p>
           <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this Regular Table")}</Button>
         </form>
       )}
@@ -1206,14 +1243,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             <Tag tone={tag === OPEN_TO_MORE_TAG ? "love" : "muted"}>{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
         </div>
-        {description(event, lang).length > 220 ? (
-          <details class="how ev-desc">
-            <summary>{description(event, lang).slice(0, 160).trim()}…</summary>
-            <p style="white-space:pre-line;margin:8px 0 0">{description(event, lang)}</p>
-          </details>
-        ) : (
-          <p style="white-space:pre-line">{description(event, lang)}</p>
-        )}
+        <HostText text={description(event, lang)} t={t} />
       </Card>
       {reg?.status === "confirmed" && event.status === "published" && icebreakerWindow(event.startsAt, event.endsAt, now) ? (
         <IcebreakerCard v={v} eventId={event.id} chatKey={event.visibility === "private" ? `circle:${event.id}` : null} />
@@ -1256,7 +1286,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             {event.costThb > 0 ? (
               <small>
                 {" "}
-                {t("จ่ายนอกแอป ที่สถานที่หรือกับผู้จัด", "Paid off-platform, at the venue or to the host.")}
+                {t("จ่ายนอกแอป ที่งานหรือกับผู้จัด", "Paid outside the app, at the venue or to the host.")}
                 {event.paymentNote ? ` ${event.paymentNote}` : ""}
               </small>
             ) : null}
@@ -1372,7 +1402,7 @@ function InviteBox(props: { event: Event; url: string | null; v: View }) {
     return (
       <form method="post" action={`${base}/invite`} id="invite">
         <h3>{t("ชวนเพื่อนมาด้วย (+1)", "Invite a friend (+1)")}</h3>
-        <p class="muted">{t("สร้างลิงก์ให้เพื่อนลงทะเบียนเป็น +1 ของคุณ ใช้ได้ 1 ครั้ง", "Make a link your friend can use to sign up as your +1. It works once.")}</p>
+        <p class="muted">{t("ลิงก์สมัครเป็น +1 ของคุณ ใช้ได้ครั้งเดียว", "A one-time sign-up link for your +1.")}</p>
         <Button kind="ghost">{t("ชวนเพื่อน", "Invite a friend")}</Button>
       </form>
     );
@@ -1382,7 +1412,7 @@ function InviteBox(props: { event: Event; url: string | null; v: View }) {
   return (
     <div id="invite" class="invite-box" data-url={props.url} data-text={text} lang={lang}>
       <h3>{t("ชวนเพื่อนมาด้วย (+1)", "Invite a friend (+1)")}</h3>
-      <p class="muted">{t("ส่งลิงก์นี้ให้เพื่อน 1 คน เพื่อนจะลงทะเบียนเป็น +1 ของคุณ ลิงก์ใช้ได้ครั้งเดียว", "Send this link to one friend. They sign up as your +1. The link works once.")}</p>
+      <p class="muted">{t("ส่งให้เพื่อน 1 คน ใช้ได้ครั้งเดียว", "Send to one friend. It works once.")}</p>
       <div class="field">
         <label for="invite-url">{t("ลิงก์ชวนเพื่อน", "Invite link")}</label>
         <input id="invite-url" type="url" readonly value={props.url} onfocus="this.select()" />
@@ -1456,7 +1486,7 @@ function RegistrationBox(props: {
           <Tag tone="warn">{statusLabel("waitlisted", t)}</Tag>{" "}
           {props.waitPos ? t(`ราวคิวที่ ${props.waitPos}`, `About #${props.waitPos} in line`) : null}
         </p>
-        <p class="muted">{t("ถ้ามีที่ว่าง เราจะแจ้งทันที แล้วคุณมีเวลายืนยัน 12 ชม.", "If a spot opens we'll notify you, and you'll have 12 hours to confirm.")}</p>
+        <p class="muted">{t("มีที่ว่างเราจะแจ้ง แล้วยืนยันภายใน 12 ชม.", "We'll tell you if a spot opens. 12h to confirm.")}</p>
         <form method="post" action={`${base}/cancel`}>
           <Button kind="ghost">{t("ออกจากคิวสำรอง", "Leave the waitlist")}</Button>
         </form>
@@ -1507,7 +1537,7 @@ function RegistrationBox(props: {
             label={t("มากับเพื่อน? ใส่ชื่อผู้ใช้ของเพื่อน (ไม่บังคับ)", "Bringing a friend? Their username (optional)")}
             name="plusOneUsername"
             maxlength={30}
-            hint={t("เพื่อนต้องลงทะเบียนเองและใส่ชื่อผู้ใช้ของคุณด้วย", "Your friend RSVPs too and enters your username.")}
+            hint={t("เพื่อนลงทะเบียนเองและใส่ชื่อผู้ใช้ของคุณ", "They RSVP too, with your username.")}
           />
         ) : null}
         <button type="submit" class="btn primary btn-ticket">
@@ -2108,7 +2138,10 @@ function Essentials(props: { event: Event; hostName: string | null; v: View }) {
       <h2 id="essentials-h" class="h3">
         <span aria-hidden="true">📌</span> {t("ข้อมูลที่ต้องใช้วันงาน", "What you need on the day")}
       </h2>
-      <p class="muted">{t("เปิดหน้านี้ตอนมีเน็ตครั้งหนึ่ง แล้วจะดูได้แม้ไม่มีสัญญาณ", "Open this page once while online and it stays readable with no signal.")}</p>
+      <div class="muted with-info">
+        <span>{t("เปิดตอนมีเน็ตครั้งเดียว แล้วดูได้แม้ไม่มีสัญญาณ", "Open once online, then it works offline.")}</span>
+        <MoreInfo t={t}>{t("เก็บไว้บนเครื่องนี้เท่านั้น และลบเองเมื่องานจบหรือเมื่อออกจากระบบ", "Kept on this phone only, and cleared when the table ends or you sign out.")}</MoreInfo>
+      </div>
       <dl class="facts">
         <dt>{t("เมื่อไหร่", "When")}</dt>
         <dd>
@@ -2133,7 +2166,7 @@ function Essentials(props: { event: Event; hostName: string | null; v: View }) {
         <dt>{t("สิ่งที่ต้องเตรียม", "What to bring")}</dt>
         <dd>
           <ul class="ess-bring">
-            <li>{t("บัตรนี้ เปิดได้แม้ไม่มีเน็ต หรือจดรหัสบัตรไว้", "This pass. It opens without signal, or note the pass code.")}</li>
+            <li>{t("บัตรนี้ หรือรหัสบัตร", "This pass, or its code.")}</li>
             {event.costThb > 0 ? (
               <li>
                 {t(`ค่าใช้จ่าย ${costText(event, t)} จ่ายที่งานหรือกับผู้จัด`, `${costText(event, t)}, paid at the venue or to the host`)}
@@ -2183,7 +2216,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
       <section class="phone-down">
         <p class="pd-emoji" aria-hidden="true">📵</p>
         <h1>{t("วางมือถือได้แล้ว", "Phone down, people up")}</h1>
-        <p class="muted">{t("คุณเช็กอินแล้ว ที่เหลือคือคนตรงหน้า ลองชวนคุยด้วยคำถามเหล่านี้", "You're checked in. The rest is the people in front of you. Try one of these.")}</p>
+        <p class="muted">{t("เช็กอินแล้ว ลองหยิบสักข้อมาชวนคุย", "You're checked in. Try one of these.")}</p>
         <ol class="pd-prompts">
           {prompts.slice(0, 3).map(([th, en]) => (
             <li>{t(th, en)}</li>
@@ -2230,7 +2263,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
             </span>
           </button>
           <p class="code">{code}</p>
-          <p class="muted">{t("ถ้าสแกนไม่ได้ ให้โฮสต์ใส่รหัสนี้ · อย่าแชร์บัตรนี้", "If the scan fails, the host can type this code · don't share this pass")}</p>
+          <p class="muted">{t("สแกนไม่ได้ ให้โฮสต์พิมพ์รหัสนี้ · อย่าแชร์บัตร", "Scan fails? The host types this code · don't share it")}</p>
           {reg.checkedInAt ? <Tag tone="ok">{t("เช็กอินแล้ว", "Checked in")}</Tag> : null}
         </div>
       </section>
