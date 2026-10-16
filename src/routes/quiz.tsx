@@ -768,7 +768,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         <LinkButton href={props.continueHref}>{props.continueLabel}</LinkButton>
         {props.retake ? (
           <LinkButton href="/quiz" kind="ghost">
-            {t("ทำใหม่", "Retake")}
+            {t("ทำแบบทดสอบใหม่", "Retake the quiz")}
           </LinkButton>
         ) : null}
       </div>

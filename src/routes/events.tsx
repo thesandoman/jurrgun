@@ -52,7 +52,8 @@ import {
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
-import { fmtDate, fmtParts, type Lang, type T } from "../lib/i18n";
+import { fmtDate, fmtMonth, fmtParts, type Lang, type T } from "../lib/i18n";
+import { SubLabel } from "../ui/section-head";
 import { eventPlace } from "../lib/places";
 import { qrSvg, shortCode } from "../lib/qr";
 import { seeAgain } from "../services/see-again";
@@ -2085,38 +2086,61 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       {past.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ผ่านมา", "No past events yet.")}</Empty>
       ) : (
-        past.map(({ event, reg }) => {
-          const attended = !!reg.checkedInAt;
-          return (
-            <Card>
-              <div class="spread">
-                <h3>
-                  <a href={`/events/${event.id}`}>{title(event, lang)}</a>
-                </h3>
-                <Tag tone={attended ? "ok" : "muted"}>{attended ? t("เข้าร่วมแล้ว", "Attended") : t("ไม่ได้เช็กอิน", "Not checked in")}</Tag>
-              </div>
-              <div class="meta">
-                <span>🗓️ {fmtDate(event.startsAt, lang)}</span>
-              </div>
-              {attended ? (
-                <div class="row">
-                  {peopleWindow(event.endsAt, now) === "open" ? (
-                    <LinkButton href={`/events/${event.id}/people`}>{t("คนที่เจอ", "People I met")}</LinkButton>
-                  ) : null}
-                  <LinkButton href={`/events/${event.id}/feedback`} kind="ghost">
-                    {gaveFeedback.has(event.id) ? t("แก้ไขความคิดเห็น", "Edit feedback") : t("ให้ความคิดเห็น", "Give feedback")}
-                  </LinkButton>
-                </div>
-              ) : null}
-            </Card>
-          );
-        })
+        // Compact rows grouped by month (owner, C3). Buttons only while the 72-hour window after the event is open.
+        byMonth(past, (r) => fmtMonth(r.event.startsAt, lang)).map(([month, items]) => (
+          <section class="past-month">
+            <SubLabel>{month}</SubLabel>
+            <ul class="past-rows">
+              {items.map(({ event, reg }) => {
+                const attended = !!reg.checkedInAt;
+                const open = attended && peopleWindow(event.endsAt, now) === "open";
+                const p = fmtParts(event.startsAt, lang);
+                return (
+                  <li class={open ? "past-row is-open" : "past-row"}>
+                    <a class="past-main" href={`/events/${event.id}`}>
+                      <span class="past-day" aria-hidden="true">
+                        <b>{p.day}</b>
+                        <small>{p.weekday}</small>
+                      </span>
+                      <span class="past-text">
+                        <b>{title(event, lang)}</b>
+                        <small class="sr-only">{fmtDate(event.startsAt, lang)}</small>
+                        <small class={attended ? "past-state is-ok" : "past-state"}>{attended ? t("✓ เข้าร่วมแล้ว", "✓ Attended") : t("ไม่ได้เช็กอิน", "Not checked in")}</small>
+                      </span>
+                      <span class="past-chev" aria-hidden="true">›</span>
+                    </a>
+                    {open ? (
+                      <div class="past-acts">
+                        <LinkButton href={`/events/${event.id}/people`}>{t("คนที่เจอ", "People I met")}</LinkButton>
+                        <LinkButton href={`/events/${event.id}/feedback`} kind="ghost">
+                          {gaveFeedback.has(event.id) ? t("แก้ไขความคิดเห็น", "Edit feedback") : t("ให้ความคิดเห็น", "Give feedback")}
+                        </LinkButton>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))
       )}
     </>,
   );
 });
 
 // ---------------------------------------------------------------- pass --
+
+/** Consecutive items under one month heading, in the order given (newest first on My events). */
+export function byMonth<X>(items: X[], month: (x: X) => string): [string, X[]][] {
+  const out: [string, X[]][] = [];
+  for (const x of items) {
+    const m = month(x);
+    const last = out[out.length - 1];
+    if (last && last[0] === m) last[1].push(x);
+    else out.push([m, [x]]);
+  }
+  return out;
+}
 
 /** The first word of a nickname: the host's first name, nothing more. */
 export function firstName(nickname: string): string {
@@ -2272,6 +2296,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
           {t("เริ่ม", "Starts")} {fmtDate(event.startsAt, lang)}
         </p>
       ) : null}
+      <PassSteps t={t} checkedIn={!!reg.checkedInAt} />
       {now < event.startsAt ? <TableIntroPrompt v={view(c)} next={`/me/events/${event.id}/pass`} /> : null}
       <div class="pass-actions">
         <a class="chip-btn" href={`/me/events/${event.id}/calendar.ics`} download={`jurrgun-${event.id}.ics`}>
@@ -2283,39 +2308,40 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
       </div>
       <script dangerouslySetInnerHTML={{ __html: COUNTDOWN_JS }} />
       <Essentials event={event} hostName={host?.nickname ?? null} v={view(c)} />
-      <ol class="next-steps" aria-label={t("ขั้นตอนต่อไป", "What happens next")}>
-        <li class="done">
-          <span>
-            <b>{t("ได้ที่นั่งแล้ว", "You have a spot")}</b>
-            <small>{t("จะจัดโต๊ะให้ก่อนงานเริ่ม", "Tables are set before the start")}</small>
-          </span>
-        </li>
-        <li class={reg.checkedInAt ? "done" : undefined}>
-          <span>
-            <b>{t("เช็กอินกับโฮสต์", "Check in with your host")}</b>
-            <small>
-              {event.safetyInfo
-                ? t(`เปิด 30 นาทีก่อนเริ่ม · จุดนัดพบ: ${event.safetyInfo}`, `Opens 30 min before the start · ${event.safetyInfo}`)
-                : t("เปิด 30 นาทีก่อนเริ่ม", "Opens 30 min before the start")}
-            </small>
-          </span>
-        </li>
-        <li>
-          <span>
-            <b>{t("คนที่เจอ", "People I met")}</b>
-            <small>
-              {t(
-                `เปิดให้เลือก ${PEOPLE_WINDOW_HOURS} ชม. หลังจบงาน และจะได้รู้จักกันต่อเมื่อเลือกกันทั้งสองฝ่ายเท่านั้น`,
-                `Opens for ${PEOPLE_WINDOW_HOURS} hours after the event. You only connect if you both choose to.`,
-              )}
-            </small>
-          </span>
-        </li>
-      </ol>
       <LinkButton href={`/events/${event.id}`} kind="ghost">{t("← รายละเอียดกิจกรรม", "← Event details")}</LinkButton>
     </>,
   );
 });
+
+/**
+ * What happens next on the pass, as a three-step progress strip (owner, C4):
+ * a spot, check-in, People I met. Done steps carry a tick and the current one
+ * says "Now", so the state never rests on colour alone.
+ */
+export function PassSteps(props: { t: T; checkedIn: boolean }) {
+  const { t } = props;
+  const at = props.checkedIn ? 2 : 1;
+  const steps = [
+    { label: t("ได้ที่นั่งแล้ว", "You have a spot"), hint: t("จัดโต๊ะก่อนเริ่มงาน", "Tables set before the start") },
+    { label: t("เช็กอินกับโฮสต์", "Check in with your host"), hint: t("เปิด 30 นาทีก่อนเริ่ม", "Opens 30 min before") },
+    { label: t("คนที่เจอ", "People I met"), hint: t(`${PEOPLE_WINDOW_HOURS} ชม. หลังจบงาน ถ้าเลือกตรงกัน`, `${PEOPLE_WINDOW_HOURS} h after, if it's mutual`) },
+  ];
+  return (
+    <ol class="pass-steps" aria-label={t("ขั้นตอนต่อไป", "What happens next")}>
+      {steps.map((s, i) => (
+        <li class={i < at ? "is-done" : i === at ? "is-now" : undefined} aria-current={i === at ? "step" : undefined}>
+          <span class="ps-bar" aria-hidden="true" />
+          <b>
+            <span class="ps-mark" aria-hidden="true">{i < at ? "✓" : String(i + 1)}</span> {s.label}
+          </b>
+          {i < at ? <span class="sr-only">{t("(เสร็จแล้ว)", "(done)")}</span> : null}
+          {i === at ? <small class="ps-now">{t("ตอนนี้", "Now")}</small> : null}
+          <small>{s.hint}</small>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 /** The pass as a calendar file: only for the member holding a confirmed seat. */
 eventRoutes.get("/me/events/:id/calendar.ics", requireMember, async (c) => {
@@ -2338,13 +2364,13 @@ eventRoutes.get("/me/events/:id/calendar.ics", requireMember, async (c) => {
 });
 
 /**
- * "Starts in 2 h 15 m · check-in opens in 1 h 45 m", ticking each minute.
- * Check-in opens 30 minutes before the start (rules.checkInOpen).
+ * One countdown line, "Starts in 2 h 15 m", ticking each minute (owner, C4).
+ * When check-in opens is the strip's second step.
  */
 const COUNTDOWN_JS = `(function(){var el=document.querySelector(".countdown[data-start]");if(!el)return;var start=new Date(el.dataset.start).getTime(),th=el.dataset.lang!=="en";
 function span(ms){var m=Math.max(0,Math.round(ms/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;if(th)return d?d+" วัน "+h+" ชม.":h?h+" ชม. "+mm+" นาที":mm+" นาที";return d?d+" d "+h+" h":h?h+" h "+mm+" m":mm+" m"}
-function tick(){var now=Date.now(),left=start-now,open=left-30*60000;if(left<=0){el.textContent=th?"เริ่มแล้ว":"It's started";return}
-var s=(th?"เริ่มในอีก ":"Starts in ")+span(left);s+=open>864e5?"":open>0?(th?" · เปิดเช็กอินในอีก ":" · check‑in opens in ")+span(open):(th?" · เปิดเช็กอินแล้ว":" · check‑in is open");el.textContent=s}
+function tick(){var now=Date.now(),left=start-now;if(left<=0){el.textContent=th?"เริ่มแล้ว":"It's started";return}
+el.textContent=(th?"เริ่มในอีก ":"Starts in ")+span(left)}
 tick();setInterval(tick,60000)})()`;
 
 // ---------------------------------------------------------------- live --

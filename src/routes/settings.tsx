@@ -74,6 +74,7 @@ import {
   timesOrLegacy,
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
+import { SubLabel } from "../ui/section-head";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
@@ -113,7 +114,7 @@ import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
 import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 import { myTables } from "../services/regular-tables";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, withGenderSelf } from "./onboarding";
-import { isArchetype, loadVibe, VisibilityToggle } from "./quiz";
+import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L } from "../lib/i18n";
 import { releaseUpcomingSeats } from "../services/events";
@@ -214,21 +215,14 @@ settingsRoutes.get("/settings", async (c) => {
   const memberSince = created ? created.toLocaleDateString(lang === "en" ? "en-GB" : "th-TH", { month: "short", year: "numeric" }) : null;
   const typeCard =
     vibe && vibeKey ? (
-      <>
-        <div class="me-h">
-          <h2>{t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")}</h2>
-          <a href="/types">{t("ทุกไทป์", "All types")}</a>
-        </div>
-        <a href="/quiz/result" class="teaser">
-          <b class="big" aria-hidden="true">{ARCHETYPES[vibeKey].emoji}</b>
-          <span>
-            <strong>{L(lang, displayName(vibeKey, vibe.modifier))}</strong>
-            <small class="muted">{L(lang, ARCHETYPES[vibeKey].tagline)}</small>
-          </span>
-        </a>
-        <VisibilityToggle v={v} visible={vibe.visible} next="/settings" />
-        <a href="/quiz">{t("ทำแบบทดสอบใหม่", "Retake the quiz")}</a>
-      </>
+      // A link to the type only: showing it at Tables and retaking the quiz live on /quiz/result (owner, C1).
+      <a href="/quiz/result" class="teaser">
+        <b class="big" aria-hidden="true">{ARCHETYPES[vibeKey].emoji}</b>
+        <span>
+          <strong>{L(lang, displayName(vibeKey, vibe.modifier))}</strong>
+          <small class="muted">{L(lang, ARCHETYPES[vibeKey].tagline)}</small>
+        </span>
+      </a>
     ) : (
       <a href="/quiz" class="teaser">
         <b class="big" aria-hidden="true">🧭</b>
@@ -256,7 +250,7 @@ settingsRoutes.get("/settings", async (c) => {
   const paused = isPaused(p, now);
   const quick = (
     <section class="quick" id="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
-      <h2>⚡ {t("สวิตช์ด่วน", "Quick switches")}</h2>
+      <SubLabel>⚡ {t("สวิตช์ด่วน", "Quick switches")}</SubLabel>
       <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies. People and chats stay.")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
@@ -340,6 +334,7 @@ settingsRoutes.get("/settings", async (c) => {
       ]}
       steps={steps}
       type={typeCard}
+      typeLink={vibeKey ? { href: "/types", label: t("ทุกไทป์", "All types") } : undefined}
       badge={badge}
       quick={quick}
       links={[

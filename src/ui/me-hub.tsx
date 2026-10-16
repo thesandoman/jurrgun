@@ -10,6 +10,7 @@
 import type { Child } from "hono/jsx";
 import { interestOpt } from "../content/profile";
 import type { View } from "./kit";
+import { SectionHead, SubLabel } from "./section-head";
 
 /** `sub`: an optional breakdown under the label (e.g. "across 3 crews"). */
 export type MeStat = { emoji: string; n: number; label: string; sub?: string; href: string; tint: Tint };
@@ -26,14 +27,15 @@ export function MeHub(props: {
   newcomer: boolean;
   interests: string[];
   stats: MeStat[];
-  /** One sentence of numbers (each linked) instead of the stat tiles. */
   /** The next table, or a way to find one. */
   next?: Child;
   steps: MeStep[];
   type: Child;
   badge?: Child;
-  /** A one-time question shown under the numbers (e.g. "Still new to Bangkok?"). */
+  /** A one-time question (e.g. "Still new to Bangkok?"). It takes the one prompt slot ahead of the profile nudge. */
   ask?: Child;
+  /** The link beside the type section's heading. */
+  typeLink?: { href: string; label: string };
   links: MeLink[];
   /** One-tap switches shown above the menu. */
   quick?: Child;
@@ -70,8 +72,8 @@ export function MeHub(props: {
       {/* The number tiles sit right under the photo and name (owner, 2026-10-16: the one-sentence version read as plain text). */}
       <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
         {props.stats.map((s) => (
-          <a href={s.href} class={`me-stat tint-${s.tint}`}>
-            <span class="me-stat-emoji" aria-hidden="true">{s.emoji}</span>
+          <a href={s.href} class="me-stat">
+            <span class={`me-stat-emoji tint-${s.tint}`} aria-hidden="true">{s.emoji}</span>
             <b>{s.n}</b>
             <small>{s.label}</small>
             {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
@@ -80,9 +82,10 @@ export function MeHub(props: {
       </nav>
       {props.next ?? null}
 
-      {props.ask ?? null}
-
-      {pct < 100 ? (
+      {/* One next-step slot (owner, C1): the most urgent ask only. The one-time question first, then what the profile is missing. */}
+      {props.ask ? (
+        props.ask
+      ) : pct < 100 ? (
         <section class="me-grow">
           <div class="me-grow-head">
             {/* What's left, in words: no percentage meter (owner, Phase 2). */}
@@ -96,20 +99,16 @@ export function MeHub(props: {
             ))}
           </div>
         </section>
-      ) : (
-        <section class="me-grow me-grow-done">
-          <strong>🌳 {t("โปรไฟล์พร้อมแล้ว", "Your profile is ready")}</strong>
-        </section>
-      )}
+      ) : null}
 
-      <section class="me-type">{props.type}</section>
+      <section class="me-type" aria-labelledby="me-type-h">
+        <SectionHead id="me-type-h" title={t("ไทป์กรุงเทพฯ ของคุณ", "Your Bangkok Type")} link={props.typeLink} />
+        {props.type}
+      </section>
 
       {props.interests.length ? (
         <section class="me-loves">
-          <div class="me-h">
-            <h2>{t("สิ่งที่ฉันชอบ", "Things I love")}</h2>
-            <a href="/settings/profile#interests">{t("แก้ไข", "Edit")}</a>
-          </div>
+          <SectionHead title={t("สิ่งที่ฉันชอบ", "Things I love")} link={{ href: "/settings/profile#interests", label: t("แก้ไข", "Edit") }} />
           <div class="me-stickers">
             {props.interests.map((i) => {
               const o = interestOpt(i);
@@ -125,14 +124,16 @@ export function MeHub(props: {
 
       {props.badge}
 
+      <SectionHead title={t("ตั้งค่าและอื่น ๆ", "Settings and more")} />
+
       {props.quick}
 
       {[...new Set(props.links.map((l) => l.group ?? ""))].map((g) => (
       <>
-      {g ? <h2 class="me-group">{g}</h2> : null}
+      {g ? <SubLabel>{g}</SubLabel> : null}
       <nav class="me-menu" aria-label={g || t("ตั้งค่า", "Settings")}>
         {props.links.filter((l) => (l.group ?? "") === g).map((l) => (
-          <a href={l.href} class={`me-row tint-${l.tint}`} title={l.hint}>
+          <a href={l.href} class="me-row" title={l.hint}>
             <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
               {l.emoji}
             </span>
@@ -188,11 +189,10 @@ const ME_CSS = `
 .me-peek{display:inline-block;margin-top:12px;font-weight:600;font-size:.92rem;text-decoration:none;padding:8px 16px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow)}
 
 .me-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 18px}
-.me-stat{display:flex;flex-direction:column;align-items:center;gap:0;padding:14px 6px 12px;text-decoration:none;color:var(--ink);background:color-mix(in srgb,var(--tint) 16%,var(--surface));border-radius:28px 22px 30px 20px/22px 30px 20px 28px;transition:transform .2s}
-.me-stat:nth-child(2){border-radius:22px 30px 20px 28px/30px 20px 28px 22px;transform:translateY(6px)}
+.me-stat{display:flex;flex-direction:column;align-items:center;gap:0;padding:14px 6px 12px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:24px;transition:transform .2s}
 .me-stat:active{transform:scale(.97)}
-.me-stat-emoji{font-size:1.3rem;line-height:1}
-.me-stat-sub{margin-top:4px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--tint) 22%,var(--surface));font-weight:600}
+.me-stat-emoji{display:grid;place-items:center;width:40px;height:40px;font-size:1.2rem;line-height:1;border-radius:50%;background:color-mix(in srgb,var(--tint) 22%,var(--surface))}
+.me-stat-sub{margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--surface-2);font-weight:600}
 .me-stat b{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;line-height:1.2;margin-top:4px}
 .me-stat small{font-size:.78rem;color:var(--ink-2);text-align:center;line-height:1.25}
 
@@ -204,10 +204,9 @@ const ME_CSS = `
 .me-grow .muted{margin:0 0 10px}
 .me-todo{display:flex;flex-wrap:wrap;gap:8px}
 .me-todo a{padding:7px 13px;border-radius:999px;font-size:.88rem;font-weight:600;text-decoration:none;background:var(--brand-soft);color:var(--brand)}
-.me-grow-done{text-align:center;background:color-mix(in srgb,var(--t-green) 14%,var(--surface))}
 
 .me-type{margin:18px 0}
-.me-type .teaser{transform:rotate(-1.2deg);border-radius:30px 24px 32px 22px/24px 32px 22px 30px}
+.me-type .teaser{display:flex;width:100%;box-sizing:border-box;margin:0;border-radius:24px}
 .me-type .card{border-radius:24px}
 
 .me-h{display:flex;justify-content:space-between;align-items:baseline}
@@ -224,7 +223,7 @@ const ME_CSS = `
 .me-chip:nth-child(6n){--tint:var(--t-sun);transform:rotate(1deg)}
 
 .me-menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:20px 0}
-.me-row{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:118px;padding:14px;border-radius:24px;text-decoration:none;color:var(--ink);background:color-mix(in srgb,var(--tint) 12%,var(--surface));border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .18s ease}
+.me-row{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:118px;padding:14px;border-radius:24px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .18s ease}
 .me-row:hover,.me-row:focus-visible{transform:translateY(-2px)}
 .me-row:active{transform:scale(.98)}
 .me-bubble{flex:none;display:grid;place-items:center;width:46px;height:46px;font-size:1.35rem;background:color-mix(in srgb,var(--tint) 22%,var(--surface));border-radius:55% 45% 50% 50%/50% 55% 45% 50%}

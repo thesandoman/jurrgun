@@ -591,4 +591,44 @@ main details.host-text-more{margin:0;padding:0;border:0;background:none;box-shad
 /* Finalize review plain fixes: the chat host badge is 12px and readable in dark mode (was about 1.8:1). */
 .host-badge{font-size:.75rem}
 @media (prefers-color-scheme:dark){.host-badge{background:#3a2f12;color:#ffd27a}}
+/* Two heading levels (finalize A4): one section title with an optional link, one small label for groups inside it. */
+.sec-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:32px 0 8px}
+.sec-head h2{font-family:var(--display);font-size:1.25rem;line-height:1.3;margin:0;min-width:0}
+.sec-head>a{display:inline-flex;align-items:center;min-height:44px;flex:none;font-weight:600;font-size:.94rem;text-decoration:none}
+.sub-label{font-family:var(--font);font-size:.8125rem;font-weight:700;line-height:1.4;color:var(--ink-2);letter-spacing:.01em;margin:16px 4px 8px}
+.sub-label+.me-menu{margin-top:0}
+.quick>.sub-label{margin-top:0}
+/* Me (finalize A1, C1): one plain card surface, the colour only in the icon bubbles; the type card is full width and straight. */
+main .me-type{margin:0}
+main .me-type>a.teaser{display:flex;width:100%;transform:none}
+.me-grow{margin:12px 0 0}
+/* My events (finalize C3): past events as compact rows under month labels; buttons only while the 72-hour window is open. */
+.past-month .sub-label{margin-top:16px}
+.past-rows{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.past-row+.past-row{border-top:1px solid var(--line)}
+.past-main{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;text-decoration:none;color:var(--ink)}
+.past-day{display:flex;flex-direction:column;align-items:center;flex:none;min-width:40px;line-height:1.15;font-family:var(--display)}
+.past-day b{font-size:1.1rem}
+.past-day small{font-size:.75rem;color:var(--ink-2)}
+.past-text{flex:1;min-width:0;display:grid;gap:2px}
+.past-text b{font-weight:600;line-height:1.35}
+.past-state{font-size:.8125rem;color:var(--ink-2)}
+.past-state.is-ok{color:var(--ok)}
+.past-chev{flex:none;font-size:1.4rem;line-height:1;color:var(--ink-3)}
+.past-acts{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px 66px}
+.past-acts .btn{margin:0}
+@media (max-width:480px){.past-acts{padding-left:14px}.past-acts .btn{flex:1 1 auto}}
+/* Pass (finalize C4): what happens next as a three-step progress strip, not radio-like circles. */
+.pass-steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 16px;padding:0}
+.pass-steps li{display:grid;align-content:start;gap:2px;min-width:0}
+.pass-steps .ps-bar{display:block;height:6px;border-radius:3px;background:var(--line);margin-bottom:6px}
+.pass-steps li.is-done .ps-bar{background:var(--brand)}
+.pass-steps li.is-now .ps-bar{background:linear-gradient(90deg,var(--brand) 50%,var(--line) 50%)}
+.pass-steps b{font-size:.875rem;font-weight:700;line-height:1.3;color:var(--ink)}
+.pass-steps li:not(.is-done):not(.is-now) b{color:var(--ink-2)}
+.pass-steps .ps-mark{font-variant-numeric:tabular-nums}
+.pass-steps li.is-done .ps-mark{color:var(--ok)}
+.pass-steps small{font-size:.8125rem;line-height:1.35;color:var(--ink-2)}
+.pass-steps .ps-now{justify-self:start;padding:0 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:.75rem}
+.countdown{white-space:nowrap}
 `);

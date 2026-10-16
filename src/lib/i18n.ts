@@ -45,6 +45,12 @@ export function fmtDate(iso: Date | string, lang: Lang): string {
   }).format(d);
 }
 
+/** "October 2026" / "ตุลาคม 2569" in Bangkok time: a month heading. */
+export function fmtMonth(iso: Date | string, lang: Lang): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(d);
+}
+
 /** Bangkok-time pieces for a date block: day of month, short weekday, HH:MM. */
 export function fmtParts(iso: Date | string, lang: Lang): { day: string; weekday: string; time: string } {
   const d = typeof iso === "string" ? new Date(iso) : iso;
