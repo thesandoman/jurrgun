@@ -20,9 +20,10 @@ async function mkEvent(hostId: string, startsIn: number, extra: Partial<typeof e
   const startsAt = new Date(Date.now() + startsIn);
   await db()
     .insert(events)
-    .values({ id, title: `DAY-${id.slice(0, 6)}`, startsAt, endsAt: new Date(startsAt.getTime() + 3 * HOUR), venueName: "Soi Social Club", district: "watthana", capacity: 8, status: "published", createdBy: hostId, hostAccountId: hostId, ...extra });
+    .values({ id, title: `DAY-${id.slice(0, 6)}`, startsAt, endsAt: new Date(startsAt.getTime() + 3 * HOUR), venueName: "Soi Social Club", district: "watthana", capacity: 8, status: "published", createdBy: hostId, hostAccountId: hostId, visibility: "private", privateToken: randomToken(12), ...extra });
   return id;
 }
+// Private, so these near-future tables never crowd other tests' events off Discover.
 const reg = async (eventId: string, accountId: string, status = "confirmed") => {
   const id = newId();
   await db().insert(registrations).values({ id, eventId, accountId, status, passToken: randomToken(18) });
@@ -65,7 +66,7 @@ describe("stations (pure)", () => {
     expect(STATIONS.find((s) => s.key === "bts_siam")!.lines).toEqual(["bts_sukhumvit", "bts_silom"]);
     expect(STATIONS.find((s) => s.key === "mrt_tao_poon")!.lines).toEqual(["mrt_blue", "mrt_purple"]);
     expect(isStationKey("mrt_bang_wa") && isStationKey("bts_bang_wa")).toBe(true);
-    for (const s of STATIONS) expect(`${s.th} ${s.en}`).not.toMatch(/[–—]/);
+    for (const s of STATIONS) expect(`${s.th} ${s.en}`).not.toMatch(/[\u2013\u2014]/);
   });
   it("checks the host's fields", () => {
     const keys = STATIONS.map((s) => s.key);
@@ -227,7 +228,7 @@ describe.skipIf(!HAS_DB)("venue notes and nearest station", () => {
       intensity: "social",
       groupMin: "4",
       groupMax: "6",
-      visibility: "public",
+      visibility: "private",
       accessibility: "",
       safetyInfo: "",
       venueNotes: "ชั้น 2 โต๊ะยาวข้างหน้าต่าง",
@@ -244,11 +245,11 @@ describe.skipIf(!HAS_DB)("venue notes and nearest station", () => {
     expect([e.nearestStation, e.walkMinutes, e.venueNotes, e.venueNotesEn]).toEqual(["bts_asok", 5, form.venueNotes, form.venueNotesEn]);
 
     const member = await createMember();
-    const th = await (await req(`/events/${e.id}`, { cookie: `${member.cookie}; lang=th` })).text();
+    const th = await (await req(`/events/${e.id}?t=${e.privateToken}`, { cookie: `${member.cookie}; lang=th` })).text();
     expect(th).toContain("BTS อโศก เดิน 5 นาที");
     expect(th).toContain("ชั้น 2 โต๊ะยาวข้างหน้าต่าง");
     expect(th).toContain('class="fact-ico"');
-    const en = await (await req(`/events/${e.id}`, { cookie: `${member.cookie}; lang=en` })).text();
+    const en = await (await req(`/events/${e.id}?t=${e.privateToken}`, { cookie: `${member.cookie}; lang=en` })).text();
     expect(en).toContain("BTS Asok, 5 min walk");
     expect(en).toContain("2nd floor, the long table by the window");
 
