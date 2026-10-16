@@ -20,6 +20,8 @@ import { onboarding } from "./routes/onboarding";
 import { peopleRoutes } from "./routes/people";
 import { profileRoutes } from "./routes/profile";
 import { publicRoutes } from "./routes/public";
+import { policyRoutes } from "./routes/policies";
+import { consentRoutes } from "./routes/consents";
 import { newcomerRoutes } from "./routes/newcomers";
 import { pulseRoutes } from "./routes/pulse";
 import { pwaRoutes } from "./routes/pwa";
@@ -48,6 +50,7 @@ app.use("*", captureSource);
 
 app.route("/api/setup", setup);
 app.route("/", publicRoutes);
+app.route("/", policyRoutes);
 app.route("/", newcomerRoutes);
 app.route("/", learnRoutes);
 app.route("/", pwaRoutes);
@@ -72,6 +75,7 @@ app.route("/", eventRoutes);
 app.route("/", peopleRoutes);
 app.route("/", profileRoutes);
 app.route("/", settingsRoutes);
+app.route("/", consentRoutes);
 app.route("/", pulseRoutes);
 app.route("/admin", adminRoutes);
 

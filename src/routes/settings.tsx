@@ -126,7 +126,7 @@ import {
   type Profile,
 } from "../schema";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
-import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
+import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, TextArea, Toggle, view, type View } from "../ui/kit";
 import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
@@ -370,6 +370,7 @@ settingsRoutes.get("/settings", async (c) => {
       links={[
         { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky", group: gOut },
         { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
+        { href: "/safety/how", emoji: "🤝", title: t("เราดูแลความปลอดภัยยังไง", "How we keep you safe"), hint: t("เลือกกันทั้งสองฝ่าย บล็อก รายงาน", "Mutual only, block, report"), tint: "mint", group: gOut },
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("ฟรี หรือจ่ายที่สถานที่", "Free or pay at the venue"), tint: "lime" as const, group: gOut }
           : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table"), hint: t("จัดแฮงเอาต์ของคุณเอง", "Run your own hangouts"), tint: "lime" as const, group: gOut },
@@ -382,7 +383,8 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green", group: gYou },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน", "Quick, anonymous city questions"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
-        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint", group: gAcct },
+        { href: "/settings/consents", emoji: "✅", title: t("ความยินยอมของฉัน", "My consents"), hint: t("เปิดหรือปิดแต่ละเรื่อง พร้อมวันที่", "Each one on or off, with dates"), tint: "mint", group: gAcct },
+        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ดาวน์โหลดข้อมูล ปิดบัญชี", "Download my data, deactivate"), tint: "mint", group: gAcct },
         ...(emailEnabled(c.env)
           ? [{ href: "/settings/email", emoji: "✉️", title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), hint: t("เข้าสู่ระบบด้วยรหัสทางอีเมล", "Sign in with a code by email"), tint: "sky" as const, group: gAcct }]
           : []),
@@ -1343,31 +1345,15 @@ function withdrawRomanceChoices(db: ReturnType<typeof getDb>, accountId: string)
 
 // -------------------------------------------------------------- privacy --
 
-const CATEGORIES: { key: string; required: boolean; th: string; en: string; hintTh: string; hintEn: string }[] = [
-  { key: "service", required: true, th: "บัญชีและบริการกิจกรรม", en: "Account and event service", hintTh: "จำเป็นเพื่อให้แอปทำงาน ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Needed for the app to work. Withdrawn only by deactivating your account." },
-  { key: "safety", required: true, th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation", hintTh: "ใช้ตรวจสอบรายงานและป้องกันการคุกคาม ถอนได้โดยการปิดบัญชีเท่านั้น", hintEn: "Used to review reports and prevent harassment. Withdrawn only by deactivating your account." },
-  { key: "personalization", required: false, th: "จัดกลุ่มและแนะนำกิจกรรมตามความสนใจ", en: "Personalised groups and suggestions", hintTh: "ใช้ความสนใจและภาษาของคุณในการจัดโต๊ะ", hintEn: "Uses your interests and languages to seat you well." },
-  { key: "research", required: false, th: "City Pulse: ช่วยวิจัยเมือง (ไม่ระบุตัวตน)", en: "City Pulse: anonymous city research", hintTh: "คำตอบเก็บแยกไว้ภายใต้รหัสวิจัย แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน และภาพรวมนี้ส่งให้ กทม.", hintEn: "Answers are stored under a research code and only ever shown as totals from 10+ people. Those totals go to the BMA." },
-  { key: "notifications", required: false, th: "การแจ้งเตือนกิจกรรม", en: "Event notifications", hintTh: "เตือนก่อนงานและแจ้งเมื่อมีที่ว่าง", hintEn: "Reminders and waitlist updates." },
-  { key: "romance_data", required: false, th: "ข้อมูลเปิดใจมากกว่าเพื่อน (ข้อมูลอ่อนไหว)", en: "Romance-mode data (sensitive)", hintTh: "อัตลักษณ์ทางเพศและคนที่อยากเจอ ถ้าถอนความยินยอม เราจะกลับคุณเป็นโหมดเพื่อนและลบข้อมูลนี้ทันที", hintEn: "Gender identity and 'open to meeting'. Withdrawing switches romance mode off and deletes them at once." },
-];
+/** Switched on and off with a plain toggle; the consent centre (/settings/consents) also sends profile_links. */
 const OPTIONAL = ["personalization", "research", "notifications"];
 
 function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
   const { t, lang } = props.v;
-  const cur = props.current;
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
     ["👥 ข้อมูลการใช้งาน", "👥 Social store", "ชื่อเล่น รูป ความสนใจ กิจกรรมที่ลงทะเบียน คนรู้จัก และการตั้งค่าส่วนตัว", "Nickname, photo, interests, events, connections and your private preferences."],
     ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse เก็บด้วยรหัสวิจัยแทนตัวตน เมื่อปิดบัญชี เราจะตัดการเชื่อมโยงกับตัวคุณ ข้อมูลจึงระบุตัวคุณไม่ได้อีก", "City Pulse answers, stored under a research code instead of your identity. When you deactivate, the link is cut and the rows become anonymous."],
-  ];
-  const retention: [string, string, string, string][] = [
-    ["ข้อมูลเปิดใจมากกว่าเพื่อน", "Romance-mode details", "ลบทันทีเมื่อกลับเป็นโหมดเพื่อน", "Deleted as soon as you switch it off"],
-    ["ตัวเลือกหลังกิจกรรมที่ไม่ตรงกัน", "Non-mutual post-event choices", "ลบเมื่อครบ 72 ชม.", "Deleted when the 72-hour window closes"],
-    ["คนรู้จักและช่องทางติดต่อที่แชร์", "Connections and shared contacts", "จนกว่าฝ่ายใดฝ่ายหนึ่งจะลบหรือปิดบัญชี", "Until either person removes it or deletes their account"],
-    ["บันทึกการเช็กอินและกลุ่ม", "Check-in and group records", "12 เดือน แล้วเหลือเป็นภาพรวม", "12 months, then aggregated"],
-    ["คำตอบ City Pulse", "City Pulse answers", "24 เดือน ภายใต้รหัสวิจัย", "24 months under the research code"],
-    ["บัญชีที่ปิดแล้ว", "Deactivated accounts", "ซ่อนโปรไฟล์ทันที ลบถาวรหลัง 30 วัน", "Profile hidden at once, deleted after 30 days"],
   ];
   return (
     <>
@@ -1376,39 +1362,10 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
       </p>
       <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</h1>
       <p class="muted">{t("คุณเลือกเองว่าจะให้ใช้ข้อมูลอะไร ทุกครั้งที่เปลี่ยน เราจะบันทึกไว้พร้อมวันที่", "You decide how your data is used. Every change is kept as a dated record.")}</p>
-      <Card>
-        <h2>{t("ความยินยอม", "Your consents")}</h2>
-        <form method="post">
-          <input type="hidden" name="present" value="1" />
-          {CATEGORIES.filter((cat) => cat.key !== "romance_data" || cur.has("romance_data")).map((cat) => {
-            const on = !!cur.get(cat.key);
-            if (cat.required) {
-              return (
-                <div class="toggle" role="group" aria-label={t(cat.th, cat.en)}>
-                  <span>
-                    {t(cat.th, cat.en)} <Tag tone="muted">{on ? t("จำเป็น · เปิดอยู่", "Required · on") : t("ปิดอยู่", "Off")}</Tag>
-                    <small>{t(cat.hintTh, cat.hintEn)}</small>
-                  </span>
-                </div>
-              );
-            }
-            if (cat.key === "romance_data" && !on) {
-              return (
-                <div class="toggle">
-                  <span>
-                    {t(cat.th, cat.en)} <Tag tone="muted">{t("ปิดอยู่", "Off")}</Tag>
-                    <small>
-                      {t("เปิดได้ที่หน้า", "Switch on from")} <a href="/settings/connections">{t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences")}</a>
-                    </small>
-                  </span>
-                </div>
-              );
-            }
-            return <Toggle name={`consent_${cat.key}`} label={t(cat.th, cat.en)} hint={t(cat.hintTh, cat.hintEn)} checked={on} />;
-          })}
-          <Button>{t("บันทึกความยินยอม", "Save consents")}</Button>
-        </form>
-      </Card>
+      <p class="row">
+        <a class="btn ghost" href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")} <span aria-hidden="true">→</span></a>
+        <a class="btn ghost" href="/privacy">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a>
+      </p>
       <Card>
         <h2>{t("ข้อมูลของคุณเก็บไว้ที่ไหน", "Where your data lives")}</h2>
         <p class="muted">{t("เราแยกข้อมูลเป็น 3 ส่วนที่ไม่ปะปนกัน", "We keep your data in three separate stores.")}</p>
@@ -1421,17 +1378,6 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
         ))}
       </Card>
       <Card>
-        <h2>{t("เก็บข้อมูลนานแค่ไหน", "How long we keep it")}</h2>
-        <ul>
-          {retention.map(([th, en, rth, ren]) => (
-            <li>
-              <strong>{t(th, en)}:</strong> {t(rth, ren)}
-            </li>
-          ))}
-        </ul>
-        <p class="muted">{t("ระยะเวลาเหล่านี้เป็นค่าเริ่มต้นในช่วงทดลอง และอาจปรับก่อนเปิดตัวจริง", "These are pilot defaults and may change before launch.")}</p>
-      </Card>
-      <Card>
         <h2>{t("ข้อมูลของฉัน", "My data")}</h2>
         <p>{t("ดาวน์โหลดสำเนาข้อมูลทั้งหมดของคุณเป็นไฟล์ JSON", "Download a copy of all your data as a JSON file.")}</p>
         <LinkButton href="/settings/privacy/export" kind="ghost">
@@ -1439,7 +1385,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
         </LinkButton>
       </Card>
       <Card>
-        <h2>{t("ปิดบัญชี", "Deactivate account")}</h2>
+        <h2 id="deactivate">{t("ปิดบัญชี", "Deactivate account")}</h2>
         <p>
           {t(
             "เราจะซ่อนโปรไฟล์ของคุณทันที ออกจากระบบทุกเครื่อง ลบรูป และตัดการเชื่อมโยงกับข้อมูลวิจัย จากนั้นลบบัญชีถาวรหลัง 30 วัน",
@@ -1477,7 +1423,9 @@ settingsRoutes.get("/settings/privacy", async (c) => {
   return page(c, { title: view(c).t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), tab: "me" }, <PrivacyCenter v={view(c)} current={current} />);
 });
 
-settingsRoutes.post("/settings/privacy", async (c) => {
+/** Saves consents from the Privacy Center or the consent centre: append-only rows, latest wins. */
+async function saveConsents(c: C) {
+  const fromCentre = c.req.path === "/settings/consents";
   const user = me(c);
   const p = user.profile!;
   const body = await c.req.parseBody();
@@ -1485,7 +1433,7 @@ settingsRoutes.post("/settings/privacy", async (c) => {
   const db = getDb(c.env);
   const queries: { toSQL(): { sql: string; params: unknown[] } }[] = [];
   const changed: Record<string, boolean> = {};
-  for (const key of OPTIONAL) {
+  for (const key of fromCentre ? [...OPTIONAL, PROFILE_LINKS_CONSENT] : OPTIONAL) {
     const want = str(body[`consent_${key}`]) === "1";
     if (want !== !!current.get(key)) changed[key] = want;
   }
@@ -1505,8 +1453,10 @@ settingsRoutes.post("/settings/privacy", async (c) => {
     queries.push(audit(db, user.account.id, "consent.updated", { type: "account", id: user.account.id }, { changed }));
     await batch(c.env, queries);
   }
-  return c.redirect("/settings/privacy?notice=saved");
-});
+  return c.redirect(fromCentre ? "/settings/consents?notice=saved" : "/settings/privacy?notice=saved");
+}
+settingsRoutes.post("/settings/privacy", saveConsents);
+settingsRoutes.post("/settings/consents", saveConsents);
 
 settingsRoutes.get("/settings/privacy/export", async (c) => {
   const user = me(c);

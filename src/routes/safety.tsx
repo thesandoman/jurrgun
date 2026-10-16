@@ -115,6 +115,7 @@ safetyRoutes.get("/safety", (c) => {
 
       <p class="row">
         <a href="/report">🚩 {t("รายงาน", "Report someone")}</a>
+        <a href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>
         <a href="/learn/date-responsibly">{t("อ่านเพิ่ม", "Read more")} →</a>
       </p>
     </>,

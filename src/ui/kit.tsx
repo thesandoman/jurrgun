@@ -208,6 +208,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
         <footer class="foot">
           <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a>
           <a href="/learn">{t("เรียนรู้", "Learn")}</a>
+          <a href="/safety/how">{t("ความปลอดภัย", "Safety")}</a>
           <a href="/privacy">{t("ความเป็นส่วนตัว", "Privacy")}</a>
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>

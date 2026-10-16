@@ -206,73 +206,6 @@ publicRoutes.get("/lang/:code", (c) => {
   return c.redirect(safeNext(c.req.query("back"), "/"));
 });
 
-publicRoutes.get("/privacy", (c) => {
-  const { t } = view(c);
-  const H = (th: string, en: string) => <h2>{t(th, en)}</h2>;
-  const P = (th: string, en: string) => <p>{t(th, en)}</p>;
-  const Li = (th: string, en: string) => <li>{t(th, en)}</li>;
-  return page(
-    c,
-    { title: t("ความเป็นส่วนตัว", "Privacy") },
-    <>
-      <h1>{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</h1>
-      <p class="muted">{t("ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) · ฉบับวันที่ 15 ตุลาคม 2569", "Under Thailand's Personal Data Protection Act 2019 (PDPA) · Version of 15 October 2026")}</p>
-
-      {H("ใครดูแลข้อมูลของคุณ", "Who looks after your data")}
-      {P(
-        "Jurrgun เป็นแอปอิสระสำหรับนัดเจอเพื่อนใหม่ในกรุงเทพฯ และปริมณฑล ดำเนินการโดยทีม Jurrgun ซึ่งเป็นผู้ควบคุมข้อมูลส่วนบุคคล กรุงเทพมหานคร (กทม.) เป็นเจ้าภาพหลักและผู้กำกับดูแล เจ้าหน้าที่ กทม. ช่วยดูแลความปลอดภัยของชุมชนในฐานะทีมงาน",
-        "Jurrgun is an independent app for meeting new friends in Bangkok and the surrounding areas. It is run by the Jurrgun team, the data controller. The Bangkok Metropolitan Administration (BMA) is its main host and oversight body, and BMA staff help keep the community safe as part of the team.",
-      )}
-
-      {H("เราเก็บอะไร และเก็บไว้แยกกัน", "What we collect, kept in separate stores")}
-      <ul>
-        {Li("ข้อมูลบัญชี: ชื่อผู้ใช้ รหัสผ่าน (เก็บแบบแฮช ไม่เก็บรหัสจริง) และสถานะบัญชี", "Account: username, password (hashed, never stored as written) and account status.")}
-        {Li("ข้อมูลกิจกรรม: ชื่อเล่น เขต ภาษา ความสนใจ คำตอบในโปรไฟล์ กิจกรรมที่เข้าร่วม คนรู้จัก และแชต", "Social: nickname, district, languages, interests, profile answers, events you join, connections and chats.")}
-        {Li("ข้อมูลวิจัยเมือง (City Pulse): เก็บด้วยรหัสวิจัยแทนตัวตน ใช้เฉพาะเมื่อคุณยินยอม", "City research (City Pulse): stored under a research code instead of your identity, only if you agree.")}
-        {Li("ข้อมูลอ่อนไหว: สถานะความสัมพันธ์ เพศ อัตลักษณ์ทางเพศ รสนิยม และการตั้งค่าเปิดใจมากกว่าเพื่อน เก็บเมื่อคุณให้ความยินยอมโดยชัดแจ้งเท่านั้น", "Sensitive data: relationship status, gender, gender identity, orientation and Open to something more settings, kept only with your explicit consent.")}
-        {Li("แหล่งที่มาตอนสมัคร: ถ้าคุณเข้ามาจากลิงก์แคมเปญหรือพาร์ตเนอร์ เราจำชื่อลิงก์นั้นไว้ในคุกกี้ 30 วัน บันทึกไว้กับบัญชีตอนสมัคร และนับเป็นภาพรวมเท่านั้น", "Sign-up source: if a campaign or partner link brought you here, we keep that link's name in a cookie for 30 days, save it with your account when you sign up, and count it only as totals.")}
-      </ul>
-
-      {H("เราใช้ข้อมูลเพื่ออะไร", "Why we use it")}
-      <ul>
-        {Li("ให้บริการ: จัดโต๊ะ บัดดี้ โต๊ะประจำ แชต และการเช็กอิน (ตามสัญญาการใช้บริการ)", "To run the service: seating tables, buddies, Regular Tables, chat and check-in (to provide the service you signed up for).")}
-        {Li("ความปลอดภัย: ตรวจรายงาน ป้องกันการคุกคามและการหลอกลวง (ประโยชน์โดยชอบด้วยกฎหมาย)", "Safety: reviewing reports, preventing harassment and scams (legitimate interest).")}
-        {Li("การแนะนำและการวิจัยเมือง: ใช้เมื่อคุณยินยอมเท่านั้น และถอนได้ทุกเมื่อ", "Suggestions and city research: only with your consent, which you can withdraw at any time.")}
-      </ul>
-
-      {H("ใครเห็นอะไร", "Who sees what")}
-      <ul>
-        {Li("สมาชิกคนอื่นเห็นโปรไฟล์ของคุณเมื่อได้เจอกันแล้วเท่านั้น และไม่มีใครค้นหาหรือเลื่อนดูคุณได้", "Other members see your profile only after you've met. Nobody can search or browse you.")}
-        {Li("ลิงก์โซเชียลในโปรไฟล์ของคุณ เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย และเฉพาะตอนที่คุณเปิดให้เห็น", "The social links on your profile are visible only to mutual connections, and only while you choose to show them.")}
-        {Li("ทีมงานและเจ้าหน้าที่ กทม. เห็นเฉพาะที่จำเป็นต่อความปลอดภัย เช่น สถานะบัญชีและรายงาน ไม่เห็นข้อมูลอ่อนไหว ตัวเลือกส่วนตัว หรือแชตของคุณ เว้นแต่ข้อความนั้นถูกรายงาน", "Our team and BMA staff see only what safety needs, such as account status and reports. They never see your sensitive data, private choices or chats, unless a message is reported.")}
-        {Li("กทม. ได้รับผล City Pulse เป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น ไม่ได้รับข้อมูลส่วนบุคคลของคุณ", "The BMA receives City Pulse only as totals from 10 or more people, never your personal data.")}
-        {Li("เราไม่ขายข้อมูล ไม่ใช้ตัวติดตามโฆษณา และไม่ส่งข้อมูลของคุณให้พาร์ตเนอร์", "We never sell data, use ad trackers or pass your data to partners.")}
-      </ul>
-
-      {H("เก็บไว้นานแค่ไหน", "How long we keep it")}
-      <ul>
-        {Li("ข้อมูลเปิดใจมากกว่าเพื่อน: ลบทันทีเมื่อกลับเป็นโหมดเพื่อน", "Open to something more details: deleted as soon as you switch back to friends only.")}
-        {Li("ตัวเลือกหลังกิจกรรมที่ไม่ตรงกัน: ลบเมื่อครบ 72 ชั่วโมง", "Post-event choices that weren't mutual: deleted after 72 hours.")}
-        {Li("บันทึกการเช็กอินและโต๊ะ: 12 เดือน แล้วเหลือเป็นภาพรวม", "Check-in and table records: 12 months, then kept only as totals.")}
-        {Li("คำตอบ City Pulse: 24 เดือน ภายใต้รหัสวิจัย", "City Pulse answers: 24 months under the research code.")}
-        {Li("บัญชีที่ปิดแล้ว: ซ่อนโปรไฟล์ทันที ลบถาวรหลัง 30 วัน", "Deactivated accounts: hidden at once, deleted after 30 days.")}
-      </ul>
-
-      {H("สิทธิของคุณ", "Your rights")}
-      {P(
-        "คุณขอดู ขอสำเนา แก้ไข ลบ ระงับการใช้ คัดค้าน หรือโอนย้ายข้อมูล และถอนความยินยอมได้ทุกเมื่อ ส่วนใหญ่ทำได้เองที่ ตั้งค่า → ศูนย์ความเป็นส่วนตัว (ดาวน์โหลดข้อมูล เปลี่ยนความยินยอม ปิดบัญชี) และคุณมีสิทธิร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.)",
-        "You can ask to see, copy, correct, delete, restrict, object to or move your data, and withdraw consent at any time. Most of this you can do yourself in Settings → Privacy Center (download your data, change consents, deactivate). You can also complain to Thailand's Personal Data Protection Committee (PDPC).",
-      )}
-
-      {H("ติดต่อเรื่องข้อมูลส่วนบุคคล", "Contact about your data")}
-      {P(
-        "ทีม Jurrgun ทำหน้าที่ดูแลข้อมูลส่วนบุคคล ติดต่อได้ผ่าน ตั้งค่า → ศูนย์ความเป็นส่วนตัว เราจะตอบภายใน 30 วัน",
-        "The Jurrgun team handles data protection. Contact us through Settings → Privacy Center, and we'll reply within 30 days.",
-      )}
-    </>,
-  );
-});
-
 publicRoutes.get("/code-of-conduct", (c) => {
   const { t } = view(c);
   const rules: [string, string][] = [
@@ -300,19 +233,6 @@ publicRoutes.get("/code-of-conduct", (c) => {
       <ul>{ghosting.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
       <h2 id="fair-process">{t("ยุติธรรมและตรวจสอบได้", "Fair and accountable")}</h2>
       <ul>{FAIR_PROCESS.map(([th, en]) => <li>{t(th, en)}</li>)}</ul>
-    </>,
-  );
-});
-
-publicRoutes.get("/terms", (c) => {
-  const { t } = view(c);
-  return page(
-    c,
-    { title: t("ข้อกำหนด", "Terms") },
-    <>
-      <h1>{t("ข้อกำหนดการใช้งาน (ฉบับร่างต้นแบบ)", "Terms of use (prototype draft)")}</h1>
-      <p>{t("บริการนี้เป็นต้นแบบเพื่อการทดสอบ สำหรับผู้ที่อายุ 18 ปีขึ้นไปและอยู่ในหรือรอบ ๆ กรุงเทพฯ รวมถึงคนที่มาพักอยู่ช่วงหนึ่ง อย่าใช้ข้อมูลส่วนตัวจริงระหว่างการทดสอบ", "This is a test prototype for adults (18+) in and around Bangkok, including people staying for a while. Please don't use real personal data during testing.")}</p>
-      <p>{t("กิจกรรมที่มีค่าใช้จ่าย ให้ชำระเงินนอกแอปที่สถานที่จัดกิจกรรม", "Paid events are paid off-platform, at the venue.")}</p>
     </>,
   );
 });

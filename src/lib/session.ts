@@ -17,7 +17,7 @@ import type { AppEnv } from "./env";
 import { langFromHeader, pickLang } from "./i18n";
 
 export const SESSION_COOKIE = "bkk_sid";
-const SESSION_DAYS = 30;
+export const SESSION_DAYS = 30;
 
 export async function startSession(c: Context<AppEnv>, accountId: string): Promise<void> {
   const token = randomToken();

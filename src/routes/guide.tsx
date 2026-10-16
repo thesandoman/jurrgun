@@ -93,7 +93,8 @@ guideRoutes.get("/guide", requireMember, async (c) => {
       <FlowStep emoji="🛡️" title={t("ความปลอดภัย", "Safety")}>
         <Tips tips={SAFETY} t={t} />
         <p class="muted">
-          <a href="/safety">{t("เปิดหน้าปลอดภัยไว้ก่อน", "Open the Safety net")}</a>
+          <a href="/safety">{t("เปิดหน้าปลอดภัยไว้ก่อน", "Open the Safety net")}</a> ·{" "}
+          <a href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>
         </p>
       </FlowStep>
       <FlowStep emoji="💬" title={t("การสื่อสาร", "Communication")}>

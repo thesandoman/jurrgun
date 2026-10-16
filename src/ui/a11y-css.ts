@@ -918,4 +918,24 @@ main .me-stat-sub{padding:0;background:none;font-weight:600}
 .card>:is(h2,h3):first-child{margin-top:0}
 /* "All details" closing an open section needs no line of its own: the next section's line follows. */
 main .open-sec>details.how:last-child{border-bottom:0}
+/* Privacy notice, Terms, How we keep you safe, consent centre: open sections on a flat page,
+   hairlines between rows instead of cards, a readable line length, 44px link rows. */
+.policy{max-width:68ch}
+.policy h2{margin:32px 0 8px;font-size:1.15rem}
+.policy ul{padding-left:20px;margin:0 0 12px}
+.policy li{margin:0 0 8px}
+.policy ul.policy-rows{list-style:none;padding:0;border-top:1px solid var(--line)}
+.policy-rows li{display:grid;gap:2px;margin:0;padding:12px 0;border-bottom:1px solid var(--line)}
+.policy-rows small{color:var(--ink-2)}
+.policy-rows code{font-size:.9rem;overflow-wrap:anywhere}
+.policy-links{display:flex;flex-wrap:wrap;gap:0 16px;margin:12px 0}
+.policy-links a{display:inline-flex;align-items:center;min-height:44px}
+.policy-contact{font-weight:600}
+.safe-how section{padding:12px 0;border-bottom:1px solid var(--line)}
+.safe-how section h2{margin:0 0 4px}
+.safe-how section p{margin:0}
+.consent-centre form{display:grid;gap:0;margin:0 0 16px}
+.consent-centre form>.toggle{margin:0;padding:12px 0;border-bottom:1px solid var(--line)}
+.consent-centre form>.btn{margin-top:16px;justify-self:start}
+.consent-row small a{display:inline-flex;align-items:center;min-height:44px}
 `);
