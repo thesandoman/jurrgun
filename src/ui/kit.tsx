@@ -594,7 +594,7 @@ export function pageOf(raw: string | undefined, size: number): { page: number; o
 }
 
 /**
- * "Showing 51–100 of 142" with Previous / Next links for a server-paged
+ * "Showing 51 to 100 of 142" with Previous / Next links for a server-paged
  * table. `href(n)` builds the link to page n, keeping the page's filters.
  */
 export function Pager(props: { t: T; label: string; page: number; size: number; shown: number; total: number; href: (page: number) => string }) {

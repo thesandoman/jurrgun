@@ -337,7 +337,7 @@ body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 .tfilter label{font-weight:600;font-size:.92rem}
 .tfilter input{max-width:360px;flex:1 1 220px}
 .tfilter small{color:var(--ink-2)}
-/* Server-paged tables: "Showing 51–100 of 142" and Previous / Next. */
+/* Server-paged tables: "Showing 51 to 100 of 142" and Previous / Next. */
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:10px 0}
 .pager p{margin:0;color:var(--ink-2)}
 /* A heading that's an h2 for the outline but sized like an h3. */
