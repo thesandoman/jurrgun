@@ -667,6 +667,40 @@ export const loginAttempts = pgTable(
   (t) => [index("identity_login_attempts_user_idx").on(t.username, t.createdAt), index("identity_login_attempts_ip_idx").on(t.ipHash, t.createdAt)],
 );
 
+/**
+ * An email address a member signs in with (src/services/email-code.ts). Only
+ * a keyed SHA-256 of the lower-cased, trimmed address is stored: there is no
+ * copy of the address itself, so neither staff nor the member can read it back.
+ */
+export const emailLinks = pgTable(
+  "identity_email_links",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    emailHash: text("email_hash").notNull(),
+    verifiedAt: ts("verified_at"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("identity_email_links_hash_idx").on(t.emailHash), index("identity_email_links_account_idx").on(t.accountId)],
+);
+
+/** One-time 6-digit codes, sent by email. The code is stored only as an HMAC; rows go after 24 hours. */
+export const loginCodes = pgTable(
+  "identity_login_codes",
+  {
+    id: text("id").primaryKey(),
+    emailHash: text("email_hash").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: ts("expires_at").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    usedAt: ts("used_at"),
+    /** SHA-256 of the client IP, as in identity_login_attempts. */
+    ipHash: text("ip_hash").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("identity_login_codes_email_idx").on(t.emailHash, t.createdAt), index("identity_login_codes_ip_idx").on(t.ipHash, t.createdAt)],
+);
+
 // ----------------------------------------------------------- Bangkok Buddy --
 // docs/BANGKOK-BUDDY.md. One buddy at a time, matched on Bangkok Type and
 // districts; weekly quests at real places stamp a shared 50-district passport.

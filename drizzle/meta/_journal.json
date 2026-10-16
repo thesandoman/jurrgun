@@ -148,6 +148,13 @@
       "when": 1792145552276,
       "tag": "0020_woozy_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792145682197,
+      "tag": "0021_email_sign_in",
+      "breakpoints": true
     }
   ]
 }

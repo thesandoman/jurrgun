@@ -265,5 +265,16 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"social_registrations\" ADD COLUMN \"eta_status\" text;",
       "ALTER TABLE \"social_registrations\" ADD COLUMN \"eta_at\" timestamp with time zone;"
     ]
+  },
+  {
+    "id": "0021_email_sign_in",
+    "statements": [
+      "CREATE TABLE \"identity_email_links\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"email_hash\" text NOT NULL,\n\t\"verified_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"identity_login_codes\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"email_hash\" text NOT NULL,\n\t\"code_hash\" text NOT NULL,\n\t\"expires_at\" timestamp with time zone NOT NULL,\n\t\"attempts\" integer DEFAULT 0 NOT NULL,\n\t\"used_at\" timestamp with time zone,\n\t\"ip_hash\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE UNIQUE INDEX \"identity_email_links_hash_idx\" ON \"identity_email_links\" (\"email_hash\");",
+      "CREATE INDEX \"identity_email_links_account_idx\" ON \"identity_email_links\" (\"account_id\");",
+      "CREATE INDEX \"identity_login_codes_email_idx\" ON \"identity_login_codes\" (\"email_hash\",\"created_at\");",
+      "CREATE INDEX \"identity_login_codes_ip_idx\" ON \"identity_login_codes\" (\"ip_hash\",\"created_at\");"
+    ]
   }
 ];
