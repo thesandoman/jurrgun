@@ -94,7 +94,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
       { id: newId(), ...pair(me.id, c.id), level: "activity", eventId: ev2 },
     ]);
     const html = await (await req("/settings", { cookie: `${me.cookie}; lang=en` })).text();
-    expect(html).toMatch(/<b>3<\/b><small>My people<\/small><small class="me-stat-sub">across 2 crews<\/small>/);
+    expect(html).toMatch(/<b>3<\/b><small>My people<\/small><small class="me-stat-sub">met at 2 events<\/small>/);
   });
 
   it("shows my numbers and nudges what my profile is missing", async () => {

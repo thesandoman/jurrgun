@@ -111,7 +111,7 @@ fieldset{border:none;padding:0;margin:14px 0}
 .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .pill{position:relative}
 .pill input{position:absolute;opacity:0;inset:0}
-.pill span{display:inline-block;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-height:40px;font-size:.92rem}
+.pill span{display:inline-block;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-height:44px;font-size:.92rem}
 .pill input:checked+span{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
 .pill input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent)}
 .toggle{display:flex;gap:10px;align-items:flex-start;margin:10px 0;cursor:pointer}
@@ -226,7 +226,7 @@ main.wrap{animation:page-in .22s ease both}
 body.bare{padding-bottom:0}
 body.bare .foot{display:none}
 details.info{display:inline-block;background:none;border:none;padding:0;margin:0 0 6px;vertical-align:middle}
-details.info summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border-radius:999px;color:var(--brand);font-weight:600;font-size:1rem}
+details.info summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border-radius:999px;color:var(--brand);font-weight:600;font-size:1rem}
 details.info summary::-webkit-details-marker{display:none}
 details.info[open]{display:block;background:var(--brand-soft);border-radius:12px;padding:6px 12px 10px}
 details.info div{font-size:.9rem;color:var(--ink-2)}
@@ -235,7 +235,7 @@ details.info div{font-size:.9rem;color:var(--ink-2)}
 .flow-top{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
 .flow-progress{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
 .flow-progress i{display:block;height:100%;background:var(--brand);border-radius:3px;transition:width .3s ease}
-.flow-close{text-decoration:none;color:var(--ink-3);font-size:1.1rem;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px}
+.flow-close{text-decoration:none;color:var(--ink-3);font-size:1.1rem;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px}
 .flow-steps{flex:1}
 .flow-step{padding-bottom:18px}
 .flow:not(.is-js) .flow-step+.flow-step{border-top:1px solid var(--line);padding-top:12px}
@@ -250,7 +250,7 @@ details.info div{font-size:.9rem;color:var(--ink-2)}
 body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 .flow-bar .flow-next,.flow-bar>.btn:first-child{flex:1}
 .flow-bar .flow-back{min-width:52px;font-size:1.2rem}
-.flow-bar .skip{flex-basis:100%;background:none;border:none;color:var(--ink-3);font:inherit;font-size:.9rem;min-height:40px;cursor:pointer;text-decoration:underline}
+.flow-bar .skip{flex-basis:100%;background:none;border:none;color:var(--ink-3);font:inherit;font-size:.9rem;min-height:44px;cursor:pointer;text-decoration:underline}
 .btn.is-busy{opacity:.7}
 .flow-step.in-f{animation:slide-f .26s cubic-bezier(.2,.8,.2,1) both}
 .flow-step.in-b{animation:slide-b .26s cubic-bezier(.2,.8,.2,1) both}
@@ -468,7 +468,7 @@ body:has(.tabbar) .topbar .a11y-panel{max-height:calc(100dvh - 200px - env(safe-
 /* Notifications dropdown (src/ui/notif-menu.tsx) */
 .notif{position:relative;display:inline-block;background:none;border:0;padding:0;margin:0;border-radius:0}
 .topbar .notif{position:static}
-.notif>summary{list-style:none;cursor:pointer;color:inherit;font-weight:400;position:relative;display:inline-grid;place-items:center;min-width:40px;min-height:40px;border-radius:999px;font-size:1.1rem}
+.notif>summary{list-style:none;cursor:pointer;color:inherit;font-weight:400;position:relative;display:inline-grid;place-items:center;min-width:44px;min-height:44px;border-radius:999px;font-size:1.1rem}
 .notif>summary::-webkit-details-marker{display:none}
 .notif-dot{position:absolute;top:2px;right:0;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--lime);color:var(--deep);font-size:.68rem;font-weight:800;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--deep)}
 .notif-panel{position:absolute;right:12px;top:calc(100% + 6px);z-index:40;width:min(360px,calc(100vw - 24px));padding:12px;border-radius:20px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.28);text-align:left;font-size:.95rem;max-height:calc(100dvh - 120px);overflow-y:auto;overscroll-behavior:contain}
@@ -502,7 +502,7 @@ main.wrap{padding-inline:var(--gx)}
 /* Segmented control (This week / Weekend…, Map / List) */
 .seg{display:flex;gap:2px;padding:4px;margin:12px 0;border-radius:14px;background:color-mix(in srgb,var(--river) 10%,var(--surface-2));overflow-x:auto;scrollbar-width:none}
 .seg::-webkit-scrollbar{display:none}
-.seg a{flex:1 1 0;text-align:center;line-height:1.2;padding:8px 10px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:11px;color:var(--ink-2);text-decoration:none;font-size:.9rem;font-weight:500}
+.seg a{flex:1 1 0;text-align:center;line-height:1.2;padding:8px 10px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:11px;color:var(--ink-2);text-decoration:none;font-size:.9rem;font-weight:500}
 .seg.views a{flex:0 0 auto;white-space:nowrap;padding-inline:16px}
 .seg a.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(14,36,51,.14)}
 .seg-row{display:flex;flex-wrap:wrap;gap:0 10px;align-items:center}
@@ -612,7 +612,7 @@ main.wrap>.ev-scene:first-child{margin-top:-26px}
 .a11y-row input:checked::after{transform:translateX(18px)}
 .a11y-row input:focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:2px}
 .a11y-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:8px;border-top:1px solid var(--line)}
-.a11y-reset{min-height:40px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.a11y-reset{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
 /* On the map the button matches the other floating buttons */
 .fd-top .a11y>summary{width:var(--top-h);height:var(--top-h);border-radius:16px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow)}
 .fd-top .a11y[open]>summary{background:var(--brand);color:var(--brand-ink)}

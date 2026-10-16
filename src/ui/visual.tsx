@@ -209,7 +209,7 @@ a.tile2:active{transform:scale(.98)}
 .fan{overflow:visible;contain:layout}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .acts form{margin:0}
-.acts .btn{min-height:40px;padding:0 14px;font-size:.9rem}
+.acts .btn{min-height:44px;padding:0 14px;font-size:.9rem}
 .glass-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);color:inherit;text-decoration:none;font-weight:700;font-size:.88rem}
 .glass-btn:hover{background:rgba(255,255,255,.26)}
 .type-hero2 .tile2{min-height:260px;text-align:left}

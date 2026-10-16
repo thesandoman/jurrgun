@@ -556,7 +556,7 @@ export const PROFILE_FORM_CSS = `
 .pf-photo{display:grid;gap:10px}
 .pf-photo img{width:100%;max-height:260px;object-fit:cover;border-radius:16px}
 .pf-prompt-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
-.pf-shuffle{min-height:40px;padding:6px 14px;font-size:.9rem}
+.pf-shuffle{min-height:44px;padding:6px 14px;font-size:.9rem}
 .pf-clear{font-size:.86rem;color:var(--ink-3);display:flex;gap:6px;align-items:center}
 .pf-photo-main{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .pf-photo-main img,.pf-photo-main .pf-initial{width:96px;height:96px;border-radius:28px;object-fit:cover}

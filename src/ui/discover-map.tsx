@@ -529,7 +529,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(183,247,207,0)}100%{box-shadow:0 0 0 0 rgba(183,247,207,0)}}
 /* filters chip + panel */
 .fd-filters{background:none;border:0;padding:0;margin:0;border-radius:0;position:fixed;z-index:9;left:12px;top:calc(var(--tk-h) + var(--top-h) + 64px + var(--gap) * 3)}
-.fd-filters>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:600;font-size:.88rem;cursor:pointer;box-shadow:var(--shadow);position:relative}
+.fd-filters>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:600;font-size:.88rem;cursor:pointer;box-shadow:var(--shadow);position:relative}
 .fd-filters>summary::-webkit-details-marker{display:none}
 .fd-dot{position:absolute;top:4px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold)}
 .fd-filters[open]>summary{background:var(--fresh);color:#04210f}

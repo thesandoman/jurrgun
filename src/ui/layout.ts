@@ -21,7 +21,7 @@ html.a11y-touch input[type=checkbox],html.a11y-touch input[type=radio]{width:26p
   body.fullmap-body .tabbar{left:50%;right:auto;width:560px;transform:translateX(-50%)}
   .topbar{gap:16px}
   .top-nav{display:flex;align-items:center;gap:4px;margin:0 auto;padding:5px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
-  .top-nav a{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 16px;border-radius:999px;color:color-mix(in srgb,var(--on-deep) 82%,transparent);text-decoration:none;font-weight:600;font-size:.95rem;white-space:nowrap;transition:background-color .2s ease,color .2s ease,transform .15s ease}
+  .top-nav a{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 16px;border-radius:999px;color:color-mix(in srgb,var(--on-deep) 82%,transparent);text-decoration:none;font-weight:600;font-size:.95rem;white-space:nowrap;transition:background-color .2s ease,color .2s ease,transform .15s ease}
   .top-nav a:hover{background:rgba(255,255,255,.1);color:var(--on-deep)}
   .top-nav a span{display:inline-grid;place-items:center}
   .top-nav a span svg{width:18px;height:18px}

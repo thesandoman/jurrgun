@@ -31,7 +31,7 @@ details.how[open]>summary::after,.filters[open]>summary::after,details.card[open
 details.how{border-radius:18px}
 /* text links inside the app read as taps, not web links */
 main a:not(.btn):not(.card):not(.tile):not(.tile2):not(.place-card):not(.feature){text-decoration:none;font-weight:600}
-.spread>a:first-child:not(.btn){display:inline-flex;align-items:center;min-height:40px}
+.spread>a:first-child:not(.btn){display:inline-flex;align-items:center;min-height:44px}
 /* inputs: filled, soft, 16px so iOS doesn't zoom */
 input[type=text],input[type=password],input[type=date],input[type=datetime-local],input[type=number],input[type=search],input[type=url],input[type=email],select,textarea{background:var(--surface-2);border-color:transparent;font-size:16px}
 input:focus,select:focus,textarea:focus{background:var(--surface);border-color:var(--brand)}
@@ -49,7 +49,7 @@ body:has(.tabbar) .foot{display:none}
 .card{box-shadow:0 1px 2px rgba(6,40,22,.05),0 8px 24px rgba(6,40,22,.06)}
 /* floating Map ⇄ Cards switch on Discover */
 .view-switch{position:fixed;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(118px + env(safe-area-inset-bottom));display:flex;padding:4px;border-radius:999px;background:var(--deep,#06492a);border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 26px rgba(4,40,22,.35)}
-.view-switch a{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 16px;border-radius:999px;color:var(--on-deep,#fff);text-decoration:none;font-weight:700;font-size:.92rem;white-space:nowrap}
+.view-switch a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 16px;border-radius:999px;color:var(--on-deep,#fff);text-decoration:none;font-weight:700;font-size:.92rem;white-space:nowrap}
 .view-switch a.on{background:var(--lime);color:var(--deep,#06492a)}
 .fullmap .view-switch{bottom:calc(var(--tab-h) + var(--sheet-h) + 14px)}
 .fullmap .svm-key{bottom:calc(var(--tab-h) + var(--sheet-h) + 70px)}

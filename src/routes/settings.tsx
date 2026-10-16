@@ -281,7 +281,7 @@ settingsRoutes.get("/settings", async (c) => {
           emoji: "🤝",
           n: Number(circle?.n ?? 0),
           label: t("คนรู้จักของฉัน", "My people"),
-          sub: crews > 0 ? t(`จาก ${crews} กิจกรรม`, `across ${crews} ${crews === 1 ? "crew" : "crews"}`) : undefined,
+          sub: crews > 0 ? t(`จาก ${crews} กิจกรรม`, `met at ${crews} ${crews === 1 ? "event" : "events"}`) : undefined,
           href: "/connections",
           tint: "teal",
         },

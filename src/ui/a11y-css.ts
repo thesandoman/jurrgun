@@ -58,7 +58,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 
 /* Tap targets at least 24px tall (2.5.8, WCAG 2.2 AA). */
 .foot a{display:inline-flex;align-items:center;min-height:32px}
-.row>a:not(.btn),.spread>a:not(.btn),h2>a,.me-group a,.tk-item{display:inline-flex;align-items:center;min-height:32px}
+.row>a:not(.btn),.spread>a:not(.btn),h2>a,.me-group a,.tk-item{display:inline-flex;align-items:center;min-height:44px}
 /* Links inside text keep their line, but get a taller tap area. */
 :where(main,.fd-sheet) :where(a:not(.btn,.card,.tile,.tile2)){padding-block:4px}
 
@@ -108,7 +108,7 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 .pronoun-picks{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 14px}
 .pronoun-picks [aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
 .pronoun-picks [aria-pressed="true"]::before{content:"✓ "}
-.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:32px;padding:2px 10px;border-radius:999px;background:var(--gold-soft);color:var(--warn);font-size:.75rem;font-weight:700;white-space:nowrap}
+.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:2px 10px;border-radius:999px;background:var(--gold-soft);color:var(--warn);font-size:.75rem;font-weight:700;white-space:nowrap}
 .proto-chip>summary::-webkit-details-marker{display:none}
 .proto-chip>p{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:min(260px,70vw);margin:0;padding:10px 12px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:.86rem;box-shadow:0 10px 26px rgba(0,0,0,.18);border:1px solid var(--line)}
 /* Readability: 17px body text, and taller lines for Thai so stacked marks never touch. */
@@ -126,7 +126,7 @@ html[lang="th"] body{line-height:1.7}
 /* Profile edit: sticky section shortcuts under the header; sections land below them. */
 .pf-jump{position:sticky;top:calc(56px + env(safe-area-inset-top,0px));z-index:4;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 calc(-1 * var(--gx,20px)) 8px;padding:8px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line)}
 .pf-jump::-webkit-scrollbar{display:none}
-.pf-jump a{flex:none;display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:.9rem;text-decoration:none;white-space:nowrap}
+.pf-jump a{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:.9rem;text-decoration:none;white-space:nowrap}
 .pf-section{scroll-margin-top:130px}
 @media (min-width:1024px){.pf-jump{top:72px}}
 
@@ -153,6 +153,19 @@ main nav.me-stats{grid-template-columns:repeat(2,1fr)}
 @media (min-width:680px){main nav.me-stats{grid-template-columns:repeat(4,1fr)}}
 /* Public profile on laptops: three wider fact columns instead of five narrow ones. */
 @media (min-width:900px){.pc-facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Tap targets: 44px on member pages (house rule, beyond WCAG 2.2's 24px floor). */
+.topbar summary,.topbar .chip,.proto-chip>summary,.topbar .brand{min-height:44px}
+.topbar summary{min-width:44px}
+.topbar .chip{display:inline-flex;align-items:center}
+main .btn,.chip-btn,.glass-btn,.pf-jump a,.view-switch a,.seg a,.a11y-reset{min-height:44px}
+.seg a{display:inline-flex;align-items:center;justify-content:center}
+/* Titles and heading links that open something (not links inside a sentence). */
+main :is(h2,h3)>a,.me-h a,.me-todo a,.me-type>a,main h2.spread>a{display:inline-flex;align-items:center;min-height:44px}
+.thanks-starters button,.chat-starters button{min-height:44px}
+main details>summary{min-height:44px;display:flex;align-items:center}
+.me-peek,.me-lang a{display:inline-flex;align-items:center;min-height:44px}
+.passport-card>a,details.how li>a,.safety-row>a{display:inline-flex;align-items:center;min-height:44px}
 
 /* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
 .flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
