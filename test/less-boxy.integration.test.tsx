@@ -9,6 +9,7 @@ import { newId, randomToken } from "../src/lib/crypto";
 import { A11Y_CSS } from "../src/ui/a11y-css";
 import { IcebreakerCard } from "../src/ui/icebreakers";
 import { PROFILE_CSS } from "../src/ui/profile-card";
+import { Notice } from "../src/ui/kit";
 
 const v = { lang: "en" as const, t: (_th: string, en: string) => en, user: null, path: "/" };
 const rule = (css: string, sel: string) => css.slice(css.indexOf(sel), css.indexOf("}", css.indexOf(sel)) + 1);
@@ -41,6 +42,21 @@ describe("open sections", () => {
       expect(r, sel).not.toMatch(/background|box-shadow|border-radius/);
     }
     expect(rule(PROFILE_CSS, ".pc-dating{")).not.toContain("background");
+  });
+});
+
+describe("no boxes inside boxes", () => {
+  it("fact tiles, icebreakers and info notes have no tinted tile behind them", () => {
+    expect(rule(A11Y_CSS, ".fact-tile{position:relative")).toContain("background:none");
+    expect(A11Y_CSS).not.toContain(".type-facts .fact-tile{background");
+    expect(rule(A11Y_CSS, ".ice-list li{padding")).toContain("background:none");
+    expect(rule(A11Y_CSS, ".notice.info{")).toContain("background:none");
+  });
+
+  it("an info note is one line led by an icon; status notes keep their plain text", () => {
+    expect(String(<Notice>Draft</Notice>)).toBe('<div class="notice info" role="status"><span class="notice-ico" aria-hidden="true">ℹ️</span><span class="notice-text">Draft</span></div>');
+    expect(String(<Notice icon="🔒">Private</Notice>)).toContain('<span class="notice-ico" aria-hidden="true">🔒</span><span class="notice-text">Private</span>');
+    expect(String(<Notice kind="error">Oops</Notice>)).toBe('<div class="notice error" role="alert">Oops</div>');
   });
 });
 

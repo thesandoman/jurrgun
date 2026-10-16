@@ -642,8 +642,6 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 .fact-tile .ft-sub{font-size:.82rem;line-height:1.35;color:var(--ink-2)}
 .fact-tile .ft-sub .seats{margin:4px 0 0}
 .pc-group-h+.fact-tiles{margin-top:8px}
-/* Tiles straight on the page (the quiz result) get the card surface and an edge. */
-.type-facts .fact-tile{background:var(--surface);border:1px solid var(--line)}
 /* The type facts are sentences: one per row on phones, three across from 720px. */
 @media (min-width:720px){.type-facts[data-cols] .ft-wide{grid-column:auto}}
 /* B2 Sheet (src/ui/sheet.tsx): a bottom sheet on phones, a popover by its trigger on laptops. */
@@ -879,4 +877,25 @@ main .me-stats{margin:16px 0}
 /* A person's profile: "Together", "Where you've met" and their links follow the profile's own open sections. */
 .pc+.open-sec{margin-top:0}
 .open-sec.together .eyebrow{display:block;margin-bottom:4px}
+/* 3. No boxes inside boxes. Fact tiles are plain icon and text rows (no tile), still two columns on
+   phones, a lone fact across the row; the icon hangs in its own 24px column. */
+.fact-tiles{gap:12px 16px}
+.fact-tile{position:relative;padding:0 0 0 28px;border-radius:0;background:none}
+.fact-tile .ft-i{position:absolute;left:0;top:0;width:24px;margin:0;text-align:center}
+.fact-tile dt{color:var(--ink-2)}
+/* Icebreakers: a simple list, a thin line between questions instead of a pill each. */
+.ice-list{gap:0}
+.ice-list li{padding:8px 0;border-radius:0;background:none}
+.ice-list li+li{border-top:1px solid var(--line)}
+/* Info notes: one quiet line with an icon, no tinted box. Ok, warn and error keep their colour (status). */
+.notice.info{display:flex;align-items:flex-start;gap:8px;padding:0;border-radius:0;background:none;color:var(--ink-2)}
+.notice-ico{flex:none;width:20px;text-align:center}
+.notice-text{min-width:0}
+.safe-line{padding:0;border-radius:0;background:none;color:var(--ink-2)}
+/* Event details: the quick facts are a plain line of icon and text, and "All details" is a row between lines. */
+.open-sec .chips2{gap:4px 16px}
+.open-sec .chips2 span{padding:0;border-radius:0;background:none;font-size:.9rem;font-weight:600;color:var(--ink-2)}
+main .open-sec details.how{margin:8px 0 0;padding:0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;background:none;box-shadow:none}
+/* Me: the "from N events" breakdown under a number is plain small text, not a pill. */
+main .me-stat-sub{padding:0;background:none;font-weight:600}
 `);

@@ -99,7 +99,7 @@ function Sources(props: { sources: Source[]; lang: Lang }) {
 function BlockView(props: { block: Block; lang: Lang }) {
   const { block, lang } = props;
   if (block.kind === "p") return <p>{L(lang, block.text)}</p>;
-  if (block.kind === "tip") return <Notice kind="info">💡 {L(lang, block.text)}</Notice>;
+  if (block.kind === "tip") return <Notice kind="info" icon="💡">{L(lang, block.text)}</Notice>;
   if (block.kind === "link")
     return (
       <p>
@@ -207,8 +207,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
           </li>
         ))}
       </ul>
-      <Notice kind="info">
-        💡{" "}
+      <Notice kind="info" icon="💡">
         {t(
           "ไทป์เป็นเรื่องสนุกไว้ชวนคุย ไม่มีไทป์ไหนดีกว่ากัน และเราไม่เคยใช้ไทป์เพื่อซ่อนหรือคัดใครออก ไทป์ของคุณเป็นความลับจนกว่าคุณจะเลือกแสดง",
           "Types are for fun and conversation. No type is better, and they're never used to hide or exclude anyone. Yours stays private unless you choose to show it.",

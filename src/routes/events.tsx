@@ -1155,9 +1155,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review: members can't see this yet")}</Notice> : null}
       {event.status === "rejected" ? <Notice kind="warn">{t("ทีมงานส่งกลับให้แก้ไข", "Sent back by the team for changes")}{event.reviewNote ? `: ${event.reviewNote}` : ""}</Notice> : null}
       {event.visibility === "private" && event.regularTableId ? (
-        <Notice kind="info">🔒 {t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A Regular Table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
+        <Notice kind="info" icon="🔒">{t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A Regular Table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
       ) : event.visibility === "private" ? (
-        <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
+        <Notice kind="info" icon="🔒">{t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
       ) : null}
       <DayStatusLine t={t} lang={lang} shown={dayStatus} />
       {going && dayOf && !reg!.checkedInAt ? <EtaBox t={t} eventId={event.id} current={shownEta(event, reg!, now)} next={`/events/${event.id}`} /> : null}

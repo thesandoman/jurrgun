@@ -334,10 +334,24 @@ function AdminNav(props: { v: View }) {
 
 // ------------------------------------------------------------ components --
 
-export function Notice(props: { kind?: "ok" | "error" | "info" | "warn"; class?: string; children: Child }) {
+/**
+ * A message. Info notes are one quiet line led by an icon (ℹ️ unless `icon` says otherwise), not a
+ * tinted box (owner, 2026-10-16); ok, warn and error keep their colour because they are status.
+ */
+export function Notice(props: { kind?: "ok" | "error" | "info" | "warn"; class?: string; icon?: Child; children: Child }) {
+  const kind = props.kind ?? "info";
   return (
-    <div class={`notice ${props.kind ?? "info"}${props.class ? ` ${props.class}` : ""}`} role={props.kind === "error" ? "alert" : "status"}>
-      {props.children}
+    <div class={`notice ${kind}${props.class ? ` ${props.class}` : ""}`} role={kind === "error" ? "alert" : "status"}>
+      {kind === "info" || props.icon ? (
+        <>
+          <span class="notice-ico" aria-hidden="true">
+            {props.icon ?? "ℹ️"}
+          </span>
+          <span class="notice-text">{props.children}</span>
+        </>
+      ) : (
+        props.children
+      )}
     </div>
   );
 }
