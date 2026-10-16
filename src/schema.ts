@@ -411,6 +411,27 @@ export const connections = pgTable(
   ],
 );
 
+/**
+ * Social links on a member's own profile (owner, 2026-10-16): Instagram, Facebook, LinkedIn,
+ * TikTok, X, Threads, a website or a link. Shown only to mutual connections, and only while the
+ * member's "show my links to my people" consent (category profile_links) is on. LINE stays in the
+ * per-person contact share. One row per network.
+ */
+export const profileLinks = pgTable(
+  "social_profile_links",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    /** instagram | facebook | linkedin | tiktok | x | threads | website | link */
+    network: text("network").notNull(),
+    /** Normalised handle or https URL. */
+    value: text("value").notNull(),
+    createdAt: created(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("social_profile_links_account_network_idx").on(t.accountId, t.network)],
+);
+
 export const contactShares = pgTable(
   "social_contact_shares",
   {

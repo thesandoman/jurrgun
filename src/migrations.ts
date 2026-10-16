@@ -276,5 +276,12 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"identity_login_codes_email_idx\" ON \"identity_login_codes\" (\"email_hash\",\"created_at\");",
       "CREATE INDEX \"identity_login_codes_ip_idx\" ON \"identity_login_codes\" (\"ip_hash\",\"created_at\");"
     ]
+  },
+  {
+    "id": "0022_profile_links",
+    "statements": [
+      "CREATE TABLE \"social_profile_links\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"network\" text NOT NULL,\n\t\"value\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE UNIQUE INDEX \"social_profile_links_account_network_idx\" ON \"social_profile_links\" (\"account_id\",\"network\");"
+    ]
   }
 ];
