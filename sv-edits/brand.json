@@ -1,0 +1,74 @@
+{
+ "name": "Jurrgun",
+ "name_th": "เจอกัน",
+ "promise_th": "กลุ่มเล็ก สถานที่จริง แล้วเจอกันนะ",
+ "promise_en": "Small groups. Real Bangkok places. See you there.",
+ "cta_th": "เริ่มต้น",
+ "cta_en": "Get started",
+ "endorse_th": "แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล",
+ "endorse_en": "An independent app, hosted and overseen by the Bangkok Metropolitan Administration",
+ "url": "jurrgun.apps.sv-academy.org",
+ "colors": [
+  {
+   "role": "accent",
+   "name": "Jurrgun green",
+   "hex": "#137f45",
+   "source": "src/ui/brand.tsx:26"
+  },
+  {
+   "role": "background",
+   "name": "Cream",
+   "hex": "#fff9f0",
+   "source": "src/ui/warm.ts:13"
+  },
+  {
+   "role": "ink",
+   "name": "Ink",
+   "hex": "#1e2b22",
+   "source": "src/ui/warm.ts:14"
+  },
+  {
+   "role": "soft",
+   "name": "Mango",
+   "hex": "#ffb443",
+   "source": "src/ui/warm.ts:16"
+  },
+  {
+   "role": "soft",
+   "name": "Coral",
+   "hex": "#ff7a5c",
+   "source": "src/ui/warm.ts:16"
+  },
+  {
+   "role": "soft",
+   "name": "Fresh green",
+   "hex": "#2fb866",
+   "source": "src/ui/warm.ts:15"
+  },
+  {
+   "role": "accent",
+   "name": "Love red (💘 opt-in only)",
+   "hex": "#e23744",
+   "source": "src/ui/styles.ts:20"
+  }
+ ],
+ "fonts": [
+  {
+   "role": "display",
+   "family": "Sao Chingcha",
+   "source": "design/fonts/README.md; BMA font files",
+   "installed": "private font folder ~/.sv-edits/fonthome/jurrgun"
+  },
+  {
+   "role": "body",
+   "family": "Anuphan",
+   "source": "design/fonts/README.md; BMA font files",
+   "installed": "private font folder ~/.sv-edits/fonthome/jurrgun"
+  }
+ ],
+ "logo": {
+  "kind": "component",
+  "file": "sv-edits/logo-source.svg",
+  "source": "src/ui/brand.tsx:26"
+ }
+}

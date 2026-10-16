@@ -1,0 +1,8 @@
+scenes/
+scenes-relit/
+scenes-new/
+fonts/
+*.log
+*.blend
+*.blend1
+scenes-collage-v1.png
