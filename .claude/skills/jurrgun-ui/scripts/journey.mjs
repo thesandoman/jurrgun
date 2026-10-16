@@ -55,6 +55,8 @@ for (let step = 0; step < 80; step++) {
       const need=Math.max(+(st.dataset.need||0),0);[...st.querySelectorAll('input[type=checkbox]')].slice(0,need).forEach(b=>{if(!b.checked)b.click()});
       st.querySelectorAll('input[type=checkbox][required]').forEach(b=>{if(!b.checked)b.click()});
       return 'flow:'+(st.querySelector('.flow-title')||{}).textContent?.trim().slice(0,30)}
+    // A page with its own Continue link (e.g. the type result, which also has a "Does this feel like you?" form) moves on by the link.
+    if(document.querySelector('main a.btn.primary')&&!document.querySelector('main form.flow'))return 'link';
     const fm=document.querySelector('main form');if(fm&&fm.querySelector('button[type=submit]'))return 'form';
     return document.querySelector('main a.btn.primary')?'link':'none'})()`);
   const key = path + "|" + kind;
