@@ -380,7 +380,7 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     key: "personalization",
     control: "toggle",
     title: { th: "จัดโต๊ะตามความสนใจ", en: "Seat me by my interests" },
-    hint: { th: "ใช้ความสนใจและภาษาของคุณช่วยจัดโต๊ะ", en: "Uses your interests and languages to help seat you." },
+    hint: { th: "ใช้ความสนใจ สไตล์ มหาวิทยาลัย และไทป์กรุงเทพฯ ของคุณช่วยจัดโต๊ะและจับคู่บัดดี้", en: "Uses your interests, styles, university and Bangkok Type to help seat you and pair your buddy." },
     // What loadAttendees (services/events.ts) and canPair (match/profile.ts) still read without it.
     withdraw: {
       th: "ถ้าปิด เราจัดโต๊ะจากภาษา อายุและช่วงอายุที่คุณเลือก สิ่งที่คุณมองหา คนที่คุณบล็อก คนที่เคยเจอกันในงานก่อน และการเป็นคนใหม่ในกรุงเทพฯ เท่านั้น ไม่ใช้ความสนใจ สไตล์ มหาวิทยาลัย หรือ Bangkok Type ของคุณ",
