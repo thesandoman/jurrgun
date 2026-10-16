@@ -16,6 +16,7 @@
  *   POST /settings/password
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
+import { endPinkies } from "../services/pinky";
 import { canBeWomenOnly, canSwitchToSingle, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS, romanceEligible } from "../domain/rules";
 import { ReflectionFields } from "../ui/reflections";
 import { reflectionsFromForm } from "../content/reflections";
@@ -1084,7 +1085,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
   if (result.romanceConsent !== null) {
     queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category: "romance_data", granted: result.romanceConsent, version: CONSENT_VERSION }));
   }
-  if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id));
+  if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id), ...endPinkies(db, user.account.id));
   if (result.patch.relationship !== p.relationship) {
     queries.push(audit(db, user.account.id, "profile.private_updated", { type: "account", id: user.account.id }));
   }
@@ -1109,7 +1110,7 @@ async function romanceQuick(c: C, on: boolean) {
   if (!on) {
     if (!p.romanceOn) return c.redirect("/settings");
     queries.push(db.update(profiles).set({ ...romanceOffPatch(p), updatedAt: new Date() }).where(eq(profiles.accountId, id)));
-    queries.push(withdrawRomanceChoices(db, id));
+    queries.push(withdrawRomanceChoices(db, id), ...endPinkies(db, id));
     queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: false, version: CONSENT_VERSION }));
     await batch(c.env, queries);
     return c.redirect("/settings?notice=romance_off");
@@ -1327,7 +1328,7 @@ settingsRoutes.post("/settings/privacy", async (c) => {
   if (current.get("romance_data") && str(body.consent_romance_data) !== "1") {
     changed.romance_data = false;
     queries.push(db.update(profiles).set({ ...romanceOffPatch(p), updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id)));
-    if (p.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id));
+    if (p.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id), ...endPinkies(db, user.account.id));
   }
   for (const [category, granted] of Object.entries(changed)) {
     queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category, granted, version: CONSENT_VERSION }));

@@ -5,6 +5,7 @@
  *   GET /people/:accountId              someone's card
  *   GET /people/:accountId/photo/:slot  their main photo ("main") or a photo
  *                                       prompt's image (slot = prompt id)
+ *   POST /people/:accountId/pinky       เกี่ยวก้อย · Pinky: tap, or step back (src/services/pinky.ts)
  *
  * Who may see a card (else 404, so nobody learns whether an account exists):
  * the person themself, or a member who checked in at the same event as them
@@ -28,6 +29,9 @@ import { LinkButton, page, view } from "../ui/kit";
 import { datingPromptsShown, datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
 import { regularAt } from "../services/regular-tables";
 import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
+import { pinkyState, stepBack, tapPinky } from "../services/pinky";
+import { PinkyRow } from "../ui/pinky";
+import { str } from "../ui/kit";
 
 export const profileRoutes = new Hono<AppEnv>();
 
@@ -180,10 +184,12 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   const person = cardPerson(target.profile, me.profile);
   // The card itself is only reachable by connected viewers and the member (visibleProfile), and
   // regularAt drops tables this viewer couldn't join (women-only) or whose host they're blocked with.
-  const [vibes, tables, metAt] = await Promise.all([
+  const [vibes, tables, metAt, pinky] = await Promise.all([
     vibesFor(db, self ? [me.account.id] : [target.account.id, me.account.id]),
     regularAt(db, target.account.id, { id: me.account.id, gender: me.profile?.gender }),
     self ? Promise.resolve([]) : whereWeMet(db, me.account.id, target.account.id),
+    // เกี่ยวก้อย · Pinky: only for members with 💘 on, on the card of someone they met.
+    self || !me.profile ? Promise.resolve(null) : pinkyState(db, me.profile, target.account.id),
   ]);
   const theirVibe = vibes.get(target.account.id);
   const resident = showsResidentBadge(target.account, target.profile);
@@ -238,6 +244,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
           </ul>
         </section>
       ) : null}
+      {pinky ? <PinkyRow t={t} otherId={target.account.id} name={person.nickname} state={pinky} /> : null}
       {self ? null : (
         <p class="row muted">
           <a href={`/report?account=${encodeURIComponent(target.account.id)}`}>{t("รายงาน", "Report")}</a>
@@ -259,6 +266,23 @@ profileRoutes.get("/people/:accountId", requireMember, async (c) => {
   const target = await visibleProfile(getDb(c.env), me.account.id, id);
   if (!target) return c.notFound();
   return renderCard(c, target, false);
+});
+
+/**
+ * เกี่ยวก้อย · Pinky. Same access rule as the card. The answer is the same
+ * redirect whatever the other person chose: only a mutual Pinky changes what
+ * the card shows.
+ */
+profileRoutes.post("/people/:accountId/pinky", requireMember, async (c) => {
+  const me = c.var.user!;
+  const id = c.req.param("accountId");
+  const db = getDb(c.env);
+  const target = id === me.account.id ? null : await visibleProfile(db, me.account.id, id);
+  if (!target) return c.notFound();
+  const action = str((await c.req.parseBody()).action);
+  if (action === "tap") await tapPinky(c.env, db, me.profile!, id);
+  else if (action === "back") await stepBack(c.env, db, me.profile!, id);
+  return c.redirect(`/people/${encodeURIComponent(id)}#pinky`);
 });
 
 /** A card photo. Same access rule as the card. Deployed: redirect to a signed URL; locally: the bytes. */

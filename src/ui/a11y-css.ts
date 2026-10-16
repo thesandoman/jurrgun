@@ -769,4 +769,39 @@ main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
   main article.pc>.pc-jump{position:static;margin:0;padding-inline:0;border-radius:0;background:none}
   main .me>.me-hero .me-blob-b{transform:translateX(-12%)}
 }
+/* Day-of status: one calm line at the top of the event page, the pass and the hangout chat. Words carry
+   the meaning; the left edge only echoes it. Running late / On my way are two 44px buttons. */
+.day-status{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);color:var(--ink);line-height:1.5}
+.day-status .fact-ico{flex:none;width:20px;height:20px;margin-top:2px;color:var(--ink-2)}
+.day-status .ds-who{color:var(--ink-2);font-weight:600}
+.day-status.ds-running_late,.day-status.ds-moved{border-left-color:var(--warn);background:var(--warn-soft)}
+.day-status.ds-cancelled{border-left-color:var(--ink-3);background:var(--surface-2)}
+.eta-box{margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.eta-box .eta-q{margin:0 0 8px;color:var(--ink)}
+.eta-btns{display:flex;flex-wrap:wrap;gap:8px}
+.eta-btns .btn{min-height:44px}
+.eta-sum{margin:8px 0;padding-left:20px}
+.eta-host a{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
+.find-table{margin:8px 0}
+.find-table p{margin:0 0 4px}
+.ft-line,.station-fact{display:inline-flex;gap:6px;align-items:center}
+.ft-line .fact-ico,.station-fact .fact-ico{flex:none;width:18px;height:18px;color:var(--ink-2)}
+.ft-notes{white-space:pre-line;color:var(--ink-2)}
+.venue-extras select{width:100%;min-height:44px}
+.day-status-form .choices .toggle{min-height:44px}
+/* เกี่ยวก้อย · Pinky: a quiet row on the card of someone you met, 💘 members only. Love red on the
+   card's own surface (never coral or orange); the state is always in words, buttons are 44px. */
+.pinky{margin:16px 0;padding:14px 16px;border-radius:var(--radius);background:var(--love-soft);border:1px solid color-mix(in srgb,var(--love) 30%,transparent);color:var(--ink)}
+.pinky-head{display:flex;gap:10px;align-items:flex-start}
+.pinky-ico{flex:none;margin-top:2px;color:var(--love-ink)}
+.pinky-name{margin:0;font-size:1rem;line-height:1.4;color:var(--love-ink)}
+.pinky-sub{margin:2px 0 0;color:var(--ink-2)}
+.pinky-state{margin:12px 0 0}
+.pinky-note{margin:8px 0 0;font-size:.9rem;color:var(--ink-2)}
+.pinky-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.pinky-actions form{margin:0}
+.pinky .btn{min-height:44px}
+.pinky .btn.pinky-btn{background:var(--love-ink);border-color:var(--love-ink);color:var(--surface)}
+.pinky .btn.pinky-btn:hover{background:color-mix(in srgb,var(--love-ink) 88%,var(--ink))}
+.pinky .btn:focus-visible{outline:3px solid var(--love-ink);outline-offset:2px}
 `);

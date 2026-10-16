@@ -862,6 +862,12 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
           <p class="pc-met" data-celebrate={r.celebrate ? "" : undefined}>
             {r.graduated ? <>{t(`🎉 เจอกันมา ${times} ครั้ง`, `🎉 Met ${times} times`)} · </> : null}
             {met}
+            {r.level === "romance" ? (
+              <>
+                {" · "}
+                <Tag tone="love">เกี่ยวก้อย · Pinky</Tag>
+              </>
+            ) : null}
           </p>
         </div>
       </div>
