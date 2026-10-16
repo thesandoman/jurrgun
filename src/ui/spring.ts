@@ -14,7 +14,11 @@
  *  - still(): reduced motion (the OS setting or our Accessibility menu).
  *
  * No library: a classic script that sets window.jgMotion, loaded in <head>.
+ * It also carries the logo's wave and drag (logo-wave.ts), the kit's first user
+ * on every page.
  */
+import { LOGO_JS } from "./logo-wave";
+
 export const SPRING_JS = `window.jgMotion=(function(){
 function spring(o){var x=o.from,v=o.velocity||0,to=o.to,r=o.response||0.35,d=o.damping==null?1:o.damping;
 var k=Math.pow(2*Math.PI/r,2),c=4*Math.PI*d/r,last=performance.now(),id=0,live=true;
@@ -30,4 +34,4 @@ function project(v,rate){rate=rate||0.99;return(v/1000)*rate/(1-rate)}
 function rubberband(over,dim,c){c=c||0.55;return(over*dim*c)/(dim+c*Math.abs(over))}
 function still(){return matchMedia("(prefers-reduced-motion: reduce)").matches||document.documentElement.classList.contains("a11y-motion")}
 function tick(){try{if(navigator.vibrate&&!still())navigator.vibrate(8)}catch(e){}}
-return{spring:spring,tracker:tracker,project:project,rubberband:rubberband,still:still,tick:tick}})();`;
+return{spring:spring,tracker:tracker,project:project,rubberband:rubberband,still:still,tick:tick}})();` + ";" + LOGO_JS;

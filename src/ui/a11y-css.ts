@@ -819,4 +819,10 @@ a.plink>span[aria-hidden]{flex:0 0 24px;text-align:center}
 .plinks-sheet a.plink:hover{background:var(--surface-2)}
 .pf-links{display:grid;gap:0 16px}
 @media (min-width:1024px){.pf-links{grid-template-columns:1fr 1fr}}
+/* Logo wave and drag (logo-wave.ts): the hand turns about its wrist, and a touch drag moves the
+   logo instead of the page, except with reduced motion, where the logo is a plain link. */
+.brand-mark .jg-hand{transform-box:view-box;transform-origin:37px 51px}
+.topbar .brand,.fd-logo{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
+@media (prefers-reduced-motion:reduce){.topbar .brand,.fd-logo{touch-action:auto}}
+html.a11y-motion .topbar .brand,html.a11y-motion .fd-logo{touch-action:auto}
 `);
