@@ -105,6 +105,8 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(html).toContain(`class="me-stats"`);
     expect(html).not.toContain("You&#39;ve been to");
     expect(html).toContain("Your next table");
+    // Nothing booked: the action line is the link, with an arrow (owner card).
+    expect(html).toMatch(/<a class="card me-next" href="\/events">[\s\S]*?Nothing booked yet\.[\s\S]*?<b class="me-next-go">Find a table this week <span aria-hidden="true">→<\/span><\/b>/);
     expect(html).not.toMatch(/\d+% there/);
     const left = (h: string) => Number(/Help your table get to know you: (\d+) things? left/.exec(h)?.[1]);
     const before = left(html);

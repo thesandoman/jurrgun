@@ -225,6 +225,12 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .me-next small{color:var(--ink-2);font-weight:600}
 .me-next b{font-size:1.06rem}
 .me-next span{color:var(--ink-2);font-size:.9rem}
+/* Owner cards: the next table reads as a link (green line with an arrow) and matches the profile card under it. */
+.card.me-next{border:0;border-radius:26px;padding:16px 18px;margin:12px 0 16px;box-shadow:var(--shadow);gap:4px}
+.me-next .me-next-go{display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:var(--brand);font-size:1.06rem}
+.me-next .me-next-go span{color:inherit;font-size:1.1rem;flex:none}
+.me-next:hover .me-next-go,.me-next:focus-visible .me-next-go{text-decoration:underline;text-underline-offset:3px}
+.me-next+.me-grow{margin-top:0}
 
 /* Event scene colours stay in the palette (Phase 3): "play" was violet, "art" coral. */
 .scene-play{--scene:linear-gradient(180deg,#dff5c8 0 55%,#4f9d2f 55% 100%)}
@@ -616,8 +622,8 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 .btn.quiet:hover{background:var(--brand-soft)}
 .btn.danger{background:var(--err-soft);color:var(--err);border-color:color-mix(in srgb,var(--err) 25%,transparent)}
 .btn.danger:hover{border-color:var(--err)}
-.btn.love{background:#c0222f;border-color:#c0222f;color:#fff}
-.btn.love:hover{background:#a51c27;border-color:#a51c27}
+.btn.love{background:var(--love-ink);border-color:var(--love-ink);color:var(--surface)}
+.btn.love:hover{background:color-mix(in srgb,var(--love-ink) 86%,var(--ink));border-color:color-mix(in srgb,var(--love-ink) 86%,var(--ink))}
 .btn:disabled,.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed;transform:none}
 .btn.is-busy{pointer-events:none;opacity:.85}
 .btn.is-busy::after{content:"";display:inline-block;width:1.1em;height:.3em;margin-left:8px;vertical-align:middle;background:radial-gradient(circle,currentColor 45%,transparent 50%) 0 50%/33% 100% repeat-x;animation:busy .9s steps(3) infinite;clip-path:inset(0 100% 0 0)}

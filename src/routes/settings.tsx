@@ -190,7 +190,7 @@ settingsRoutes.get("/settings", async (c) => {
     myTables(db, user.account.id),
     // The next table I'm seated at: Me leads with it (owner, Phase 2).
     db
-      .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt })
+      .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district })
       .from(registrations)
       .innerJoin(events, eq(events.id, registrations.eventId))
       .where(and(eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed"), gt(events.startsAt, now), ne(events.status, "cancelled")))
@@ -314,13 +314,20 @@ settingsRoutes.get("/settings", async (c) => {
         nextUp ? (
           <a class="card me-next" href={`/me/events/${nextUp.id}/pass`}>
             <small>{t("โต๊ะถัดไป", "Your next table")}</small>
-            <b>{lang === "en" ? nextUp.titleEn ?? nextUp.title : nextUp.title}</b>
-            <span>{fmtDate(nextUp.startsAt, lang)}</span>
+            <span>
+              {fmtDate(nextUp.startsAt, lang)} · {label(DISTRICTS, nextUp.district, lang)}
+            </span>
+            <b class="me-next-go">
+              {lang === "en" ? nextUp.titleEn ?? nextUp.title : nextUp.title} <span aria-hidden="true">→</span>
+            </b>
           </a>
         ) : (
           <a class="card me-next" href="/events">
             <small>{t("โต๊ะถัดไป", "Your next table")}</small>
-            <b>{t("ยังไม่มีนัด หาโต๊ะสัปดาห์นี้กัน", "Nothing booked yet. Find a table this week")}</b>
+            <span>{t("ยังไม่มีนัด", "Nothing booked yet.")}</span>
+            <b class="me-next-go">
+              {t("หาโต๊ะสัปดาห์นี้", "Find a table this week")} <span aria-hidden="true">→</span>
+            </b>
           </a>
         )
       }
