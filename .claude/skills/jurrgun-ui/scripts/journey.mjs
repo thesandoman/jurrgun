@@ -38,7 +38,7 @@ async function go(path, label) { await send("Page.navigate", { url: BASE + path 
 
 await go("/", "landing-or-intro");
 await go("/signup", "signup");
-await ev(`(()=>{document.getElementById('f-username').value=${JSON.stringify(user)};document.getElementById('f-password').value=${JSON.stringify(pass)};const c=document.getElementById('f-confirm');if(c)c.value=${JSON.stringify(pass)};document.querySelector('main form').requestSubmit()})()`);
+await ev(`(()=>{document.getElementById('f-username').value=${JSON.stringify(user)};document.getElementById('f-password').value=${JSON.stringify(pass)};const c=document.getElementById('f-confirm');if(c)c.value=${JSON.stringify(pass)};const tb=document.querySelector('main input[name=terms]');if(tb)tb.checked=true;document.querySelector('main form').requestSubmit()})()`);
 await wait(2000); await shot("after-signup");
 
 // Onboarding and the first quiz: card flows, plain forms and "continue" links, until we land in the app.

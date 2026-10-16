@@ -98,7 +98,7 @@ describe.skipIf(!HAS_DB)("R7: research", () => {
     for (const [m, research] of [[yes, "1"], [no, ""]] as const) {
       await db().delete(consents).where(eq(consents.accountId, m.id));
       await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, m.id));
-      await req("/onboarding/privacy", { cookie: m.cookie, form: { consent_service: "1", consent_safety: "1", conduct: "1", ...(research ? { consent_research: "1" } : {}) } });
+      await req("/onboarding/privacy", { cookie: m.cookie, form: { conduct: "1", terms: "1", ...(research ? { consent_research: "1" } : {}) } });
     }
     expect((await account(yes.id)).researchId).not.toBeNull();
     expect((await account(no.id)).researchId).toBeNull();

@@ -209,7 +209,7 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
         if ((rows as unknown as unknown[]).length || (rows as unknown as { rows?: unknown[] }).rows?.length) left.push(`${cfg.name}.${col.name}`);
       }
     }
-    // Attendance and ratings stay for event totals, pointing at the scrubbed account with nothing personal left (the notice says so).
+    // Attendance and ratings stay for event totals, pointing at the scrubbed account with your name and details removed (the notice says so).
     expect(left.sort()).toEqual(["social_feedback.account_id", "social_registrations.account_id"]);
     const [fb] = await db().select().from(feedback).where(eq(feedback.accountId, m.id));
     expect(fb?.comment ?? "").toBe("");
