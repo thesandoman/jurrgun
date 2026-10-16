@@ -407,22 +407,29 @@ describe.skipIf(!HAS_DB)("City Pulse copy", () => {
 });
 
 describe.skipIf(!HAS_DB)("Here for dating", () => {
-  it("dating members answer why and what's hard; answers are saved privately and answered back", async () => {
+  it("dating members answer why and what's hard; answers are kept privately until consent, then saved", async () => {
     const m = await createMember();
     const r = await req("/onboarding/welcome", { cookie: m.cookie, form: { mode: "dating_only" } });
     expect(r.headers.get("location")).toBe("/onboarding/dating");
     const q = await (await req("/onboarding/dating?lang=en", { cookie: m.cookie })).text();
     expect(q).toContain("Why are you here for dating?");
     expect(q).toContain("What makes dating in Bangkok hard?");
-    const done = await (
-      await req("/onboarding/dating?lang=en", {
-        cookie: `${m.cookie}; bkk_intent=dating_only`,
-        form: { reasons: ["long_term", "slow", "real_things", "new_city", "bogus"], challenges: ["safety", "ghosting", "nope"] },
-      })
-    ).text();
+    const res = await req("/onboarding/dating?lang=en", {
+      cookie: `${m.cookie}; bkk_intent=dating_only`,
+      form: { reasons: ["long_term", "slow", "real_things", "new_city", "bogus"], challenges: ["safety", "ghosting", "nope"] },
+    });
+    const done = await res.text();
     expect(done).toContain("We hear you");
     expect(done).toContain("No ghosting");
     expect(done).toContain('href="/safety"');
+    // R1: nothing is saved before the romance_data consent.
+    expect(await db().select().from(datingIntents).where(eq(datingIntents.accountId, m.id))).toEqual([]);
+    const pending = /bkk_dating_pending=[^;]+/.exec(res.headers.get("set-cookie") ?? "")![0];
+    await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, m.id));
+    await req("/onboarding/connections", {
+      cookie: `${m.cookie}; bkk_intent=dating_only; ${pending}`,
+      form: { relationship: "single", romanceOn: "1", romanceConsent: "1", romanceOpenTo: "everyone", ageMin: "18", ageMax: "99" },
+    });
     const [row] = await db().select().from(datingIntents).where(eq(datingIntents.accountId, m.id));
     expect(row.mode).toBe("dating_only");
     expect(row.reasons).toEqual(["long_term", "slow", "real_things"]); // up to three, unknown dropped

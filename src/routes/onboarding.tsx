@@ -16,7 +16,7 @@
  * after the first RSVP as "Help your table get to know you" (/onboarding/you).
  */
 import { Hono, type Context } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, desc, eq } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { ageOn, canBeWomenOnly, canSwitchToSingle, MIN_AGE } from "../domain/rules";
@@ -35,6 +35,7 @@ import { newId } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import type { Lang } from "../lib/i18n";
 import { consents, datingIntents, profiles, wellbeing } from "../schema";
+import { CONSENT_VERSION, consentEffects, consentRow, hasConsent, privateFieldConsents, ROMANCE_CONSENT } from "../services/consent";
 import {
   CHALLENGE_ANSWERS,
   cleanPrefs,
@@ -78,7 +79,7 @@ const STEPS = ["welcome", "quiz", "basics", "privacy", "connections", "wellbeing
 type Step = (typeof STEPS)[number];
 // One progress bar for the whole first-time journey, with chapter names: src/ui/journey.tsx (D1).
 
-export const CONSENT_VERSION = "2026-10-proto";
+export { CONSENT_VERSION };
 export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
 /** friends | dating, chosen on the welcome screen before a profile exists (dating_only from older visits reads as dating). */
 export { INTENT_COOKIE };
@@ -182,11 +183,8 @@ onboarding.post("/welcome", async (c) => {
   const raw = str(body.mode);
   const mode = isMode(raw) ? raw : "friends";
   setCookie(c, INTENT_COOKIE, mode, { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
-  const me = c.var.user!.account.id;
-  await getDb(c.env)
-    .insert(datingIntents)
-    .values({ accountId: me, mode, reasons: [], challenges: [], updatedAt: new Date() })
-    .onConflictDoUpdate({ target: datingIntents.accountId, set: { mode, updatedAt: new Date() } });
+  // The choice stays in the cookie: dating intents are saved only with romance_data consent (R1).
+  await saveDatingIntent(getDb(c.env), c.var.user!.account.id, { mode });
   return c.redirect(mode === "friends" ? "/onboarding/quiz" : "/onboarding/dating");
 });
 
@@ -224,6 +222,56 @@ export function prefsFromBody(body: Record<string, unknown>) {
   return cleanPrefs({ goal: body.goal, kids: body.kids, pace: body.pace, distance: body.distance, firstDate: list1(body.firstDate) });
 }
 
+/** Onboarding dating answers waiting for the romance_data consent (R1). Never sent anywhere. */
+export const DATING_PENDING_COOKIE = "bkk_dating_pending";
+
+type DatingValues = { mode?: string; reasons?: string[]; challenges?: string[]; prefs?: Record<string, unknown> };
+
+/** Insert or update the member's dating intents. Only in the same batch as, or after, a romance_data yes. */
+function datingIntentUpsert(db: ReturnType<typeof getDb>, accountId: string, v: DatingValues) {
+  return db
+    .insert(datingIntents)
+    .values({ accountId, mode: v.mode ?? "dating", reasons: v.reasons ?? [], challenges: v.challenges ?? [], prefs: v.prefs ?? {}, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: datingIntents.accountId, set: { ...v, updatedAt: new Date() } });
+}
+
+/** R1: dating intents are saved only while the member's newest romance_data answer is yes. */
+export async function saveDatingIntent(db: ReturnType<typeof getDb>, accountId: string, v: DatingValues): Promise<boolean> {
+  if (!(await hasConsent(db, accountId, ROMANCE_CONSENT))) return false;
+  await datingIntentUpsert(db, accountId, v);
+  return true;
+}
+
+/**
+ * The upsert for dating answers given in onboarding before consent, to put in the batch
+ * that records the romance_data yes. Null when nothing is waiting (no 💘 welcome answer and
+ * no dating answers). Clears the cookie either way.
+ */
+export function pendingDatingIntent(c: Context<AppEnv>, db: ReturnType<typeof getDb>, accountId: string) {
+  const raw = getCookie(c, DATING_PENDING_COOKIE);
+  const mode = getCookie(c, INTENT_COOKIE);
+  if (raw) deleteCookie(c, DATING_PENDING_COOKIE, { path: "/" });
+  if (!raw && mode !== "dating" && mode !== "dating_only") return null;
+  let saved: { reasons?: unknown; challenges?: unknown; prefs?: unknown } = {};
+  try {
+    saved = raw ? JSON.parse(raw) : {};
+  } catch {
+    saved = {};
+  }
+  const strs = (x: unknown) => (Array.isArray(x) ? x.filter((y): y is string => typeof y === "string") : []);
+  return datingIntentUpsert(db, accountId, {
+    mode: mode === "dating_only" ? "dating_only" : "dating",
+    reasons: pick(strs(saved.reasons), DATING_REASONS).slice(0, MAX_REASONS),
+    challenges: pick(strs(saved.challenges), DATING_CHALLENGES),
+    prefs: cleanPrefs(saved.prefs),
+  });
+}
+
+/** Romance off or romance_data withdrawn: answers waiting in the cookie go too. */
+export function dropPendingDating(c: Context<AppEnv>) {
+  if (getCookie(c, DATING_PENDING_COOKIE)) deleteCookie(c, DATING_PENDING_COOKIE, { path: "/" });
+}
+
 /** Two quick questions for dating members: why, and what makes it hard. */
 onboarding.get("/dating", (c) => {
   const v = view(c);
@@ -256,11 +304,10 @@ onboarding.post("/dating", async (c) => {
   const challenges = pick(list(body.challenges), DATING_CHALLENGES);
   const prefs = prefsFromBody(body);
   const me = c.var.user!.account.id;
-  const mode = getCookie(c, INTENT_COOKIE);
-  await getDb(c.env)
-    .insert(datingIntents)
-    .values({ accountId: me, mode: isMode(mode ?? "") ? mode! : "dating", reasons, challenges, prefs, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: datingIntents.accountId, set: { reasons, challenges, prefs, updatedAt: new Date() } });
+  // Not saved yet (R1): the answers wait in a private cookie until the romance_data consent is
+  // given at "Open to something more?", and are dropped if it isn't. Saved now only when it already was.
+  setCookie(c, DATING_PENDING_COOKIE, JSON.stringify({ reasons, challenges, prefs }), { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
+  await saveDatingIntent(getDb(c.env), me, { mode: getCookie(c, INTENT_COOKIE) === "dating_only" ? "dating_only" : "dating", reasons, challenges, prefs });
   // Answer what they told us, briefly.
   const answers = challenges.map((ch) => ({ emoji: DATING_CHALLENGES.find((o) => o.value === ch)!.emoji, text: CHALLENGE_ANSWERS[ch] })).filter((a) => a.text);
   return page(
@@ -927,9 +974,18 @@ onboarding.post("/connections", async (c) => {
       .set({ ...result.patch, intents: result.patch.romanceOn ? [...intents, "romance"] : intents, bio: withGenderSelf(result.patch.romanceOn ? cleanBio(p.bio) : withoutDating(cleanBio(p.bio)), result.genderSelf, result.datingGenderSelf) })
       .where(eq(profiles.accountId, user.account.id)),
   ];
-  if (result.romanceConsent !== null) {
-    queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category: "romance_data", granted: result.romanceConsent, version: CONSENT_VERSION }) as never);
+  if (result.romanceConsent !== null) queries.push(consentRow(db, user.account.id, ROMANCE_CONSENT, result.romanceConsent) as never);
+  if (result.patch.romanceOn) {
+    // The romance_data yes is in this batch, so the onboarding dating answers can be saved now (R1).
+    const pending = pendingDatingIntent(c, db, user.account.id);
+    if (pending) queries.push(pending as never);
+  } else {
+    // Romance off: no dating intents, saved or waiting (R1, R2).
+    dropPendingDating(c);
+    queries.push(...(consentEffects(db, user.account.id, ROMANCE_CONSENT, false, null) as never[]));
   }
+  // R3: giving a relationship status or a private gender records that consent.
+  queries.push(...((await privateFieldConsents(db, user.account.id, { relationship: result.patch.relationship, gender: result.patch.gender })) as never[]));
   await batch(c.env, queries);
   return c.redirect("/onboarding/wellbeing");
 });

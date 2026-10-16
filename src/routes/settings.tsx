@@ -119,7 +119,8 @@ import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, s
 import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
-import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, withGenderSelf } from "./onboarding";
+import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, dropPendingDating, pendingDatingIntent, withGenderSelf } from "./onboarding";
+import { consentEffects, consentRow, deleteDatingIntents, hasConsent, privateFieldConsents, ROMANCE_CONSENT } from "../services/consent";
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L, type T } from "../lib/i18n";
@@ -1214,10 +1215,19 @@ settingsRoutes.post("/settings/connections", async (c) => {
       })
       .where(eq(profiles.accountId, user.account.id)),
   ];
-  if (result.romanceConsent !== null) {
-    queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category: "romance_data", granted: result.romanceConsent, version: CONSENT_VERSION }));
+  if (result.romanceConsent !== null) queries.push(consentRow(db, user.account.id, ROMANCE_CONSENT, result.romanceConsent));
+  if (result.patch.romanceOn) {
+    // Onboarding dating answers still waiting for this yes are saved with it (R1).
+    const pending = pendingDatingIntent(c, db, user.account.id);
+    if (pending) queries.push(pending);
+  } else {
+    // Romance off: dating intents go at once (R2).
+    dropPendingDating(c);
+    queries.push(deleteDatingIntents(db, user.account.id));
   }
   if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id), ...endPinkies(db, user.account.id));
+  // R3: relationship status and the private gender carry their own consent rows.
+  queries.push(...(await privateFieldConsents(db, user.account.id, { relationship: result.patch.relationship, gender: result.patch.gender })));
   if (result.patch.relationship !== p.relationship) {
     queries.push(audit(db, user.account.id, "profile.private_updated", { type: "account", id: user.account.id }));
   }
@@ -1243,7 +1253,8 @@ async function romanceQuick(c: C, on: boolean) {
     if (!p.romanceOn) return c.redirect("/settings");
     queries.push(db.update(profiles).set({ ...romanceOffPatch(p), updatedAt: new Date() }).where(eq(profiles.accountId, id)));
     queries.push(withdrawRomanceChoices(db, id), ...endPinkies(db, id));
-    queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: false, version: CONSENT_VERSION }));
+    queries.push(consentRow(db, id, ROMANCE_CONSENT, false), ...consentEffects(db, id, ROMANCE_CONSENT, false, null));
+    dropPendingDating(c);
     await batch(c.env, queries);
     return c.redirect("/settings?notice=romance_off");
   }
@@ -1268,8 +1279,11 @@ async function romanceQuick(c: C, on: boolean) {
       })
       .where(eq(profiles.accountId, id)),
   );
-  queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: "romance_data", granted: true, version: CONSENT_VERSION }));
-  if (toSingle) queries.push(audit(db, id, "profile.private_updated", { type: "account", id }));
+  queries.push(consentRow(db, id, ROMANCE_CONSENT, true));
+  const pending = pendingDatingIntent(c, db, id);
+  if (pending) queries.push(pending);
+  // Becoming Single here gives a relationship status: R3 records that consent too.
+  if (toSingle) queries.push(audit(db, id, "profile.private_updated", { type: "account", id }), ...(await privateFieldConsents(db, id, { relationship: "single" })));
   await batch(c.env, queries);
   return c.redirect("/settings?notice=romance_on");
 }
@@ -1463,8 +1477,11 @@ settingsRoutes.post("/settings/privacy", async (c) => {
     if (p.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id), ...endPinkies(db, user.account.id));
   }
   for (const [category, granted] of Object.entries(changed)) {
-    queries.push(db.insert(consents).values({ id: newId(), accountId: user.account.id, category, granted, version: CONSENT_VERSION }));
+    // Each change carries its effects: romance_data no deletes dating intents, research no
+    // deletes City Pulse and wellbeing answers and cuts the research id, research yes issues one.
+    queries.push(consentRow(db, user.account.id, category, granted), ...consentEffects(db, user.account.id, category, granted, user.account.researchId));
   }
+  if (changed.romance_data === false) dropPendingDating(c);
   if (queries.length) {
     queries.push(audit(db, user.account.id, "consent.updated", { type: "account", id: user.account.id }, { changed }));
     await batch(c.env, queries);
@@ -1726,6 +1743,8 @@ settingsRoutes.get("/settings/dating", async (c) => {
 
 settingsRoutes.post("/settings/dating", async (c) => {
   const prefs = prefsFromBody(await c.req.parseBody({ all: true }));
+  // R1: never saved without the romance_data consent.
+  if (!(await hasConsent(getDb(c.env), me(c).account.id, ROMANCE_CONSENT))) return c.redirect("/settings");
   await getDb(c.env)
     .update(datingIntents)
     .set({ prefs, updatedAt: new Date() })
