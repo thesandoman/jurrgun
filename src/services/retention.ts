@@ -1,7 +1,8 @@
 /**
- * Data retention (PRD §12.4). There is no cron on this platform, so this runs
- * when a bma_admin presses "Run retention cleanup" on /admin, and lazily at
- * most once per 24 hours when a bma_admin opens /admin.
+ * Data retention (PRD §12.4, privacy risk assessment R5 and R6). There is no
+ * cron on this platform: the hourly clock (services/clock.ts) runs it at most
+ * once per 24 hours, a bma_admin can run it from /admin, and opening /admin
+ * runs it lazily too.
  *
  * It only removes what the retention table says to remove:
  *
@@ -16,24 +17,42 @@
  *                             checked them in and how, +1 links and buddy
  *                             pairs are cleared; the registration row and its
  *                             status stay, so attendance totals still add up
+ *   chat messages, "home safe?" 180 days
+ *   read notifications        90 days after they were read (R6)
+ *   reports, moderation       2 years after the report or action, once the
+ *   actions, strikes          report is closed (actioned or dismissed) (R6)
+ *   audit log                 1 year (R6)
  *   City Pulse and wellbeing  24 months after the answer (research code rows)
  *   research ids              cut, with every answer under them, from any
  *                             account whose newest research answer isn't yes
  *                             (a research_id exists only with research consent)
  *   deactivated accounts      30 days after deactivation, unless a moderation
  *                             hold applies (an open or in-review report about
- *                             them): profile, vibe, sessions, notifications,
- *                             contact shares, social links, consents, sign-in emails and their
- *                             codes are hard-deleted, the
- *                             account row is anonymised and its research_id link
- *                             cut, and their feedback comments are blanked
- *                             (the ratings stay, unlinked). Reports, moderation actions and audit rows
- *                             are kept (legal hold); registrations carry no
- *                             personal content and stay for aggregate counts.
+ *                             them). Every table holding their account id (R5):
+ *     deleted: profile, Bangkok Type, sessions, notifications, push devices,
+ *       consents, sign-in emails and their codes, Google / LINE links, social
+ *       links, contact shares (theirs, and the other person's on a connection
+ *       with them), chat messages (and photos), chat reads and poll votes,
+ *       "home safe?" answers, dating intents, buddy opt-in and deck picks
+ *       (theirs and about them), passport stamps, strikes, blocks (either way),
+ *       connection choices (either way), invites they made, event buddy pairs
+ *       with them, meet feedback they gave, weekly plans, plan pitches and
+ *       joins (theirs, and others' joins on their pitches), thank-you notes
+ *       (either way), Table Host requests, hangout shares (either way),
+ *       regular table seats, regular table conflicts.
+ *     anonymised, kept for totals or for the other person: the account row
+ *       (username, password and research id cleared), feedback (comment
+ *       blanked, ratings stay), registrations (signals, ETA, +1 links and the
+ *       buddy wish cleared; status and check-in stay), connections (ended),
+ *       buddy matches (ended, quests stay for the other buddy's passport),
+ *       meet feedback about them (the link to them cut), invites they used
+ *       (the link cut), regular tables they hosted (archived, description
+ *       blanked), events they hosted (kept as listings).
+ *     kept until their own period: reports, moderation actions and audit rows.
  *
  * Every run writes one "retention.run" audit row with the counts.
  */
-import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, notExists, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
 import { CODE_RETENTION_HOURS } from "./email-code";
@@ -42,7 +61,23 @@ import { deleteObject, type StorageEnv } from "../storage";
 import {
   accounts,
   auditLog,
+  blocks,
+  buddyMatches,
   buddyPairs,
+  chatVotes,
+  circleHeadRequests,
+  circleShares,
+  invites,
+  meetFeedback,
+  moderationActions,
+  pitchJoins,
+  planPitches,
+  regularTableConflicts,
+  regularTableMembers,
+  regularTables,
+  strikes,
+  thanks,
+  weeklyPlans,
   connectionChoices,
   connections,
   consents,
@@ -82,6 +117,12 @@ export const CHECKIN_RETENTION_DAYS = 365;
 export const RESEARCH_RETENTION_DAYS = 730;
 /** Chat messages are kept this long, then deleted (reported ones stay in the report's details). */
 export const CHAT_RETENTION_DAYS = 180;
+/** Read notifications are deleted this long after they were read (R6). */
+export const READ_NOTIFICATION_RETENTION_DAYS = 90;
+/** Closed reports, moderation actions and strikes are deleted after this (R6). */
+export const SAFETY_RETENTION_DAYS = 730;
+/** Audit rows are deleted after this (R6). */
+export const AUDIT_RETENTION_DAYS = 365;
 /** Research ids cut per run (accounts without research consent); the rest wait for the next run. */
 export const RESEARCH_BATCH = 500;
 /** Accounts anonymised per run; the rest wait for the next run. */
@@ -101,6 +142,12 @@ export type RetentionCounts = {
   accountsDeleted: number;
   /** Research ids cut (and their answers deleted) because research consent isn't on. */
   researchLinksCut: number;
+  /** R6: read notifications, closed reports, moderation actions, strikes and audit rows past their period. */
+  readNotificationsDeleted: number;
+  reportsDeleted: number;
+  moderationActionsDeleted: number;
+  strikesDeleted: number;
+  auditRowsDeleted: number;
   /** True when more deactivated accounts were due than one run handles. */
   accountsRemaining: boolean;
 };
@@ -125,7 +172,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .limit(500);
   await dropFiles(env, oldPhotos.map((p) => p.key!));
 
-  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld] = await batch(env, [
+  const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
+  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, reportsOld, actionsOld, strikesOld, auditOld] = await batch(env, [
     db
       .update(registrations)
       .set({ socialSignal: null, signalTopics: null })
@@ -158,6 +206,19 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     db.delete(chatMessages).where(lt(chatMessages.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY))),
     db.delete(safeArrivals).where(lt(safeArrivals.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY))),
     db.delete(loginCodes).where(lt(loginCodes.createdAt, new Date(now.getTime() - CODE_RETENTION_HOURS * HOUR))).returning({ id: loginCodes.id }),
+    // R6 retention periods.
+    db
+      .delete(notifications)
+      .where(and(isNotNull(notifications.readAt), lt(notifications.readAt, new Date(now.getTime() - READ_NOTIFICATION_RETENTION_DAYS * DAY))))
+      .returning({ id: notifications.id }),
+    db
+      .delete(reports)
+      .where(and(inArray(reports.status, ["actioned", "dismissed"]), lt(reports.createdAt, safetyCutoff)))
+      .returning({ id: reports.id }),
+    db.delete(moderationActions).where(lt(moderationActions.createdAt, safetyCutoff)).returning({ id: moderationActions.id }),
+    db.delete(strikes).where(lt(strikes.createdAt, safetyCutoff)).returning({ id: strikes.id }),
+    // The run's own audit row is written after this, so the last run stays readable.
+    db.delete(auditLog).where(lt(auditLog.createdAt, new Date(now.getTime() - AUDIT_RETENTION_DAYS * DAY))).returning({ id: auditLog.id }),
   ]);
 
   // 1b. A research_id only with research consent (privacy R7): an account holding one whose newest
@@ -209,6 +270,11 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     checkInsAggregated: checkIns.length,
     researchAnswersDeleted: pulseOld.length + wellOld.length,
     researchLinksCut: unconsented.length,
+    readNotificationsDeleted: readOld.length,
+    reportsDeleted: reportsOld.length,
+    moderationActionsDeleted: actionsOld.length,
+    strikesDeleted: strikesOld.length,
+    auditRowsDeleted: auditOld.length,
     accountsDeleted: ids.length,
     accountsRemaining: due.length > ACCOUNT_BATCH,
   };
@@ -228,10 +294,19 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(sessions).where(inArray(sessions.accountId, ids)),
       db.delete(notifications).where(inArray(notifications.accountId, ids)),
       db.delete(pushSubscriptions).where(inArray(pushSubscriptions.accountId, ids)),
-      db.delete(contactShares).where(inArray(contactShares.accountId, ids)),
+      // Contact shares: theirs, and the other person's on a connection with them.
+      db
+        .delete(contactShares)
+        .where(
+          or(
+            inArray(contactShares.accountId, ids),
+            inArray(contactShares.connectionId, db.select({ id: connections.id }).from(connections).where(or(inArray(connections.aAccount, ids), inArray(connections.bAccount, ids)))),
+          ),
+        ),
       db.delete(profileLinks).where(inArray(profileLinks.accountId, ids)),
       db.delete(chatMessages).where(inArray(chatMessages.sender, ids)),
       db.delete(chatReads).where(inArray(chatReads.accountId, ids)),
+      db.delete(chatVotes).where(inArray(chatVotes.accountId, ids)),
       db.delete(safeArrivals).where(inArray(safeArrivals.accountId, ids)),
       db.delete(buddySwipes).where(or(inArray(buddySwipes.accountId, ids), inArray(buddySwipes.targetId, ids))),
       db.delete(datingIntents).where(inArray(datingIntents.accountId, ids)),
@@ -239,6 +314,37 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(passportStamps).where(inArray(passportStamps.accountId, ids)),
       db.delete(consents).where(inArray(consents.accountId, ids)),
       db.update(feedback).set({ comment: "" }).where(inArray(feedback.accountId, ids)),
+      // R5: every other table that holds their account id.
+      db.delete(strikes).where(inArray(strikes.accountId, ids)),
+      db.delete(blocks).where(or(inArray(blocks.blocker, ids), inArray(blocks.blocked, ids))),
+      db.delete(connectionChoices).where(or(inArray(connectionChoices.fromAccount, ids), inArray(connectionChoices.toAccount, ids))),
+      db.delete(invites).where(inArray(invites.inviter, ids)),
+      db.update(invites).set({ usedBy: null }).where(inArray(invites.usedBy, ids)),
+      // Event buddy pairs with them. The id is matched in the column's text, which works however the
+      // jsonb array was encoded (the local driver stores it as a JSON string); ids are UUIDs.
+      db.delete(buddyPairs).where(or(...ids.map((x) => sql`strpos(${buddyPairs.members}::text, ${x}) > 0`))),
+      db
+        .update(buddyMatches)
+        .set({ state: "ended", endReason: "account_deleted", endedAt: now })
+        .where(and(ne(buddyMatches.state, "ended"), or(inArray(buddyMatches.aAccount, ids), inArray(buddyMatches.bAccount, ids)))),
+      db.delete(meetFeedback).where(inArray(meetFeedback.accountId, ids)),
+      db.update(meetFeedback).set({ aboutAccount: null }).where(inArray(meetFeedback.aboutAccount, ids)),
+      db.delete(weeklyPlans).where(inArray(weeklyPlans.accountId, ids)),
+      db.delete(pitchJoins).where(or(inArray(pitchJoins.accountId, ids), inArray(pitchJoins.pitchId, db.select({ id: planPitches.id }).from(planPitches).where(inArray(planPitches.accountId, ids))))),
+      db.delete(planPitches).where(inArray(planPitches.accountId, ids)),
+      db.delete(thanks).where(or(inArray(thanks.fromAccount, ids), inArray(thanks.toAccount, ids))),
+      db.delete(circleHeadRequests).where(inArray(circleHeadRequests.accountId, ids)),
+      db.delete(circleShares).where(or(inArray(circleShares.fromAccount, ids), inArray(circleShares.toAccount, ids))),
+      db.delete(regularTableMembers).where(inArray(regularTableMembers.accountId, ids)),
+      db.delete(regularTableConflicts).where(or(inArray(regularTableConflicts.aAccount, ids), inArray(regularTableConflicts.bAccount, ids))),
+      db.update(regularTables).set({ archivedAt: now }).where(and(inArray(regularTables.hostAccountId, ids), isNull(regularTables.archivedAt))),
+      db.update(regularTables).set({ description: "" }).where(inArray(regularTables.hostAccountId, ids)),
+      // Registrations stay for attendance totals, without anything personal.
+      db
+        .update(registrations)
+        .set({ socialSignal: null, signalTopics: null, etaStatus: null, etaAt: null, plusOneWith: null, plusOneUsername: null, wantsBuddy: false })
+        .where(inArray(registrations.accountId, ids)),
+      db.update(registrations).set({ plusOneWith: null, plusOneUsername: null }).where(inArray(registrations.plusOneWith, ids)),
       // Frees their Google / LINE identity, so they can sign up again later.
       db.delete(oauthLinks).where(inArray(oauthLinks.accountId, ids)),
       // Their sign-in email (a hash only) and any codes still waiting for it.
