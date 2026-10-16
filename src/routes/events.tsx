@@ -104,6 +104,7 @@ import {
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
 import { canView, ownsEvent } from "../domain/hosting";
+import { notifyHostRunningLate } from "../services/eta-notice";
 import { dayOfOpen, shownDayStatus, shownEta, isEtaStatus } from "../domain/day-of";
 import { DayStatusLine, EtaBox, EtaSummary, FindTheTable } from "../ui/day-of";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
@@ -2356,6 +2357,12 @@ eventRoutes.post("/events/:id/eta", requireMember, async (c) => {
     .update(registrations)
     .set(raw === "clear" ? { etaStatus: null, etaAt: null } : { etaStatus: raw, etaAt: now })
     .where(eq(registrations.id, row.reg.id));
+  // Running late tells the host once (first name only, never the event title); on my way stays quiet.
+  if (raw === "running_late") {
+    const hostId = row.event.hostAccountId ?? row.event.createdBy;
+    const [host] = await db.select({ locale: profiles.locale }).from(profiles).where(eq(profiles.accountId, hostId)).limit(1);
+    await notifyHostRunningLate(c.env, db, { eventId: id, hostId, attendeeId: user.account.id, firstName: user.profile.nickname ? firstName(user.profile.nickname) : null, hostLocale: host?.locale ?? null }, now);
+  }
   return c.redirect(next);
 });
 
