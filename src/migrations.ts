@@ -251,5 +251,19 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_push_endpoint_idx\" ON \"social_push_subscriptions\" (\"endpoint\");",
       "CREATE INDEX \"social_push_account_idx\" ON \"social_push_subscriptions\" (\"account_id\");"
     ]
+  },
+  {
+    "id": "0020_woozy_richard_fisk",
+    "statements": [
+      "ALTER TABLE \"social_events\" ADD COLUMN \"day_status\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"day_status_note\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"day_status_at\" timestamp with time zone;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"venue_notes\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"venue_notes_en\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"nearest_station\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"walk_minutes\" integer;",
+      "ALTER TABLE \"social_registrations\" ADD COLUMN \"eta_status\" text;",
+      "ALTER TABLE \"social_registrations\" ADD COLUMN \"eta_at\" timestamp with time zone;"
+    ]
   }
 ];
