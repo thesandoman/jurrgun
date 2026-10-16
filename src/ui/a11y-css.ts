@@ -588,4 +588,7 @@ main details.host-text-more{margin:0;padding:0;border:0;background:none;box-shad
 .host-text-more>summary::-webkit-details-marker{display:none}
 .host-text-more[open]>summary,.host-text:has(.host-text-more[open]) .host-text-dots{display:none}
 .host-text-more[open]>p{margin-top:0}
+/* Finalize review plain fixes: the chat host badge is 12px and readable in dark mode (was about 1.8:1). */
+.host-badge{font-size:.75rem}
+@media (prefers-color-scheme:dark){.host-badge{background:#3a2f12;color:#ffd27a}}
 `);

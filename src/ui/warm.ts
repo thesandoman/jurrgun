@@ -39,7 +39,7 @@ const RULES = `
   & .top-nav a{color:var(--ink-2)}
   & .top-nav a:hover{background:var(--surface);color:var(--ink)}
   & .top-nav a.on{background:var(--brand);color:#fff}
-  & .top-nav a.center:not(.on){color:#b45f00}
+  & .top-nav a.center:not(.on){color:#9a5100}
 
   /* buttons: friendly green, softer shadow */
   & .btn.primary{background:var(--brand);color:#fff;box-shadow:0 6px 16px rgba(19,127,69,.22)}
