@@ -17,7 +17,7 @@ const event = async (title: string, daysAgo: number) => {
 };
 
 describe.skipIf(!HAS_DB)("no repeats", () => {
-  it("shows one card per person, with the other meetings under Also met at, and Remove removes them all", async () => {
+  it("shows one card per person with the last meeting, lists every meeting on their profile, and Remove removes them all", async () => {
     const me = await createMember();
     const them = await createMember({ nickname: `Twice${newId().slice(0, 4)}` });
     const e1 = await event("Board games night", 10);
@@ -28,7 +28,13 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     ]);
     const html = await (await req("/connections?lang=en", { cookie: me.cookie })).text();
     expect(html.split(`href="/people/${them.id}"`).length - 1).toBe(1);
-    expect(html).toContain("Also met at: Board games night");
+    expect(html).toContain("Last met at Night food crawl");
+    expect(html).not.toContain("Board games night");
+    // The full history lives on their profile (B1), newest first.
+    const prof = await (await req(`/people/${them.id}?lang=en`, { cookie: me.cookie })).text();
+    expect(prof).toContain("Where you've met");
+    expect(prof.indexOf("Night food crawl")).toBeGreaterThan(0);
+    expect(prof.indexOf("Night food crawl")).toBeLessThan(prof.indexOf("Board games night"));
     expect(html).not.toContain("nothing yet");
     // Me counts people, not meetings.
     expect(await (await req("/settings?lang=en", { cookie: me.cookie })).text()).toMatch(/<a href="\/connections" class="me-stat[^"]*"><span[^>]*>🤝<\/span><b>1<\/b>/);

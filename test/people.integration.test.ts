@@ -200,7 +200,7 @@ describe.skipIf(!HAS_DB)("People I Met", () => {
     expect((await connectionBetween(ev, x, y)).level).toBe("friend");
 
     const page = await (await req("/connections", { cookie: en(y) })).text();
-    expect(page).toContain("Would like to be friends");
+    expect(page).toContain("Last met at");
     expect(page).not.toContain("Open to something more");
     const yPeople = await (await req(`/events/${ev}/people`, { cookie: en(y) })).text();
     // y sees the romance option (eligible) but only their own choice is checked.
@@ -402,7 +402,7 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     expect([...order].sort((x, y) => x - y)).toEqual(order);
   });
 
-  it("My Bangkok circle shows the badge and a visible type; no spark line without my own quiz", async () => {
+  it("My Bangkok circle shows the badge; their profile shows a visible type, and no spark line without my own quiz", async () => {
     const x = await member({ bkkRegistered: "verified" });
     const y = await member();
     const ev = await makeEvent({ endedHoursAgo: 1 });
@@ -416,13 +416,17 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     await db().insert(vibes).values({ accountId: x.id, vector: {}, archetype: "CDMH", modifier: "rhythm-", visible: true });
     html = await (await req("/connections", { cookie: en(y) })).text();
     expect(html).toContain("Bangkok resident");
-    expect(html).toContain(`🛕 ${displayName("CDMH", "rhythm-").en}`);
+    // The slim card (B1) leaves the type and the spark to the profile.
     expect(html).not.toContain("Conversation spark");
+    let prof = await (await req(`/people/${x.id}`, { cookie: en(y) })).text();
+    expect(prof).toContain(`🛕 ${displayName("CDMH", "rhythm-").en}`);
+    expect(prof).not.toContain("Conversation spark");
     await db().insert(vibes).values({ accountId: y.id, vector: {}, archetype: "CDSH", visible: false });
-    html = await (await req("/connections", { cookie: en(y) })).text();
-    expect(html).toContain("Conversation spark");
-    expect(html).toContain("One letter apart"); // CDMH vs CDSH: one letter apart
+    prof = await (await req(`/people/${x.id}`, { cookie: en(y) })).text();
+    expect(prof).toContain("Conversation spark");
+    expect(prof).toContain("One letter apart"); // CDMH vs CDSH: one letter apart
+    expect(await (await req("/connections", { cookie: en(y) })).text()).not.toContain("Conversation spark");
     // x's own view of y: y's type is hidden.
-    expect(await (await req("/connections", { cookie: en(x) })).text()).not.toContain("The Story Collector");
+    expect(await (await req(`/people/${y.id}`, { cookie: en(x) })).text()).not.toContain("The Story Collector");
   });
 });

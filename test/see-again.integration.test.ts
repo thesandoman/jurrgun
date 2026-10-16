@@ -60,7 +60,7 @@ async function connect(eventId: string, x: Member, y: Member, level = "friend") 
 const page = async (path: string, m: Member) => (await req(path, { cookie: en(m) })).text();
 
 describe.skipIf(!HAS_DB)("see them again", () => {
-  it("names connected people from the event and points to an event they booked, on all three pages", async () => {
+  it("names connected people from the event and points to an event they booked, on the event page and My people", async () => {
     const me = await member(`Me${tag()}`);
     const ploy = await member(`Ploy${tag()}`);
     const ken = await member(`Ken${tag()}`);
@@ -76,7 +76,9 @@ describe.skipIf(!HAS_DB)("see them again", () => {
     const theirs = await mkEvent({ titleEn: "Stranger's pick", startsAt: new Date(Date.now() + DAY) });
     await book(theirs, stranger.id);
 
-    for (const path of [`/events/${past}`, "/me/events", "/connections"]) {
+    // My people only (B1), not My events.
+    expect(await page("/me/events", me)).not.toContain('class="card see-again"');
+    for (const path of [`/events/${past}`, "/connections"]) {
       const html = await page(path, me);
       expect(html, path).toContain('class="card see-again"');
       expect(html, path).toMatch(new RegExp(`Ploy\\w+, Ken\\w+|Ken\\w+, Ploy\\w+`));
@@ -89,9 +91,9 @@ describe.skipIf(!HAS_DB)("see them again", () => {
       expect(card, path).not.toMatch(/romance|something more|💘/i);
     }
     expect(await page(`/events/${past}`, me)).toContain("People you met here");
-    expect(await page("/me/events", me)).toContain("People you met at Noodle night");
+    expect(await page("/connections", me)).toContain("People you met at Noodle night");
     // Thai first.
-    const th = await (await req("/me/events", { cookie: me.cookie })).text();
+    const th = await (await req("/connections", { cookie: me.cookie })).text();
     expect(th).toContain("คนที่คุณเจอที่");
     expect(th).toContain("ดูกิจกรรมนี้");
   });

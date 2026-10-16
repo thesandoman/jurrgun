@@ -34,7 +34,7 @@ describe.skipIf(!HAS_DB)("filming fixes", () => {
     for (const m of [a, b]) await db().insert(contactShares).values({ id: newId(), connectionId: c1, accountId: m.id, method: "line", value: "x_" + m.id.slice(0, 4) });
     const [pb] = await db().select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, b.id));
     const html = await (await req("/connections?lang=en", { cookie: a.cookie })).text();
-    expect(html).toContain(`You and ${pb.nickname} have met`);
+    expect(html).toContain("🎉 Met 2 times");
     expect(html).toContain(`Invite ${pb.nickname} to a table`);
     expect(html).not.toContain(`You and ${pb.nickname} (they/them)`);
     expect(html).toContain(`${pb.nickname} (they/them)</a>`);

@@ -54,7 +54,10 @@ describe.skipIf(!HAS_DB)("curated icebreakers", () => {
     await reg(id, m.id);
     const key = `circle:${id}`;
     const html = await (await req(`/chat/${key}`, { cookie: `${m.cookie}; lang=en` })).text();
-    expect(html).toContain('class="chat-ice" open');
+    // Inside the composer's + Sheet (B3), open there.
+    expect(html).toContain('class="how chat-ice" open');
+    expect(html.indexOf("chat-plus")).toBeGreaterThan(0);
+    expect(html.indexOf("chat-plus")).toBeLessThan(html.indexOf("chat-ice"));
     const first = icebreakersFor(id)[0];
     expect(html).toContain(`<button name="body" value="${first.en.replace(/'/g, "&#39;")}">`);
     // The profile-prompt starters step aside so there's one set of suggestions.
