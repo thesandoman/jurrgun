@@ -832,7 +832,7 @@ function CircleGroups(props: { v: View; extras: CircleExtras }) {
 }
 
 /**
- * One person on My people (finalize review B1 + C2): avatar, name, one "last met"
+ * One person on My people (finalize review B1 + C2), as a row of the grouped list: avatar, name, one "last met"
  * line, Chat, and one ⋯ that opens the Sheet with everything else. The
  * conversation spark and the full meeting history live on their profile.
  */
@@ -848,7 +848,7 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
       : "";
   const vibe = r.other.vibe?.visible ? ARCHETYPES[r.other.vibe.archetype] : null;
   return (
-    <Card class="person-card">
+    <li class="person-row">
       <div class="pc-row">
         {r.other.photo ? (
           <img class="pc-av" src={`/people/${r.other.id}/photo/main`} alt="" width={48} height={48} loading="lazy" />
@@ -858,14 +858,14 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
         <div class="pc-main">
           <h2 class="pc-name">
             <a href={`/people/${r.other.id}`}>{r.other.name}</a>
-            {r.other.resident ? (
-              <>
-                {" "}
-                <ResidentTag v={props.v} />
-              </>
-            ) : null}
           </h2>
           <p class="pc-met" data-celebrate={r.celebrate ? "" : undefined}>
+            {/* The resident tag leads the line under the name, so the name keeps one line beside Chat and ⋯. */}
+            {r.other.resident ? (
+              <>
+                <ResidentTag v={props.v} />{" "}
+              </>
+            ) : null}
             {r.graduated ? <>{t(`🎉 เจอกันมา ${times} ครั้ง`, `🎉 Met ${times} times`)} · </> : null}
             {met}
             {r.level === "romance" ? (
@@ -951,7 +951,7 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
           </form>
         </Sheet>
       </div>
-    </Card>
+    </li>
   );
 }
 
@@ -999,7 +999,12 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
           <LinkButton href="/events">{t("ดูกิจกรรม", "Find an event")}</LinkButton>
         </Card>
       ) : (
-        props.rows.map((r) => <PersonCard v={props.v} r={r} error={props.error?.id === r.id ? props.error.text : undefined} />)
+        // One grouped list, rows split by hairlines (owner, 2026-10-16: "too card/boxy").
+        <ul class="glist people-list" aria-label={props.v.t("คนรู้จักของคุณ", "Your people")}>
+          {props.rows.map((r) => (
+            <PersonCard v={props.v} r={r} error={props.error?.id === r.id ? props.error.text : undefined} />
+          ))}
+        </ul>
       )}
       {props.extras ? <CircleGroups v={props.v} extras={props.extras} /> : null}
     </>
@@ -1367,7 +1372,7 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
         groupNotifications(rows, lang).map((g) => (
           <section class="notif-day">
             <h2 class="h3">{t(g.th, g.en)}</h2>
-            <ul class="notif-list notif-page">
+            <ul class="glist notif-list notif-page">
               {g.items.map(({ n, count }) => {
                 const title = lang === "en" ? n.titleEn : n.titleTh;
                 const href = n.link && safeNext(n.link, "") ? n.link : undefined;

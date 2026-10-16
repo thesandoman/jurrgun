@@ -135,18 +135,23 @@ export function MeHub(props: {
       <>
       {g ? <SubLabel>{g}</SubLabel> : null}
       <nav class="me-menu" aria-label={g || t("ตั้งค่า", "Settings")}>
-        {props.links.filter((l) => (l.group ?? "") === g).map((l) => (
-          <a href={l.href} class="me-row" title={l.hint}>
-            <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
-              {l.emoji}
-            </span>
-            <span class="me-row-text">
-              <strong>{l.title}</strong>
-              <small>{l.hint}</small>
-            </span>
-            <span class="me-chev" aria-hidden="true">›</span>
-          </a>
-        ))}
+        {/* One grouped list per group, rows split by hairlines (owner, 2026-10-16). */}
+        <ul class="glist me-list">
+          {props.links.filter((l) => (l.group ?? "") === g).map((l) => (
+            <li>
+              <a href={l.href} class="me-row">
+                <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
+                  {l.emoji}
+                </span>
+                <span class="me-row-text">
+                  <strong>{l.title}</strong>
+                  <small>{l.hint}</small>
+                </span>
+                <span class="me-chev" aria-hidden="true">›</span>
+              </a>
+            </li>
+          ))}
+        </ul>
       </nav>
       </>
       ))}
@@ -225,15 +230,12 @@ const ME_CSS = `
 .me-chip:nth-child(6n+5){--tint:var(--t-mint);transform:rotate(-1.5deg)}
 .me-chip:nth-child(6n){--tint:var(--t-sun);transform:rotate(1deg)}
 
-.me-menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:20px 0}
-.me-row{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:118px;padding:14px;border-radius:24px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .18s ease}
-.me-row:hover,.me-row:focus-visible{transform:translateY(-2px)}
-.me-row:active{transform:scale(.98)}
-.me-bubble{flex:none;display:grid;place-items:center;width:46px;height:46px;font-size:1.35rem;background:color-mix(in srgb,var(--tint) 22%,var(--surface));border-radius:55% 45% 50% 50%/50% 55% 45% 50%}
-.me-row:nth-child(even) .me-bubble{border-radius:45% 55% 52% 48%/56% 46% 54% 44%}
-.me-row-text{display:flex;flex-direction:column;line-height:1.25;margin-top:auto}
-.me-row-text small{display:none}
-.me-row .me-chev{position:absolute;top:12px;right:14px}
+.me-menu{margin:0 0 16px}
+.me-menu>.glist{margin:0;--glist-inset:64px}
+.me-row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;text-decoration:none;color:var(--ink)}
+.me-bubble{flex:none;display:grid;place-items:center;width:36px;height:36px;font-size:1.1rem;background:color-mix(in srgb,var(--tint) 22%,var(--surface));border-radius:50%}
+.me-row-text{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.me-row-text small{color:var(--ink-2);font-size:.82rem}
 .me-chev{font-size:1.5rem;color:var(--ink-3);line-height:1}
 
 .me-lang{display:flex;gap:6px;padding:5px;margin:10px auto;border-radius:999px;background:var(--surface-2);width:max-content;max-width:100%}

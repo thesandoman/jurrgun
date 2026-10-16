@@ -266,7 +266,7 @@ chatRoutes.get("/chat", async (c) => {
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a Regular Table or a private hangout.")}</Empty>
       ) : (
-        <ul class="chat-list">
+        <ul class="glist chat-list">
           {rows.map(({ th, last, unread }) => {
             const who = th.members.filter((x) => x !== me).map((x) => nameOf.get(x) ?? "?");
             return (

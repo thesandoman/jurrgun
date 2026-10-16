@@ -295,8 +295,6 @@ h1,h2,h3,.flow-title{text-wrap:balance}
 body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 @media (min-width:900px){.sticky-cta{bottom:20px}}
 
-/* Me: an odd tile out spans the row instead of sitting alone. */
-.me-menu>:last-child:nth-child(odd){grid-column:1/-1}
 
 /* Landing heroes: a shade behind the text so it reads on any sky (1.4.3). */
 .tile2.hero .tile2-art::after{background:linear-gradient(to top,rgba(8,20,14,.78) 0%,rgba(8,20,14,.6) 55%,rgba(8,20,14,.5) 100%)}
@@ -693,17 +691,10 @@ details.sheet[open]>.sheet-more{background:var(--surface-2)}
   .sheet-panel::backdrop{background:transparent}
 }
 @media (prefers-color-scheme:dark){.sheet-panel{box-shadow:0 -12px 40px rgba(0,0,0,.5)}}
-/* B1 person cards on My people: avatar, name, one last-met line, Chat and ⋯ (no empty band above the name). */
-.card.person-card{display:grid;gap:12px}
-.pc-row{display:flex;align-items:center;gap:12px;min-width:0}
+/* B1 people on My people: avatar, name, one last-met line, Chat and ⋯ (rows of one grouped list, below). */
 .pc-av{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:0 0 48px;background:var(--surface-2)}
 .pc-row .avstack{flex:0 0 auto;margin:0}
-.pc-main{min-width:0}
-.card.person-card h2.pc-name{margin:0;font-size:1.15rem;line-height:1.3}
 .pc-met{margin:2px 0 0;color:var(--ink-2);font-size:.9rem;line-height:1.45}
-.pc-acts{display:flex;align-items:center;gap:8px}
-.pc-acts .btn{min-height:44px;margin:0}
-@media (min-width:640px){.card.person-card{grid-template-columns:1fr auto;align-items:center}}
 /* B1: the full meeting history now sits on the person's profile. */
 .card.met-at h2.eyebrow{margin:0 0 6px;font-size:.8rem}
 .met-at ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
@@ -825,4 +816,50 @@ a.plink>span[aria-hidden]{flex:0 0 24px;text-align:center}
 .topbar .brand,.fd-logo{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 @media (prefers-reduced-motion:reduce){.topbar .brand,.fd-logo{touch-action:auto}}
 html.a11y-motion .topbar .brand,html.a11y-motion .fd-logo{touch-action:auto}
+/* ---- Less boxy (owner decisions, 2026-10-16) ---- */
+/* 1. Grouped lists: repeated items are rows inside ONE rounded group, split by 1px hairlines that start
+   after the avatar or icon (--glist-inset), like a phone's settings list. No overflow:hidden, so a ⋯
+   popover inside a row is never clipped. */
+.glist{list-style:none;margin:12px 0 16px;padding:0;display:block;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.glist>*{position:relative;margin:0}
+.glist>*+*::before{content:"";position:absolute;top:0;left:var(--glist-inset,16px);right:0;height:1px;background:var(--line);pointer-events:none}
+/* Row links fill their row; a tinted or hovered row keeps the group's rounded corners. */
+.glist>:first-child,.glist>:first-child>a{border-top-left-radius:15px;border-top-right-radius:15px}
+.glist>:last-child,.glist>:last-child>a{border-bottom-left-radius:15px;border-bottom-right-radius:15px}
+/* My people: avatar | name | Chat and ⋯ on the first line, the last-met line under the name (under the
+   buttons too on phones). The inner wrappers step aside so every part shares one grid. */
+.glist.people-list{--glist-inset:76px}
+.person-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;grid-template-areas:"av name acts" "av met met";column-gap:12px;align-items:center;padding:10px 12px 10px 16px}
+.person-row>.pc-row,.person-row .pc-main{display:contents}
+.person-row .pc-av,.person-row .pc-row>.avstack{grid-area:av;align-self:center}
+.person-row h2.pc-name{grid-area:name;margin:0;font-size:1.06rem;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.person-row .pc-met{grid-area:met;margin:2px 0 0}
+.person-row .pc-met:empty{display:none}
+/* The 44px buttons reach 6px into the row padding, so the name line is not 44px tall on its own. */
+.person-row .pc-acts{grid-area:acts;display:flex;align-items:center;gap:8px;margin:-6px 0}
+.person-row .pc-met{font-size:.88rem;line-height:1.5}
+.person-row .pc-acts .btn{min-height:44px;margin:0;padding:8px 14px}
+@media (min-width:640px){.person-row{grid-template-areas:"av name acts" "av met acts"}}
+/* Chats: the same group; the unread tint and "New" label stay on the row (status, never colour alone). */
+.glist.chat-list{display:block;--glist-inset:66px}
+.glist.chat-list a{border:0;border-radius:0;background:none;min-height:56px}
+.glist.chat-list a.unread{background:color-mix(in srgb,var(--brand) 9%,var(--surface))}
+/* Notifications: one group per day. */
+.glist.notif-page{display:block;margin-top:8px}
+.glist.notif-page a,.glist.notif-page div{border:0;border-radius:0;background:none;min-height:44px;padding:12px 16px}
+.glist.notif-page li.unread a,.glist.notif-page li.unread div{background:color-mix(in srgb,var(--brand) 9%,var(--surface))}
+/* My events: upcoming tables as rows too; past rows get the inset hairline after the date. */
+.glist.up-rows{--glist-inset:82px}
+.up-row{padding:12px 16px}
+.up-row .row{margin:8px 0 0}
+.up-row .row:empty{display:none}
+.glist.past-rows{--glist-inset:66px}
+.past-row+.past-row{border-top:0}
+/* Me: the quick switches sit in one group; each switch is a plain row inside it. */
+.glist.quick-list{margin:0}
+.quick-list>*{margin:0}
+.quick-list .qs{border-radius:0;background:none;box-shadow:none;min-height:56px;padding:10px 16px}
+.quick-list>:first-child .qs{border-top-left-radius:15px;border-top-right-radius:15px}
+.quick-list>:last-child .qs{border-bottom-left-radius:15px;border-bottom-right-radius:15px}
+.quick-list .qs-consent{margin:0 12px 12px}
 `);

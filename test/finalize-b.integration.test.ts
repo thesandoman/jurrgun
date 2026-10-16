@@ -25,12 +25,16 @@ async function connected() {
 }
 
 describe.skipIf(!HAS_DB)("finalize review B", () => {
-  it("a My people card is avatar, name, last met, Chat and one ⋯ holding thank-you, share contact, report, block and remove", async () => {
+  it("a My people row is avatar, name, last met, Chat and one ⋯ holding thank-you, share contact, report, block and remove", async () => {
     const { a, b, id } = await connected();
     const html = await (await req("/connections?lang=en", { cookie: `${a.cookie}; lang=en` })).text();
-    const start = html.indexOf('class="card person-card"');
-    expect(start).toBeGreaterThan(0);
-    const card = html.slice(start, html.indexOf("</section>", start));
+    // One grouped list (owner, 2026-10-16), each person a row in it, not a card of their own.
+    const list = html.indexOf('<ul class="glist people-list"');
+    expect(list).toBeGreaterThan(0);
+    const start = html.indexOf('<li class="person-row">', list);
+    expect(start).toBeGreaterThan(list);
+    expect(html).not.toContain("person-card");
+    const card = html.slice(start, html.indexOf("</ul>", start));
     expect(card).toContain('<h2 class="pc-name">');
     expect(card).toContain("Last met at Soi walk");
     expect(card).toContain(`href="/chat/conn:${id}"`);

@@ -258,6 +258,7 @@ settingsRoutes.get("/settings", async (c) => {
   const quick = (
     <section class="quick" id="quick" aria-label={t("สวิตช์ด่วน", "Quick switches")}>
       <SubLabel>⚡ {t("สวิตช์ด่วน", "Quick switches")}</SubLabel>
+      <div class="glist quick-list">
       <QuickSwitch k="pause" on={paused} emoji="⏸️" title={t("พัก Jurrgun 1 สัปดาห์", "Take a week off")} hint={paused ? t(`พักอยู่ถึง ${fmtDate(p.pausedUntil!, lang)}`, `On a break until ${fmtDate(p.pausedUntil!, lang)}`) : t("ไม่มีบัดดี้ใหม่ คนรู้จักและแชตยังอยู่", "No new buddies. People and chats stay.")} />
       {p.pronouns ? <QuickSwitch k="pronouns" on={p.showPronouns} emoji="🏷️" title={t(`แสดงสรรพนาม (${p.pronouns})`, `Show my pronouns (${p.pronouns})`)} hint={t("บนโปรไฟล์และการ์ดบัดดี้", "On my profile and buddy card")} /> : null}
       {p.relationship === "relationship" || p.relationship === "married" ? null : (
@@ -285,6 +286,7 @@ settingsRoutes.get("/settings", async (c) => {
       )}
       {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} /> : null}
       {canBeWomenOnly(p.gender) ? <QuickSwitch k="womenOnly" on={p.womenOnly} emoji="🌸" title={t("เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only")} hint={t("บัดดี้ การ์ด แมตช์ และแชต", "Buddies, deck, matches and chats")} /> : null}
+      </div>
     </section>
   );
   return page(

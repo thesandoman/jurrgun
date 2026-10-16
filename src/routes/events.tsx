@@ -2029,8 +2029,9 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
           </p>
         </>
       ) : (
-        upcoming.map(({ event, reg }) => (
-          <Card>
+        <ul class="glist up-rows">
+        {upcoming.map(({ event, reg }) => (
+          <li class="up-row">
             <div class="dated">
               <DateBlock d={event.startsAt} lang={lang} />
               <div>
@@ -2053,8 +2054,9 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
                 </div>
               </div>
             </div>
-          </Card>
-        ))
+          </li>
+        ))}
+        </ul>
       )}
 
       <h2 id="past">{t("ที่ผ่านมา", "Past")}</h2>
@@ -2065,7 +2067,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         byMonth(past, (r) => fmtMonth(r.event.startsAt, lang)).map(([month, items]) => (
           <section class="past-month">
             <SubLabel>{month}</SubLabel>
-            <ul class="past-rows">
+            <ul class="glist past-rows">
               {items.map(({ event, reg }) => {
                 const attended = !!reg.checkedInAt;
                 const open = attended && peopleWindow(event.endsAt, now) === "open";
