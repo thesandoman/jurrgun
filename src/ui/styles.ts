@@ -181,7 +181,7 @@ dl.facts dd{margin:0}
 .intro-slide p.intro-foot{font-size:.85rem;font-weight:600;color:var(--ink-3)}
 .endorse{display:block;margin-top:6px;font-weight:600;opacity:.92}
 .foot-endorse{font-weight:600}
-.intro-art{width:min(62vw,240px);aspect-ratio:1;border-radius:36%;display:grid;place-items:center;box-shadow:0 18px 50px color-mix(in srgb,var(--fresh) 30%,transparent);animation:float 5s ease-in-out infinite}
+.intro-art{width:min(62vw,240px);aspect-ratio:1;border-radius:36%;display:grid;place-items:center;box-shadow:0 18px 50px color-mix(in srgb,var(--fresh) 30%,transparent)}
 .intro-art b{font-size:min(28vw,108px);line-height:1}
 .intro-mark{display:block;width:72%;height:72%}.intro-mark svg{width:100%;height:100%;filter:drop-shadow(0 8px 18px rgba(0,0,0,.18))}
 .s1 .intro-art{background:none;box-shadow:none}.s1 .intro-mark{width:100%;height:100%}
@@ -197,8 +197,7 @@ dl.facts dd{margin:0}
 .intro-dots i.on{width:26px;background:var(--brand)}
 .intro-lang{position:absolute;top:calc(18px + env(safe-area-inset-top));left:18px;margin:0;font-size:.85rem}
 .hero-mark{display:inline-flex;width:64px;height:64px;margin-bottom:6px}.hero-mark .brand-mark{width:64px;height:64px}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@media (prefers-reduced-motion:reduce){.intro-art{animation:none}}
+
 .card h3>span[aria-hidden]{display:inline-grid;place-items:center;width:34px;height:34px;margin-right:8px;border-radius:12px;background:var(--brand-soft);vertical-align:middle}
 hr{border:none;border-top:1px solid var(--line);margin:18px 0}
 @media (min-width:900px){body:not(.admin){padding-bottom:84px}}

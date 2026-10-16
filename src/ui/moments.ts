@@ -31,10 +31,10 @@ export const MOMENTS_CSS = themed(`
 @keyframes tear-body{from{transform:translateY(18px) rotate(.8deg);opacity:0}}
 
 /* Live pass: check-in is open */
-.ticket.is-live{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent),var(--shadow);animation:live-glow 2.4s ease-in-out infinite}
+.ticket.is-live{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent),var(--shadow);animation:live-glow 2.4s ease-in-out 3}
 @keyframes live-glow{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--brand) 16%,transparent),var(--shadow)}}
 .live-pill{display:inline-flex;align-items:center;gap:8px;margin:0 0 8px;padding:5px 12px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:.88rem}
-.live-pill i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--brand);animation:live-dot 1.8s ease-out infinite}
+.live-pill i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--brand);animation:live-dot 1.8s ease-out 3}
 @keyframes live-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--brand) 55%,transparent)}80%,100%{box-shadow:0 0 0 9px transparent}}
 
 /* QR flips to the short code */

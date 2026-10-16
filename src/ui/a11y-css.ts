@@ -739,4 +739,6 @@ html:not(.sheet-js) .chat-compose{position:static}
 .journey-top .flow-close{margin:-14px 0}
 /* The ⓘ ends the helper line instead of sitting alone on its own line. */
 .flow-hint.with-info{margin:0 0 8px}
+/* D2 ambient motion: decorative shapes sit still (Me's blobs and photo frame no longer morph). Only a live state pulses, 3 times. */
+main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
 `);
