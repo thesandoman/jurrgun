@@ -1,5 +1,5 @@
 /**
- * Dating on Jurrgun: the three "what brings you here" modes, the two
+ * Dating on Jurrgun: the "what brings you here" modes, the two
  * questions dating members answer at the start, and the dating safety net
  * (/safety). Bilingual, gender neutral, no em or en dashes.
  */
@@ -10,11 +10,18 @@ export const MODES = ["friends", "dating", "dating_only"] as const;
 export type Mode = (typeof MODES)[number];
 export const isMode = (x: string): x is Mode => (MODES as readonly string[]).includes(x);
 
+/**
+ * The two choices a member sees (owner, Phase 2B): friends first, 💘 as the
+ * opt-in. "dating_only" stays a valid stored mode for existing members and
+ * old form posts, but it is no longer offered; it shows as the 💘 option.
+ */
 export const MODE_OPTS: { value: Mode; emoji: string; label: Text }[] = [
-  { value: "friends", emoji: "👋", label: t("Friends and group hangouts only", "เพื่อนใหม่และกิจกรรมกลุ่มเท่านั้น") },
-  { value: "dating", emoji: "🌱", label: t("Friends, and open to dating", "เพื่อนใหม่ และเปิดใจเรื่องเดต") },
-  { value: "dating_only", emoji: "💘", label: t("Here for dating", "มาหาเดตโดยเฉพาะ") },
+  { value: "friends", emoji: "👋", label: t("New friends and group plans", "เพื่อนใหม่และกิจกรรมกลุ่ม") },
+  { value: "dating", emoji: "💘", label: t("New friends, and open to something more", "เพื่อนใหม่ และเปิดใจมากกว่าเพื่อน") },
 ];
+
+/** The offered choice a stored mode shows as: dating_only reads as the 💘 option. */
+export const offeredMode = (m: Mode | undefined): Mode | undefined => (m === "dating_only" ? "dating" : m);
 
 /** "Why are you here for dating?" Pick up to three. */
 export const DATING_REASONS: { value: string; emoji: string; label: Text }[] = [

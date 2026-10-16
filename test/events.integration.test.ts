@@ -546,7 +546,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(item(cNick)).not.toContain("Bangkok resident");
     expect(item(aNick)).not.toContain("The Party Host");
     expect(item(bNick)).toContain("🍜 The Food Hunter");
-    expect(item(bNick)).toContain("Interesting match");
+    expect(item(bNick)).toContain("Opposite sides");
     expect(item(bNick)).toContain("queue longest for");
     // Everyone is still listed (types never hide anyone).
     for (const n of [aNick, bNick, cNick]) expect(html).toContain(n);

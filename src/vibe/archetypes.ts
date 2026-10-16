@@ -12,8 +12,9 @@
  *   plan     🎲 Spontaneous / 🗓️ Planner
  * All six categories still feed table matching.
  *
- * Match labels (Natural / Complementary / Interesting) are conversation
- * starters between TYPES. They never hide, rank or exclude anyone.
+ * Match labels (internally natural / complementary / interesting) are
+ * conversation starters between TYPES. They never hide, rank or exclude
+ * anyone, and their member-facing names never say match or compatible (D31).
  */
 import { CATEGORIES, MOTIVE_PLACES, MOTIVES, type Category, type Motive, type Text } from "./content";
 import { strengthOf } from "./generator";
@@ -68,7 +69,7 @@ export type Archetype = {
   spots: Spot[];
   /** When in the week this type is at its best. */
   bestTime: Text;
-  /** The types this one clicks with most, and why. */
+  /** Types you might meet at a table, and what each brings the other (shown on the result and type pages). */
   clicks: { key: ArchetypeKey; why: Text }[];
   /** Modern hangouts and specific areas: malls, clubs, stadiums, food halls. */
   hangouts: Hangout[];
@@ -680,9 +681,9 @@ export function matchLabel(a: ArchetypeKey, b: ArchetypeKey): MatchLabel {
 }
 
 export const MATCH_LABELS: Record<Exclude<MatchLabel, null>, { emoji: string; name: Text; copy: Text }> = {
-  natural: { emoji: "💚", name: t("เข้ากันเป็นธรรมชาติ", "Natural match"), copy: t("มองกรุงเทพฯ คล้ายกัน คุยกันง่าย", "You see Bangkok the same way, easy to click.") },
-  complementary: { emoji: "🧩", name: t("เติมเต็มกัน", "Complementary match"), copy: t("ต่างกันแค่ข้อเดียว ลงตัวพอดี", "One letter apart: different in a way that fits.") },
-  interesting: { emoji: "✨", name: t("คู่ที่น่าสนใจ", "Interesting match"), copy: t("คนละขั้วทุกข้อ เรื่องคุยไม่มีวันหมด", "Opposite on every letter: you'll never run out of things to say.") },
+  natural: { emoji: "💚", name: t("มองเมืองคล้ายกัน", "Sees Bangkok like you"), copy: t("มองกรุงเทพฯ คล้ายกัน เริ่มคุยง่าย", "You see Bangkok the same way, so talk comes easy.") },
+  complementary: { emoji: "🧩", name: t("ต่างกันนิดเดียว", "One letter apart"), copy: t("ต่างกันแค่ข้อเดียว มีมุมใหม่ ๆ มาแลกกัน", "Different in one way, with something new to swap.") },
+  interesting: { emoji: "✨", name: t("คนละขั้ว", "Opposite sides"), copy: t("คนละขั้วทุกข้อ เรื่องคุยไม่มีวันหมด", "Opposite on every letter: you'll never run out of things to say.") },
 };
 
 function flip(code: ArchetypeKey, index: number): ArchetypeKey {

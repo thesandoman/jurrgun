@@ -199,7 +199,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
           </a>
         ))}
       </div>
-      <h2>{t("ไทป์ไหนเข้ากับไทป์ไหน", "How types meet")}</h2>
+      <h2>{t("ไทป์ต่าง ๆ เจอกันแล้วเป็นยังไง", "How types meet")}</h2>
       <ul>
         {(["natural", "complementary", "interesting"] as const).map((m) => (
           <li>

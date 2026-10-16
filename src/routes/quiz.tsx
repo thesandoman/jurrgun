@@ -468,12 +468,12 @@ function Certainty(props: { v: View; res: TypeResult & { range: ArchetypeKey[] }
   );
 }
 
-/** Who this type clicks with, and why. */
+/** Types you might meet at a table, and what each brings the other (D31: no compatibility language). */
 function Clicks(props: { v: View; a: Archetype }) {
   const { t, lang } = props.v;
   return (
     <Card>
-      <h2>🤝 {t("เข้ากันได้ดีกับ", "Clicks with")}</h2>
+      <h2>🤝 {t("ไทป์ที่คุณอาจได้เจอที่โต๊ะ", "Types you might meet at a table")}</h2>
       <div class="type-row">
         {props.a.clicks.map((x) => (
           <a href={`/types/${typeSlug(x.key)}`} class="type-pick" title={L(lang, x.why)}>
@@ -483,7 +483,7 @@ function Clicks(props: { v: View; a: Archetype }) {
         ))}
       </div>
       <details class="how">
-        <summary>{t("ทำไมถึงเข้ากัน", "Why you click")}</summary>
+        <summary>{t("เจอกันแล้วได้อะไร", "What you'd bring each other")}</summary>
         <ul>
           {props.a.clicks.map((x) => (
             <li>
@@ -524,7 +524,7 @@ function Matches(props: { v: View; archetype: ArchetypeKey; /** Types already on
   }
   return (
     <>
-      <h2>{t("ใครชวนคุยสนุก", "Fun to chat with")}</h2>
+      <h2>{t("ไทป์อื่นที่น่ารู้จัก", "More types worth meeting")}</h2>
       <div class="matches">
         {rows.map(([kind, key]) => (
           <a href={`/types/${typeSlug(key)}`}>

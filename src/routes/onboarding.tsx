@@ -3,8 +3,9 @@
  * Every stage is a card flow (src/ui/flow.tsx). Few screens before the first
  * event (D42): the quiz, then one screen each for basics and privacy.
  *
- *   0 welcome      one splash screen, and the first question: friends only, open to dating, or here
- *                  for dating; dating members then answer why, and what makes dating in Bangkok hard
+ *   0 welcome      one splash screen, and the first question: new friends and group plans (the default),
+ *                  or new friends and 💘 open to something more; 💘 members then answer why, and what
+ *                  makes dating in Bangkok hard
  *   1 quiz         Bangkok Vibe quiz (skippable) → type reveal (/onboarding/type)
  *   2 basics       one screen: nickname, birth date (18+ gate), district, how you're in Bangkok
  *   3 privacy      one screen: required consents + code of conduct, and the optional extras
@@ -48,6 +49,7 @@ import {
   MAX_FIRST,
   MAX_REASONS,
   MODE_OPTS,
+  offeredMode,
 } from "../content/dating";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
@@ -79,7 +81,7 @@ const stage = (s: Step) => ({ at: STAGE_AT[s], of: 4 });
 
 export const CONSENT_VERSION = "2026-10-proto";
 export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
-/** friends | dating | dating_only, chosen on the welcome screen before a profile exists. */
+/** friends | dating, chosen on the welcome screen before a profile exists (dating_only from older visits reads as dating). */
 export const INTENT_COOKIE = "bkk_intent";
 
 /** The first step this user hasn't completed. */
@@ -139,9 +141,14 @@ function MustToggle(props: { name: string; label: string; checked?: boolean }) {
 
 // ------------------------------------------------------------- welcome --
 
+/** Love red tints the 💘 card only once it is chosen; friends stays brand green. */
+const WELCOME_CSS = `.welcome-mode .answer input[value=dating]:checked+span{border-color:var(--love);background:var(--love-soft);color:var(--ink)}
+.welcome-mode .answer input[value=dating]:focus-visible+span{outline-color:color-mix(in srgb,var(--love) 45%,transparent)}`;
+
 onboarding.get("/welcome", (c) => {
   const { t, lang } = view(c);
-  const chosen = getCookie(c, INTENT_COOKIE);
+  const raw = getCookie(c, INTENT_COOKIE);
+  const chosen = raw && isMode(raw) ? offeredMode(raw) : undefined;
   return page(
     c,
     { title: TITLE, bare: true },
@@ -154,7 +161,8 @@ onboarding.get("/welcome", (c) => {
         <h1>{t("ยินดีต้อนรับสู่ Jurrgun", "Welcome to Jurrgun")}</h1>
       </div>
       <h2>{t("มาหาอะไรที่ Jurrgun?", "What brings you here?")}</h2>
-      <div class="answers">
+      <style dangerouslySetInnerHTML={{ __html: WELCOME_CSS }} />
+      <div class="answers welcome-mode">
         {MODE_OPTS.map((o, i) => (
           <AnswerCard name="mode" value={o.value} emoji={o.emoji} label={lang === "en" ? o.label.en : o.label.th} checked={chosen ? chosen === o.value : i === 0} />
         ))}

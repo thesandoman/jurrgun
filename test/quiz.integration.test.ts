@@ -222,7 +222,9 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(result).not.toContain("Wing");
     expect(result).toContain('action="/quiz/visibility"');
     expect(result).toContain("How sure we are");
-    expect(result).toContain("Clicks with");
+    expect(result).toContain("Types you might meet at a table");
+    expect(result).toContain("What you&#39;d bring each other");
+    expect(result).not.toMatch(/Clicks with|Why you click|Natural match|Complementary match|Interesting match|Fun to chat with/);
     expect(result).toContain("Places and areas");
 
     // Retake: the same questions in the same order, so a change in the result is a real change.

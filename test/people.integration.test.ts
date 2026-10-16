@@ -396,7 +396,7 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     expect(card(`${p}c`)).not.toContain("Bangkok resident");
     expect(card(`${p}b`)).not.toContain("Story Collector");
     expect(card(`${p}d`)).toContain("🍜 The Food Hunter");
-    expect(card(`${p}d`)).toContain("Complementary match"); // BDSH vs BDSN: one letter apart
+    expect(card(`${p}d`)).toContain("One letter apart"); // BDSH vs BDSN: one letter apart
     const order = [`${p}a`, `${p}b`, `${p}c`, `${p}d`].map((n) => html.indexOf(`<legend>${n}</legend>`));
     expect(order.every((x) => x > 0)).toBe(true);
     expect([...order].sort((x, y) => x - y)).toEqual(order);
@@ -421,7 +421,7 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     await db().insert(vibes).values({ accountId: y.id, vector: {}, archetype: "CDSH", visible: false });
     html = await (await req("/connections", { cookie: en(y) })).text();
     expect(html).toContain("Conversation spark");
-    expect(html).toContain("Complementary match"); // CDMH vs CDSH: one letter apart
+    expect(html).toContain("One letter apart"); // CDMH vs CDSH: one letter apart
     // x's own view of y: y's type is hidden.
     expect(await (await req("/connections", { cookie: en(x) })).text()).not.toContain("The Story Collector");
   });
