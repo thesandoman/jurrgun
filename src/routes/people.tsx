@@ -71,6 +71,8 @@ import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
 import { SeeAgainCard } from "../ui/see-again";
 import { Sheet } from "../ui/sheet";
+import { visibleLinks, type ShownLink } from "../services/profile-links";
+import { ProfileLinksSheet } from "../ui/profile-links";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -515,6 +517,8 @@ type CircleRow = {
   alsoMet?: { id: string; title: string; startsAt: Date }[];
   /** How many times we've met (events where we chose each other). */
   meets?: number;
+  /** Their social links, only when they let their people see them (services/profile-links.ts). */
+  links?: ShownLink[];
 };
 
 /**
@@ -553,7 +557,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
   if (rows.length === 0) return { rows: [] };
   const otherIds = [...new Set(rows.map((r) => (r.aAccount === me ? r.bAccount : r.aAccount)))];
   const eventIds = [...new Set(rows.map((r) => r.eventId))];
-  const [people, evs, shares, vibeMap] = await Promise.all([
+  const [people, evs, shares, vibeMap, links] = await Promise.all([
     db
       .select({
         id: accounts.id,
@@ -577,6 +581,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
       .where(inArray(contactShares.connectionId, rows.map((r) => r.id)))
       .limit(400),
     vibesFor(db, [...otherIds, me]),
+    visibleLinks(db, me, otherIds),
   ]);
   const personById = new Map(people.map((p) => [p.id, p]));
   const eventById = new Map(evs.map((e) => [e.id, e]));
@@ -597,6 +602,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
       buddy: r.eventId.startsWith("buddy:"),
       mine: mine ? { method: mine.method, value: mine.value } : null,
       theirs: theirs ? { method: theirs.method, value: theirs.value } : null,
+      links: links.get(otherId),
     });
   }
   await markGraduations(c, out);
@@ -911,6 +917,7 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
               <span>{t("เขาแชร์", "They shared")}: {r.theirs ? `${method(r.theirs.method)} ${r.theirs.value}` : t("ยังไม่แชร์", "nothing yet")}</span>
             </p>
           ) : null}
+          {r.links?.length ? <ProfileLinksSheet t={t} links={r.links} /> : null}
           {props.error ? <Notice kind="error">{props.error}</Notice> : null}
           <details class="how" open={!!props.error}>
             <summary>📇 {r.mine ? t("อัปเดตช่องทางติดต่อ", "Update contact") : t("แชร์ช่องทางติดต่อ", "Share contact")}</summary>

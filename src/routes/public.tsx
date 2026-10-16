@@ -243,6 +243,7 @@ publicRoutes.get("/privacy", (c) => {
       {H("ใครเห็นอะไร", "Who sees what")}
       <ul>
         {Li("สมาชิกคนอื่นเห็นโปรไฟล์ของคุณเมื่อได้เจอกันแล้วเท่านั้น และไม่มีใครค้นหาหรือเลื่อนดูคุณได้", "Other members see your profile only after you've met. Nobody can search or browse you.")}
+        {Li("ลิงก์โซเชียลในโปรไฟล์ของคุณ เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย และเฉพาะตอนที่คุณเปิดให้เห็น", "The social links on your profile are visible only to mutual connections, and only while you choose to show them.")}
         {Li("ทีมงานและเจ้าหน้าที่ กทม. เห็นเฉพาะที่จำเป็นต่อความปลอดภัย เช่น สถานะบัญชีและรายงาน ไม่เห็นข้อมูลอ่อนไหว ตัวเลือกส่วนตัว หรือแชตของคุณ เว้นแต่ข้อความนั้นถูกรายงาน", "Our team and BMA staff see only what safety needs, such as account status and reports. They never see your sensitive data, private choices or chats, unless a message is reported.")}
         {Li("กทม. ได้รับผล City Pulse เป็นภาพรวมจากอย่างน้อย 10 คนเท่านั้น ไม่ได้รับข้อมูลส่วนบุคคลของคุณ", "The BMA receives City Pulse only as totals from 10 or more people, never your personal data.")}
         {Li("เราไม่ขายข้อมูล ไม่ใช้ตัวติดตามโฆษณา และไม่ส่งข้อมูลของคุณให้พาร์ตเนอร์", "We never sell data, use ad trackers or pass your data to partners.")}

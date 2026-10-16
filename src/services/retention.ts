@@ -20,7 +20,7 @@
  *   deactivated accounts      30 days after deactivation, unless a moderation
  *                             hold applies (an open or in-review report about
  *                             them): profile, vibe, sessions, notifications,
- *                             contact shares, consents, sign-in emails and their
+ *                             contact shares, social links, consents, sign-in emails and their
  *                             codes are hard-deleted, the
  *                             account row is anonymised and its research_id link
  *                             cut, and their feedback comments are blanked
@@ -50,6 +50,7 @@ import {
   loginCodes,
   emailLinks,
   notifications,
+  profileLinks,
   pushSubscriptions,
   oauthLinks,
   profiles,
@@ -198,6 +199,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(notifications).where(inArray(notifications.accountId, ids)),
       db.delete(pushSubscriptions).where(inArray(pushSubscriptions.accountId, ids)),
       db.delete(contactShares).where(inArray(contactShares.accountId, ids)),
+      db.delete(profileLinks).where(inArray(profileLinks.accountId, ids)),
       db.delete(chatMessages).where(inArray(chatMessages.sender, ids)),
       db.delete(chatReads).where(inArray(chatReads.accountId, ids)),
       db.delete(safeArrivals).where(inArray(safeArrivals.accountId, ids)),

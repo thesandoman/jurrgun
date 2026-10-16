@@ -803,4 +803,20 @@ input[type=email],input[type=tel]{width:100%;font:inherit;font-size:16px;color:v
 .code-resend p{margin:0}
 .email-linked{display:grid;gap:4px;margin:0 0 12px}
 .reminder-note{display:block;margin-top:4px;color:var(--ink-2)}
+/* Social links (mutual connections only): each link is a 48px row with a plain icon, the network's
+   name small above the handle, and long handles wrap instead of pushing the page sideways. */
+.plinks ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.card.plinks h2.eyebrow{margin:0 0 8px;font-size:.8rem}
+a.plink{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 12px;border-radius:12px;background:var(--surface-2);color:var(--ink);text-decoration:none}
+a.plink:hover{background:color-mix(in srgb,var(--surface-2) 80%,var(--ink) 6%)}
+a.plink:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+a.plink>span[aria-hidden]{flex:0 0 24px;text-align:center}
+.plink-text{display:grid;min-width:0;line-height:1.3}
+.plink-text small{color:var(--ink-2);font-weight:400;font-size:.8rem}
+.plink-text bdi{font-weight:600;overflow-wrap:anywhere}
+.plinks-sheet{display:grid;gap:4px}
+.plinks-sheet a.plink{background:none}
+.plinks-sheet a.plink:hover{background:var(--surface-2)}
+.pf-links{display:grid;gap:0 16px}
+@media (min-width:1024px){.pf-links{grid-template-columns:1fr 1fr}}
 `);

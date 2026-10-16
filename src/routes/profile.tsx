@@ -31,6 +31,8 @@ import { regularAt } from "../services/regular-tables";
 import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 import { pinkyState, stepBack, tapPinky } from "../services/pinky";
 import { PinkyRow } from "../ui/pinky";
+import { visibleLinks } from "../services/profile-links";
+import { ProfileLinksCard } from "../ui/profile-links";
 import { str } from "../ui/kit";
 
 export const profileRoutes = new Hono<AppEnv>();
@@ -184,12 +186,14 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   const person = cardPerson(target.profile, me.profile);
   // The card itself is only reachable by connected viewers and the member (visibleProfile), and
   // regularAt drops tables this viewer couldn't join (women-only) or whose host they're blocked with.
-  const [vibes, tables, metAt, pinky] = await Promise.all([
+  const [vibes, tables, metAt, pinky, links] = await Promise.all([
     vibesFor(db, self ? [me.account.id] : [target.account.id, me.account.id]),
     regularAt(db, target.account.id, { id: me.account.id, gender: me.profile?.gender }),
     self ? Promise.resolve([]) : whereWeMet(db, me.account.id, target.account.id),
     // เกี่ยวก้อย · Pinky: only for members with 💘 on, on the card of someone they met.
     self || !me.profile ? Promise.resolve(null) : pinkyState(db, me.profile, target.account.id),
+    // Social links: mutual connections only, while their switch is on. Never on my own preview.
+    self ? Promise.resolve(new Map()) : visibleLinks(db, me.account.id, [target.account.id]),
   ]);
   const theirVibe = vibes.get(target.account.id);
   const resident = showsResidentBadge(target.account, target.profile);
@@ -244,6 +248,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
           </ul>
         </section>
       ) : null}
+      {self ? null : <ProfileLinksCard t={t} name={person.nickname} links={links.get(target.account.id) ?? []} />}
       {pinky ? <PinkyRow t={t} otherId={target.account.id} name={person.nickname} state={pinky} /> : null}
       {self ? null : (
         <p class="row muted">

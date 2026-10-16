@@ -104,6 +104,7 @@ import {
   emailLinks,
   strikes,
   vibes,
+  profileLinks,
   profiles,
   pulseQuestions,
   pulseResponses,
@@ -116,6 +117,8 @@ import {
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
 import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 import { myTables } from "../services/regular-tables";
+import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
+import { linksSwitch, ownLinks } from "../services/profile-links";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, withGenderSelf } from "./onboarding";
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
@@ -540,6 +543,9 @@ type ProfileVals = {
   newcomer: boolean;
   locale: string;
   bio: Bio;
+  /** Social links as typed (network key to text) and the "show my links to my people" switch. Loaded when missing. */
+  links?: Record<string, string>;
+  linksOn?: boolean;
 };
 
 function Section(props: { id?: string; emoji: string; title: string; hint?: string; children: Child }) {
@@ -554,7 +560,34 @@ function Section(props: { id?: string; emoji: string; title: string; hint?: stri
   );
 }
 
-function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; datingDeck: string[]; photo: string | null; hasPhoto: boolean; promptPhoto: (id: string) => string | null; error?: string }) {
+/**
+ * Social links (owner, 2026-10-16): one optional field per network and the switch, which is off
+ * until the member turns it on. Only mutual connections ever see them (services/profile-links.ts).
+ */
+function LinksSection(props: { v: View; links: Record<string, string>; on: boolean; errorField?: string; error?: string }) {
+  const { t } = props.v;
+  return (
+    <Section id="links" emoji="🔗" title={t("ลิงก์โซเชียล", "Social links")} hint={t("เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย", "Only people you both chose can see these")}>
+      <input type="hidden" name="links_present" value="1" />
+      <Toggle name="linksOn" label={t("ให้คนรู้จักของฉันเห็นลิงก์", "Show my links to my people")} checked={props.on} />
+      <div class="pf-links">
+        {NETWORKS.map((n) => (
+          <Field
+            label={`${n.icon} ${t(n.th, n.en)}`}
+            name={`link_${n.key}`}
+            value={props.links[n.key] ?? ""}
+            maxlength={200}
+            autocomplete="off"
+            placeholder={n.kind === "url" ? "https://" : n.key === "linkedin" ? t("ชื่อในลิงก์ หรือวางลิงก์", "Name or profile link") : t("@ชื่อผู้ใช้ หรือวางลิงก์", "@name or profile link")}
+            error={props.errorField === n.key ? props.error : undefined}
+          />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; datingDeck: string[]; photo: string | null; hasPhoto: boolean; promptPhoto: (id: string) => string | null; error?: string; errorField?: string }) {
   const { t, lang } = props.v;
   const vals = props.vals;
   const bio = vals.bio;
@@ -575,6 +608,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
         <a href="#facts">{t("ข้อมูลสั้น ๆ", "Facts")}</a>
         <a href="#prefs">{t("การนัดเจอ", "Meetups")}</a>
         <a href="#prompts">{t("คำถาม", "Prompts")}</a>
+        <a href="#links">{t("ลิงก์", "Links")}</a>
       </nav>
       <form method="post" action="/settings/profile" enctype="multipart/form-data" data-guard="">
         {/* Enter / "Go" submits with the FIRST submit button. Without this one that
@@ -759,6 +793,8 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           </Section>
         ) : null}
 
+        <LinksSection v={props.v} links={vals.links ?? {}} on={!!vals.linksOn} errorField={props.errorField} error={props.error} />
+
         <div class="pf-save">
           <Button>{t("บันทึกโปรไฟล์", "Save profile")}</Button>
         </div>
@@ -783,9 +819,14 @@ function profileVals(p: Profile): ProfileVals {
   };
 }
 
-async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string; status?: 400 } = {}) {
+async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string; errorField?: string; status?: 400 } = {}) {
   const user = me(c);
   const p = user.profile!;
+  if (!vals.links) {
+    const db = getDb(c.env);
+    const [rows, on] = await Promise.all([ownLinks(db, user.account.id), linksSwitch(db, [user.account.id])]);
+    vals = { ...vals, links: Object.fromEntries(rows.map((r) => [r.network, linkInputValue(r.network, r.value)])), linksOn: !!on.get(user.account.id) };
+  }
   const stored = cleanBio(p.bio);
   const deck = currentDeck(user.account.id, stored);
   const datingDeck = romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [];
@@ -795,7 +836,7 @@ async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string
   return page(
     c,
     { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: opts.status },
-    <ProfileForm v={view(c)} vals={vals} deck={deck} datingDeck={datingDeck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} />,
+    <ProfileForm v={view(c)} vals={vals} deck={deck} datingDeck={datingDeck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} errorField={opts.errorField} />,
   );
 }
 
@@ -803,8 +844,18 @@ settingsRoutes.get("/settings/profile", (c) => renderProfileForm(c, profileVals(
 
 type Body = Record<string, string | File | (string | File)[]>;
 type Parsed =
-  | { ok: false; vals: ProfileVals; error: string }
-  | { ok: true; vals: ProfileVals; deck: string[]; mainFile: File | null; removePhoto: boolean; pending: { id: string; file: File }[]; dropKeys: string[] };
+  | { ok: false; vals: ProfileVals; error: string; errorField?: string }
+  | {
+      ok: true;
+      vals: ProfileVals;
+      deck: string[];
+      mainFile: File | null;
+      removePhoto: boolean;
+      pending: { id: string; file: File }[];
+      dropKeys: string[];
+      /** Normalised social links (null clears one) and the switch, when the form sent its links section. */
+      links?: { values: Record<string, string | null>; on: boolean };
+    };
 
 const fileOf = (raw: unknown): File | null => {
   const f = Array.isArray(raw) ? raw[0] : raw;
@@ -872,6 +923,12 @@ function parseProfileForm(c: C, body: Body): Parsed {
     locale: str(body.locale) === "en" ? "en" : "th",
     bio,
   };
+  // Social links: only when the form sent its section, so other posts never clear them.
+  const linksSent = str(body.links_present) === "1";
+  if (linksSent) {
+    vals.links = Object.fromEntries(NETWORKS.map((n) => [n.key, str(body[`link_${n.key}`]).slice(0, 400)]));
+    vals.linksOn = str(body.linksOn) === "1";
+  }
   const fail = (th: string, en: string): Parsed => ({ ok: false, vals, error: t(th, en) });
 
   if (!vals.nickname) return fail("ใส่ชื่อเล่นก่อน", "Please add a nickname.");
@@ -943,7 +1000,21 @@ function parseProfileForm(c: C, body: Body): Parsed {
     }
   }
   bio.answers = answers;
-  return { ok: true, vals, deck, mainFile, removePhoto: str(body.removePhoto) === "1", pending, dropKeys };
+
+  let links: { values: Record<string, string | null>; on: boolean } | undefined;
+  if (linksSent) {
+    const out: Record<string, string | null> = {};
+    for (const n of NETWORKS) {
+      const r = normaliseLink(n.key, vals.links![n.key] ?? "");
+      if (!r.ok) {
+        const name = t(n.th, n.en);
+        return { ok: false, vals, error: t(`${name}: ${r.error.th}`, `${name}: ${r.error.en}`), errorField: n.key };
+      }
+      out[n.key] = r.value;
+    }
+    links = { values: out, on: !!vals.linksOn };
+  }
+  return { ok: true, vals, deck, mainFile, removePhoto: str(body.removePhoto) === "1", pending, dropKeys, links };
 }
 
 /** Upload files, then write the profile. Returns an error message or null. */
@@ -1001,16 +1072,46 @@ async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise
   // City Pulse follows the change reflection: replaced when edited, withdrawn when cleared (consent rules in syncQuizChange).
   const before = cleanBio(p.bio).reflections?.change;
   const after = vals.bio.reflections?.change;
+  if (parsed.links) await saveLinks(c, parsed.links);
   // Keep the in-request copy current for anything rendered after this.
-  Object.assign(p, { ...vals, intents, photoKey, bio: vals.bio });
+  const { links: _links, linksOn: _linksOn, ...profileOnly } = vals;
+  Object.assign(p, { ...profileOnly, intents, photoKey, bio: vals.bio });
   if (before !== after) await syncQuizChange(c, after);
   return null;
+}
+
+/**
+ * Social links: one row per filled network (an empty field deletes its row), and the switch as an
+ * append-only consent row, written only when it changes (latest wins, like the Privacy Center).
+ */
+async function saveLinks(c: C, links: { values: Record<string, string | null>; on: boolean }) {
+  const db = getDb(c.env);
+  const id = me(c).account.id;
+  const now = new Date();
+  const current = await linksSwitch(db, [id]);
+  const keep = Object.entries(links.values).filter((e): e is [string, string] => e[1] !== null);
+  const drop = Object.entries(links.values).filter(([, v]) => v === null).map(([k]) => k);
+  const queries: { toSQL(): { sql: string; params: unknown[] } }[] = [];
+  if (drop.length) queries.push(db.delete(profileLinks).where(and(eq(profileLinks.accountId, id), inArray(profileLinks.network, drop))));
+  if (keep.length) {
+    queries.push(
+      db
+        .insert(profileLinks)
+        .values(keep.map(([network, value]) => ({ id: newId(), accountId: id, network, value, updatedAt: now })))
+        .onConflictDoUpdate({ target: [profileLinks.accountId, profileLinks.network], set: { value: sql`excluded.value`, updatedAt: now } }),
+    );
+  }
+  if (links.on !== !!current.get(id)) {
+    queries.push(db.insert(consents).values({ id: newId(), accountId: id, category: PROFILE_LINKS_CONSENT, granted: links.on, version: CONSENT_VERSION }));
+    queries.push(audit(db, id, "consent.updated", { type: "account", id }, { changed: { [PROFILE_LINKS_CONSENT]: links.on } }));
+  }
+  if (queries.length) await batch(c.env, queries);
 }
 
 settingsRoutes.post("/settings/profile", async (c) => {
   const body = (await c.req.parseBody({ all: true })) as Body;
   const parsed = parseProfileForm(c, body);
-  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, status: 400 });
+  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400 });
   const err = await saveProfile(c, parsed);
   if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400 });
   return c.redirect("/settings?notice=saved");
@@ -1026,7 +1127,7 @@ settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   const user = me(c);
   if ("nickname" in body) {
     const parsed = parseProfileForm(c, body);
-    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, status: 400 });
+    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400 });
     const err = await saveProfile(c, parsed);
     if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400 });
   }
@@ -1415,6 +1516,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     rid ? db.select({ phase: wellbeing.phase, q1: wellbeing.q1, q2: wellbeing.q2, q3: wellbeing.q3, createdAt: wellbeing.createdAt }).from(wellbeing).where(eq(wellbeing.researchId, rid)).limit(10) : Promise.resolve([]),
     db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)).limit(20),
   ]);
+  const myLinks = await ownLinks(db, id);
 
   const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked, [emails]] = await Promise.all([
     db
@@ -1475,6 +1577,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     registrations: regs,
     choicesIMade: choices,
     connections: conns.map((x) => ({ with: nick.get(x.a === id ? x.b : x.a) ?? null, level: x.level, event: x.event, createdAt: x.createdAt, removedAt: x.removedAt })),
+    socialLinks: myLinks.map((l) => ({ network: l.network, value: l.value, shownAs: linkText(l.network, l.value), createdAt: l.createdAt, updatedAt: l.updatedAt })),
     contactSharesIMade: shares.map((s) => {
       const conn = conns.find((x) => x.id === s.connectionId);
       return { with: conn ? (nick.get(conn.a === id ? conn.b : conn.a) ?? null) : null, method: s.method, value: s.value, createdAt: s.createdAt };
@@ -1536,6 +1639,8 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     // Unlink Google / LINE now: signing in with them again starts a fresh account.
     db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
     db.delete(emailLinks).where(eq(emailLinks.accountId, id)),
+    // Social links go at once; the switch's history stays with the other consents until deletion.
+    db.delete(profileLinks).where(eq(profileLinks.accountId, id)),
     audit(db, id, "account.deactivated", { type: "account", id }),
   ]);
   await releaseUpcomingSeats(c.env, id);
