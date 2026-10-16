@@ -9,7 +9,7 @@ import { and, desc, eq, like, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
 import type { AppEnv } from "../../lib/env";
 import { requireRole } from "../../lib/session";
-import { redactSensitive } from "../../lib/records";
+import { redactSensitive, shownTarget } from "../../lib/records";
 import { accounts, auditLog, profiles } from "../../schema";
 import { Button, Empty, page, TableFilter, view } from "../../ui/kit";
 
@@ -112,7 +112,7 @@ adminAudit.get("/", async (c) => {
                   <td>
                     <code>{r.action}</code>
                   </td>
-                  <td>{r.targetType ? <small>{`${r.targetType}:${r.targetId ?? ""}`}</small> : null}</td>
+                  <td>{r.targetType ? <small>{shownTarget(r.action, r.targetType, r.targetId)}</small> : null}</td>
                   <td>
                     <small>
                       <code style="word-break:break-all">{JSON.stringify(redactSensitive(r.detail ?? {}))}</code>

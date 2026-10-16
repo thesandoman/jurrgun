@@ -875,7 +875,8 @@ buddyRoutes.post("/buddy/:id/pass", requireMember, async (c) => {
   await batch(c.env, [
     db.update(buddyMatches).set({ state: "ended", endedBy: me, endReason: "pass", endedAt: new Date() }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "proposed"))),
     notify(db, them, "buddy_ended", "บัดดี้คู่นี้ไม่ได้ไปต่อ เราจะหาบัดดี้ใหม่ให้เร็ว ๆ นี้", "This buddy match didn't go ahead. A new buddy is coming soon.", "/buddy"),
-    audit(db, me, "buddy.pass", { type: "buddy_match", id: m.id }),
+    // Privacy R9: no pairing id, so the audit log never says whose buddy this was.
+    audit(db, me, "buddy.pass"),
   ]);
   return c.redirect("/buddy?notice=done");
 });
@@ -900,7 +901,7 @@ buddyRoutes.post("/buddy/:id/end", requireMember, async (c) => {
     batch(c.env, [
       db.update(buddyMatches).set({ state: "ended", endedBy: me, endReason: reason, endedAt: now }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "active"))),
       notify(db, them, "buddy_ended", th, en, "/buddy"),
-      audit(db, me, "buddy.end", { type: "buddy_match", id: m.id }),
+      audit(db, me, "buddy.end"),
     ]);
   if (m.endRequestedBy === them) {
     await close("mutual", "บัดดี้ตกลงปิดรอบนี้แล้ว ขอบคุณที่ออกสำรวจด้วยกันนะ", "Your buddy agreed to wrap up. Thank you both for exploring together!");
@@ -1012,12 +1013,14 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
   const next = st.left > 0 ? st.deck[0] : undefined;
   let card: Child = null;
   if (next) {
-    const [[person], types] = await Promise.all([
+    const [[person], types, [shown]] = await Promise.all([
       st.db.select().from(profiles).where(eq(profiles.accountId, next)).limit(1),
       typeOfAccount(st.db, [st.me, next]),
+      st.db.select({ visible: vibes.visible }).from(vibes).where(eq(vibes.accountId, next)).limit(1),
     ]);
     const mineP = c.var.user!.profile!;
-    const theirs = types.get(next);
+    // Privacy R8: a stranger's Bangkok Type shows on the deck only when they chose to show it.
+    const theirs = shown?.visible ? types.get(next) : undefined;
     const a = theirs ? ARCHETYPES[theirs] : null;
     const why = theirs && types.get(st.me) ? clickReason(types.get(st.me)!, theirs) : null;
     const bio = cleanBio(person.bio);

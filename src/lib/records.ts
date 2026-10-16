@@ -24,6 +24,18 @@ export function redactSensitive(value: unknown): unknown {
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, SENSITIVE_KEY.test(k) ? "[private]" : redactSensitive(v)]));
 }
 
+/**
+ * Actions whose target would name the other person in a block or a removal
+ * (privacy R9). New rows carry no target; older rows are shown without it.
+ */
+const PRIVATE_TARGET = new Set(["block.create", "connection.remove", "buddy.pass", "buddy.end"]);
+
+/** The target as staff may see it: "[private]" for a block or a removal. */
+export function shownTarget(action: string, type: string | null, id: string | null): string | null {
+  if (!type) return null;
+  return PRIVATE_TARGET.has(action) ? `${type}:[private]` : `${type}:${id ?? ""}`;
+}
+
 export function audit(
   db: Db,
   actor: string,

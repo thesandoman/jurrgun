@@ -1094,7 +1094,8 @@ peopleRoutes.post("/connections/:id/remove", requireMember, async (c) => {
           set: { choice: "none" },
         }),
     ),
-    ...all.map((x) => audit(db, me, "connection.remove", { type: "connection", id: x.id })),
+    // Privacy R9: staff can read the audit log, so it never says who was removed.
+    audit(db, me, "connection.remove", undefined, { count: all.length }),
   ]);
   return c.redirect("/connections?notice=done");
 });
@@ -1321,7 +1322,8 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
           or(and(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, other)), and(eq(buddyMatches.aAccount, other), eq(buddyMatches.bAccount, me))),
         ),
       ),
-    audit(db, me, "block.create", { type: "account", id: other }),
+    // Privacy R9: the audit log never says who was blocked.
+    audit(db, me, "block.create"),
   ]);
   // Two people at the same regular table: nobody is removed; the host decides (/tables/:id/conflicts).
   await raiseConflicts(c.env, me, other);
