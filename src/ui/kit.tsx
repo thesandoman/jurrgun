@@ -231,6 +231,19 @@ function Icon(props: { d: string }) {
     </svg>
   );
 }
+/** Small drawn icons for facts on cards (time, place, language), in the nav's stroke style (Phase 3: emoji stay for warmth, controls and facts get drawn icons). */
+export function FactIcon(props: { name: "time" | "place" | "lang" }) {
+  const d = {
+    time: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5l3 2",
+    place: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Zm0-9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+    lang: "M4 6h16v10H9l-5 4V6Zm4 4h8M8 13h5",
+  }[props.name];
+  return (
+    <svg class="fact-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
 const TAB_ICONS = {
   events: <Icon d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm3.5-12.5-2 5-5 2 2-5 5-2Z" />,
   learn: <Icon d="M3 5.5C5 4.5 7.5 4.3 12 6c4.5-1.7 7-1.5 9-.5v13c-2-1-4.5-1.2-9 .5-4.5-1.7-7-1.5-9-.5v-13ZM12 6v13.5" />,

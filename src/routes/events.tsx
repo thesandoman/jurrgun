@@ -91,6 +91,7 @@ import {
   view,
   ViewSwitch,
   type View,
+  FactIcon,
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
 import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
@@ -350,9 +351,9 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
           {props.mine ? <Tag tone="accent">{statusLabel(props.mine, t)}</Tag> : null}
         </div>
         <p class="chips2">
-          <span>🕒 {fmtParts(e.startsAt, lang).time}</span>
-          <span>📍 {label(DISTRICTS, e.district, lang)}</span>
-          <span>🗣️ {langsText(e, lang)}</span>
+          <span><FactIcon name="time" /> {fmtParts(e.startsAt, lang).time}</span>
+          <span><FactIcon name="place" /> {label(DISTRICTS, e.district, lang)}</span>
+          <span><FactIcon name="lang" /> {langsText(e, lang)}</span>
         </p>
         <Seats capacity={e.capacity} taken={props.taken} />
         <div class="tags">
@@ -1205,7 +1206,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <p class="chips2">
           <span>🧑‍🤝‍🧑 {host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</span>
           <span>🎂 {ageText(event, t)}</span>
-          <span>🗣️ {langsText(event, lang)}</span>
+          <span><FactIcon name="lang" /> {langsText(event, lang)}</span>
           <span>💸 {costText(event, t)}</span>
           {event.plusOneAllowed ? <span>➕ {t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</span> : null}
           {event.accessibility ? <span>♿ {t("มีข้อมูลการเข้าถึง", "Access info")}</span> : null}

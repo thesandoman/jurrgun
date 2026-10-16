@@ -283,6 +283,8 @@ main .card:has(.safety-row) details.how>form{padding:4px 0 8px}
   .table-wrap{background:linear-gradient(to right,var(--surface) 30%,transparent),linear-gradient(to left,var(--surface) 30%,transparent) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.18),transparent),radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.18),transparent) 100% 0;background-repeat:no-repeat;background-size:40px 100%,40px 100%,14px 100%,14px 100%;background-attachment:local,local,scroll,scroll}
 }
 
+.fact-ico{vertical-align:-2px;color:var(--brand);flex:none}
+
 /* Headings break evenly (no lone last word). */
 h1,h2,h3,.flow-title{text-wrap:balance}
 /* Staff chip in the header: on narrow phones it drops to the Me menu's job, so the header never overflows. */
@@ -434,6 +436,11 @@ body:has(.disc) .discover-list{padding-bottom:0}
   .disc-tools .filters{flex:none}
   .disc .discover-list{grid-template-columns:repeat(2,minmax(0,1fr))}
   .disc .discover-list>.ev-item:has(.feat){grid-column:auto}
+  /* Place the rail and the tickets by name: the zero-height sticky marker came first and pushed the
+     tickets into the 248px rail column. */
+  .disc>.disc-mark{grid-column:1/-1;grid-row:1}
+  .disc>.disc-bar{grid-column:1;grid-row:2}
+  .disc>.discover-list{grid-column:2;grid-row:2}
 }
 @media (min-width:1220px){.disc .discover-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* Owner card G: tickets arrive quickly, 8px and 40ms apart, and are never hidden. */
