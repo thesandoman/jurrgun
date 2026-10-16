@@ -274,7 +274,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
 
   it("puts the quiz first in onboarding, and skipping continues to basics", async () => {
     const username = `q_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    const signup = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
+    const signup = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
     const cookie = (signup.headers.get("set-cookie") ?? "").split(";")[0];
     expect((await req("/onboarding", { cookie })).headers.get("location")).toBe("/onboarding/welcome");
     const welcome = await req("/onboarding/welcome", { cookie });
@@ -296,7 +296,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
 
   it("taking the quiz in onboarding reveals the type, then continues to basics", async () => {
     const username = `r_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    const signup = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
+    const signup = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
     const cookie = (signup.headers.get("set-cookie") ?? "").split(";")[0];
     const html = await (await req("/onboarding/quiz", { cookie })).text();
     const seed = seedIn(html);

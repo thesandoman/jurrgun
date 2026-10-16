@@ -226,7 +226,7 @@ function PreviewCard(props: { q: Pick<Question, "promptTh" | "promptEn" | "kind"
           </div>
         )}
         <p class="muted" style="margin-top:10px">
-          {t("คำตอบไม่ระบุตัวตน และแสดงผลเป็นภาพรวมเท่านั้น", "Answers are anonymous and only shown in aggregate.")}
+          {t("คำตอบเก็บโดยใช้รหัสแทนชื่อ และแสดงผลเป็นภาพรวมเท่านั้น", "Answers are kept under a code, not a name, and only shown in aggregate.")}
         </p>
       </Card>
     </div>

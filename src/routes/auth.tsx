@@ -16,7 +16,9 @@ import { accounts, loginAttempts, type Account } from "../schema";
 import { emailEnabled } from "../services/email-code";
 import { signupSource } from "../lib/source";
 import { enabledProviders, SocialSignIn } from "./oauth";
-import { Button, Card, Field, Notice, page, safeNext, str, view } from "../ui/kit";
+import { Button, Card, Field, Notice, page, safeNext, str, view, type View } from "../ui/kit";
+import { termsRow } from "../services/consent";
+import { TermsAgree } from "./policies";
 
 export const authRoutes = new Hono<AppEnv>();
 
@@ -118,8 +120,11 @@ export async function tooMany(c: Context<AppEnv>, mode: "signup" | "login"): Pro
 function AuthForm(props: {
   mode: "signup" | "login";
   t: (th: string, en: string) => string;
+  /** Sign-up only: the Terms box and its sheets need the page language. */
+  v?: View;
   username?: string;
   next?: string;
+  terms?: boolean;
 }) {
   const { t, mode } = props;
   const reveal = { show: t("แสดง", "Show"), hide: t("ซ่อน", "Hide"), caps: t("Caps Lock เปิดอยู่", "Caps Lock is on") };
@@ -148,6 +153,7 @@ function AuthForm(props: {
         {mode === "signup" ? (
           <Field label={t("ยืนยันรหัสผ่าน", "Confirm password")} name="confirm" type="password" required autocomplete="new-password" reveal={reveal} />
         ) : null}
+        {mode === "signup" && props.v ? <TermsAgree v={props.v} checked={props.terms} /> : null}
         <Button>{mode === "signup" ? t("สร้างบัญชี", "Create account") : t("เข้าสู่ระบบ", "Sign in")}</Button>
       </form>
     </Card>
@@ -155,7 +161,8 @@ function AuthForm(props: {
 }
 
 authRoutes.get("/signup", (c) => {
-  const { t, user } = view(c);
+  const v = view(c);
+  const { t, user } = v;
   if (user) return c.redirect(user.profile?.onboardedAt ? "/events" : "/onboarding");
   return page(
     c,
@@ -164,7 +171,7 @@ authRoutes.get("/signup", (c) => {
       <h1>{t("มาเริ่มกันเลย 👋", "Let's get you started 👋")}</h1>
       <p class="muted">{t("ใช้เวลาไม่ถึง 3 นาที", "Takes under 3 minutes.")}</p>
       <SocialSignIn t={t} providers={enabledProviders(c.env)} />
-      <AuthForm mode="signup" t={t} />
+      <AuthForm mode="signup" t={t} v={v} />
       <p>
         {t("มีบัญชีแล้ว?", "Already have an account?")} <a href="/login">{t("เข้าสู่ระบบ", "Sign in")}</a>
       </p>
@@ -173,8 +180,10 @@ authRoutes.get("/signup", (c) => {
 });
 
 authRoutes.post("/signup", async (c) => {
-  const { t } = view(c);
+  const v = view(c);
+  const { t } = v;
   const body = await c.req.parseBody();
+  const terms = str(body.terms) === "1";
   const username = normalizeUsername(str(body.username));
   const password = typeof body.password === "string" ? body.password : "";
   const confirm = typeof body.confirm === "string" ? body.confirm : "";
@@ -185,7 +194,7 @@ authRoutes.post("/signup", async (c) => {
       <>
         <h1>{t("มาเริ่มกันเลย 👋", "Let's get you started 👋")}</h1>
         <Notice kind="error">{msg}</Notice>
-        <AuthForm mode="signup" t={t} username={username} />
+        <AuthForm mode="signup" t={t} v={v} username={username} terms={terms} />
       </>,
     );
   if (!USERNAME_RE.test(username)) return fail(t("ชื่อผู้ใช้ไม่ถูกต้อง", "That username isn't valid."));
@@ -193,6 +202,7 @@ authRoutes.post("/signup", async (c) => {
   const pwIssue = passwordProblem(password);
   if (pwIssue) return fail(t("รหัสผ่านต้องยาว 8 ถึง 200 ตัวอักษร", "Password must be 8 to 200 characters."));
   if (password !== confirm) return fail(t("รหัสผ่านไม่ตรงกัน", "Passwords don't match."));
+  if (!terms) return fail(t("ติ๊กยอมรับข้อกำหนดการใช้งานก่อนจึงจะสมัครได้", "Please agree to the Terms of service to sign up."));
 
   const now = new Date();
   const ip = await ipKey(c);
@@ -212,6 +222,8 @@ authRoutes.post("/signup", async (c) => {
   }
   // Counts toward the per-IP signup limit ("signup:" can never be a real username).
   await db.insert(loginAttempts).values({ id: newId(), username: `${SIGNUP_PREFIX}${id}`, ipHash: ip.ipHash, createdAt: now });
+  // The Terms box, with the version agreed to (the notice date).
+  await termsRow(db, id);
   await startSession(c, id);
   return c.redirect("/onboarding");
 });

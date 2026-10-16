@@ -940,4 +940,26 @@ main .open-sec>details.how:last-child{border-bottom:0}
 .consent-row small a{display:inline-flex;align-items:center;min-height:44px}
 /* A toggle's checkbox kept shrinking beside a long two-line hint: it now keeps its 22px. */
 .toggle input[type=checkbox]{flex:0 0 22px}
+/* The Terms box at sign-up: the box, then two 44px links that open the Terms and the notice in a sheet
+   (the form stays as typed). In the sheet the page's own big heading is dropped: the sheet has its title. */
+.terms-agree{margin:12px 0}
+.terms-agree .toggle{margin:0}
+.terms-read{display:flex;flex-wrap:wrap;gap:0 16px;padding-left:32px}
+.terms-read summary.terms-open{display:inline-flex;align-items:center;min-height:44px;color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+.terms-sheet .sheet-body .policy>h1{display:none}
+.terms-sheet .sheet-body .policy{padding:0 4px}
+@media (min-width:1024px){details.terms-sheet[open]>.sheet-panel{width:min(640px,calc(100vw - 32px));max-width:none}}
+/* Onboarding: what the app needs to run is a plain list, not boxes to tick. */
+.needed-list{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:8px}
+.needed-list li{display:flex;gap:10px;align-items:flex-start}
+.needed-list small{display:block;color:var(--ink-2)}
+/* Consent centre: three parts, with plain rows for what isn't a switch; what switching off does sits under each switch. */
+.consent-centre h2{margin:24px 0 8px;font-size:1.1rem}
+.consent-list{list-style:none;margin:0 0 16px;padding:0;border-top:1px solid var(--line)}
+.consent-list li{display:grid;gap:2px;padding:12px 0;border-bottom:1px solid var(--line)}
+.consent-list small{color:var(--ink-2)}
+.consent-centre form>.consent-row{margin:0;padding:12px 0;border-bottom:1px solid var(--line)}
+.consent-centre .consent-then{color:var(--ink)}
+/* Me: the updated Terms card, one button that may wrap on a phone. */
+.me-terms .btn{white-space:normal;min-height:44px}
 `);

@@ -12,15 +12,18 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../lib/env";
 import { L } from "../lib/i18n";
-import { page, view } from "../ui/kit";
+import { page, view, type View } from "../ui/kit";
+import { Sheet } from "../ui/sheet";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, LATE_CANCEL_HOURS, MIN_AGE } from "../domain/rules";
 import { DEACTIVATED_RETENTION_DAYS } from "../services/retention";
 import {
+  APPEAL_REPLY_DAYS,
   CONTACT_ADDRESS,
   COOKIES,
   DEVICE_STORAGE,
   NOTICE_DATE,
   PRIVACY_CONTACT,
+  PROCESSOR_GROUPS,
   PROCESSORS,
   REPORT_LINE,
   RETENTION,
@@ -34,8 +37,11 @@ export const policyRoutes = new Hono<AppEnv>();
 
 type Pair = [string, string];
 
-policyRoutes.get("/privacy", (c) => {
-  const { t, lang } = view(c);
+/** The privacy notice itself: the /privacy page, and the sheet beside the Terms box at sign-up. */
+export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
+  // Inside the sign-up sheet, links open a new tab so the form stays as typed.
+  const tgt = props.inSheet ? "_blank" : undefined;
+  const { t, lang } = props.v;
   const T = (x: Text) => L(lang, x);
   const items = (rows: Pair[]) => (
     <ul>
@@ -44,18 +50,16 @@ policyRoutes.get("/privacy", (c) => {
       ))}
     </ul>
   );
-  return page(
-    c,
-    { title: t("ความเป็นส่วนตัว", "Privacy") },
+  return (
     <article class="policy">
       <h1>{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</h1>
       <p class="muted">
         {t("ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) · ฉบับวันที่", "Under Thailand's Personal Data Protection Act 2019 (PDPA) · Version of")} {T(NOTICE_DATE)}
       </p>
       <nav class="policy-links" aria-label={t("ไปที่", "Go to")}>
-        <a href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")}</a>
-        <a href="/settings/privacy/export">{t("ดาวน์โหลดข้อมูลของฉัน", "Download my data")}</a>
-        <a href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>
+        <a target={tgt} href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")}</a>
+        <a target={tgt} href="/settings/privacy/export">{t("ดาวน์โหลดข้อมูลของฉัน", "Download my data")}</a>
+        <a target={tgt} href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>
       </nav>
 
       <h2>{t("ใครดูแลข้อมูลของคุณ", "Who looks after your data")}</h2>
@@ -77,11 +81,12 @@ policyRoutes.get("/privacy", (c) => {
         ["ผลแบบทดสอบไทป์กรุงเทพฯ", "Your Bangkok Type quiz result."],
         ["การใช้งาน: กิจกรรมที่ลงชื่อ การเช็กอิน เวลาที่จะไปถึง โต๊ะ คนรู้จัก ตัวเลือกหลังกิจกรรม แชตและรูป บัดดี้ คำขอบคุณ ความเห็นหลังกิจกรรม และคำตอบว่าถึงบ้านปลอดภัยไหม", "Activity: events you join, check-ins, your ETA, tables, connections, post-event choices, chats and photos, buddies, thank-yous, event feedback and \"home safe?\" answers."],
         ["ความปลอดภัย: รายงาน การบล็อก คำเตือน และใบเตือน", "Safety: reports, blocks, warnings and strikes."],
-        ["City Pulse และแบบสอบถามความรู้สึก: เมื่อคุณยินยอม เก็บใต้รหัสวิจัยแทนตัวตน", "City Pulse and wellbeing answers: with your consent, under a research code instead of your identity."],
+        ["City Pulse และคำถามเรื่องความรู้สึก เช่น ความเหงา: เมื่อคุณยินยอม เก็บโดยใช้รหัสแทนชื่อ", "City Pulse and wellbeing answers, such as how lonely you feel: with your consent, under a code, not your name."],
         ["ข้อมูลทางเทคนิค: ค่าแฮชแบบมีกุญแจของ IP เพื่อกันการเดารหัสผ่าน ที่อยู่สำหรับส่งการแจ้งเตือนถ้าคุณเปิด และลิงก์ที่พาคุณมาสมัคร", "Technical: a keyed hash of your IP address to stop password guessing, a push address if you turn notifications on, and the link that brought you to sign up."],
         ["แหล่งที่มาตอนสมัคร: ถ้าคุณเข้ามาจากลิงก์แคมเปญหรือพาร์ตเนอร์ เราจำชื่อลิงก์นั้นไว้ในคุกกี้ 30 วัน บันทึกไว้กับบัญชีตอนสมัคร และนับเป็นภาพรวมเท่านั้น", "Sign-up source: if a campaign or partner link brought you here, we keep that link's name in a cookie for 30 days, save it with your account when you sign up, and count it only as totals."],
         ["เราไม่เก็บตำแหน่ง GPS ปุ่มตำแหน่งของฉันบนแผนที่ทำงานในเบราว์เซอร์เท่านั้น ไม่ส่งมาหาเรา", "We don't collect GPS location. The map's my location button works in your browser only and is never sent to us."],
       ])}
+      <p>{t(REQUIRED_TO_JOIN[0], REQUIRED_TO_JOIN[1])}</p>
 
       <h2>{t("เราใช้ข้อมูลเพื่ออะไร", "Why we use it")}</h2>
       {items([
@@ -103,18 +108,24 @@ policyRoutes.get("/privacy", (c) => {
         ["ทีมงานและเจ้าหน้าที่ กทม. เห็นเฉพาะที่ความปลอดภัยต้องใช้ เช่น สถานะบัญชีและรายงาน ไม่เห็นข้อมูลเดต สถานะความสัมพันธ์ เพศ หรือตัวเลือกส่วนตัว และเห็นแชตเฉพาะข้อความที่ถูกรายงาน", "Our team and BMA staff see only what safety needs, such as account status and reports. They never see dating data, relationship status, gender or private choices, and see chats only when a message is reported."],
         ["กทม. ได้ผล City Pulse เป็นยอดรวมจาก 10 คนขึ้นไปเท่านั้น", "The BMA gets City Pulse only as totals from 10 or more people."],
         ["เราไม่ขายข้อมูล ไม่ใช้ตัวติดตามโฆษณา และพาร์ตเนอร์เห็นแค่สิ่งที่โฮสต์เห็นตามข้อด้านบน", "We never sell data or use ad trackers. Partners see only what hosts see, as above."],
+        DISCLOSE_TO_OFFICIALS,
       ])}
 
       <h2>{t("ใครอีกบ้างที่เกี่ยวข้อง", "Who else is involved")}</h2>
-      <ul class="policy-rows">
-        {PROCESSORS.map((p) => (
-          <li>
-            <strong>{p.name}</strong>
-            <span>{T(p.does)}</span>
-            <small>{T(p.sees)}</small>
-          </li>
-        ))}
-      </ul>
+      {PROCESSOR_GROUPS.map((g) => (
+        <>
+          <h3>{T(g.title)}</h3>
+          <ul class="policy-rows">
+            {PROCESSORS.filter((p) => p.group === g.key).map((p) => (
+              <li>
+                <strong>{p.name}</strong>
+                <span>{T(p.does)}</span>
+                <small>{T(p.sees)}</small>
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
       <p>{T(TRANSFERS)}</p>
 
       <h2>{t("เก็บไว้นานแค่ไหน", "How long we keep it")}</h2>
@@ -132,7 +143,7 @@ policyRoutes.get("/privacy", (c) => {
       {items(RETENTION_NOTES.map((n) => [n.th, n.en]))}
 
       <h2>{t("คุกกี้และข้อมูลในเครื่อง", "Cookies and this device")}</h2>
-      <p>{t("เราใช้เฉพาะคุกกี้ที่แอปต้องใช้ ไม่มีคุกกี้โฆษณาหรือติดตาม", "We only use cookies the app needs. No advertising or tracking cookies.")}</p>
+      <p>{t(COOKIE_LINE[0], COOKIE_LINE[1])}</p>
       <ul class="policy-rows">
         {COOKIES.map((k) => (
           <li>
@@ -165,29 +176,63 @@ policyRoutes.get("/privacy", (c) => {
       </p>
       <ul>
         <li>
-          <a href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")}</a>: {t("เปิดหรือปิดแต่ละเรื่อง", "turn each one on or off")}
+          <a target={tgt} href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")}</a>: {t("เปิดหรือปิดแต่ละเรื่อง", "turn each one on or off")}
         </li>
         <li>
-          <a href="/settings/privacy/export">{t("ดาวน์โหลดข้อมูลของฉัน", "Download my data")}</a>: {t("สำเนาข้อมูลทั้งหมดเป็นไฟล์ JSON", "a copy of all your data as a JSON file")}
+          <a target={tgt} href="/settings/privacy/export">{t("ดาวน์โหลดข้อมูลของฉัน", "Download my data")}</a>: {t("สำเนาข้อมูลทั้งหมดเป็นไฟล์ JSON", "a copy of all your data as a JSON file")}
         </li>
         <li>
-          <a href="/settings/profile">{t("แก้ไขโปรไฟล์", "Edit profile")}</a>: {t("แก้ข้อมูลให้ถูก", "correct your details")}
+          <a target={tgt} href="/settings/profile">{t("แก้ไขโปรไฟล์", "Edit profile")}</a>: {t("แก้ข้อมูลให้ถูก", "correct your details")}
         </li>
         <li>
-          <a href="/settings/privacy">{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</a>: {t("ปิดบัญชี", "close your account")}
+          <a target={tgt} href="/settings/privacy">{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</a>: {t("ปิดบัญชี", "close your account")}
         </li>
       </ul>
       <p>{t("คุณร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.) ได้เสมอ", "You can always complain to Thailand's Personal Data Protection Committee (PDPC).")}</p>
 
+      <h2>{t("เมื่อนโยบายนี้เปลี่ยน", "Changes to this notice")}</h2>
+      <p>{t(NOTICE_CHANGES[0], NOTICE_CHANGES[1])}</p>
+      <p class="muted">
+        {t("ฉบับนี้ใช้ตั้งแต่", "This version applies from")} {T(NOTICE_DATE)}
+      </p>
+
       <h2>{t("ติดต่อ", "Contact")}</h2>
       <p class="policy-contact">{T(PRIVACY_CONTACT)}</p>
       <p>{T(REPORT_LINE)}</p>
-    </article>,
+    </article>
   );
+}
+
+/** What sign-up can't go without (auth.tsx, onboarding basics); everything else is optional. */
+export const REQUIRED_TO_JOIN: Pair = [
+  "ชื่อผู้ใช้และรหัสผ่าน (หรือบัญชี Google หรือ LINE) ชื่อเล่น วันเกิด เขต และว่าตอนนี้คุณอยู่กรุงเทพฯ แบบไหน จำเป็นต่อการสมัคร ถ้าไม่ให้ จะสมัครไม่ได้ ข้อมูลอื่นไม่บังคับ",
+  "A username and password (or a Google or LINE account), nickname, birth date, district and how you're in Bangkok right now are needed to sign up; without them you can't join. Everything else is optional.",
+];
+
+export const DISCLOSE_TO_OFFICIALS: Pair = [
+  "เราอาจเปิดเผยข้อมูลให้เจ้าหน้าที่ตามที่กฎหมายกำหนด เช่น ตามคำสั่งศาลหรือพนักงานเจ้าหน้าที่",
+  "We may disclose data to officials where the law requires it, for example on a court or official order.",
+];
+
+export const NOTICE_CHANGES: Pair = [
+  "ถ้าเราเปลี่ยนนโยบายนี้ เราจะแจ้งในแอป และถ้าจะใช้ข้อมูลเพื่อจุดประสงค์ใหม่ เราจะขอความยินยอมใหม่",
+  "If we change this notice we'll tell you in the app, and we'll ask again before using data for a new purpose.",
+];
+
+export const COOKIE_LINE: Pair = [
+  "คุกกี้ของแอปจำเป็นต่อการใช้งาน มีเพียง jg_src ที่นับว่าลิงก์แคมเปญหรือพาร์ตเนอร์ไหนพาคุณมา ไม่มีคุกกี้โฆษณา และไม่มีอะไรติดตามคุณไปเว็บอื่น",
+  "The app's cookies are needed to run it, plus one, jg_src, that counts which campaign or partner link brought you. No advertising cookies, and nothing follows you to other sites.",
+];
+
+policyRoutes.get("/privacy", (c) => {
+  const v = view(c);
+  return page(c, { title: v.t("ความเป็นส่วนตัว", "Privacy") }, <PrivacyNotice v={v} />);
 });
 
-policyRoutes.get("/terms", (c) => {
-  const { t, lang } = view(c);
+/** The Terms of service: the /terms page, and the sheet beside the Terms box at sign-up. */
+export function TermsOfService(props: { v: View; inSheet?: boolean }) {
+  const tgt = props.inSheet ? "_blank" : undefined;
+  const { t, lang } = props.v;
   const T = (x: Text) => L(lang, x);
   const flagYears = Math.round(FLAG_WINDOW_DAYS / 365);
   const S = (props: { h: Pair; rows: Pair[] }) => (
@@ -204,9 +249,7 @@ policyRoutes.get("/terms", (c) => {
       )}
     </>
   );
-  return page(
-    c,
-    { title: t("ข้อกำหนด", "Terms") },
+  return (
     <article class="policy">
       <h1>{t("ข้อกำหนดการใช้งาน", "Terms of service")}</h1>
       <p class="muted">
@@ -238,7 +281,7 @@ policyRoutes.get("/terms", (c) => {
         <li>{t("นัดเจอในที่สาธารณะ", "Meet in public places.")}</li>
         <li>{t("ห้ามคุกคาม เกลียดชัง หลอกลวง ขายของ หรือชักชวนเข้าธุรกิจ", "No harassment, hate, scams, selling or recruiting.")}</li>
         <li>
-          {t("ทำตาม", "Follow the")} <a href="/code-of-conduct">{t("หลักปฏิบัติของชุมชน", "code of conduct")}</a>
+          {t("ทำตาม", "Follow the")} <a target={tgt} href="/code-of-conduct">{t("หลักปฏิบัติของชุมชน", "code of conduct")}</a>
         </li>
       </ul>
       <S
@@ -248,7 +291,7 @@ policyRoutes.get("/terms", (c) => {
           [`เรื่องเล็กได้คำเตือน คำเตือนแต่ละครั้งนับเป็น 1 ธง และนับอยู่ ${flagYears} ปี`, `Smaller issues get a warning. Each warning is a flag, and a flag counts for ${flagYears} year${flagYears === 1 ? "" : "s"}.`],
           [`ครบ ${FLAGS_TO_REMOVE} ธง บัญชีถูกระงับ ${FLAG_SUSPEND_DAYS} วัน ทำผิดกติกาชัดเจน อาจถูกระงับหรือแบน`, `${FLAGS_TO_REMOVE} flags mean a ${FLAG_SUSPEND_DAYS}-day suspension. Clearly breaking a rule can mean a suspension or a ban.`],
           [`ไม่มาตามนัด หรือยกเลิกช้า (น้อยกว่า ${LATE_CANCEL_HOURS} ชั่วโมงก่อนเริ่ม) นับเป็นใบเตือน ซึ่งพักการลงชื่อชั่วคราว แต่ไม่ปิดบัญชี`, `No-shows and late cancels (under ${LATE_CANCEL_HOURS} hours) are event strikes. They pause sign-ups for a while, but never close your account.`],
-          ["เราแจ้งคุณทุกครั้ง ถ้าคิดว่าเราตัดสินผิด ติดต่อเราตามช่องทางด้านล่าง แล้วเราจะดูเรื่องอีกครั้ง", "We always tell you. If you think we got it wrong, contact us below and we'll look again."],
+          APPEAL_LINE,
         ]}
       />
       <S
@@ -277,8 +320,9 @@ policyRoutes.get("/terms", (c) => {
         <li>{t("บอกโต๊ะว่ากำลังไปหรือจะสาย และให้เราถามว่าถึงบ้านปลอดภัยไหม", "Tell your table you're on your way or running late, and let us ask if you got home safe.")}</li>
         <li>{t("สายด่วนแตะโทรได้ทันที บล็อก และรายงาน", "One-tap helplines, block and report.")}</li>
       </ul>
+      <p>{t(SAVINGS_LINE[0], SAVINGS_LINE[1])}</p>
       <p>
-        {t("ถ้าอยู่ในอันตราย โทร 191 ทันที", "If you're in danger, call 191 now.")} <a href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>
+        {t("ถ้าอยู่ในอันตราย โทร 191 ทันที", "If you're in danger, call 191 now.")} <a target={tgt} href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>
       </p>
       <S
         h={["ปิดบัญชี", "Closing an account"]}
@@ -289,19 +333,67 @@ policyRoutes.get("/terms", (c) => {
       />
       <S
         h={["เมื่อข้อกำหนดเปลี่ยน", "Changes to these Terms"]}
-        rows={[["เราจะบอกในแอปก่อนข้อกำหนดใหม่มีผล และแสดงวันที่ไว้ด้านบน", "We'll tell you in the app before new Terms take effect, and show the date at the top."]]}
+        rows={[["เราจะบอกในแอปก่อนข้อกำหนดใหม่มีผล ขอให้คุณยอมรับอีกครั้งในหน้าฉัน และแสดงวันที่ไว้ด้านบน", "We'll tell you in the app before new Terms take effect, ask you to accept them again on Me, and show the date at the top."]]}
       />
       <h2>{t("กฎหมายและการติดต่อ", "Law and contact")}</h2>
       <p>{t("ข้อกำหนดนี้ใช้กฎหมายไทย", "These Terms are governed by Thai law.")}</p>
+      <p>{t(DISPUTES_LINE[0], DISPUTES_LINE[1])}</p>
       <p class="policy-contact">
         {t("ติดต่อ:", "Contact:")} {T(CONTACT_ADDRESS)}
       </p>
       <p>
-        <a href="/privacy">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a>
+        <a target={tgt} href="/privacy">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a>
       </p>
-    </article>,
+    </article>
   );
+}
+
+/** Asking us to look again: the in-app Report flow, with a reply time ops can meet (APPEAL_REPLY_DAYS). */
+export const APPEAL_LINE: Pair = [
+  `เราแจ้งคุณทุกครั้ง ถ้าคิดว่าเราตัดสินผิด กดรายงานในหน้ากิจกรรมที่เกี่ยวข้อง แล้วเขียนในรายละเอียดว่าอยากให้เราดูอีกครั้ง เราตั้งใจตอบภายใน ${APPEAL_REPLY_DAYS} วัน ถ้าเข้าแอปไม่ได้ ติดต่อเราตามช่องทางด้านล่าง`,
+  `We always tell you. If you think we got it wrong, tap Report on the event it's about and say in the details that you'd like us to look again. We aim to reply within ${APPEAL_REPLY_DAYS} days. If you can't sign in, use the contact below.`,
+];
+
+export const SAVINGS_LINE: Pair = [
+  "ข้อนี้ไม่จำกัดสิทธิของคุณตามกฎหมาย และไม่ยกเว้นความรับผิดของเราที่เกิดจากความจงใจหรือประมาทเลินเล่อของเรา",
+  "This doesn't limit your legal rights, and doesn't exclude our liability for our own intent or negligence.",
+];
+
+export const DISPUTES_LINE: Pair = [
+  "ข้อพิพาทอยู่ในเขตอำนาจศาลไทย และคุณร้องเรียนสำนักงานคณะกรรมการคุ้มครองผู้บริโภค (สคบ.) ได้",
+  "Disputes go to Thai courts, and you can complain to the Office of the Consumer Protection Board (OCPB).",
+];
+
+policyRoutes.get("/terms", (c) => {
+  const v = view(c);
+  return page(c, { title: v.t("ข้อกำหนด", "Terms") }, <TermsOfService v={v} />);
 });
+
+/**
+ * The Terms box at sign-up (and in onboarding for Google and LINE sign-ups):
+ * required, never pre-ticked. The Terms and the notice open in a sheet on the
+ * same page, so nothing typed in the form is lost.
+ */
+export function TermsAgree(props: { v: View; checked?: boolean }) {
+  const { v } = props;
+  const { t } = v;
+  return (
+    <div class="terms-agree">
+      <label class="toggle">
+        <input type="checkbox" name="terms" value="1" required checked={props.checked} />
+        <span>{t("ฉันยอมรับข้อกำหนดการใช้งานและรับทราบนโยบายความเป็นส่วนตัว", "I agree to the Terms of service and have read the privacy notice")}</span>
+      </label>
+      <div class="terms-read">
+        <Sheet t={t} class="terms-sheet" align="start" title={t("ข้อกำหนดการใช้งาน", "Terms of service")} triggerClass="terms-open" trigger={t("อ่านข้อกำหนดการใช้งาน", "Read the Terms of service")}>
+          <TermsOfService v={v} inSheet />
+        </Sheet>
+        <Sheet t={t} class="terms-sheet" align="start" title={t("นโยบายความเป็นส่วนตัว", "Privacy notice")} triggerClass="terms-open" trigger={t("อ่านนโยบายความเป็นส่วนตัว", "Read the privacy notice")}>
+          <PrivacyNotice v={v} inSheet />
+        </Sheet>
+      </div>
+    </div>
+  );
+}
 
 /** How we keep you safe: one line per promise (owner: less text heavy). */
 export const SAFETY_PROMISES: { emoji: string; title: Text; line: Text }[] = [

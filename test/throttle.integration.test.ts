@@ -78,7 +78,7 @@ describe.skipIf(!HAS_DB)("signup throttling", () => {
     const ip = randomIp();
     const signup = (ipAddr: string) => {
       const username = `s_${randomToken(6).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-      return post("/signup", { username, password: "longenough1", confirm: "longenough1" }, ipAddr);
+      return post("/signup", { username, password: "longenough1", confirm: "longenough1", terms: "1" }, ipAddr);
     };
     for (let i = 0; i < 10; i++) expect((await signup(ip)).status).toBe(302);
     const r = await signup(ip);

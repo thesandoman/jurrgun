@@ -17,8 +17,12 @@ describe.skipIf(!HAS_DB)("onboarding after D42", () => {
     expect(basics.match(/class="flow-step /g)).toHaveLength(1);
     const privacy = await (await req("/onboarding/privacy?lang=en", { cookie: m.cookie })).text();
     expect(privacy.match(/class="flow-step /g)).toHaveLength(1);
-    // Every consent is still asked, with the PDPA notice and code of conduct linked.
-    for (const k of ["consent_service", "consent_safety", "conduct", "consent_personalization", "consent_research", "consent_notifications", 'href="/privacy"', 'href="/code-of-conduct"']) expect(privacy).toContain(k);
+    // Every optional consent is still asked, with the PDPA notice and code of conduct linked.
+    for (const k of ["conduct", "consent_personalization", "consent_research", "consent_notifications", 'href="/privacy"', 'href="/code-of-conduct"']) expect(privacy).toContain(k);
+    // Service and safety are needed to run the app: explained, never a box (legal review, 2026-10-16).
+    expect(privacy).toContain("Needed to run the app (not a consent)");
+    expect(privacy).not.toContain('name="consent_service"');
+    expect(privacy).not.toContain('name="consent_safety"');
   });
 
   it("a member with consents but no interests (partway through the old order) goes on to the private settings", async () => {

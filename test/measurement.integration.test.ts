@@ -307,13 +307,13 @@ describe.skipIf(!HAS_DB)("placement capture", () => {
 
   it("stores the source on the account at sign-up, and only then", async () => {
     const username = `s_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    const r = await req("/signup", { cookie: `jg_src=${encodeURIComponent("line/loy_krathong")}`, form: { username, password: "longenough1", confirm: "longenough1" } });
+    const r = await req("/signup", { cookie: `jg_src=${encodeURIComponent("line/loy_krathong")}`, form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
     expect(r.status).toBe(302);
     const [a] = await db().select({ s: accounts.signupSource }).from(accounts).where(eq(accounts.username, username)).limit(1);
     expect(a.s).toBe("line/loy_krathong");
 
     const plain = `p_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    await req("/signup", { form: { username: plain, password: "longenough1", confirm: "longenough1" } });
+    await req("/signup", { form: { username: plain, password: "longenough1", confirm: "longenough1", terms: "1" } });
     const [b] = await db().select({ s: accounts.signupSource }).from(accounts).where(eq(accounts.username, plain)).limit(1);
     expect(b.s).toBeNull();
   });

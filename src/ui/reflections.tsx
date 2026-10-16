@@ -59,8 +59,8 @@ function ChangeFields({ v, r }: Part) {
       <Field label={t("หรือเล่าด้วยคำของคุณเอง", "Or say it in your own words")} name="r_change_note" value={r.changeNote} maxlength={NOTE_MAX} />
       <p class="muted reflect-note">
         {t(
-          "ถ้าคุณยินยอมให้ใช้ข้อมูลเพื่อการวิจัย ตัวเลือกนี้ (ไม่รวมข้อความ) จะนับรวมใน City Pulse แบบไม่ระบุตัวตน",
-          "If you've agreed to research, the option you pick (never your words) is counted in City Pulse, without your name",
+          "ถ้าคุณยินยอมให้ใช้ข้อมูลเพื่อการวิจัย ตัวเลือกนี้ (ไม่รวมข้อความ) จะนับรวมใน City Pulse โดยใช้รหัสแทนชื่อ",
+          "If you've agreed to research, the option you pick (never your words) is counted in City Pulse, under a code, not your name",
         )}
       </p>
     </>

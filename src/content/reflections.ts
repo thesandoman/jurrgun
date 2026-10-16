@@ -7,7 +7,7 @@
  *   change    what you'd change: one option, plus words. Private: never on
  *             the profile. With research consent, the option alone (never
  *             the words) goes to City Pulse under the member's research id,
- *             so it's only ever seen as anonymous totals
+ *             so it's only ever seen as totals, under a research code
  *   favourite your favourite area or place: a district and/or a place typed
  *             in (suggestions from src/vibe/landmarks.ts)
  *   notYet    where you haven't been yet: up to 3 districts and/or a place;
@@ -105,7 +105,7 @@ export function reflectionsFromForm(body: Record<string, unknown>): Reflections 
   });
 }
 
-/** The City Pulse question the "what would you change" answer feeds (anonymous totals, research consent only). */
+/** The City Pulse question the "what would you change" answer feeds (totals only, under a research code, research consent only). */
 export const CHANGE_PULSE_ID = "quiz-change";
 export const CHANGE_PULSE_QUESTION = {
   id: CHANGE_PULSE_ID,

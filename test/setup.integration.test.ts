@@ -48,7 +48,7 @@ describe.skipIf(!HAS_DB)("POST /api/setup/migrate", () => {
   it("promotes an account to admin", async () => {
     const signup = await app.request(
       "/signup",
-      { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "username=first_admin&password=longenough1&confirm=longenough1" },
+      { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "username=first_admin&password=longenough1&confirm=longenough1&terms=1" },
       env,
     );
     expect(signup.status).toBe(302);

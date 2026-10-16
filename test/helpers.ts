@@ -10,6 +10,7 @@ import app from "../src/index";
 import { getDb } from "../src/db";
 import { hashPassword, newId, randomToken, sha256 } from "../src/lib/crypto";
 import { accounts, consents, events, profiles, registrations, sessions, type Role } from "../src/schema";
+import { TERMS_CONSENT, TERMS_VERSION } from "../src/content/privacy";
 
 export const ENV = { DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/cloud_dev", NO_EXTERNAL: "1" };
 
@@ -88,6 +89,8 @@ export async function createMember(
   for (const category of cats) {
     await d.insert(consents).values({ id: newId(), accountId: id, category, granted: true, version: "test" });
   }
+  // Agreed to the current Terms at sign-up, so Me shows no "updated Terms" card.
+  await d.insert(consents).values({ id: newId(), accountId: id, category: TERMS_CONSENT, granted: true, version: TERMS_VERSION });
   const token = randomToken();
   await d.insert(sessions).values({ id: await sha256(token), accountId: id, expiresAt: new Date(Date.now() + 86_400_000) });
   return { id, username, cookie: `bkk_sid=${token}`, researchId };

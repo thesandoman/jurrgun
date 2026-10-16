@@ -131,10 +131,11 @@ import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, dropPendingDating, pendingDatingIntent, withGenderSelf } from "./onboarding";
-import { consentEffects, consentRow, deleteDatingIntents, hasConsent, NOTIFICATIONS_CONSENT, privateFieldConsents, ROMANCE_CONSENT } from "../services/consent";
+import { acceptedTerms, consentEffects, consentRow, deleteDatingIntents, GENDER_CONSENT, hasConsent, NOTIFICATIONS_CONSENT, privateFieldConsents, RELATIONSHIP_CONSENT, ROMANCE_CONSENT, termsRow } from "../services/consent";
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L, type T } from "../lib/i18n";
+import { NOTICE_DATE } from "../content/privacy";
 import { Sheet } from "../ui/sheet";
 import { releaseUpcomingSeats } from "../services/events";
 
@@ -186,7 +187,8 @@ settingsRoutes.get("/settings", async (c) => {
   const p = user.profile!;
   const db = getDb(c.env);
   const now = new Date();
-  const [src, vibe, [been], [upcoming], [circle], tables, [nextUp]] = await Promise.all([
+  const [termsOk, src, vibe, [been], [upcoming], [circle], tables, [nextUp]] = await Promise.all([
+    acceptedTerms(db, user.account.id),
     photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
     db.select({ n: count() }).from(registrations).where(and(eq(registrations.accountId, user.account.id), isNotNull(registrations.checkedInAt))),
@@ -312,7 +314,20 @@ settingsRoutes.get("/settings", async (c) => {
       memberSince={memberSince}
       newcomer={p.newcomer}
       ask={
-        // Six months in, still marked new: ask once instead of keeping the label (and the newcomer card on Discover) forever.
+        // Members who joined before the Terms box, or before the Terms last changed: one small card,
+        // never a lock. It goes once they agree (a "terms" row with the current version).
+        !termsOk ? (
+          <form method="post" action="/settings/terms" class="card me-ask me-terms">
+            <p>
+              <strong>📜 {t("ข้อกำหนดการใช้งานฉบับใหม่", "Updated Terms of service")}</strong>
+              <small class="muted">
+                {t(`เราอัปเดตข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว ฉบับวันที่ ${L(lang, NOTICE_DATE)}`, `We've updated our Terms of service and privacy notice, version of ${L(lang, NOTICE_DATE)}.`)}{" "}
+                <a href="/terms">{t("อ่านข้อกำหนด", "Read the Terms")}</a> · <a href="/privacy">{t("อ่านนโยบาย", "Read the notice")}</a>
+              </small>
+            </p>
+            <button class="btn primary">{t("ฉันยอมรับข้อกำหนดและรับทราบนโยบาย", "I agree to the Terms and have read the notice")}</button>
+          </form>
+        ) : // Six months in, still marked new: ask once instead of keeping the label (and the newcomer card on Discover) forever.
         p.newcomer && !bio.newcomerAsked && created && now.getTime() - created.getTime() > 182 * 86_400_000 ? (
           <form method="post" action="/settings/newcomer" class="card me-ask">
             <p>
@@ -381,7 +396,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/thanks", emoji: "💌", title: t("คำขอบคุณ", "Thank-yous"), hint: t("ข้อความส่วนตัวจากคนที่เจอ", "Private notes from people you met"), tint: "sun", group: gOut },
         { href: "/settings/habits", emoji: "🌿", title: t("นิสัยดี ๆ และการพัก", "Healthy habits"), hint: isPaused(p, now) ? t("กำลังพักอยู่", "On a break") : t("นัดต่อสัปดาห์ พัก Jurrgun", "Plans a week, take a break"), tint: "mint", group: gYou },
         { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green", group: gYou },
-        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน", "Quick, anonymous city questions"), tint: "sky", group: gAcct },
+        { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ใช้รหัสแทนชื่อ", "Quick questions, under a code, not your name"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
         { href: "/settings/consents", emoji: "✅", title: t("ความยินยอมของฉัน", "My consents"), hint: t("เปิดหรือปิดแต่ละเรื่อง พร้อมวันที่", "Each one on or off, with dates"), tint: "mint", group: gAcct },
         { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ดาวน์โหลดข้อมูล ปิดบัญชี", "Download my data, deactivate"), tint: "mint", group: gAcct },
@@ -1353,7 +1368,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
     ["👥 ข้อมูลการใช้งาน", "👥 Social store", "ชื่อเล่น รูป ความสนใจ กิจกรรมที่ลงทะเบียน คนรู้จัก และการตั้งค่าส่วนตัว", "Nickname, photo, interests, events, connections and your private preferences."],
-    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse เก็บด้วยรหัสวิจัยแทนตัวตน เมื่อปิดบัญชี เราจะตัดการเชื่อมโยงกับตัวคุณ ข้อมูลจึงระบุตัวคุณไม่ได้อีก", "City Pulse answers, stored under a research code instead of your identity. When you deactivate, the link is cut and the rows become anonymous."],
+    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse และคำถามเรื่องความรู้สึก เก็บโดยใช้รหัสแทนชื่อ เมื่อปิดบัญชี เราตัดรหัสนี้ออกจากบัญชีของคุณ", "City Pulse and wellbeing answers, kept under a code, not your name. When you deactivate, the code is cut from your account."],
   ];
   return (
     <>
@@ -1443,6 +1458,14 @@ async function saveConsents(c: C) {
     queries.push(db.update(profiles).set({ ...romanceOffPatch(p), updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id)));
     if (p.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id), ...endPinkies(db, user.account.id));
   }
+  // Relationship status and private gender are given in Connection preferences and can be
+  // withdrawn on the consent centre (its switches show only while they are given). The
+  // Privacy Center's form has no such switches, so it never withdraws them.
+  if (fromCentre) {
+    for (const key of [RELATIONSHIP_CONSENT, GENDER_CONSENT]) {
+      if (current.get(key) && str(body[`consent_${key}`]) !== "1") changed[key] = false;
+    }
+  }
   for (const [category, granted] of Object.entries(changed)) {
     // Each change carries its effects: romance_data no deletes dating intents, research no
     // deletes City Pulse and wellbeing answers and cuts the research id, research yes issues one.
@@ -1457,6 +1480,16 @@ async function saveConsents(c: C) {
 }
 settingsRoutes.post("/settings/privacy", saveConsents);
 settingsRoutes.post("/settings/consents", saveConsents);
+
+/** The card on Me: agree to the current Terms (a "terms" row with TERMS_VERSION). */
+settingsRoutes.post("/settings/terms", async (c) => {
+  const user = me(c);
+  const db = getDb(c.env);
+  if (!(await acceptedTerms(db, user.account.id))) {
+    await batch(c.env, [termsRow(db, user.account.id), audit(db, user.account.id, "consent.updated", { type: "account", id: user.account.id }, { changed: { terms: true }, via: "me_card" })]);
+  }
+  return c.redirect("/settings?notice=saved");
+});
 
 settingsRoutes.get("/settings/privacy/export", async (c) => {
   const user = me(c);

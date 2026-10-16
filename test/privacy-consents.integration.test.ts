@@ -87,7 +87,7 @@ describe.skipIf(!HAS_DB)("R7: notifications", () => {
 describe.skipIf(!HAS_DB)("R7: research", () => {
   it("a new account has no research_id until it says yes to research", async () => {
     const username = `prv_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    const r = await req("/signup", { form: { username, password: "a-long-password-1", confirm: "a-long-password-1", age: "1" } });
+    const r = await req("/signup", { form: { username, password: "a-long-password-1", confirm: "a-long-password-1", terms: "1", age: "1" } });
     const [acct] = await db().select().from(accounts).where(eq(accounts.username, username));
     expect(r.status).toBeLessThan(400);
     expect(acct.researchId).toBeNull();

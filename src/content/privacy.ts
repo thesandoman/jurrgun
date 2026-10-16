@@ -10,8 +10,40 @@
  */
 export type Text = { th: string; en: string };
 
+/**
+ * The date of the current privacy notice and Terms (one date for both). Change
+ * it whenever either changes: the date at the top of both pages, the version on
+ * every new consent row (CONSENT_VERSION in services/consent.ts) and the Terms
+ * version members accept (TERMS_VERSION) all follow it, and members who
+ * accepted an older version see the "updated Terms" card on Me.
+ */
+export const NOTICE_ISO = "2026-10-16";
+
+const MONTHS: [string, string][] = [
+  ["มกราคม", "January"], ["กุมภาพันธ์", "February"], ["มีนาคม", "March"], ["เมษายน", "April"], ["พฤษภาคม", "May"], ["มิถุนายน", "June"],
+  ["กรกฎาคม", "July"], ["สิงหาคม", "August"], ["กันยายน", "September"], ["ตุลาคม", "October"], ["พฤศจิกายน", "November"], ["ธันวาคม", "December"],
+];
+
+/** "2026-10-16" as "16 ตุลาคม 2569" / "16 October 2026" (Buddhist-era year in Thai). */
+export function isoDateText(iso: string): Text {
+  const [y, m, d] = iso.split("-").map(Number);
+  return { th: `${d} ${MONTHS[m - 1][0]} ${y + 543}`, en: `${d} ${MONTHS[m - 1][1]} ${y}` };
+}
+
 /** Shown at the top of the notice and the Terms. */
-export const NOTICE_DATE: Text = { th: "16 ตุลาคม 2569", en: "16 October 2026" };
+export const NOTICE_DATE: Text = isoDateText(NOTICE_ISO);
+
+/** The Terms version recorded on a "terms" consent row when a member accepts them. */
+export const TERMS_VERSION = `terms-${NOTICE_ISO}`;
+
+/** The consent category that records accepting the Terms (and reading the privacy notice). */
+export const TERMS_CONSENT = "terms";
+
+/**
+ * How soon we aim to answer a member who asks us to look again at a warning,
+ * strike or suspension (an ops commitment, quoted in the Terms).
+ */
+export const APPEAL_REPLY_DAYS = 7;
 
 // ------------------------------------------------------------- periods --
 
@@ -87,7 +119,7 @@ export const RETENTION: RetentionItem[] = [
   },
   {
     what: { th: "คำตอบ City Pulse และแบบสอบถามความรู้สึก", en: "City Pulse and wellbeing answers" },
-    keep: { th: "เก็บภายใต้รหัสวิจัย ลบหลัง", en: "kept under a research code, deleted after" },
+    keep: { th: "เก็บโดยใช้รหัสแทนชื่อ ลบหลัง", en: "kept under a code, not your name, deleted after" },
     period: { n: 24, unit: "months" },
     code: "RESEARCH_RETENTION_DAYS",
   },
@@ -129,8 +161,8 @@ export const RETENTION: RetentionItem[] = [
   {
     what: { th: "บัญชีที่ปิดแล้ว", en: "Closed accounts" },
     keep: {
-      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจจะเก็บไว้แบบไม่ระบุตัวตนเพื่อนับยอดรวม แล้วลบข้อมูลที่เหลือหลัง",
-      en: "profile hidden, and photos, social links and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with nothing that identifies you, for totals; the rest is deleted after",
+      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
+      en: "profile hidden, and photos, social links and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
     },
     period: { n: 30, unit: "days" },
     code: "DEACTIVATED_RETENTION_DAYS",
@@ -182,41 +214,65 @@ export const DEVICE_STORAGE: CookieItem[] = [
 
 // ------------------------------------------------------- who else -----
 
-export type Processor = { name: string; does: Text; sees: Text };
+/**
+ * Outside services. `for_us`: they work for us, on our instructions, and see
+ * only what that work needs. `own`: their own services, which you or your
+ * browser use directly, under their own privacy policies.
+ * test/privacy-promises.test.ts checks every outside address in the code has one.
+ */
+export type Processor = { name: string; group: "for_us" | "own"; does: Text; sees: Text };
+
+export const PROCESSOR_GROUPS: { key: Processor["group"]; title: Text }[] = [
+  { key: "for_us", title: { th: "ทำงานให้เรา", en: "Work for us" } },
+  { key: "own", title: { th: "บริการของเขาเอง ภายใต้นโยบายของเขา", en: "Their own services, under their own policies" } },
+];
 
 export const PROCESSORS: Processor[] = [
   {
     name: "SV Cloud · Cloudflare",
+    group: "for_us",
     does: { th: "โฮสต์แอป ฐานข้อมูล และไฟล์ (เช่น รูป)", en: "Host the app, its database and files such as photos" },
     sees: { th: "ข้อมูลทั้งหมดที่แอปเก็บ ในฐานะผู้ให้บริการของเรา", en: "Everything the app stores, as our service providers" },
   },
   {
-    name: "Google · LINE",
-    does: { th: "ให้เข้าสู่ระบบ ถ้าคุณเลือกใช้ และแชร์ลงใน LINE เมื่อคุณแตะ", en: "Sign-in, if you choose it, and sharing to LINE when you tap it" },
-    sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขออีเมลหรือรายชื่อเพื่อน และสิ่งที่คุณเลือกแชร์", en: "That you use Jurrgun (we only ask for an account ID, never your email or friends), and whatever you choose to share" },
-  },
-  {
     name: "Resend · Postmark",
+    group: "for_us",
     does: { th: "ส่งรหัสเข้าสู่ระบบทางอีเมล เมื่อเปิดใช้", en: "Send sign-in codes by email, once switched on" },
     sees: { th: "อีเมลของคุณและรหัส ตอนส่ง", en: "Your email address and the code, when one is sent" },
   },
   {
     name: "Google · Apple · Mozilla · Microsoft",
+    group: "for_us",
     does: { th: "ส่งการแจ้งเตือนไปที่มือถือหรือเบราว์เซอร์ ถ้าคุณเปิด", en: "Deliver notifications to your phone or browser, if you turn them on" },
     sees: { th: "ที่อยู่สำหรับส่งของเครื่องคุณ ข้อความถูกเข้ารหัส อ่านไม่ได้", en: "Your device's push address. Messages are encrypted, so they can't read them" },
   },
   {
+    name: "Google · LINE",
+    group: "own",
+    does: { th: "ให้เข้าสู่ระบบ ถ้าคุณเลือกใช้ และแชร์ลงใน LINE เมื่อคุณแตะ", en: "Sign-in, if you choose it, and sharing to LINE when you tap it" },
+    sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขออีเมลหรือรายชื่อเพื่อน และสิ่งที่คุณเลือกแชร์", en: "That you use Jurrgun (we only ask for an account ID, never your email or friends), and whatever you choose to share" },
+  },
+  {
     name: "Esri · OpenStreetMap · jsDelivr",
+    group: "own",
     does: { th: "ภาพแผนที่และโค้ดแผนที่", en: "Map images and the map's code" },
     sees: { th: "IP ของคุณและบริเวณแผนที่ที่เปิด", en: "Your IP address and the map area you view" },
   },
   {
     name: "Google Maps",
+    group: "own",
     does: { th: "เส้นทางไปสถานที่ เมื่อคุณแตะลิงก์", en: "Directions, when you tap a map link" },
     sees: { th: "สิ่งที่คุณทำใน Google Maps ตามนโยบายของ Google", en: "What you do in Google Maps, under Google's own policy" },
   },
   {
+    name: "Google Fonts",
+    group: "own",
+    does: { th: "ฟอนต์อ่านง่ายในการตั้งค่าการเข้าถึง โหลดมาพร้อมทุกหน้า", en: "The easier-to-read font in the accessibility settings, loaded with every page" },
+    sees: { th: "IP ของคุณและเบราว์เซอร์ที่ใช้ ตอนโหลดฟอนต์", en: "Your IP address and browser, when the font loads" },
+  },
+  {
     name: "Open-Meteo",
+    group: "own",
     does: { th: "สภาพอากาศและฝุ่นในกรุงเทพฯ", en: "Bangkok weather and air quality" },
     sees: { th: "ไม่มีข้อมูลของคุณ เซิร์ฟเวอร์เราขอข้อมูลของกรุงเทพฯ เอง", en: "Nothing about you. Our server asks for Bangkok's weather" },
   },
@@ -261,19 +317,33 @@ export const REPORT_LINE: Text = {
  * consent centre lists all of them; test/privacy-promises.test.ts fails if the
  * code writes a category that is missing here.
  *
- *   required   needed for the app; withdrawn only by closing the account
+ *   required   needed to run the app, so not a consent: explained, never a
+ *              switch. The row onboarding writes is an acknowledgement, kept
+ *              for history. Ends only by closing the account.
  *   toggle     switched on and off on the consent centre
- *   elsewhere  switched where the data is entered (`href`)
  *   withdraw   given where the data is entered (`href`), withdrawn here too
  *   record     a one-off agreement, shown with its date
+ *
+ * `withdraw` is the one-line consequence of switching a consent off.
  */
 export type ConsentCategory = {
   key: string;
-  control: "required" | "toggle" | "elsewhere" | "withdraw" | "record";
+  control: "required" | "toggle" | "withdraw" | "record";
   title: Text;
   hint: Text;
+  withdraw?: Text;
   href?: string;
   sensitive?: boolean;
+};
+
+/** The heading over the service and safety rows, in onboarding and the consent centre. */
+export const NOT_A_CONSENT: Text = { th: "จำเป็นต่อการให้บริการ (ไม่ใช่การขอความยินยอม)", en: "Needed to run the app (not a consent)" };
+
+/** The research consent, as onboarding and the consent centre word it. */
+export const RESEARCH_TITLE: Text = { th: "City Pulse: ช่วยวิจัยเมือง", en: "City Pulse: city research" };
+export const RESEARCH_HINT: Text = {
+  th: "คำถามสั้น ๆ เรื่องเมือง และคำถามเรื่องความรู้สึก เช่น ความเหงา เก็บโดยใช้รหัสแทนชื่อ กทม. เห็นแค่ยอดรวมจาก 10 คนขึ้นไป",
+  en: "Quick city questions and wellbeing questions, such as how lonely you feel, kept under a code, not your name. The BMA only sees totals from 10 or more people.",
 };
 
 export const CONSENT_CATEGORIES: ConsentCategory[] = [
@@ -281,53 +351,59 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     key: "service",
     control: "required",
     title: { th: "บัญชีและบริการกิจกรรม", en: "Account and events" },
-    hint: { th: "จำเป็นเพื่อให้แอปทำงาน เช่น จัดโต๊ะ แชต และเช็กอิน ยกเลิกได้โดยปิดบัญชี", en: "Needed for the app to work: tables, chat and check-in. Ends when you close your account." },
+    hint: { th: "ใช้ทำให้แอปทำงาน เช่น จัดโต๊ะ แชต และเช็กอิน ตามข้อกำหนดการใช้งาน จบเมื่อปิดบัญชี", en: "Used to run the app: tables, chat and check-in, under the Terms of service. Ends when you close your account." },
   },
   {
     key: "safety",
     control: "required",
     title: { th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation" },
-    hint: { th: "ใช้ตรวจรายงานและกันการคุกคาม ยกเลิกได้โดยปิดบัญชี", en: "Used to review reports and stop harassment. Ends when you close your account." },
+    hint: { th: "ใช้ตรวจรายงานและกันการคุกคาม เพื่อความปลอดภัยของทุกคน", en: "Used to review reports and stop harassment, to keep everyone safe." },
   },
   {
     key: "personalization",
     control: "toggle",
     title: { th: "จัดโต๊ะตามความสนใจ", en: "Seat me by my interests" },
     hint: { th: "ใช้ความสนใจและภาษาของคุณช่วยจัดโต๊ะ", en: "Uses your interests and languages to help seat you." },
+    withdraw: { th: "ถ้าปิด เราจัดโต๊ะจากภาษาและเขตของคุณเท่านั้น", en: "If you turn it off, we seat you by your languages and district only." },
   },
   {
     key: "research",
     control: "toggle",
-    title: { th: "City Pulse: ช่วยวิจัยเมือง", en: "City Pulse: city research" },
-    hint: { th: "คำตอบเก็บใต้รหัสวิจัย กทม. เห็นแค่ยอดรวมจาก 10 คนขึ้นไป ถ้าปิด เราลบหรือตัดคำตอบเดิมออกจากตัวคุณ", en: "Answers sit under a research code. The BMA only sees totals from 10 or more people. Turn it off and past answers are deleted or unlinked from you." },
+    title: RESEARCH_TITLE,
+    hint: RESEARCH_HINT,
+    withdraw: { th: "ถ้าปิด เราลบคำตอบเดิมของคุณ และจะไม่ถามคำถามเหล่านี้อีก", en: "If you turn it off, we delete your past answers and stop asking these questions." },
   },
   {
     key: "notifications",
     control: "toggle",
     title: { th: "แจ้งเตือนกิจกรรม", en: "Event reminders" },
-    hint: { th: "เตือนก่อนกิจกรรมและเมื่อมีที่ว่าง ถ้าไม่ได้เปิด เราจะไม่ส่ง", en: "Reminders before events and when a spot opens. If it's not on, we don't send them." },
+    hint: { th: "เตือนก่อนกิจกรรมและเมื่อมีที่ว่าง", en: "Reminders before events and when a spot opens." },
+    withdraw: { th: "ถ้าปิด เราจะไม่ส่งการเตือนเหล่านี้", en: "If you turn it off, we don't send these reminders." },
   },
   {
     key: "profile_links",
     control: "toggle",
     title: { th: "ให้คนรู้จักเห็นลิงก์โซเชียล", en: "Show my social links to my people" },
     hint: { th: "เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย เพิ่มหรือลบลิงก์ได้ที่แก้ไขโปรไฟล์", en: "Only mutual connections see them. Add or remove links in Edit profile." },
+    withdraw: { th: "ถ้าปิด คนรู้จักจะไม่เห็นลิงก์ของคุณ ลิงก์ยังเก็บไว้จนกว่าคุณจะลบ", en: "If you turn it off, your people stop seeing your links. They stay saved until you remove them." },
   },
   {
     key: "relationship_data",
-    control: "elsewhere",
+    control: "withdraw",
     href: "/settings/connections",
     sensitive: true,
     title: { th: "สถานะความสัมพันธ์", en: "Relationship status" },
     hint: { th: "ส่วนตัว ทีมงานไม่เห็น ใช้กับเรื่องเปิดใจมากกว่าเพื่อนเท่านั้น", en: "Private, never shown to staff. Used only for Open to something more." },
+    withdraw: { th: "ถ้าถอน สถานะจะกลับเป็นไม่ระบุ และคุณจะเปิดใจมากกว่าเพื่อนไม่ได้", en: "If you withdraw it, your status goes back to Prefer not to say, and you can't use Open to something more." },
   },
   {
     key: "gender_data",
-    control: "elsewhere",
+    control: "withdraw",
     href: "/settings/connections",
     sensitive: true,
     title: { th: "เพศ (ส่วนตัว)", en: "Gender (private)" },
     hint: { th: "ใช้กับโต๊ะและบัดดี้สำหรับผู้หญิงเท่านั้น ไม่แสดงให้ใครเห็น", en: "Used for women-only tables and buddies. Never shown to anyone." },
+    withdraw: { th: "ถ้าถอนเรื่องเพศ เราลบเพศที่บอกไว้ และคุณจะเลือกโต๊ะสำหรับผู้หญิงไม่ได้", en: "If you withdraw gender, we clear it, and you can't choose women-only tables." },
   },
   {
     key: "romance_data",
@@ -335,7 +411,14 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     href: "/settings/connections",
     sensitive: true,
     title: { th: "ข้อมูลเปิดใจมากกว่าเพื่อน", en: "Open to something more data" },
-    hint: { th: "อัตลักษณ์ทางเพศ คนที่อยากเจอ และเป้าหมายการเดต ถ้าถอน เราลบทันที", en: "Gender identity, who you'd like to meet and dating goals. Withdraw and they're deleted at once." },
+    hint: { th: "อัตลักษณ์ทางเพศ คนที่อยากเจอ และเป้าหมายการเดต", en: "Gender identity, who you'd like to meet and dating goals." },
+    withdraw: { th: "ถ้าถอน เราลบข้อมูลนี้ทันที และปิดเปิดใจมากกว่าเพื่อน", en: "If you withdraw it, we delete it at once and switch off Open to something more." },
+  },
+  {
+    key: TERMS_CONSENT,
+    control: "record",
+    title: { th: "ข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว", en: "Terms of service and privacy notice" },
+    hint: { th: "บันทึกว่าคุณยอมรับข้อกำหนดการใช้งานและรับทราบนโยบายความเป็นส่วนตัว", en: "A record that you agreed to the Terms of service and read the privacy notice." },
   },
   {
     key: "guide",

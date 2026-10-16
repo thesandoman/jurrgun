@@ -12,7 +12,7 @@ const cookieFrom = (res: Response) => (res.headers.get("set-cookie") ?? "").spli
 describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
   it("creates an account, onboards through every step, and lands on events", async () => {
     const username = `u_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    const signup = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
+    const signup = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
     expect(signup.status).toBe(302);
     expect(signup.headers.get("location")).toBe("/onboarding");
     const cookie = cookieFrom(signup);
@@ -85,14 +85,14 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
 
   it("refuses a duplicate username", async () => {
     const username = `d_${randomToken(5).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
-    await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
-    const again = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
+    await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
+    const again = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
     expect(again.status).toBe(400);
   });
 
   it("reserves the google_ and line_ username prefixes for social sign-in", async () => {
     for (const username of ["google_me", "line_me"]) {
-      const r = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1" } });
+      const r = await req("/signup", { form: { username, password: "longenough1", confirm: "longenough1", terms: "1" } });
       expect(r.status).toBe(400);
     }
   });

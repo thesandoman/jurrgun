@@ -24,11 +24,13 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { newId } from "../lib/crypto";
 import { accounts, consents, datingIntents, profiles, pulseResponses, wellbeing } from "../schema";
+import { NOTICE_ISO, TERMS_CONSENT, TERMS_VERSION } from "../content/privacy";
 
 type Db = ReturnType<typeof getDb>;
 type Query = { toSQL(): { sql: string; params: unknown[] } };
 
-export const CONSENT_VERSION = "2026-10-proto";
+/** Every new consent row records the notice it was given under (the notice date, src/content/privacy.ts). */
+export const CONSENT_VERSION = `notice-${NOTICE_ISO}`;
 export const ROMANCE_CONSENT = "romance_data";
 export const RESEARCH_CONSENT = "research";
 export const PERSONALIZATION_CONSENT = "personalization";
@@ -69,6 +71,22 @@ export async function consentsFor(db: Db, ids: string[], category: string): Prom
 /** One new consent row (the history is the audit trail). */
 export function consentRow(db: Db, accountId: string, category: string, granted: boolean) {
   return db.insert(consents).values({ id: newId(), accountId, category, granted, version: CONSENT_VERSION });
+}
+
+/** True when the member's newest Terms row accepts the current Terms (TERMS_VERSION). */
+export async function acceptedTerms(db: Db, accountId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ granted: consents.granted, version: consents.version })
+    .from(consents)
+    .where(and(eq(consents.accountId, accountId), eq(consents.category, TERMS_CONSENT)))
+    .orderBy(desc(consents.createdAt))
+    .limit(1);
+  return !!row && row.granted && row.version === TERMS_VERSION;
+}
+
+/** The row that records accepting the current Terms (and reading the privacy notice). */
+export function termsRow(db: Db, accountId: string) {
+  return db.insert(consents).values({ id: newId(), accountId, category: TERMS_CONSENT, granted: true, version: TERMS_VERSION });
 }
 
 /** Delete the member's dating intents (romance switched off or romance_data withdrawn). */

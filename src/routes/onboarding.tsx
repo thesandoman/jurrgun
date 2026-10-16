@@ -8,7 +8,8 @@
  *                  makes dating in Bangkok hard
  *   1 quiz         Bangkok Vibe quiz (skippable) → type reveal (/onboarding/type)
  *   2 basics       one screen: nickname, birth date (18+ gate), district, how you're in Bangkok
- *   3 privacy      one screen: required consents + code of conduct, and the optional extras
+ *   3 privacy      one screen: the Terms (if not yet accepted) and the code of conduct; what the
+ *                  app needs to run (service, safety: explained, not asked); the optional consents
  *   4 connections  one private screen (relationship, ages, women-only), skippable; romance for dating members
  *   5 wellbeing    optional UCLA-3 baseline on one screen, only with research consent
  *
@@ -35,7 +36,10 @@ import { newId } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import type { Lang } from "../lib/i18n";
 import { consents, datingIntents, profiles, wellbeing } from "../schema";
-import { CONSENT_VERSION, consentEffects, consentRow, hasConsent, privateFieldConsents, ROMANCE_CONSENT } from "../services/consent";
+import { acceptedTerms, CONSENT_VERSION, consentEffects, consentRow, hasConsent, privateFieldConsents, ROMANCE_CONSENT, termsRow } from "../services/consent";
+import { CONSENT_CATEGORIES, NOT_A_CONSENT, RESEARCH_HINT } from "../content/privacy";
+import { L } from "../lib/i18n";
+import { TermsAgree } from "./policies";
 import {
   CHALLENGE_ANSWERS,
   cleanPrefs,
@@ -494,69 +498,81 @@ onboarding.post("/basics", async (c) => {
 
 // -------------------------------------------------------------- privacy --
 
+/**
+ * Service and safety are needed to run the app, so they are explained, never
+ * asked: no box to tick. Their rows are still written when this step is done,
+ * as a dated acknowledgement for the history. The rest are real choices.
+ */
 const CONSENT_ITEMS: { key: string; required: boolean; emoji: string; th: string; en: string }[] = [
   { key: "service", required: true, emoji: "🎟️", th: "บัญชีและบริการกิจกรรม", en: "Account and events" },
   { key: "safety", required: true, emoji: "🛡️", th: "ความปลอดภัยและการดูแลชุมชน", en: "Safety and moderation" },
   { key: "personalization", required: false, emoji: "🪑", th: "จัดโต๊ะตามความสนใจ", en: "Seat me by my interests" },
-  { key: "research", required: false, emoji: "📊", th: "City Pulse วิจัยเมืองแบบไม่ระบุตัวตน", en: "City Pulse anonymous research" },
+  { key: "research", required: false, emoji: "📊", th: "City Pulse: ช่วยวิจัยเมือง", en: "City Pulse: city research" },
   { key: "notifications", required: false, emoji: "🔔", th: "แจ้งเตือนกิจกรรม", en: "Event reminders" },
 ];
 
-function PrivacyForm(props: { v: View; j: Journey; error?: string }) {
-  const { t } = props.v;
+function PrivacyForm(props: { v: View; j: Journey; error?: string; needTerms: boolean; values?: Record<string, string> }) {
+  const { t, lang } = props.v;
+  const val = props.values ?? {};
+  const hintOf = (key: string) => CONSENT_CATEGORIES.find((c) => c.key === key)!.hint;
   return (
     <Flow v={props.v} submit={t("ต่อไป", "Next")} journey={props.j} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep
         emoji="🤝"
         title={t("สิ่งที่จำเป็น", "The must-haves")}
-        hint={t("3 ข้อนี้ทำให้แอปใช้งานได้และปลอดภัย ต้องยอมรับก่อนเริ่มใช้งาน", "These three keep the app working and safe.")}
+        hint={t("ยอมรับข้อตกลงก่อนเริ่มใช้งาน", "Agree to these to get started.")}
         info={
-          <>
-            <p>
-              {t(
-                "บริการ: ใช้สำหรับบัญชีและการจองกิจกรรมของคุณ ความปลอดภัย: ใช้ตรวจสอบรายงานและป้องกันการคุกคาม",
-                "Service: your account and bookings. Safety: used to review reports and prevent harassment.",
-              )}
-            </p>
-            <p>
-              <a href="/privacy" target="_blank">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a> ·{" "}
-              <a href="/code-of-conduct" target="_blank">{t("หลักปฏิบัติของชุมชน", "Code of conduct")}</a>
-            </p>
-          </>
+          <p>
+            <a href="/privacy" target="_blank">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a> ·{" "}
+            <a href="/code-of-conduct" target="_blank">{t("หลักปฏิบัติของชุมชน", "Code of conduct")}</a>
+          </p>
         }
       >
-        {CONSENT_ITEMS.filter((i) => i.required).map((i) => (
-          <MustToggle name={`consent_${i.key}`} label={`${i.emoji} ${t(i.th, i.en)}`} checked />
-        ))}
-        <MustToggle name="conduct" label={`📜 ${t("ฉันยอมรับหลักปฏิบัติของชุมชน", "I agree to the code of conduct")}`} />
+        {props.needTerms ? <TermsAgree v={props.v} checked={val.terms === "1"} /> : null}
+        <MustToggle name="conduct" label={`📜 ${t("ฉันยอมรับหลักปฏิบัติของชุมชน", "I agree to the code of conduct")}`} checked={val.conduct === "1"} />
+        <h3 class="flow-sub">{L(lang, NOT_A_CONSENT)}</h3>
+        <ul class="needed-list">
+          {CONSENT_ITEMS.filter((i) => i.required).map((i) => (
+            <li>
+              <span aria-hidden="true">{i.emoji}</span>
+              <span>
+                <b>{t(i.th, i.en)}</b>
+                <small>{L(lang, hintOf(i.key))}</small>
+              </span>
+            </li>
+          ))}
+        </ul>
         <h3 class="flow-sub">
           <span aria-hidden="true">✨</span> {t("ตัวเลือกเพิ่มเติม", "Optional extras")}
         </h3>
         <div class="flow-hint with-info">
-          <span>{t("เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "Change any of these later in Settings.")}</span>
+          <span>{t("ไม่เลือกก็ใช้แอปได้ เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "You can use the app without these. Change them any time in Settings.")}</span>
           <details class="more-info">
             <summary aria-label={`ⓘ ${t("ตัวเลือกเพิ่มเติม", "Optional extras")}`}>
               <span aria-hidden="true">ⓘ</span>
             </summary>
             <div class="more-info-body">
               {t(
-                "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง",
-                "Seating uses your interests and languages. City Pulse: results are only shown as totals from 10 or more people. Reminders: before events and when a spot opens.",
+                "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง",
+                "Seating uses your interests and languages. Reminders: before events and when a spot opens.",
               )}
             </div>
           </details>
         </div>
         {CONSENT_ITEMS.filter((i) => !i.required).map((i) => (
-          <Toggle name={`consent_${i.key}`} label={`${i.emoji} ${t(i.th, i.en)}`} />
+          <Toggle name={`consent_${i.key}`} label={`${i.emoji} ${t(i.th, i.en)}`} hint={i.key === "research" ? L(lang, RESEARCH_HINT) : undefined} checked={val[`consent_${i.key}`] === "1"} />
         ))}
       </FlowStep>
     </Flow>
   );
 }
 
-onboarding.get("/privacy", (c) => {
-  if (!c.var.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: TITLE, bare: true }, <PrivacyForm v={view(c)} j={journeyFor(c, "privacy")} />);
+onboarding.get("/privacy", async (c) => {
+  const user = c.var.user!;
+  if (!user.profile) return c.redirect("/onboarding/basics");
+  // Password sign-ups ticked the Terms on /signup; Google and LINE sign-ups agree here.
+  const needTerms = !(await acceptedTerms(getDb(c.env), user.account.id));
+  return page(c, { title: TITLE, bare: true }, <PrivacyForm v={view(c)} j={journeyFor(c, "privacy")} needTerms={needTerms} />);
 });
 
 onboarding.post("/privacy", async (c) => {
@@ -564,23 +580,38 @@ onboarding.post("/privacy", async (c) => {
   const user = c.var.user!;
   if (!user.profile) return c.redirect("/onboarding/basics");
   const body = await c.req.parseBody();
-  const granted = (k: string) => str(body[`consent_${k}`]) === "1";
-  if (!granted("service") || !granted("safety") || str(body.conduct) !== "1") {
+  const db = getDb(c.env);
+  // Service and safety aren't asked (no box): their rows are the acknowledgement, always yes.
+  const granted = (k: string) => CONSENT_ITEMS.some((i) => i.key === k && i.required) || str(body[`consent_${k}`]) === "1";
+  const needTerms = !(await acceptedTerms(db, user.account.id));
+  const termsOk = !needTerms || str(body.terms) === "1";
+  if (!termsOk || str(body.conduct) !== "1") {
+    const values: Record<string, string> = { terms: str(body.terms), conduct: str(body.conduct) };
+    for (const i of CONSENT_ITEMS) values[`consent_${i.key}`] = str(body[`consent_${i.key}`]);
     return page(
       c,
       { title: TITLE, status: 400, bare: true },
-      <PrivacyForm v={v} j={journeyFor(c, "privacy")} error={v.t("ต้องยอมรับเรื่องบริการ ความปลอดภัย และหลักปฏิบัติ ก่อนจึงจะไปต่อได้", "Service, safety and the code of conduct are needed to continue.")} />,
+      <PrivacyForm
+        v={v}
+        j={journeyFor(c, "privacy")}
+        needTerms={needTerms}
+        values={values}
+        error={
+          needTerms
+            ? v.t("ต้องยอมรับข้อกำหนดการใช้งานและหลักปฏิบัติของชุมชน ก่อนจึงจะไปต่อได้", "Please agree to the Terms of service and the code of conduct to continue.")
+            : v.t("ต้องยอมรับหลักปฏิบัติของชุมชน ก่อนจึงจะไปต่อได้", "Please agree to the code of conduct to continue.")
+        }
+      />,
     );
   }
-  const db = getDb(c.env);
-  await batch(
-    c.env,
-    CONSENT_ITEMS.flatMap((i) => [
+  await batch(c.env, [
+    ...(needTerms ? [termsRow(db, user.account.id)] : []),
+    ...CONSENT_ITEMS.flatMap((i) => [
       consentRow(db, user.account.id, i.key, granted(i.key)),
       // A research yes is what issues the research_id (privacy R7).
       ...consentEffects(db, user.account.id, i.key, granted(i.key), user.account.researchId),
     ]),
-  );
+  ]);
   return c.redirect("/onboarding/connections");
 });
 
