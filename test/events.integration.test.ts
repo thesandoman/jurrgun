@@ -479,6 +479,37 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(await html()).not.toContain("Find your Bangkok Type");
   });
 
+  it("lists events before the For you card, which can be hidden, and counts active filters", async () => {
+    const m = await createMember();
+    const html = async (path: string, cookie = m.cookie) => (await req(path, { cookie: `${cookie}; lang=en` })).text();
+    const list = await html("/events?view=list");
+    expect(list).toContain('class="disc-bar"');
+    // Three events (when there are three) come before the For you card.
+    const firstCard = list.indexOf('class="ev-item"');
+    const forYou = list.indexOf("hint for-you");
+    expect(forYou).toBeGreaterThan(-1);
+    if (firstCard > -1) expect(firstCard).toBeLessThan(forYou);
+    const hide = await req("/events/for-you/dismiss", { cookie: m.cookie, method: "POST" });
+    expect(hide.status).toBe(302);
+    expect(hide.headers.get("set-cookie") ?? "").toContain("bkk_for_you=hide");
+    expect(await html("/events?view=list", `${m.cookie}; bkk_for_you=hide`)).not.toContain("hint for-you");
+    expect(await html("/events?view=list&free=1&short=1")).toContain('<span class="count">2</span>');
+    expect(await html("/events?view=list")).not.toContain('<span class="count">');
+  });
+
+  it("offers the next events on My events when nothing is booked", async () => {
+    const m = await createMember();
+    const soon = await mkEvent({ startsAt: new Date(Date.now() + 20_000), endsAt: new Date(Date.now() + HOUR) });
+    const html = await (await req("/me/events", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain("Nothing booked yet. Here");
+    expect(html).toContain("coming up next.");
+    expect(html).toContain(`EV-${soon.slice(0, 8)}`);
+    expect(html).toContain("See all events");
+    await mkReg(soon, m.id);
+    const booked = await (await req("/me/events", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(booked).not.toContain("coming up next");
+  });
+
   it("falls back to the emoji cover when there is no storage binding", async () => {
     const m = await createMember();
     const ev = await mkEvent({ coverKey: `uploads/events/x/${newId()}`, tags: ["food"] });

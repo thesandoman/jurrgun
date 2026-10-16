@@ -27,6 +27,7 @@ import { weekKey } from "../domain/buddy";
 import { cleanBio } from "../content/profile";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import type { Child } from "hono/jsx";
 import { type AnyColumn, and, asc, count, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
@@ -68,6 +69,7 @@ import {
   type Event,
   type Registration,
   weeklyPlans,
+  type Profile,
 } from "../schema";
 import { refreshWaitlist, runBuddyRound, seatState, SEAT_STATUSES } from "../services/events";
 import { getObject, getObjectUrl } from "../storage";
@@ -176,6 +178,13 @@ export const INVITE_COOKIE = "bkk_invite";
 /** Invite tokens are randomToken(18): 24 base64url characters. */
 export const INVITE_TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const QUIZ_HINT_COOKIE = "bkk_quiz_hint";
+const FOR_YOU_COOKIE = "bkk_for_you";
+/** Laptops: the filter rail starts open, since there is room for it. */
+const RAIL_OPEN_JS = `(function(){try{var bar=document.querySelector(".disc-bar"),mark=document.querySelector(".disc-mark");if(!bar)return;
+if(matchMedia("(min-width:1024px)").matches){var d=bar.querySelector("details.filters");if(d)d.open=true;return}
+if(!mark||!("IntersectionObserver" in window))return;
+new IntersectionObserver(function(es){var stuck=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;if(stuck===bar.classList.contains("is-stuck"))return;
+var h=bar.offsetHeight;bar.classList.toggle("is-stuck",stuck);bar.style.marginBottom=stuck?(h-bar.offsetHeight+12)+"px":""}).observe(mark)}catch(e){}})()`;
 
 /**
  * A URL a browser can load the event's cover image from, or null for the
@@ -373,6 +382,19 @@ function statusLabel(status: string, t: T): string {
   }
 }
 
+/** The next `n` public events this member may see, with seats taken and covers, for an empty My events. */
+async function nextEvents(env: AppEnv["Bindings"], db: Db, profile: Profile, now: Date, n: number) {
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now)];
+  if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
+  if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
+  const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(n);
+  const [taken, coverPairs] = await Promise.all([
+    takenCounts(db, list.map((e) => e.id)),
+    Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(env, e)] as const)),
+  ]);
+  return { list, taken, covers: new Map(coverPairs) };
+}
+
 /** Seats held (confirmed + offered) per event, in ONE grouped query. */
 async function takenCounts(db: Db, ids: string[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
@@ -546,19 +568,32 @@ eventRoutes.get("/events", requireMember, async (c) => {
         {t(`มี ${unplaced} กิจกรรมที่ยังไม่ได้ปักหมุดบนแผนที่ แต่ดูได้ในรายการนี้`, `${unplaced} event${unplaced === 1 ? " isn't" : "s aren't"} on the map yet, but ${unplaced === 1 ? "it's" : "they're"} in this list`)}
       </p>
     ) : null;
-  const cards = (
-    <>
-      {list.length === 0 ? (
-        <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ แวะมาดูใหม่นะ", "No events match these filters yet. Check back soon.")}</Empty>
-      ) : (
-        list.map((e, i) => (
-          <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
-            <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} feat={!mapView && i === 0} pick={picked.has(e.id)} />
-          </div>
-        ))
-      )}
-    </>
-  );
+  // The events, with `extra` (the For you and quiz cards) after the third one, so events come first.
+  const cardList = (extra?: Child) => {
+    if (list.length === 0)
+      return (
+        <>
+          <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ แวะมาดูใหม่นะ", "No events match these filters yet. Check back soon.")}</Empty>
+          {extra}
+        </>
+      );
+    const items = list.map((e) => (
+      <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
+        <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} pick={picked.has(e.id)} />
+      </div>
+    ));
+    return (
+      <>
+        {items.slice(0, 3)}
+        {extra}
+        {items.slice(3)}
+      </>
+    );
+  };
+  const cards = cardList();
+  const filterCount = [q.district, q.tag, q.free, q.short, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
+  const forYouHidden = getCookie(c, FOR_YOU_COOKIE) === "hide";
+  const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
 
   if (mapView) {
     const week = list.filter((e) => e.startsAt.getTime() < now.getTime() + 7 * 86_400_000);
@@ -611,54 +646,79 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
-      {/* Phones: floats by the thumb. Laptops: sits here, under the heading, instead of over the cards. */}
-      <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
-      <a href="/plan" class="feature plan-teaser">
-        <b aria-hidden="true">🗓️</b>
-        <strong>{t("แผนสัปดาห์นี้: เราเลือกให้ 2 อย่าง", "This week's plan: 2 picks made for you")}</strong>
-        <small>{t("ไม่ต้องไล่ดูทั้งหมด", "No need to scroll everything")}</small>
+      <a href="/plan" class="plan-line">
+        <span aria-hidden="true">🗓️</span> {t("แผนสัปดาห์นี้: เราเลือกให้ 2 อย่าง", "This week's plan: 2 picks made for you")} <span aria-hidden="true">›</span>
       </a>
-      <div class="seg-row">
-        <nav class="seg" aria-label={t("เมื่อไหร่", "When")}>
-          {WHEN_OPTS.map((o) => {
-            const p = new URLSearchParams(params);
-            if (o.value === "all") p.delete("when");
-            else p.set("when", o.value);
-            return (
-              <a href={`/events?${p}`} class={q.when === o.value ? "on" : undefined} aria-current={q.when === o.value ? "page" : undefined}>
-                {lang === "en" ? o.en : o.th}
-              </a>
-            );
-          })}
-        </nav>
-      </div>
-      <ForYou v={v} segment={segmentOf(user.profile)} newcomer={cleanBio(user.profile.bio).newcomerAsked ? user.profile.newcomer : undefined} />
-      {myVibe.length === 0 ? (
-        <Card class="hint quiz-hint">
-          <div class="spread">
-            <a href="/quiz">
-              <strong>{t("🧭 มาหาไทป์กรุงเทพฯ ของคุณกัน (3 นาที)", "🧭 Find your Bangkok Type (3 min)")}</strong>
-            </a>
-            <form method="post" action="/events/quiz-hint/dismiss">
-              <button type="submit" class="btn ghost" aria-label={t("ซ่อนการ์ดนี้", "Hide this card")}>
-                ✕
-              </button>
-            </form>
+      <div class="disc">
+        {/* Phones: one sticky bar above the cards. Laptops: a sticky rail with the filters open. */}
+        <div class="disc-mark" aria-hidden="true" />
+        <div class="disc-bar">
+          <nav class="seg" aria-label={t("เมื่อไหร่", "When")}>
+            {WHEN_OPTS.map((o) => {
+              const p = new URLSearchParams(params);
+              if (o.value === "all") p.delete("when");
+              else p.set("when", o.value);
+              return (
+                <a href={`/events?${p}`} class={q.when === o.value ? "on" : undefined} aria-current={q.when === o.value ? "page" : undefined}>
+                  {lang === "en" ? o.en : o.th}
+                </a>
+              );
+            })}
+          </nav>
+          <div class="disc-tools">
+            <details class="filters" open={filtered}>
+              <summary>
+                <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 5h18l-7 8v6l-4-2v-4z" />
+                </svg>
+                <span class="fl">{t("ตัวกรอง", "Filters")}</span>
+                {filterCount > 0 ? <span class="count">{filterCount}</span> : null}
+              </summary>
+              {filtersForm}
+            </details>
+            <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
           </div>
-          <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยหาโต๊ะที่เข้ากับคุณ ไม่มีเรื่องการเมือง และเป็นความลับจนกว่าคุณจะเลือกให้คนอื่นเห็น", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
-        </Card>
-      ) : null}
-      <details class="filters" open={filtered}>
-        <summary>{t("ตัวกรอง", "Filters")}</summary>
-        {filtersForm}
-      </details>
-      <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>
-      <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
-        {cards}
-      </section>
+        </div>
+        <script dangerouslySetInnerHTML={{ __html: RAIL_OPEN_JS }} />
+        <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>
+        <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
+          {cardList(
+            <>
+              {forYouHidden ? null : (
+                <ForYou v={v} segment={segmentOf(user.profile)} newcomer={cleanBio(user.profile.bio).newcomerAsked ? user.profile.newcomer : undefined} dismissable />
+              )}
+              {quizHint}
+            </>,
+          )}
+        </section>
+      </div>
     </>,
   );
 });
+
+/** Hide the "For you" card on Discover (per browser). */
+eventRoutes.post("/events/for-you/dismiss", requireMember, (c) => {
+  setCookie(c, FOR_YOU_COOKIE, "hide", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax", httpOnly: true });
+  return c.redirect("/events?view=list");
+});
+
+function quizHintCard(t: T) {
+  return (
+    <Card class="hint quiz-hint">
+      <div class="spread">
+        <a href="/quiz">
+          <strong>{t("🧭 มาหาไทป์กรุงเทพฯ ของคุณกัน (3 นาที)", "🧭 Find your Bangkok Type (3 min)")}</strong>
+        </a>
+        <form method="post" action="/events/quiz-hint/dismiss">
+          <button type="submit" class="btn ghost" aria-label={t("ซ่อนการ์ดนี้", "Hide this card")}>
+            ✕
+          </button>
+        </form>
+      </div>
+      <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยหาโต๊ะที่เข้ากับคุณ ไม่มีเรื่องการเมือง และเป็นความลับจนกว่าคุณจะเลือกให้คนอื่นเห็น", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
+    </Card>
+  );
+}
 
 /** Hide the "Find your Bangkok Type" card on Discover (per browser). */
 eventRoutes.post("/events/quiz-hint/dismiss", requireMember, (c) => {
@@ -764,11 +824,22 @@ function mapChips(list: Event[], lang: Lang): MapChip[] {
  * The first card on Discover, different for locals, newcomers and
  * internationals (domain/segment.ts). Suggestions only: everyone sees every event.
  */
-function ForYou(props: { v: View; segment: Segment; newcomer?: boolean }) {
+function ForYou(props: { v: View; segment: Segment; newcomer?: boolean; dismissable?: boolean }) {
   const { t } = props.v;
   const card = (title: string, body: string, links: [string, string][]) => (
     <Card class="hint for-you">
-      <strong>{title}</strong>
+      {props.dismissable ? (
+        <div class="spread">
+          <strong>{title}</strong>
+          <form method="post" action="/events/for-you/dismiss">
+            <button type="submit" class="btn ghost" aria-label={t("ซ่อนการ์ดนี้", "Hide this card")}>
+              ✕
+            </button>
+          </form>
+        </div>
+      ) : (
+        <strong>{title}</strong>
+      )}
       <p>{body}</p>
       <p class="row">
         {links.map(([href, text]) => (
@@ -1850,6 +1921,8 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
     myStrikes(db, user.account.id),
   ]);
   const upcoming = rows.filter((r) => r.event.endsAt.getTime() > now.getTime() && r.event.status !== "draft");
+  // Nothing booked: the next few public events, so My events offers something to join (owner card F).
+  const suggest = upcoming.length === 0 ? await nextEvents(c.env, db, user.profile, now, 3) : null;
   const past = rows.filter((r) => r.event.endsAt.getTime() <= now.getTime() && r.reg.status === "confirmed").reverse();
   const pastIds = past.map((r) => r.event.id);
   const given = pastIds.length
@@ -1899,9 +1972,21 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
 
       <h2 id="upcoming">{t("กำลังจะมาถึง", "Upcoming")}</h2>
       {upcoming.length === 0 ? (
-        <Empty>
-          {t("ยังไม่ได้จองกิจกรรมไหน", "Nothing booked yet.")} <a href="/events">{t("ค้นหากิจกรรม", "Find something to do")}</a>
-        </Empty>
+        <>
+          <p class="muted">{t("ยังไม่ได้จองกิจกรรมไหน ลองดูกิจกรรมที่ใกล้ที่สุดนี้", "Nothing booked yet. Here's what's coming up next.")}</p>
+          {suggest?.list.length ? (
+            <div class="discover-list next-up">
+              {suggest.list.map((e) => (
+                <div class="ev-item">
+                  <EventCard e={e} taken={suggest.taken.get(e.id) ?? 0} v={v} cover={suggest.covers.get(e.id)} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <p>
+            <a href="/events?view=list">{t("ดูกิจกรรมทั้งหมด", "See all events")} →</a>
+          </p>
+        </>
       ) : (
         upcoming.map(({ event, reg }) => (
           <Card>

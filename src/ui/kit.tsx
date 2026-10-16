@@ -616,10 +616,10 @@ export function ViewSwitch(props: { t: T; on: "map" | "cards"; mapHref: string; 
   return (
     <nav class="view-switch" aria-label={t("มุมมอง", "View")}>
       <a href={props.mapHref} class={props.on === "map" ? "on" : undefined} aria-current={props.on === "map" ? "page" : undefined}>
-        🗺️ {t("แผนที่", "Map")}
+        🗺️ <span class="vs-l">{t("แผนที่", "Map")}</span>
       </a>
       <a href={props.cardsHref} class={props.on === "cards" ? "on" : undefined} aria-current={props.on === "cards" ? "page" : undefined}>
-        🃏 {t("การ์ด", "Cards")}
+        🃏 <span class="vs-l">{t("การ์ด", "Cards")}</span>
       </a>
     </nav>
   );

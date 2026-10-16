@@ -62,7 +62,7 @@ import {
 import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
 import { NotifItems } from "../ui/notif-menu";
-import { AvatarStack, Bento, Pill, Tile, artFor } from "../ui/visual";
+import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 
 export const peopleRoutes = new Hono<AppEnv>();
@@ -683,48 +683,54 @@ async function loadCircleExtras(c: Ctx, rows: CircleRow[], myVibe: VibeInfo | un
   };
 }
 
-function CircleTop(props: { v: View; extras: CircleExtras; people: { name: string; emoji?: string; seed: string }[] }) {
-  const { t, lang } = props.v;
-  const { buddy, hangouts, ideas, tables } = props.extras;
+function CircleTop(props: { v: View; extras: CircleExtras }) {
+  const { t } = props.v;
+  const { buddy, tables } = props.extras;
   // Only circle heads, verified partners and admins host; everyone else can ask to lead a circle.
   const host = !!props.v.user && canHost(props.v.user.account, true);
   const hostsTable = tables.some((x) => x.hosting);
   return (
+    <nav class="circle-chips" aria-label={t("ทางลัด", "Shortcuts")}>
+      <a href="/chat">💬 {t("แชต", "Chats")}</a>
+      <a href="/buddy" class="circle-buddy">
+        🤝{" "}
+        {buddy
+          ? buddy.state === "active"
+            ? t(`สำรวจกรุงเทพฯ กับ ${buddy.nickname}`, `Exploring with ${buddy.nickname}`)
+            : t(`บัดดี้คนใหม่: ${buddy.nickname}`, `New buddy: ${buddy.nickname}`)
+          : t("หาบัดดี้", "Get a buddy")}
+      </a>
+      {host && hostsTable ? (
+        <a href="/host/new?table=1">＋ {t("ชวนโต๊ะประจำไปแฮงเอาต์", "Plan a hangout for your regular table")}</a>
+      ) : host ? (
+        <a href="/host/new?visibility=private">＋ {t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your people")}</a>
+      ) : (
+        <a href="/circles/lead">👑 {t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table")}</a>
+      )}
+      <a href="/events">🗓️ {t("กิจกรรมกลุ่ม", "Browse group events")}</a>
+    </nav>
+  );
+}
+
+/** Tables, hangouts and ideas, under the member's own people. With none of them, one line and one next step. */
+function CircleGroups(props: { v: View; extras: CircleExtras }) {
+  const { t, lang } = props.v;
+  const { hangouts, ideas, tables } = props.extras;
+  const host = !!props.v.user && canHost(props.v.user.account, true);
+  if (!tables.length && !hangouts.length && !ideas.length)
+    return (
+      <Card class="circle-none">
+        <p class="muted">
+          {t(
+            "ยังไม่มีโต๊ะประจำหรือแฮงเอาต์กลุ่ม ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง แล้วเข้าร่วมโต๊ะได้จากหน้ากิจกรรมนั้น",
+            "No regular tables or group hangouts yet. Go to a hangout with a Table Host, then join their table from that event's page.",
+          )}
+        </p>
+        <a href="/tables">🪑 {t("ดูโต๊ะประจำ", "See regular tables")}</a>
+      </Card>
+    );
+  return (
     <>
-      <h2 class="sr-only">{t("ทางลัด", "Shortcuts")}</h2>
-      <Bento>
-        <Tile href="/buddy" tone="deep" size="wide" class="circle-buddy">
-          <span class="go" aria-hidden="true">↗</span>
-          <Pill dot>🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</Pill>
-          <h3>
-            {buddy
-              ? buddy.state === "active"
-                ? t(`สำรวจกรุงเทพฯ กับ ${buddy.nickname}`, `Exploring with ${buddy.nickname}`)
-                : t(`บัดดี้คนใหม่: ${buddy.nickname}`, `New buddy: ${buddy.nickname}`)
-              : t("หาบัดดี้", "Get a buddy")}
-          </h3>
-        </Tile>
-        {host && hostsTable ? (
-          <Tile href="/host/new?table=1" tone="brand">
-            <span class="ico" aria-hidden="true">＋</span>
-            <h3>{t("ชวนโต๊ะประจำไปแฮงเอาต์", "Plan a hangout for your regular table")}</h3>
-          </Tile>
-        ) : host ? (
-          <Tile href="/host/new?visibility=private" tone="brand">
-            <span class="ico" aria-hidden="true">＋</span>
-            <h3>{t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your people")}</h3>
-          </Tile>
-        ) : (
-          <Tile href="/circles/lead" tone="brand">
-            <span class="ico" aria-hidden="true">👑</span>
-            <h3>{t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table")}</h3>
-          </Tile>
-        )}
-        <Tile href="/events">
-          <span class="ico" aria-hidden="true">🗓️</span>
-          <h3>{t("กิจกรรมกลุ่ม", "Browse group events")}</h3>
-        </Tile>
-      </Bento>
       <h2 class="spread">
         <span>🪑 {t("โต๊ะประจำของฉัน", "My regular tables")}</span>
         <a href="/tables" class="muted">{t("ดูทั้งหมด", "See all")}</a>
@@ -778,10 +784,6 @@ function CircleTop(props: { v: View; extras: CircleExtras; people: { name: strin
           </div>
         </>
       ) : null}
-      <h2 class="people-h">
-        🫂 {t("คนรู้จักของคุณ", "Your people")}{" "}
-        {props.people.length ? <AvatarStack items={props.people.slice(0, 6).map((p) => ({ label: p.name, emoji: p.emoji, seed: p.seed }))} more={Math.max(0, props.people.length - 6)} size={34} /> : null}
-      </h2>
     </>
   );
 }
@@ -791,10 +793,12 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
   const method = (m: string) => label(CONTACT_METHODS, m, lang);
   return (
     <>
-      <p class="spread">
-        <span />
-        <a href="/chat">💬 {t("แชต", "Chats")}</a>
-      </p>
+      {props.extras ? null : (
+        <p class="spread">
+          <span />
+          <a href="/chat">💬 {t("แชต", "Chats")}</a>
+        </p>
+      )}
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My people in Bangkok")}</h1>
       <script
         dangerouslySetInnerHTML={{
@@ -804,12 +808,18 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
       <p class="muted">
         {t("คนที่เลือกกันและกัน บัดดี้ และแฮงเอาต์กลุ่ม", "People you chose each other with, your buddy, and group hangouts.")}
       </p>
+      {props.extras ? <CircleTop v={props.v} extras={props.extras} /> : null}
       {props.extras ? (
-        <CircleTop
-          v={props.v}
-          extras={props.extras}
-          people={props.rows.map((r) => ({ name: r.other.name, emoji: r.other.vibe?.visible ? ARCHETYPES[r.other.vibe.archetype].emoji : undefined, seed: r.other.id }))}
-        />
+        <h2 class="people-h">
+          🫂 {t("คนรู้จักของคุณ", "Your people")}{" "}
+          {props.rows.length ? (
+            <AvatarStack
+              items={props.rows.slice(0, 6).map((r) => ({ label: r.other.name, emoji: r.other.vibe?.visible ? ARCHETYPES[r.other.vibe.archetype].emoji : undefined, seed: r.other.id }))}
+              more={Math.max(0, props.rows.length - 6)}
+              size={34}
+            />
+          ) : null}
+        </h2>
       ) : null}
       {props.rows.length === 0 ? (
         <Card>
@@ -913,6 +923,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
           </Card>
         ))
       )}
+      {props.extras ? <CircleGroups v={props.v} extras={props.extras} /> : null}
     </>
   );
 }

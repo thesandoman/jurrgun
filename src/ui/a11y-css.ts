@@ -254,4 +254,82 @@ h2.h3{font-size:1.02rem;margin:.2rem 0 .3rem}
 .err-page .row{justify-content:center}
 .err-mark{font-size:3rem;margin:0}
 .intro-slide h2{font-size:1.9rem;font-weight:800;margin:10px 0 4px;line-height:1.15}
+/* A status tag beside a title stays on one line; the title wraps instead (My events "Not checked in"). */
+.spread>.tag{flex:none;white-space:nowrap}
+.spread>h3,.spread>h2{min-width:0}
+/* My people, owner card D: shortcuts as one row of chips, then the member's own people. */
+.circle-chips{display:flex;gap:8px;overflow-x:auto;margin:4px calc(-1 * var(--gx,20px)) 8px;padding:4px var(--gx,20px);scrollbar-width:none}
+.circle-chips a{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;text-decoration:none;white-space:nowrap}
+.circle-chips a.circle-buddy{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.circle-none{display:grid;gap:8px}
+.circle-none p{margin:0}
+.circle-none a{display:inline-flex;align-items:center;min-height:44px;font-weight:700}
+/* My events with nothing booked, owner card F: the next events as tickets. */
+.next-up{margin:8px 0 4px}
+/* Discover, owner card A: one sticky bar (time, filters, map/cards) so events start on the first screen. */
+.plan-line{display:flex;align-items:center;gap:6px;min-height:44px;margin:-4px 0 4px;font-weight:700;color:var(--brand);text-decoration:none}
+.disc-bar{position:sticky;top:var(--disc-top,60px);z-index:4;display:grid;gap:6px;margin:0 calc(-1 * var(--gx,20px)) 12px;padding:6px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line)}
+.disc-bar:has(details[open]){position:static}
+.disc-bar .seg{margin:0}
+.disc-tools{display:flex;align-items:flex-start;gap:8px}
+.disc-tools .filters{flex:1;min-width:0;margin:0;padding:0 14px;border:1px solid var(--line);border-radius:14px}
+.disc-tools .filters>summary{font-weight:700}
+.disc-tools .filters .filters{margin:0;padding:0 0 12px;border:0;background:none;box-shadow:none}
+h1:has(+.plan-line){text-wrap:balance}
+.disc-tools .filters .count{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-inline-start:6px;margin-inline-end:auto;padding:0 6px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-size:.8rem}
+.disc-bar .view-switch{position:static;transform:none;flex:none;margin:0;box-shadow:none}
+body:has(.disc) .discover-list{padding-bottom:0}
+.disc-tools .filters>summary{white-space:nowrap}
+.disc-tools .fi{display:none;width:20px;height:20px;flex:none}
+/* Owner card: once scrolled past, the bar shrinks to one row (time chips, a filter icon with its count, the other view). */
+.disc-bar.is-stuck{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding-block:4px}
+.disc-bar.is-stuck .seg{overflow-x:auto;scrollbar-width:none;background:none;padding:0;gap:4px}
+.disc-bar.is-stuck .seg a{flex:none;font-size:.82rem;padding:4px 10px}
+.disc-bar.is-stuck .disc-tools{align-items:center;gap:4px}
+.disc-bar.is-stuck .disc-tools .filters{border:0;padding:0;background:none}
+.disc-bar.is-stuck .disc-tools .filters>summary{justify-content:center;min-width:44px;gap:2px}
+.disc-bar.is-stuck .disc-tools .filters>summary::after{display:none}
+.disc-bar.is-stuck .fi{display:block}
+.disc-bar.is-stuck .fl,.disc-bar.is-stuck .vs-l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.disc-bar.is-stuck .disc-tools .filters .count{margin-inline:0}
+.disc-bar.is-stuck .view-switch{padding:0;background:none;border:0}
+.disc-bar.is-stuck .view-switch a.on{display:none}
+.disc-bar.is-stuck .view-switch a{min-width:44px;justify-content:center;padding:0 8px;background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+@media (max-width:359.98px){.disc-tools .filters{padding:0 10px}.disc-bar .view-switch a{padding:6px 10px}.card.ev-card,.card.ev-card.feat{--stub:64px}}
+/* Event cards, owner card B: a side-on ticket. Category colour and the date live in the stub; the perforation runs down between stub and body. */
+.card.ev-card,.card.ev-card.feat{--stub:76px;display:grid;grid-template-columns:var(--stub) minmax(0,1fr);-webkit-mask:radial-gradient(circle 9px at var(--stub) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 9px at var(--stub) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 9px at var(--stub) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 9px at var(--stub) 100%,#0000 97%,#000) bottom/100% 51% no-repeat}
+.ev-card .event-cover,.ev-card.feat .event-cover{height:auto;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px 6px}
+.ev-card .event-cover img{position:absolute;inset:0;width:100%;height:100%}
+.ev-card .event-cover .scene-badge{width:40px;height:40px;border-radius:13px;font-size:1.35rem}
+.ev-card .ev-date{position:relative;left:auto;bottom:auto;min-width:50px;transform:none}
+.ev-card .ev-body,.ev-card.feat .ev-body{padding:12px 14px 12px 16px}
+.ev-card .ev-body::before{left:0;right:auto;top:14px;bottom:14px;border-top:0;border-left:2px dashed color-mix(in srgb,var(--ink-3) 35%,transparent)}
+.ev-card.feat h3{font-size:1.08rem}
+/* Owner card: time, area and language on one plain line, so a ticket is about 170px. */
+.ev-card .chips2{display:flex;flex-wrap:wrap;align-items:baseline;gap:0;white-space:normal;overflow:visible;margin:4px 0 6px;color:var(--ink-2);font-size:.92rem;line-height:1.5}
+.ev-card .chips2 span{display:inline;padding:0;background:none;border:0;border-radius:0;font-weight:600;white-space:nowrap}
+.ev-card .chips2 span:not(:last-child)::after{content:"·";margin:0 6px;color:var(--ink-3);font-weight:400}
+/* Discover on laptops, owner card C: a sticky filter rail beside an even grid of tickets. */
+@media (min-width:1024px){
+  main.wrap:has(.disc){max-width:1180px}
+  .disc{display:grid;grid-template-columns:248px minmax(0,1fr);gap:24px;align-items:start}
+  .disc-bar,.disc-bar:has(details[open]){position:sticky;top:84px;margin:0;padding:0 4px 0 0;border:0;background:none;max-height:calc(100vh - 100px);overflow:auto;gap:12px}
+  .disc-bar .seg{flex-direction:column;align-items:stretch;border-radius:18px}
+  .disc-bar .seg a{justify-content:flex-start;text-align:start;padding-inline:14px}
+  .disc-tools{flex-direction:column-reverse;align-items:stretch}
+  .disc-tools .filters{flex:none}
+  .disc .discover-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .disc .discover-list>.ev-item:has(.feat){grid-column:auto}
+}
+@media (min-width:1220px){.disc .discover-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Owner card G: tickets arrive quickly, 8px and 40ms apart, and are never hidden. */
+@media (prefers-reduced-motion:no-preference){
+  html:not(.a11y-motion) .disc .discover-list>*{animation:rise-sm .3s cubic-bezier(.2,.8,.2,1) backwards}
+  html:not(.a11y-motion) .disc .discover-list>:nth-child(2){animation-delay:.04s}
+  html:not(.a11y-motion) .disc .discover-list>:nth-child(3){animation-delay:.08s}
+  html:not(.a11y-motion) .disc .discover-list>:nth-child(4){animation-delay:.12s}
+  html:not(.a11y-motion) .disc .discover-list>:nth-child(5){animation-delay:.16s}
+  html:not(.a11y-motion) .disc .discover-list>:nth-child(n+6){animation-delay:.2s}
+}
+@keyframes rise-sm{from{transform:translateY(8px)}}
 `);

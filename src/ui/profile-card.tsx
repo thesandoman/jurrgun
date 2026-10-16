@@ -137,6 +137,8 @@ export function ProfileCard(props: {
   actions?: Child;
   /** Names of the regular tables they sit at, already filtered for this viewer (src/services/regular-tables.ts regularAt). */
   regularAt?: string[];
+  /** My own card: a small avatar with the actions beside the name, and chips that jump to each section. */
+  compact?: boolean;
 }) {
   const { t, lang } = props.v;
   const p = props.person;
@@ -212,7 +214,7 @@ export function ProfileCard(props: {
   return (
     <article class="pc">
       <style dangerouslySetInnerHTML={{ __html: PROFILE_CSS }} />
-      <header class="pc-hero">
+      <header class={props.compact ? "pc-hero pc-compact" : "pc-hero"}>
         {props.photo ? (
           <img class="pc-photo" src={props.photo} alt={t(`รูปของ ${p.nickname}`, `${p.nickname}'s photo`)} />
         ) : (
@@ -231,7 +233,15 @@ export function ProfileCard(props: {
           </p>
           {props.badges ? <div class="pc-badges">{props.badges}</div> : null}
         </div>
+        {props.compact && props.actions ? <div class="pc-actions">{props.actions}</div> : null}
       </header>
+      {props.compact ? (
+        <nav class="pc-jump" aria-label={t("ไปที่ส่วนต่าง ๆ", "Jump to")}>
+          {intents.length || facts.length || tableCount > 1 ? <a href="#pc-about">{t("เกี่ยวกับฉัน", "About me")}</a> : null}
+          {comm.length ? <a href="#pc-style">{t("สไตล์", "Style")}</a> : null}
+          {interests.length ? <a href="#pc-interests">{t("ความสนใจ", "Interests")}</a> : null}
+        </nav>
+      ) : null}
 
       {bio.learning ? (
         <section class="pc-lines">
@@ -242,12 +252,12 @@ export function ProfileCard(props: {
           ) : null}
         </section>
       ) : null}
-      {props.actions ? <div class="pc-actions">{props.actions}</div> : null}
+      {props.actions && !props.compact ? <div class="pc-actions">{props.actions}</div> : null}
 
       {slot()}
 
       {intents.length || facts.length || tableCount > 1 ? (
-        <section class="pc-sec">
+        <section class="pc-sec" id="pc-about">
           {intents.length ? (
             <>
               <h2>{t("มาที่นี่เพื่อ", "Here for")}</h2>
@@ -321,7 +331,7 @@ export function ProfileCard(props: {
       {slot()}
 
       {comm.length ? (
-        <section class="pc-sec">
+        <section class="pc-sec" id="pc-style">
           <h2>{t("สไตล์การสื่อสาร", "How I keep in touch")}</h2>
           <div class="pc-comm">
             {comm.map((c) => (
@@ -340,7 +350,7 @@ export function ProfileCard(props: {
       {slot()}
 
       {interests.length ? (
-        <section class="pc-sec">
+        <section class="pc-sec" id="pc-interests">
           <h2>{t("ความสนใจ", "Interests")}</h2>
           {props.viewerInterests && sharedCount ? <p class="muted pc-shared-note">✨ {t(`ชอบเหมือนกัน ${sharedCount} อย่าง`, `${sharedCount} in common`)}</p> : null}
           {props.viewerUniversity && universityKey(bio) === props.viewerUniversity ? <p class="muted pc-shared-note">🎓 {t("มหาวิทยาลัยเดียวกับคุณ", "Same university as you")}</p> : null}
@@ -534,7 +544,7 @@ export const PROFILE_CSS = `
 .pc-pick{display:flex;align-items:center;gap:14px;margin:0}
 .pc-pick b{font-size:2.6rem;font-weight:400;line-height:1}
 .pc-pick span{font-size:1.4rem;font-weight:700}
-.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
+p.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
 .pc-track{position:relative;height:12px;border-radius:999px;background:var(--surface-2);margin:22px 0 10px}
 .pc-track i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,var(--fresh),var(--brand))}
 .pc-track b{position:absolute;top:50%;transform:translate(-50%,-50%);min-width:36px;height:36px;padding:0 6px;border-radius:999px;background:var(--surface);border:3px solid var(--brand);display:grid;place-items:center;font-size:.9rem;color:var(--brand)}
@@ -549,4 +559,18 @@ export const PROFILE_CSS = `
 .pc-fig img{width:100%;max-height:420px;object-fit:cover;border-radius:18px;display:block}
 .pc-fig figcaption{margin-top:10px;color:var(--ink-2)}
 @media (min-width:700px){.pc-hero{flex-direction:row;align-items:flex-end}.pc-hero .pc-photo{width:300px;flex:none}}
+/* My own card (owner card E): a small avatar beside the name, Edit on the same row, and sticky chips to each section. */
+.pc-compact{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 14px}
+.pc-compact .pc-photo{width:72px;height:72px;aspect-ratio:1;max-height:none;border-radius:20px;flex:none;box-shadow:none}
+.pc-compact .pc-initial span{font-size:2rem}
+.pc-compact .pc-id{flex:1;min-width:0}
+.pc-compact .pc-id h1{font-size:1.6rem}
+.pc-compact .pc-where{margin-top:2px}
+.pc-compact .pc-actions{flex:none;flex-direction:column;align-items:flex-end;gap:6px}
+.pc-compact .pc-actions .btn{min-height:44px;padding-inline:14px}
+@media (max-width:359.98px){.pc-compact .pc-actions{flex-basis:100%;align-items:flex-start}}
+@media (min-width:700px){.pc-hero.pc-compact{align-items:center}.pc-hero.pc-compact .pc-photo{width:72px}.pc-compact .pc-actions{flex-direction:row}}
+.pc-jump{position:sticky;top:var(--disc-top,60px);z-index:3;display:flex;gap:8px;overflow-x:auto;margin:-8px calc(-1 * var(--gx,20px)) 0;padding:8px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
+.pc-jump a{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;text-decoration:none;white-space:nowrap}
+.pc-sec[id]{scroll-margin-top:130px}
 `;

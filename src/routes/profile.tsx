@@ -197,6 +197,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         viewerInterests={self ? null : (me.profile?.interests ?? [])}
         viewerUniversity={self ? null : universityKey(cleanBio(me.profile?.bio))}
         regularAt={tables}
+        compact={self}
         actions={
           self ? (
             <>
