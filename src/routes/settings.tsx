@@ -99,6 +99,11 @@ import {
   safeArrivals,
   thanks,
   weeklyPlans,
+  chatVotes,
+  circleHeadRequests,
+  circleShares,
+  regularTableMembers,
+  regularTables,
   connectionChoices,
   connections,
   datingIntents,
@@ -131,7 +136,7 @@ import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, dropPendingDating, pendingDatingIntent, withGenderSelf } from "./onboarding";
-import { acceptedTerms, consentEffects, consentRow, deleteDatingIntents, GENDER_CONSENT, hasConsent, NOTIFICATIONS_CONSENT, privateFieldConsents, RELATIONSHIP_CONSENT, ROMANCE_CONSENT, termsRow } from "../services/consent";
+import { acceptedTerms, consentEffects, consentRow, deleteDatingIntents, GENDER_CONSENT, hasConsent, NOTIFICATIONS_CONSENT, privateFieldConsents, RELATIONSHIP_CONSENT, researchWithdrawn, ROMANCE_CONSENT, termsRow } from "../services/consent";
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L, type T } from "../lib/i18n";
@@ -1498,7 +1503,16 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
   const db = getDb(c.env);
   const [account, profile, consentRows, regs, choices, conns, shares, reps, notes, pulse, wb, pushDevices] = await Promise.all([
     db
-      .select({ username: accounts.username, role: accounts.role, status: accounts.status, verification: accounts.verification, bkkRegistered: accounts.bkkRegistered, createdAt: accounts.createdAt })
+      .select({
+        username: accounts.username,
+        role: accounts.role,
+        status: accounts.status,
+        verification: accounts.verification,
+        bkkRegistered: accounts.bkkRegistered,
+        // The campaign or partner link that brought them (a short slug, src/lib/source.ts).
+        signupSource: accounts.signupSource,
+        createdAt: accounts.createdAt,
+      })
       .from(accounts)
       .where(eq(accounts.id, id))
       .limit(1),
@@ -1565,7 +1579,46 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     db.select({ what: planPitches.what, joinedAt: pitchJoins.createdAt }).from(pitchJoins).innerJoin(planPitches, eq(planPitches.id, pitchJoins.pitchId)).where(eq(pitchJoins.accountId, id)).limit(500),
     db.select({ context: safeArrivals.context, backBy: safeArrivals.backBy, answer: safeArrivals.answer, answeredAt: safeArrivals.answeredAt, createdAt: safeArrivals.createdAt }).from(safeArrivals).where(eq(safeArrivals.accountId, id)).limit(1000),
   ]);
+  // Regular Tables, Table Host requests, hangout shares and poll votes: my own rows only.
+  // A table's join token, a reviewer's id and the poll's own text never leave.
+  const [myTables, tablesIHost, hostRequests, sharesISent, sharesIGot, myVotes] = await Promise.all([
+    db
+      .select({ table: regularTables.name, district: regularTables.district, joinedAt: regularTableMembers.joinedAt, leftAt: regularTableMembers.leftAt, rejoinAfter: regularTableMembers.rejoinAfter })
+      .from(regularTableMembers)
+      .innerJoin(regularTables, eq(regularTables.id, regularTableMembers.tableId))
+      .where(eq(regularTableMembers.accountId, id))
+      .limit(500),
+    db
+      .select({ name: regularTables.name, district: regularTables.district, description: regularTables.description, womenOnly: regularTables.womenOnly, createdAt: regularTables.createdAt, archivedAt: regularTables.archivedAt })
+      .from(regularTables)
+      .where(eq(regularTables.hostAccountId, id))
+      .limit(100),
+    db
+      .select({ tableName: circleHeadRequests.circleName, plan: circleHeadRequests.plan, status: circleHeadRequests.status, reviewNote: circleHeadRequests.reviewNote, reviewedAt: circleHeadRequests.reviewedAt, createdAt: circleHeadRequests.createdAt })
+      .from(circleHeadRequests)
+      .where(eq(circleHeadRequests.accountId, id))
+      .limit(100),
+    db
+      .select({ to: circleShares.toAccount, event: events.title, createdAt: circleShares.createdAt })
+      .from(circleShares)
+      .leftJoin(events, eq(events.id, circleShares.eventId))
+      .where(eq(circleShares.fromAccount, id))
+      .limit(2000),
+    db
+      .select({ from: circleShares.fromAccount, event: events.title, createdAt: circleShares.createdAt })
+      .from(circleShares)
+      .leftJoin(events, eq(events.id, circleShares.eventId))
+      .where(eq(circleShares.toAccount, id))
+      .limit(2000),
+    db
+      .select({ thread: chatMessages.thread, option: chatVotes.option, createdAt: chatVotes.createdAt })
+      .from(chatVotes)
+      .leftJoin(chatMessages, eq(chatMessages.id, chatVotes.messageId))
+      .where(eq(chatVotes.accountId, id))
+      .limit(5000),
+  ]);
   const buddyIds = myMatches.map((m) => (m.aAccount === id ? m.bAccount : m.aAccount));
+  const shareIds = [...sharesISent.map((x) => x.to), ...sharesIGot.map((x) => x.from)];
   const thanksIds = [...thanksSent.map((x) => x.to), ...thanksGot.map((x) => x.from)];
 
   const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked, [emails]] = await Promise.all([
@@ -1613,7 +1666,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
   ]);
 
   // Other people in my connections and blocks: nickname only.
-  const otherIds = [...new Set([...conns.map((x) => (x.a === id ? x.b : x.a)), ...myBlocks.map((b) => b.blocked), ...buddyIds, ...thanksIds])];
+  const otherIds = [...new Set([...conns.map((x) => (x.a === id ? x.b : x.a)), ...myBlocks.map((b) => b.blocked), ...buddyIds, ...thanksIds, ...shareIds])];
   const others = otherIds.length
     ? await db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, otherIds)).limit(otherIds.length)
     : [];
@@ -1668,6 +1721,16 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     weeklyPlans: myPlans,
     planPitches: myPitches,
     pitchesIJoined: myJoins,
+    regularTables: {
+      memberships: myTables,
+      tablesIHost,
+      tableHostRequests: hostRequests,
+    },
+    // Private hangouts shared through a Regular Table: the other person by nickname only.
+    hangoutSharesISent: sharesISent.map((x) => ({ to: nick.get(x.to) ?? null, event: x.event, createdAt: x.createdAt })),
+    hangoutSharesIReceived: sharesIGot.map((x) => ({ from: nick.get(x.from) ?? null, event: x.event, createdAt: x.createdAt })),
+    // My votes on chat polls: the thread kind and the option number I picked, not the poll's text.
+    chatPollVotes: myVotes.map(({ thread, ...rest }) => ({ thread: thread ? thread.split(":")[0] : null, ...rest })),
     homeSafeChecks: mySafe.map(({ context, ...rest }) => ({ about: context.split(":")[0], ...rest })),
   };
   return new Response(JSON.stringify(data, null, 2), {
@@ -1707,7 +1770,10 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     .map((a) => a.photoKey)
     .filter((k): k is string => !!k);
   await batch(c.env, [
-    db.update(accounts).set({ status: "deactivated", deactivatedAt: new Date(), researchId: null }).where(eq(accounts.id, id)),
+    db.update(accounts).set({ status: "deactivated", deactivatedAt: new Date() }).where(eq(accounts.id, id)),
+    // City Pulse and wellbeing answers go now, as on research withdrawal, and the research_id is
+    // cut. Deleting them later isn't possible: once the code is cut nothing links them to the account.
+    ...researchWithdrawn(db, id, user.account.researchId),
     db.update(profiles).set({ photoKey: null, bio: {}, updatedAt: new Date() }).where(eq(profiles.accountId, id)),
     db.delete(sessions).where(eq(sessions.accountId, id)),
     db.delete(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)),

@@ -19,6 +19,10 @@
  *                             status stay, so attendance totals still add up
  *   chat messages, "home safe?" 180 days
  *   read notifications        90 days after they were read (R6)
+ *   unread notifications      1 year after they were sent
+ *   exit reason notes         blanked after 1 year; the picked reasons stay
+ *   contact shares            on a removed connection or a blocked pair (the
+ *                             remove and block routes delete them at once)
  *   reports, moderation       2 years after the report or action, once the
  *   actions, strikes          report is closed (actioned or dismissed) (R6)
  *   audit log                 1 year (R6)
@@ -29,7 +33,8 @@
  *   deactivated accounts      30 days after deactivation, unless a moderation
  *                             hold applies (an open or in-review report about
  *                             them). Every table holding their account id (R5):
- *     deleted: profile, Bangkok Type, sessions, notifications, push devices,
+ *     deleted: City Pulse and wellbeing answers (normally already gone at
+ *       deactivation, with the research id), profile, Bangkok Type, sessions, notifications, push devices,
  *       consents, sign-in emails and their codes, Google / LINE links, social
  *       links, contact shares (theirs, and the other person's on a connection
  *       with them), chat messages (and photos), chat reads and poll votes,
@@ -83,6 +88,7 @@ import {
   consents,
   contactShares,
   events,
+  exitReasons,
   feedback,
   loginAttempts,
   loginCodes,
@@ -119,6 +125,10 @@ export const RESEARCH_RETENTION_DAYS = 730;
 export const CHAT_RETENTION_DAYS = 180;
 /** Read notifications are deleted this long after they were read (R6). */
 export const READ_NOTIFICATION_RETENTION_DAYS = 90;
+/** Unread notifications are deleted this long after they were sent (owner, 16 Oct 2026). */
+export const UNREAD_NOTIFICATION_RETENTION_DAYS = 365;
+/** The free-text note on an exit reason is blanked after this; the picked reasons stay for totals (owner, 16 Oct 2026). */
+export const EXIT_NOTE_RETENTION_DAYS = 365;
 /** Closed reports, moderation actions and strikes are deleted after this (R6). */
 export const SAFETY_RETENTION_DAYS = 730;
 /** Strikes follow the same 2 years as the reports they came from. */
@@ -146,6 +156,12 @@ export type RetentionCounts = {
   researchLinksCut: number;
   /** R6: read notifications, closed reports, moderation actions, strikes and audit rows past their period. */
   readNotificationsDeleted: number;
+  /** Unread notifications past UNREAD_NOTIFICATION_RETENTION_DAYS. */
+  unreadNotificationsDeleted: number;
+  /** Exit reason notes blanked after EXIT_NOTE_RETENTION_DAYS. */
+  exitNotesCleared: number;
+  /** Contact shares on a removed connection or between a blocked pair. */
+  contactSharesDeleted: number;
   reportsDeleted: number;
   moderationActionsDeleted: number;
   strikesDeleted: number;
@@ -175,7 +191,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   await dropFiles(env, oldPhotos.map((p) => p.key!));
 
   const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
-  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, reportsOld, actionsOld, strikesOld, auditOld] = await batch(env, [
+  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone] = await batch(env, [
     db
       .update(registrations)
       .set({ socialSignal: null, signalTopics: null, helloLine: null })
@@ -214,13 +230,29 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       .where(and(isNotNull(notifications.readAt), lt(notifications.readAt, new Date(now.getTime() - READ_NOTIFICATION_RETENTION_DAYS * DAY))))
       .returning({ id: notifications.id }),
     db
+      .delete(notifications)
+      .where(and(isNull(notifications.readAt), lt(notifications.createdAt, new Date(now.getTime() - UNREAD_NOTIFICATION_RETENTION_DAYS * DAY))))
+      .returning({ id: notifications.id }),
+    db
       .delete(reports)
       .where(and(inArray(reports.status, ["actioned", "dismissed"]), lt(reports.createdAt, safetyCutoff)))
       .returning({ id: reports.id }),
     db.delete(moderationActions).where(lt(moderationActions.createdAt, safetyCutoff)).returning({ id: moderationActions.id }),
-    db.delete(strikes).where(lt(strikes.createdAt, safetyCutoff)).returning({ id: strikes.id }),
+    db.delete(strikes).where(lt(strikes.createdAt, new Date(now.getTime() - STRIKE_RETENTION_DAYS * DAY))).returning({ id: strikes.id }),
     // The run's own audit row is written after this, so the last run stays readable.
     db.delete(auditLog).where(lt(auditLog.createdAt, new Date(now.getTime() - AUDIT_RETENTION_DAYS * DAY))).returning({ id: auditLog.id }),
+    // Exit reasons: the picked reasons stay for totals, the free-text note goes.
+    db
+      .update(exitReasons)
+      .set({ note: "" })
+      .where(and(ne(exitReasons.note, ""), lt(exitReasons.createdAt, new Date(now.getTime() - EXIT_NOTE_RETENTION_DAYS * DAY))))
+      .returning({ id: exitReasons.id }),
+    // Contact shares last only while the connection does: removing it or a block deletes them at
+    // once (routes/people.tsx); this catches any left on a removed connection or a blocked pair.
+    db
+      .delete(contactShares)
+      .where(inArray(contactShares.connectionId, endedConnections(db)))
+      .returning({ id: contactShares.id }),
   ]);
 
   // 1b. A research_id only with research consent (privacy R7): an account holding one whose newest
@@ -273,6 +305,9 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     researchAnswersDeleted: pulseOld.length + wellOld.length,
     researchLinksCut: unconsented.length,
     readNotificationsDeleted: readOld.length,
+    unreadNotificationsDeleted: unreadOld.length,
+    exitNotesCleared: exitNotes.length,
+    contactSharesDeleted: sharesGone.length,
     reportsDeleted: reportsOld.length,
     moderationActionsDeleted: actionsOld.length,
     strikesDeleted: strikesOld.length,
@@ -290,7 +325,13 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     );
   }
   if (ids.length) {
+    // Their City Pulse and wellbeing answers, as on research withdrawal. Deactivation already
+    // deletes them and cuts the research_id (routes/settings.tsx); this covers any account
+    // that reached deletion still holding one. It must run before the research_id is cleared below.
+    const theirRids = db.select({ rid: accounts.researchId }).from(accounts).where(and(inArray(accounts.id, ids), isNotNull(accounts.researchId)));
     writes.push(
+      db.delete(pulseResponses).where(inArray(pulseResponses.researchId, theirRids)),
+      db.delete(wellbeing).where(inArray(wellbeing.researchId, theirRids)),
       db.delete(profiles).where(inArray(profiles.accountId, ids)),
       db.delete(vibes).where(inArray(vibes.accountId, ids)),
       db.delete(sessions).where(inArray(sessions.accountId, ids)),
@@ -400,4 +441,17 @@ async function dropFiles(env: DatabaseEnv, keys: string[]) {
   const st = env as unknown as StorageEnv;
   if (!keys.length || (!st.FILES && !st.BUCKET)) return;
   await deleteObject(st, keys).catch(() => {});
+}
+
+/** Connections that are removed, or whose pair has a block either way: their contact shares go. */
+export function endedConnections(db: ReturnType<typeof getDb>) {
+  return db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(
+      or(
+        isNotNull(connections.removedAt),
+        sql`exists (select 1 from ${blocks} b where (b.blocker = ${connections.aAccount} and b.blocked = ${connections.bAccount}) or (b.blocker = ${connections.bAccount} and b.blocked = ${connections.aAccount}))`,
+      ),
+    );
 }

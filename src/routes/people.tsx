@@ -472,7 +472,13 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
         }),
     );
   }
-  if (removeIds.length) writes.push(db.update(connections).set({ removedAt: new Date() }).where(inArray(connections.id, removeIds)));
+  if (removeIds.length) {
+    writes.push(
+      db.update(connections).set({ removedAt: new Date() }).where(inArray(connections.id, removeIds)),
+      // Contact shares last only as long as the connection (privacy notice): they go with it.
+      db.delete(contactShares).where(inArray(contactShares.connectionId, removeIds)),
+    );
+  }
   if (notifyIds.length) {
     const ev = state.event;
     // Never mentions the level: a romance connection is only visible on /connections.
@@ -1084,6 +1090,8 @@ peopleRoutes.post("/connections/:id/remove", requireMember, async (c) => {
     .limit(50);
   await batch(c.env, [
     db.update(connections).set({ removedAt: new Date() }).where(and(inArray(connections.id, all.map((x) => x.id)), isNull(connections.removedAt))),
+    // Both people's contact shares go with the connection (privacy notice: until either removes them).
+    deletePairShares(db, me, other),
     // My choice becomes "none", so a later save by the other person can't quietly bring it back.
     ...all.map((x) =>
       db
@@ -1303,6 +1311,8 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
   const body = await c.req.parseBody();
   await batch(c.env, [
     db.insert(blocks).values({ id: newId(), blocker: me, blocked: other }).onConflictDoNothing({ target: [blocks.blocker, blocks.blocked] }),
+    // A block ends the connection, so both people's contact shares are deleted, not just hidden.
+    deletePairShares(db, me, other),
     db
       .update(connections)
       .set({ removedAt: new Date() })
@@ -1502,3 +1512,9 @@ peopleRoutes.post("/connections/:id/still", requireMember, async (c) => {
   await getDb(c.env).update(graduations).set(side).where(eq(graduations.connectionId, found.row.id));
   return c.redirect("/connections?notice=saved");
 });
+
+/** Delete every contact share either person made on any connection between the two of them. */
+function deletePairShares(db: ReturnType<typeof getDb>, x: string, y: string) {
+  const pair = or(and(eq(connections.aAccount, x), eq(connections.bAccount, y)), and(eq(connections.aAccount, y), eq(connections.bAccount, x)));
+  return db.delete(contactShares).where(inArray(contactShares.connectionId, db.select({ id: connections.id }).from(connections).where(pair)));
+}

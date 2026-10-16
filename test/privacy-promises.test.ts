@@ -13,6 +13,7 @@ import app from "../src/index";
 import * as retention from "../src/services/retention";
 import * as rules from "../src/domain/rules";
 import * as session from "../src/lib/session";
+import * as emailCode from "../src/services/email-code";
 import { SV_MAP_JS_B64 } from "../src/vendor/sv-map.generated";
 import { CONSENT_CATEGORIES, COOKIES, DEVICE_STORAGE, PROCESSORS, RETENTION, periodDays, periodText } from "../src/content/privacy";
 import { SAFETY_PROMISES } from "../src/routes/policies";
@@ -39,6 +40,7 @@ const MODULES: Record<string, Record<string, unknown>> = {
   "services/retention": retention as unknown as Record<string, unknown>,
   "domain/rules": rules as unknown as Record<string, unknown>,
   "lib/session": session as unknown as Record<string, unknown>,
+  "services/email-code": emailCode as unknown as Record<string, unknown>,
 };
 
 describe("privacy notice: retention periods match the code", () => {
@@ -57,7 +59,7 @@ describe("privacy notice: retention periods match the code", () => {
     });
   }
 
-  it("strikes are kept as long as reports (PENDING: retention constant from the privacy fixes)", () => {
+  it("strikes are kept as long as reports", () => {
     const mod = MODULES["services/retention"];
     const names = Object.keys(mod).filter((k) => /STRIKE/.test(k) && /DAYS$/.test(k));
     const reports = RETENTION.find((r) => r.what.en.startsWith("Reports"))!;

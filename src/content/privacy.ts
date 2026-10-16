@@ -127,7 +127,13 @@ export const RETENTION: RetentionItem[] = [
     what: { th: "การแจ้งเตือนที่อ่านแล้ว", en: "Notifications you've read" },
     keep: { th: "ลบหลัง", en: "deleted after" },
     period: { n: 90, unit: "days" },
-    code: /NOTIFICATION.*_DAYS$/,
+    code: "READ_NOTIFICATION_RETENTION_DAYS",
+  },
+  {
+    what: { th: "การแจ้งเตือนที่ยังไม่ได้อ่าน", en: "Notifications you haven't read" },
+    keep: { th: "ลบหลัง", en: "deleted after" },
+    period: { n: 1, unit: "years" },
+    code: "UNREAD_NOTIFICATION_RETENTION_DAYS",
   },
   {
     what: { th: "รายงาน การดำเนินการของทีมงาน และใบเตือน", en: "Reports, moderation actions and strikes" },
@@ -152,17 +158,28 @@ export const RETENTION: RetentionItem[] = [
     what: { th: "ความพยายามเข้าสู่ระบบและรหัสทางอีเมล", en: "Sign-in attempts and email codes" },
     keep: { th: "ลบหลัง", en: "deleted after" },
     period: { n: 24, unit: "hours" },
-    code: "LOGIN_ATTEMPT_RETENTION_HOURS",
+    // The email codes' own constant; the sign-in attempts' LOGIN_ATTEMPT_RETENTION_HOURS is tested equal to it.
+    code: "CODE_RETENTION_HOURS",
+    from: "services/email-code",
   },
   {
     what: { th: "คนรู้จัก ช่องทางติดต่อที่แชร์ และลิงก์โซเชียล", en: "Connections, shared contacts and social links" },
-    keep: { th: "จนกว่าคุณหรืออีกฝ่ายจะลบ หรือปิดบัญชี", en: "until you or the other person removes them, or an account is closed" },
+    keep: {
+      th: "จนกว่าคุณหรืออีกฝ่ายจะลบหรือบล็อก หรือปิดบัญชี ช่องทางติดต่อที่แชร์จะถูกลบทันทีเมื่อเลิกเป็นคนรู้จักหรือมีการบล็อก",
+      en: "until you or the other person removes them or blocks, or an account is closed. Shared contacts are deleted at once when the connection is removed or either of you blocks",
+    },
+  },
+  {
+    what: { th: "ข้อความที่คุณเขียนตอนปิดบัญชี", en: "The note you write when you leave" },
+    keep: { th: "ลบหลัง", en: "deleted after" },
+    period: { n: 1, unit: "years" },
+    code: "EXIT_NOTE_RETENTION_DAYS",
   },
   {
     what: { th: "บัญชีที่ปิดแล้ว", en: "Closed accounts" },
     keep: {
-      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
-      en: "profile hidden, and photos, social links and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
+      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล คำตอบ City Pulse และแบบสอบถามความรู้สึก และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
+      en: "profile hidden, and photos, social links, City Pulse and wellbeing answers and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
     },
     period: { n: 30, unit: "days" },
     code: "DEACTIVATED_RETENTION_DAYS",
@@ -177,8 +194,8 @@ export const RETENTION_NOTES: Text[] = [
     en: "If a report about an account is still open, we keep that account until the report is closed.",
   },
   {
-    th: "เหตุผลที่ออก (ถ้าบอกเรา) เก็บโดยไม่มีชื่อบัญชี จึงโยงกลับมาหาคุณไม่ได้",
-    en: "Reasons for leaving, if you give them, are kept without your account, so they can't be linked back to you.",
+    th: "เหตุผลที่ออก (ถ้าบอกเรา) เก็บโดยไม่มีชื่อบัญชี จึงโยงกลับมาหาคุณไม่ได้ เหตุผลที่เลือกไว้เก็บเป็นยอดรวม ส่วนข้อความที่เขียนเองลบหลัง 1 ปี",
+    en: "Reasons for leaving, if you give them, are kept without your account, so they can't be linked back to you. The reasons you pick stay as totals; a note you write is deleted after 1 year.",
   },
 ];
 
@@ -364,7 +381,11 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     control: "toggle",
     title: { th: "จัดโต๊ะตามความสนใจ", en: "Seat me by my interests" },
     hint: { th: "ใช้ความสนใจและภาษาของคุณช่วยจัดโต๊ะ", en: "Uses your interests and languages to help seat you." },
-    withdraw: { th: "ถ้าปิด เราจัดโต๊ะจากภาษาและเขตของคุณเท่านั้น", en: "If you turn it off, we seat you by your languages and district only." },
+    // What loadAttendees (services/events.ts) and canPair (match/profile.ts) still read without it.
+    withdraw: {
+      th: "ถ้าปิด เราจัดโต๊ะจากภาษา อายุและช่วงอายุที่คุณเลือก สิ่งที่คุณมองหา คนที่คุณบล็อก คนที่เคยเจอกันในงานก่อน และการเป็นคนใหม่ในกรุงเทพฯ เท่านั้น ไม่ใช้ความสนใจ สไตล์ มหาวิทยาลัย หรือ Bangkok Type ของคุณ",
+      en: "If you turn it off, we seat you only by your languages, your age and the age range you chose, what you're looking for, who you've blocked, who you've met at earlier events, and whether you're new to Bangkok. Your interests, styles, university and Bangkok Type aren't used.",
+    },
   },
   {
     key: "research",
