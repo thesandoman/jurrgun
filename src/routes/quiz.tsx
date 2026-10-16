@@ -532,6 +532,39 @@ function Matches(props: { v: View; archetype: ArchetypeKey; /** Types already on
   );
 }
 
+/** "Does this feel like you?" answers, kept with the result and only ever counted in totals. */
+export const FEELS = ["yes", "partly", "no"] as const;
+export type Feel = (typeof FEELS)[number];
+
+/**
+ * One tap after the result: the only real check on accuracy (the simulations
+ * only test simulated people). Stored with the result (blend.feel), cleared by a
+ * retake, and only ever read as totals of 10 or more (skill
+ * jurrgun-quiz-measurement). Nothing changes on the page except the choice.
+ */
+function FeelsLikeYou(props: { v: View; feel?: Feel; next: string }) {
+  const { t } = props.v;
+  const labels: Record<Feel, string> = {
+    yes: t("ใช่ เป็นเราเลย", "Yes, that's me"),
+    partly: t("ใช่บางส่วน", "Partly"),
+    no: t("ไม่ค่อยใช่", "Not really"),
+  };
+  return (
+    <form method="post" action="/quiz/feel" class="card feels-like" id="feel" aria-labelledby="feel-q">
+      <input type="hidden" name="next" value={props.next} />
+      <p id="feel-q" style="margin:0 0 8px;font-weight:700">{t("ผลนี้รู้สึกเหมือนตัวคุณไหม?", "Does this feel like you?")}</p>
+      <div class="row" role="group" aria-labelledby="feel-q">
+        {FEELS.map((f) => (
+          <button type="submit" name="feel" value={f} class={`btn ${props.feel === f ? "primary" : "ghost"}`} aria-pressed={props.feel === f ? "true" : "false"}>
+            {labels[f]}
+          </button>
+        ))}
+      </div>
+      <small class="muted">{props.feel ? t("ขอบคุณ คำตอบนี้ช่วยให้แบบทดสอบดีขึ้น", "Thanks. This helps us make the quiz better.") : t("ไม่มีใครเห็นคำตอบของคุณ เรานับแค่ผลรวม", "Nobody sees your answer; we only count totals.")}</small>
+    </form>
+  );
+}
+
 export function VisibilityToggle(props: { v: View; visible: boolean; next: string }) {
   const { t } = props.v;
   return (
@@ -687,6 +720,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
       <CodeChips lang={lang} archetype={key} modifier={props.row.modifier} />
       {res.moves ? <p class="type-moves">{L(lang, motiveSentence(res.moves.motive, res.moves.place))}</p> : null}
       <WhyYou v={props.v} archetype={key} why={(props.row.blend as { why?: Why } | null)?.why} />
+      <FeelsLikeYou v={props.v} feel={(props.row.blend as { feel?: Feel } | null)?.feel} next={props.visibilityNext} />
       <TypeFacts v={props.v} a={a} />
       <details class="how">
         <summary>{t("เกี่ยวกับไทป์นี้", "About this type")}</summary>
@@ -936,6 +970,21 @@ quizRoutes.get("/quiz/result", async (c) => {
     {user.account.role === "circle_head" && user.profile ? <HostStyle v={v} bio={user.profile.bio} /> : null}
     </>,
   );
+});
+
+quizRoutes.post("/quiz/feel", async (c) => {
+  const user = c.var.user!;
+  const body = await c.req.parseBody();
+  const next = safeNext(str(body.next), "/quiz/result");
+  const feel = str(body.feel) as Feel;
+  const row = await loadVibe(c.env, user.account.id);
+  if (!row) return c.redirect(user.profile?.onboardedAt ? "/quiz" : "/onboarding");
+  if (!FEELS.includes(feel)) return c.redirect(`${next}#feel`);
+  await getDb(c.env)
+    .update(vibes)
+    .set({ blend: { ...(row.blend ?? { types: [], unsure: [], consistency: null }), feel } as typeof row.blend })
+    .where(eq(vibes.accountId, user.account.id));
+  return c.redirect(`${next}#feel`);
 });
 
 quizRoutes.post("/quiz/visibility", async (c) => {

@@ -348,4 +348,29 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     const r = await req("/quiz", { cookie: m.cookie, form: form(seed, qs) });
     expect(r.status).toBe(302);
   });
+
+  it('"Does this feel like you?": one tap, kept with the result, cleared by a retake', async () => {
+    const m = await createMember();
+    const seed = quizSeed(m.id, null);
+    const qs = quizQuestions(seed, null, MEMBER);
+    expect((await submit(m.cookie, form(seed, qs), qs.length)).status).toBe(302);
+    const page = await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text();
+    expect(page).toContain("Does this feel like you?");
+    expect(page).toContain('action="/quiz/feel"');
+    const r = await req("/quiz/feel", { cookie: m.cookie, form: { feel: "partly", next: "/quiz/result" } });
+    expect(r.headers.get("location")).toBe("/quiz/result#feel");
+    let [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    expect((row.blend as { feel?: string }).feel).toBe("partly");
+    // Anything else is ignored.
+    await req("/quiz/feel", { cookie: m.cookie, form: { feel: "100%" } });
+    [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    expect((row.blend as { feel?: string }).feel).toBe("partly");
+    // The choice shows as pressed; a retake starts fresh.
+    expect(await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text()).toContain('value="partly" class="btn primary" aria-pressed="true"');
+    const seed2 = quizSeed(m.id, row);
+    const qs2 = quizQuestions(seed2, row, MEMBER);
+    expect((await submit(m.cookie, form(seed2, qs2), qs2.length)).status).toBe(302);
+    [row] = await db().select().from(vibes).where(eq(vibes.accountId, m.id));
+    expect((row.blend as { feel?: string }).feel).toBeUndefined();
+  });
 });
