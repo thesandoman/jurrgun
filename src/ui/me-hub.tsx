@@ -27,7 +27,6 @@ export function MeHub(props: {
   interests: string[];
   stats: MeStat[];
   /** One sentence of numbers (each linked) instead of the stat tiles. */
-  summary?: Child;
   /** The next table, or a way to find one. */
   next?: Child;
   steps: MeStep[];
@@ -68,23 +67,18 @@ export function MeHub(props: {
         </a>
       </header>
 
-      {props.summary ? (
-        <>
-          {props.next ?? null}
-          {props.summary}
-        </>
-      ) : (
-        <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
-          {props.stats.map((s) => (
-            <a href={s.href} class={`me-stat tint-${s.tint}`}>
-              <span class="me-stat-emoji" aria-hidden="true">{s.emoji}</span>
-              <b>{s.n}</b>
-              <small>{s.label}</small>
-              {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
-            </a>
-          ))}
-        </nav>
-      )}
+      {/* The number tiles sit right under the photo and name (owner, 2026-10-16: the one-sentence version read as plain text). */}
+      <nav class="me-stats" aria-label={t("สรุปของฉัน", "My numbers")}>
+        {props.stats.map((s) => (
+          <a href={s.href} class={`me-stat tint-${s.tint}`}>
+            <span class="me-stat-emoji" aria-hidden="true">{s.emoji}</span>
+            <b>{s.n}</b>
+            <small>{s.label}</small>
+            {s.sub ? <small class="me-stat-sub">{s.sub}</small> : null}
+          </a>
+        ))}
+      </nav>
+      {props.next ?? null}
 
       {props.ask ?? null}
 

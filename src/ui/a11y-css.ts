@@ -238,8 +238,6 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .me-next small{color:var(--ink-2);font-weight:600}
 .me-next b{font-size:1.06rem}
 .me-next span{color:var(--ink-2);font-size:.9rem}
-.me-summary{margin:4px 0 16px;color:var(--ink-2);line-height:1.7}
-.me-summary a{font-weight:700;color:var(--ink);text-underline-offset:3px}
 
 /* Event scene colours stay in the palette (Phase 3): "play" was violet, "art" coral. */
 .scene-play{--scene:linear-gradient(180deg,#dff5c8 0 55%,#4f9d2f 55% 100%)}

@@ -31,7 +31,7 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     expect(html).toContain("Also met at: Board games night");
     expect(html).not.toContain("nothing yet");
     // Me counts people, not meetings.
-    expect(await (await req("/settings?lang=en", { cookie: me.cookie })).text()).toContain('<a href="/connections">1 person</a>');
+    expect(await (await req("/settings?lang=en", { cookie: me.cookie })).text()).toMatch(/<a href="\/connections" class="me-stat[^"]*"><span[^>]*>🤝<\/span><b>1<\/b>/);
     const id = html.match(/action="\/connections\/([^/]+)\/remove"/)![1];
     await req(`/connections/${id}/remove`, { cookie: me.cookie, method: "POST", form: { go: "1" } });
     const left = await db()
@@ -51,7 +51,7 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
       await db().insert(regularTableMembers).values({ id: newId(), tableId: id, accountId: me.id });
     }
     const hub = await (await req("/settings?lang=en", { cookie: me.cookie })).text();
-    expect(hub).toContain('<a href="/tables">3 Regular Tables</a>');
+    expect(hub).toMatch(/<a href="\/tables" class="me-stat[^"]*"><span[^>]*>🪑<\/span><b>3<\/b><small>Tables<\/small>/);
     const prof = await (await req("/me/profile?lang=en", { cookie: me.cookie })).text();
     expect(prof).toContain("Regular at 3 tables");
     for (const n of names) expect(prof).toContain(`<span class="pc-chip">${n}</span>`);

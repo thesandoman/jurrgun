@@ -94,17 +94,16 @@ describe.skipIf(!HAS_DB)("settings", () => {
       { id: newId(), ...pair(me.id, c.id), level: "activity", eventId: ev2 },
     ]);
     const html = await (await req("/settings", { cookie: `${me.cookie}; lang=en` })).text();
-    // One sentence of numbers (Phase 2): people, not meetings.
-    expect(html).toMatch(/<a href="\/connections">3 people<\/a>/);
+    // The number tiles under the photo and name (owner): people, not meetings.
+    expect(html).toMatch(/<a href="\/connections" class="me-stat[^"]*"><span[^>]*>🤝<\/span><b>3<\/b>/);
   });
 
   it("shows my numbers and nudges what my profile is missing", async () => {
     const m = await createMember({ nickname: "Nudge" });
     let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Hey Nudge");
-    // A brand-new member gets no sentence of zeros, only the next-table card and its one step.
+    expect(html).toContain(`class="me-stats"`);
     expect(html).not.toContain("You&#39;ve been to");
-    expect(html).not.toContain(`class="me-stats"`);
     expect(html).toContain("Your next table");
     expect(html).not.toMatch(/\d+% there/);
     const left = (h: string) => Number(/Help your table get to know you: (\d+) things? left/.exec(h)?.[1]);

@@ -311,25 +311,6 @@ settingsRoutes.get("/settings", async (c) => {
         ) : undefined
       }
       interests={p.interests}
-      summary={
-        // One plain sentence instead of four big-number tiles (owner, Phase 2); each number still links to its page.
-        // A new member with nothing yet sees no sentence of zeros: the next-table card above already says what to do.
-        Number(been?.n ?? 0) + Number(circle?.n ?? 0) + Number(upcoming?.n ?? 0) + tables.length === 0 ? <></> : <p class="me-summary">
-          {t("ไปมาแล้ว ", "You've been to ")}
-          <a href="/me/events#past">{t(`${Number(been?.n ?? 0)} กิจกรรม`, `${Number(been?.n ?? 0)} ${Number(been?.n ?? 0) === 1 ? "event" : "events"}`)}</a>
-          {t(" เจอคนรู้จัก ", ", met ")}
-          <a href="/connections">{t(`${Number(circle?.n ?? 0)} คน`, `${Number(circle?.n ?? 0)} ${Number(circle?.n ?? 0) === 1 ? "person" : "people"}`)}</a>
-          {tables.length ? (
-            <>
-              {t(" นั่งโต๊ะประจำ ", ", sit at ")}
-              <a href="/tables">{t(`${tables.length} โต๊ะ`, `${tables.length} Regular ${tables.length === 1 ? "Table" : "Tables"}`)}</a>
-            </>
-          ) : null}
-          {t(" และมีนัด ", " and have ")}
-          <a href="/me/events#upcoming">{t(`${Number(upcoming?.n ?? 0)} งานที่จะถึง`, `${Number(upcoming?.n ?? 0)} coming up`)}</a>
-          {t("", ".")}
-        </p>
-      }
       next={
         nextUp ? (
           <a class="card me-next" href={`/me/events/${nextUp.id}/pass`}>
