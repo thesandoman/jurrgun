@@ -27,7 +27,7 @@ describe.skipIf(!HAS_DB)("what BMA staff can see", () => {
   it("staff pages never show a member's romance, relationship, gender or dating data", async () => {
     const secret = `Sunset boat ${newId().slice(0, 8)}`;
     const m = await createMember({ relationship: "prefer_not", nickname: "Ploy" });
-    await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "1" } });
+    await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "1", consent: "1" } });
     const id = datingDeckFor(m.id).find((x) => promptById(x)!.kind === "text")!;
     await db()
       .update(profiles)

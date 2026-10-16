@@ -7,7 +7,7 @@ import { consents, events, profiles } from "../src/schema";
 import { cleanBio, datingDeckFor, promptById } from "../src/content/profile";
 
 const prof = async (id: string) => (await db().select().from(profiles).where(eq(profiles.accountId, id)))[0];
-const quick = (cookie: string, on: "0" | "1") => req("/settings/quick", { cookie, form: { key: "romance", on } });
+const quick = (cookie: string, on: "0" | "1") => req("/settings/quick", { cookie, form: { key: "romance", on, ...(on === "1" ? { consent: "1" } : {}) } });
 
 describe.skipIf(!HAS_DB)("one tap: open to something more", () => {
   it("switches on in one tap, records consent and makes a prefer-not member Single", async () => {
