@@ -31,7 +31,24 @@ export type PlanMember = {
   socialEnergy?: string;
   /** Private gender, only to keep women-only events for women. */
   gender?: string | null;
+  /** Meetups this member actually came to (checked in). */
+  tablesAttended?: number;
 };
+
+/**
+ * Explore, then regulars (owner card 10-16, optimal stopping): the first
+ * EXPLORE_TABLES meetups are for meeting people. After that the plan already
+ * leans toward hangouts your people are going to ("friends"), and once every
+ * FRESH_EVERY weeks one pick is kept for new faces, so a circle never closes.
+ */
+export const EXPLORE_TABLES = 3;
+export const FRESH_EVERY = 4;
+
+/** Whether this plan week keeps a pick for new faces ("2026-W42" → week 42). */
+export function freshWeek(week: string, tablesAttended: number): boolean {
+  const n = Number(/W(\d+)$/.exec(week)?.[1] ?? 0);
+  return tablesAttended >= EXPLORE_TABLES && n % FRESH_EVERY === 0;
+}
 
 export type PlanEvent = {
   id: string;
@@ -109,7 +126,7 @@ export function scoreEvent(m: PlanMember, e: PlanEvent, now: Date): Pick | null 
  * This week's two picks: the buddy quest (if there's one to do) and the best
  * event, or the two best events, preferring two different kinds of meetup.
  */
-export function pickPlan(m: PlanMember, events: PlanEvent[], now: Date, quest?: { id: string } | null): Pick[] {
+export function pickPlan(m: PlanMember, events: PlanEvent[], now: Date, quest?: { id: string } | null, fresh = false): Pick[] {
   const scored = events
     .map((e) => ({ e, p: scoreEvent(m, e, now) }))
     .filter((x): x is { e: PlanEvent; p: Pick } => !!x.p && x.p.score > 0)
@@ -118,6 +135,15 @@ export function pickPlan(m: PlanMember, events: PlanEvent[], now: Date, quest?: 
   if (quest) picks.push({ kind: "quest", ref: quest.id, score: 0, reasons: ["buddy"] });
   const first = scored[0];
   if (first) picks.push(first.p);
+  // A fresh week: one pick is the best hangout none of your people are going to; the other stays as usual.
+  if (fresh) {
+    const freshPick = scored.find((x) => x.e.friendsGoing === 0);
+    if (freshPick) {
+      const tagged = { ...freshPick.p, reasons: [...freshPick.p.reasons, "new_faces"] };
+      const other = quest ? picks[0] : scored.find((x) => x !== freshPick)?.p;
+      return other ? [other, tagged] : [tagged];
+    }
+  }
   if (picks.length < 2 && first) {
     const second = scored.slice(1).find((x) => x.e.tags[0] !== first.e.tags[0]) ?? scored[1];
     if (second) picks.push(second.p);

@@ -1,6 +1,6 @@
 /** Weekly plan and outcome maths (src/domain/plan.ts, src/domain/outcomes.ts): pure. */
 import { describe, expect, it } from "vitest";
-import { pickPlan, scoreEvent, timeWindow, type PlanEvent, type PlanMember } from "../src/domain/plan";
+import { EXPLORE_TABLES, freshWeek, pickPlan, scoreEvent, timeWindow, type PlanEvent, type PlanMember } from "../src/domain/plan";
 import { countsAtLeast, feedbackSummary, pctOf, returnRate } from "../src/domain/outcomes";
 
 const now = new Date("2026-10-12T00:00:00Z"); // Mon 07:00 Bangkok
@@ -33,6 +33,19 @@ describe("weekly plan scoring", () => {
     expect(pickPlan(member, evs, now).map((p) => p.ref)).toEqual(["a", "c"]);
     expect(pickPlan(member, evs, now, { id: "q" }).map((p) => p.ref)).toEqual(["q", "a"]);
     expect(pickPlan(member, [], now)).toEqual([]);
+  });
+
+  it("explore, then regulars: once a month after 3 meetups, one pick is for new faces (owner card 10-16)", () => {
+    expect(freshWeek("2026-W44", EXPLORE_TABLES - 1)).toBe(false); // still exploring
+    expect(freshWeek("2026-W44", EXPLORE_TABLES)).toBe(true);
+    expect(freshWeek("2026-W43", 10)).toBe(false);
+    // Your people go to a and b; c is all new faces.
+    const evs = [ev({ id: "a", friendsGoing: 2 }), ev({ id: "b", friendsGoing: 1, tags: ["walk"] }), ev({ id: "c", district: "dusit" })];
+    expect(pickPlan(member, evs, now).map((p) => p.ref)).toEqual(["a", "b"]);
+    const fresh = pickPlan(member, evs, now, null, true);
+    expect(fresh.map((p) => p.ref)).toEqual(["a", "c"]);
+    expect(fresh[1].reasons).toContain("new_faces");
+    expect(pickPlan(member, evs, now, { id: "q" }, true).map((p) => p.ref)).toEqual(["q", "c"]);
   });
 });
 

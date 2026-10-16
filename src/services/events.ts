@@ -8,7 +8,7 @@
 import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { buddyRound, type Attendee } from "../domain/matching";
-import { ageOn, OFFER_HOURS, romanceEligible, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
+import { ageOn, OFFER_HOURS, reliableAttender, romanceEligible, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { cleanBio, universityKey } from "../content/profile";
 import { audit, notify } from "../lib/records";
@@ -64,12 +64,45 @@ export async function refreshWaitlist(env: DatabaseEnv, eventId: string, now = n
     .from(strikes)
     .where(inArray(strikes.accountId, waiting.map((w) => w.accountId)))
     .limit(5000);
+  // Showing up pays (owner card 10-16): kept the last 4 plans, or a mutual "again"
+  // with the host or someone already going. Never shown as a score.
+  const waitingIds = waiting.map((w) => w.accountId);
+  const [past, going] = await Promise.all([
+    db
+      .select({ accountId: registrations.accountId, startsAt: events.startsAt, checkedInAt: registrations.checkedInAt })
+      .from(registrations)
+      .innerJoin(events, eq(events.id, registrations.eventId))
+      .where(and(inArray(registrations.accountId, waitingIds), inArray(registrations.status, ["confirmed", "late_cancelled"]), lt(events.startsAt, now)))
+      .limit(5000),
+    db
+      .select({ accountId: registrations.accountId })
+      .from(registrations)
+      .where(and(eq(registrations.eventId, eventId), eq(registrations.status, "confirmed")))
+      .limit(1000),
+  ]);
+  const people = [...new Set([...going.map((g) => g.accountId), ...(event.hostAccountId ? [event.hostAccountId] : [])])];
+  const ties = people.length
+    ? await db
+        .select({ a: connections.aAccount, b: connections.bAccount })
+        .from(connections)
+        .where(
+          and(
+            isNull(connections.removedAt),
+            or(and(inArray(connections.aAccount, waitingIds), inArray(connections.bAccount, people)), and(inArray(connections.bAccount, waitingIds), inArray(connections.aAccount, people))),
+          ),
+        )
+        .limit(5000)
+    : [];
+  const reunites = new Set(ties.flatMap((t) => [t.a, t.b]).filter((id) => waitingIds.includes(id)));
   const ordered = waitlistOrder(
     waiting.map((w) => ({
       id: w.id,
       createdAt: w.createdAt,
       isResident: w.bkk === "verified",
       priority: strikeStanding(strikeRows.filter((s) => s.accountId === w.accountId), now).waitlistPriority,
+      boost:
+        reunites.has(w.accountId) ||
+        reliableAttender(past.filter((r) => r.accountId === w.accountId).map((r) => ({ startsAt: r.startsAt, checkedIn: !!r.checkedInAt }))),
     })),
     event.residentPriority,
   );

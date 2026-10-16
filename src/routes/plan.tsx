@@ -14,7 +14,7 @@ import { Hono, type Context } from "hono";
 import { and, count, desc, eq, gt, gte, inArray, isNull, lt, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { weekKey } from "../domain/buddy";
-import { isSkipReason, pickPlan, SKIP_REASONS, type PlanEvent } from "../domain/plan";
+import { freshWeek, isSkipReason, pickPlan, SKIP_REASONS, type PlanEvent } from "../domain/plan";
 import { ageOn, romanceEligible } from "../domain/rules";
 import { budgetMax, cleanBio, TIME_WINDOWS } from "../content/profile";
 import { DISTRICTS, districtsAZ, EVENT_TAGS, label } from "../lib/constants";
@@ -78,8 +78,9 @@ async function planFor(c: C) {
       .from(events)
       .where(and(eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * DAY))))
       .limit(200),
-    db.select({ eventId: registrations.eventId }).from(registrations).where(eq(registrations.accountId, me)).limit(500),
+    db.select({ eventId: registrations.eventId, checkedInAt: registrations.checkedInAt }).from(registrations).where(eq(registrations.accountId, me)).limit(500),
   ]);
+  const tablesAttended = mine.filter((x) => x.checkedInAt).length;
   const ids = upcoming.map((e) => e.id);
   const [taken, friends, quest] = await Promise.all([
     ids.length
@@ -135,10 +136,12 @@ async function planFor(c: C) {
       socialEnergy: bio.socialEnergy,
       gender: p.gender,
       romance: romanceEligible(p),
+      tablesAttended,
     },
     cands,
     now,
     questTodo,
+    freshWeek(week, tablesAttended),
   ).map((x) => ({ kind: x.kind, ref: x.ref, reasons: x.reasons }));
   await db.insert(weeklyPlans).values({ id: newId(), accountId: me, week, picks }).onConflictDoNothing();
   const [row] = await db.select().from(weeklyPlans).where(and(eq(weeklyPlans.accountId, me), eq(weeklyPlans.week, week))).limit(1);
@@ -177,6 +180,8 @@ function reasonText(v: View, r: string): string {
       return t("ขนาดกลุ่มที่คุณชอบ", "Your kind of group size");
     case "buddy":
       return t("เควสต์กับบัดดี้สัปดาห์นี้", "This week's quest with your buddy");
+    case "new_faces":
+      return t("ได้เจอคนใหม่ ให้วงของคุณกว้างขึ้น", "New faces, so your circle keeps growing");
     default:
       return lang === "en" ? r : r;
   }

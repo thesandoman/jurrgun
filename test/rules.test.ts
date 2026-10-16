@@ -18,6 +18,8 @@ import {
   seatsOverbooked,
   strikeStanding,
   waitlistOrder,
+  reliableAttender,
+  RELIABLE_STREAK,
   type Choice,
   removalAllowed,
   flagLimitReached,
@@ -146,6 +148,23 @@ describe("seats and waitlist", () => {
     const order = waitlistOrder([e("a", 1, false), e("b", 2, true), e("c", 0, false, false)], true).map((x) => x.id);
     expect(order).toEqual(["b", "a", "c"]);
     expect(waitlistOrder([e("a", 1, false), e("b", 2, true)], false).map((x) => x.id)).toEqual(["a", "b"]);
+  });
+  it("showing up earns a first seat, after strikes and resident rules (owner card 10-16)", () => {
+    const e = (id: string, mins: number, isResident: boolean, priority = true) => ({ id, createdAt: new Date(mins * 60_000), isResident, priority });
+    const boosted = { ...e("b", 2, false), boost: true };
+    expect(waitlistOrder([e("a", 1, false), boosted], false).map((x) => x.id)).toEqual(["b", "a"]);
+    // Strikes still come first: a boosted person with 2+ strikes stays behind.
+    expect(waitlistOrder([e("a", 1, false), { ...e("c", 0, false, false), boost: true }], false).map((x) => x.id)).toEqual(["a", "c"]);
+    // Resident priority still comes first.
+    expect(waitlistOrder([e("r", 3, true), boosted], true).map((x) => x.id)).toEqual(["r", "b"]);
+  });
+  it("reliable means the last 4 plans kept; one miss means waiting for the next 4", () => {
+    const at = (d: number, checkedIn = true) => ({ startsAt: new Date(2026, 9, d), checkedIn });
+    expect(RELIABLE_STREAK).toBe(4);
+    expect(reliableAttender([at(1), at(2), at(3), at(4)])).toBe(true);
+    expect(reliableAttender([at(1), at(2), at(3)])).toBe(false);
+    expect(reliableAttender([at(1, false), at(2), at(3), at(4), at(5)])).toBe(true);
+    expect(reliableAttender([at(1), at(2), at(3), at(4), at(5, false)])).toBe(false);
   });
   it("hides small counts", () => {
     expect(safeCount(9)).toBeNull();

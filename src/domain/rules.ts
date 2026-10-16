@@ -271,19 +271,37 @@ export type WaitlistEntry = {
   isResident: boolean;
   /** From strikeStanding(). */
   priority: boolean;
+  /** Showing up pays (reliableAttender, or a mutual "again" with the host or someone going). */
+  boost?: boolean;
 };
 
 /**
  * Waitlist order: people with priority before people who lost it (2+
  * strikes); then verified residents first when the event gives them
- * priority; then first come, first served.
+ * priority; then people whose showing up earned a first seat (owner card
+ * 10-16, tit-for-tat); then first come, first served.
  */
 export function waitlistOrder(entries: WaitlistEntry[], residentPriority: boolean): WaitlistEntry[] {
   return entries.slice().sort((a, b) => {
     if (a.priority !== b.priority) return a.priority ? -1 : 1;
     if (residentPriority && a.isResident !== b.isResident) return a.isResident ? -1 : 1;
+    if (!!a.boost !== !!b.boost) return a.boost ? -1 : 1;
     return a.createdAt.getTime() - b.createdAt.getTime();
   });
+}
+
+/** Plans kept in a row that earn a first place on waitlists. */
+export const RELIABLE_STREAK = 4;
+
+/**
+ * Kept their last RELIABLE_STREAK plans: each past meetup they held a seat
+ * for, newest first, was checked in. A late cancel or no-show breaks the run;
+ * missing one only means waiting for the next four (nothing is taken away).
+ * Never shown as a score or streak.
+ */
+export function reliableAttender(past: { startsAt: Date; checkedIn: boolean }[]): boolean {
+  const recent = past.slice().sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime()).slice(0, RELIABLE_STREAK);
+  return recent.length === RELIABLE_STREAK && recent.every((r) => r.checkedIn);
 }
 
 // ---------------------------------------------------- privacy threshold --
