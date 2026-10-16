@@ -753,22 +753,6 @@ main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
   .intro-slide .intro-cta{align-items:flex-start;margin-top:16px}
   .intro>.intro-foot{position:absolute;z-index:2;left:calc(50% + 36px);top:calc(50% + 124px);width:440px;justify-content:flex-start;gap:24px;padding:0}
 }
-/* D4 laptops: Me and My profile use two columns, not a narrow column with empty sides.
-   Containers only (no markup order is assumed): the photo and name stay put on the left, everything else flows on the right. */
-@media (min-width:1024px){
-  main.wrap:has(> .me),main.wrap:has(> article.pc){max-width:1160px}
-  main .me{display:grid;grid-template-columns:300px minmax(0,1fr);column-gap:48px;align-items:start}
-  main .me>*{grid-column:2;min-width:0}
-  main .me>.me-hero{grid-column:1;grid-row:1/span 99;position:sticky;top:88px;margin:0;padding-top:32px}
-  main .me>.me-hero .me-sub{flex-direction:column;align-items:center}
-  main article.pc{display:grid;grid-template-columns:300px minmax(0,1fr);column-gap:48px;row-gap:22px;align-items:start}
-  main article.pc>*{grid-column:2;min-width:0}
-  main article.pc>.pc-hero{grid-column:1;grid-row:1/span 99;position:sticky;top:88px}
-  main article.pc>.pc-hero.pc-compact{flex-direction:column;align-items:flex-start}
-  main article.pc>.pc-hero .pc-actions{flex-direction:row}
-  main article.pc>.pc-jump{position:static;margin:0;padding-inline:0;border-radius:0;background:none}
-  main .me>.me-hero .me-blob-b{transform:translateX(-12%)}
-}
 /* Day-of status: one calm line at the top of the event page, the pass and the hangout chat. Words carry
    the meaning; the left edge only echoes it. Running late / On my way are two 44px buttons. */
 .day-status{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);color:var(--ink);line-height:1.5}
