@@ -350,6 +350,8 @@ export const registrations = pgTable(
     /** On the event day: running_late | on_my_way, told to the host. */
     etaStatus: text("eta_status"),
     etaAt: ts("eta_at"),
+    /** "Say hi first" (owner card 10-16): one line for the table, ≤ 80 chars, shown only to that table, cleared 7 days after. */
+    helloLine: text("hello_line"),
     createdAt: created(),
     cancelledAt: ts("cancelled_at"),
   },
@@ -660,6 +662,25 @@ export const vibes = pgTable("social_vibes", {
   visible: boolean("visible").notNull().default(false),
   takenAt: ts("taken_at").notNull().defaultNow(),
 });
+
+/**
+ * Where people stop in the Bangkok Type quiz (owner card 10-16): totals only.
+ * One row per Bangkok day, segment and question number, counting how many
+ * reached it. No account, no answers, no timing; read only as 10+ on Quiz health.
+ */
+export const quizReach = pgTable(
+  "social_quiz_reach",
+  {
+    id: text("id").primaryKey(),
+    /** Bangkok date, YYYY-MM-DD. */
+    day: text("day").notNull(),
+    segment: text("segment").notNull(),
+    /** 1-based question number; 0 = opened the quiz, 99 = finished. */
+    question: integer("question").notNull(),
+    reached: integer("reached").notNull().default(0),
+  },
+  (t) => [uniqueIndex("social_quiz_reach_idx").on(t.day, t.segment, t.question)],
+);
 
 /** Invite-a-friend links for +1 events (PRD §8.2). Token is the id. */
 export const invites = pgTable(

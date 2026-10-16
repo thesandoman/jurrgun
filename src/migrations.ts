@@ -283,5 +283,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE TABLE \"social_profile_links\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"network\" text NOT NULL,\n\t\"value\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
       "CREATE UNIQUE INDEX \"social_profile_links_account_network_idx\" ON \"social_profile_links\" (\"account_id\",\"network\");"
     ]
+  },
+  {
+    "id": "0023_hello_and_quiz_reach",
+    "statements": [
+      "CREATE TABLE \"social_quiz_reach\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"day\" text NOT NULL,\n\t\"segment\" text NOT NULL,\n\t\"question\" integer NOT NULL,\n\t\"reached\" integer DEFAULT 0 NOT NULL\n);",
+      "ALTER TABLE \"social_registrations\" ADD COLUMN \"hello_line\" text;",
+      "CREATE UNIQUE INDEX \"social_quiz_reach_idx\" ON \"social_quiz_reach\" (\"day\",\"segment\",\"question\");"
+    ]
   }
 ];
