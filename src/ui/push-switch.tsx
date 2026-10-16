@@ -40,6 +40,7 @@ export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
             <small id="push-hint" aria-live="polite">
               {text.off}
             </small>
+            <small class="reminder-note">{t("เปิดแล้ว การเตือนกิจกรรมจะเปิดให้ด้วย", "Switching this on also turns on event reminders.")}</small>
           </span>
           <span class="sw" aria-hidden="true" />
         </button>

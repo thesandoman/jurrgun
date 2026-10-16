@@ -5,24 +5,30 @@
  *
  *   retention      at most once a day (src/services/retention.ts)
  *   day before     confirmed seats at events starting in 18 to 30 hours
+ *   same day       confirmed seats that never got the day-before reminder
+ *                  (booked too late for it): about 3 hours before the start,
+ *                  or, when that falls in quiet hours, at the last allowed
+ *                  hour before the start (sameDayDue)
  *   window open    checked-in members of events that ended 1 to 14 hours ago,
  *                  while the 72-hour People I Met window is open
  *
  * Messages are in-app notifications, plus Web Push for members who turned it
  * on. Nothing is sent from 21:00 to 08:00 Bangkok time: the windows above are
  * wide enough that a held message goes out at 08:00. Each message is sent
- * once per member and event; the notification row is the record, so a task
- * that arrives twice sends nothing new. Members who said no to event
- * reminders at sign-up get neither.
+ * once per member and event, and a seat gets the day-before or the same-day
+ * reminder, never both. The notification row is the record, and its id is
+ * made from the kind, member and link, so two runs at once (a task that
+ * arrives twice) insert it once and only the run that inserted it pushes.
+ * Members who said no to event reminders get none of these.
  *
  * An admin starts and stops the chain from /admin. Locally there are no
  * stateful objects; tests call runClock directly.
  */
-import { and, desc, eq, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import type { Bindings } from "../lib/env";
 import { fmtParts, type Lang } from "../lib/i18n";
-import { newId } from "../lib/crypto";
+import { sha256 } from "../lib/crypto";
 import { createLogger } from "../logger";
 import { OPEN_TO_MORE_TAG, PEOPLE_WINDOW_HOURS } from "../domain/rules";
 import { accounts, consents, events, notifications, profiles, registrations, type Event } from "../schema";
@@ -36,9 +42,14 @@ const CLOCK_OBJECT = "clock:app";
 const BATCH = 500;
 
 export const KIND_TOMORROW = "event_tomorrow";
+export const KIND_TODAY = "event_today";
 export const KIND_WINDOW = "people_window";
+/** The same-day reminder aims for this long before the start. */
+export const SAME_DAY_LEAD_MS = 3 * HOUR;
+/** Below this, the day-before reminder's window (18 to 30 hours) has passed. */
+const DAY_BEFORE_MIN_MS = 18 * HOUR;
 
-export type ClockRun = { retention: boolean; quiet: boolean; tomorrow: number; windowOpen: number; pushed: number };
+export type ClockRun = { retention: boolean; quiet: boolean; tomorrow: number; today: number; windowOpen: number; pushed: number };
 
 /** The next hourly slot after `firedAt`, skipping any that already passed. */
 export function nextSlot(firedAt: number, now: number): number {
@@ -51,6 +62,23 @@ export function nextSlot(firedAt: number, now: number): number {
 export function quietHours(now: Date): boolean {
   const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Bangkok" }).format(now));
   return h >= 21 || h < 8;
+}
+
+/**
+ * Should the hourly run at `now` send the same-day reminder for a table at
+ * `startsAt`? Yes once the table is 3 hours away or less. Earlier than that
+ * only when no later hourly run before the start is outside quiet hours:
+ * then this is the last allowed chance (a table at 00:30 is reminded at
+ * 20:00; one at 09:00 waits for 08:00). Never in quiet hours, never after
+ * the start.
+ */
+export function sameDayDue(startsAt: Date, now: Date): boolean {
+  const start = startsAt.getTime();
+  const left = start - now.getTime();
+  if (left <= 0 || left >= DAY_BEFORE_MIN_MS || quietHours(now)) return false;
+  if (left <= SAME_DAY_LEAD_MS) return true;
+  for (let at = now.getTime() + HOUR; at < start; at += HOUR) if (!quietHours(new Date(at))) return false;
+  return true;
 }
 
 export async function startClock(env: Bindings, now: Date = new Date()): Promise<number> {
@@ -101,7 +129,7 @@ function usable(now: Date) {
 }
 
 export async function runClock(env: Bindings, now: Date = new Date()): Promise<ClockRun> {
-  const out: ClockRun = { retention: false, quiet: false, tomorrow: 0, windowOpen: 0, pushed: 0 };
+  const out: ClockRun = { retention: false, quiet: false, tomorrow: 0, today: 0, windowOpen: 0, pushed: 0 };
   const before = await retentionIfDue(env, "system", now);
   out.retention = !!before && before.at.getTime() === now.getTime();
   if (quietHours(now)) {
@@ -132,6 +160,37 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   out.tomorrow = sentTomorrow.sent;
   out.pushed += sentTomorrow.pushed;
 
+  // Same day: confirmed seats starting within 18 hours, when this run is the
+  // one sameDayDue picks. A seat that had the day-before reminder is skipped
+  // in sendOnce (it runs after the day-before send, so this run's count too).
+  const soon = await db
+    .select({ accountId: registrations.accountId, locale: profiles.locale, event: events })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .innerJoin(accounts, eq(accounts.id, registrations.accountId))
+    .innerJoin(profiles, eq(profiles.accountId, registrations.accountId))
+    .where(
+      and(
+        eq(events.status, "published"),
+        eq(registrations.status, "confirmed"),
+        usable(now),
+        gt(events.startsAt, now),
+        lt(events.startsAt, new Date(t + DAY_BEFORE_MIN_MS)),
+      ),
+    )
+    .limit(BATCH);
+  const sentToday = await sendOnce(
+    env,
+    KIND_TODAY,
+    soon.filter((d) => sameDayDue(d.event.startsAt, now)),
+    (d) => `/me/events/${d.event.id}/pass`,
+    (d, lang) => tomorrowText(d.event, lang, now),
+    3 * 3600,
+    [KIND_TOMORROW],
+  );
+  out.today = sentToday.sent;
+  out.pushed += sentToday.pushed;
+
   // Window open: people who checked in to an event that ended 1 to 14 hours ago.
   const ended = await db
     .select({ accountId: registrations.accountId, locale: profiles.locale, event: events })
@@ -155,7 +214,19 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   return out;
 }
 
-/** Writes one notification per (member, link) that has none of this kind yet, and pushes it. */
+/**
+ * The notification id for one message: the same kind, member and link always
+ * give the same id, so a second run inserting it at the same moment hits the
+ * primary key and inserts nothing (no schema change, no lock to hold).
+ */
+export function clockNotificationId(kind: string, accountId: string, link: string): Promise<string> {
+  return sha256(`clock ${kind} ${accountId} ${link}`).then((h) => `clk_${h}`);
+}
+
+/**
+ * Writes one notification per (member, link) that has none of this kind (or
+ * of the `blockedBy` kinds) yet, and pushes only the ones this call inserted.
+ */
 async function sendOnce(
   env: Bindings,
   kind: string,
@@ -163,6 +234,7 @@ async function sendOnce(
   linkOf: (d: Due) => string,
   textOf: (d: Due, lang: Lang) => string,
   ttl: number,
+  blockedBy: string[] = [],
 ): Promise<{ sent: number; pushed: number }> {
   if (!due.length) return { sent: 0, pushed: 0 };
   const db = getDb(env);
@@ -177,8 +249,8 @@ async function sendOnce(
     db
       .select({ accountId: notifications.accountId, link: notifications.link })
       .from(notifications)
-      .where(and(eq(notifications.kind, kind), sql`(${notifications.accountId}, ${notifications.link}) in (${pairs})`))
-      .limit(due.length * 2),
+      .where(and(inArray(notifications.kind, [kind, ...blockedBy]), sql`(${notifications.accountId}, ${notifications.link}) in (${pairs})`))
+      .limit(due.length * (2 + blockedBy.length)),
     // The newest answer per member, however many times anyone saved their consents.
     db
       .selectDistinctOn([consents.accountId], { accountId: consents.accountId, granted: consents.granted })
@@ -192,15 +264,20 @@ async function sendOnce(
   const optedOut = new Set(said.filter((c) => !c.granted).map((c) => c.accountId));
   const todo = due.filter((d) => !optedOut.has(d.accountId) && !done.has(`${d.accountId} ${linkOf(d)}`));
   if (!todo.length) return { sent: 0, pushed: 0 };
-  await db.insert(notifications).values(
-    todo.map((d) => ({ id: newId(), accountId: d.accountId, kind, titleTh: textOf(d, "th"), titleEn: textOf(d, "en"), link: linkOf(d) })),
+  const rows = await Promise.all(
+    todo.map(async (d) => ({ id: await clockNotificationId(kind, d.accountId, linkOf(d)), accountId: d.accountId, kind, titleTh: textOf(d, "th"), titleEn: textOf(d, "en"), link: linkOf(d) })),
   );
+  // Only rows this run actually inserted are pushed: a run racing this one gets nothing back for them.
+  const inserted = new Set(
+    (await db.insert(notifications).values(rows).onConflictDoNothing({ target: notifications.id }).returning({ id: notifications.id })).map((r) => r.id),
+  );
+  const mineToSend = todo.filter((_, i) => inserted.has(rows[i].id));
   let pushed = 0;
-  for (const d of todo) {
+  for (const d of mineToSend) {
     const lang: Lang = d.locale === "en" ? "en" : "th";
     pushed += await pushToAccount(env, db, d.accountId, { title: "Jurrgun", body: textOf(d, lang), url: linkOf(d), tag: `${kind}:${d.event.id}` }, ttl);
   }
-  return { sent: todo.length, pushed };
+  return { sent: mineToSend.length, pushed };
 }
 
 /** Event titles stay off lock screens for Open to something more events. */
@@ -219,20 +296,22 @@ export function bangkokDaysApart(now: Date, at: Date): number {
 }
 
 /**
- * "Tomorrow" only when the event really is on tomorrow's date in Bangkok. A
- * table just after midnight can be reminded the evening two days before
- * (quiet hours hold the later slots), so that one names the weekday instead.
+ * The reminder's text, for the day-before and the same-day reminder. It says
+ * "today" or "tomorrow" only when the event really is on that date in
+ * Bangkok. A table just after midnight can be reminded the evening two days
+ * before (quiet hours hold the later slots), so that one names the weekday.
  */
 export function tomorrowText(e: Event, lang: Lang, now: Date): string {
   const time = fmtParts(e.startsAt, lang).time;
   const name = shownTitle(e, lang);
-  const isTomorrow = bangkokDaysApart(now, e.startsAt) === 1;
+  const days = bangkokDaysApart(now, e.startsAt);
   const weekday = new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { weekday: "long", timeZone: "Asia/Bangkok" }).format(e.startsAt);
   if (lang === "en") {
-    const when = isTomorrow ? `Tomorrow at ${time}` : `${weekday} at ${time}`;
-    return name ? `${when}: ${name}, at ${e.venueName}. Your pass is ready.` : `You have a table ${isTomorrow ? "tomorrow" : `on ${weekday}`} at ${time}. Your pass is ready.`;
+    const day = days === 0 ? "today" : days === 1 ? "tomorrow" : `on ${weekday}`;
+    const when = days === 0 ? `Today at ${time}` : days === 1 ? `Tomorrow at ${time}` : `${weekday} at ${time}`;
+    return name ? `${when}: ${name}, at ${e.venueName}. Your pass is ready.` : `You have a table ${day} at ${time}. Your pass is ready.`;
   }
-  const when = isTomorrow ? `พรุ่งนี้ ${time}` : `${weekday} ${time}`;
+  const when = days === 0 ? `วันนี้ ${time}` : days === 1 ? `พรุ่งนี้ ${time}` : `${weekday} ${time}`;
   return name ? `${when} ${name} ที่ ${e.venueName} บัตรเข้างานพร้อมแล้ว` : `${when} คุณมีนัดที่โต๊ะ บัตรเข้างานพร้อมแล้ว`;
 }
 

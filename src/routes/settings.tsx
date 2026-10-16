@@ -379,7 +379,23 @@ settingsRoutes.post("/settings/push", async (c) => {
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
   const mine = await db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, user.account.id)).orderBy(asc(pushSubscriptions.createdAt)).limit(20);
   if (mine.length >= 10) await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, mine[0].id));
-  await db.insert(pushSubscriptions).values({ id: newId(), accountId: user.account.id, endpoint, p256dh, auth });
+  // Notifications on this phone means event reminders too (the consent the hourly clock reads),
+  // so switching on also says yes there when the latest answer was no.
+  const [said] = await db
+    .select({ granted: consents.granted })
+    .from(consents)
+    .where(and(eq(consents.accountId, user.account.id), eq(consents.category, "notifications")))
+    .orderBy(desc(consents.createdAt))
+    .limit(1);
+  await batch(c.env, [
+    db.insert(pushSubscriptions).values({ id: newId(), accountId: user.account.id, endpoint, p256dh, auth }),
+    ...(said?.granted
+      ? []
+      : [
+          db.insert(consents).values({ id: newId(), accountId: user.account.id, category: "notifications", granted: true, version: CONSENT_VERSION }),
+          audit(db, user.account.id, "consent.updated", { type: "account", id: user.account.id }, { changed: ["notifications"], via: "push_switch" }),
+        ]),
+  ]);
   return c.json({ ok: true });
 });
 
