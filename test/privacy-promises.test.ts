@@ -285,19 +285,27 @@ describe("Terms and safety page match the rules", () => {
 });
 
 describe("the contact line and no placeholders", () => {
-  it("the notice has the BMA privacy contact, word for word", async () => {
-    expect(words(await get("/privacy", "th"))).toContain(
-      "ติดต่อเรื่องข้อมูลส่วนตัว: กรุงเทพมหานคร (ผู้ดูแลและกำกับบริการ) ศาลาว่าการกรุงเทพมหานคร 173 ถนนดินสอ แขวงเสาชิงช้า เขตพระนคร กรุงเทพฯ 10200 · สายด่วน 1555",
-    );
-    expect(words(await get("/privacy", "en"))).toContain(
-      "Privacy contact: Bangkok Metropolitan Administration (host and overseer of this service), Bangkok City Hall, 173 Dinso Road, Sao Chingcha, Phra Nakhon, Bangkok 10200 · Hotline 1555",
-    );
+  it("privacy requests go to the Jurrgun team, and a placeholder address is marked as one (owner)", async () => {
+    const { PRIVACY_CONTACT, PRIVACY_EMAIL, PRIVACY_EMAIL_IS_PLACEHOLDER } = await import("../src/content/privacy");
+    expect(words(await get("/privacy", "th"))).toContain(PRIVACY_CONTACT.th);
+    expect(words(await get("/privacy", "en"))).toContain(PRIVACY_CONTACT.en);
+    expect(PRIVACY_CONTACT.en).toContain("Jurrgun team");
+    if (PRIVACY_EMAIL_IS_PLACEHOLDER) {
+      expect(PRIVACY_EMAIL.endsWith(".example")).toBe(true);
+      expect(PRIVACY_CONTACT.en).toContain("placeholder address");
+      expect(PRIVACY_CONTACT.th).toContain("ชั่วคราว");
+    }
+  });
+
+  it("the BMA stays the general host contact in the Terms", async () => {
+    expect(words(await get("/terms", "en"))).toContain("Bangkok City Hall");
   });
 
   it("the notice, Terms, safety page and consent words have no placeholders or dashes", async () => {
     for (const path of ["/privacy", "/terms", "/safety/how"]) {
       for (const lang of ["th", "en"] as const) {
-        const text = words(await get(path, lang));
+        // the marked privacy-contact placeholder is the one allowed exception (owner, 16 Oct 2026)
+        const text = words(await get(path, lang)).replace(/\(placeholder address[^)]*\)/g, "");
         expect(text, `${path} ${lang}`).not.toContain("[");
         expect(text, `${path} ${lang}`).not.toMatch(/to be provided|placeholder|TBD|TODO|รอเจ้าของ|รอระบุ/i);
         expect(text, `${path} ${lang}`).not.toMatch(DASHES);

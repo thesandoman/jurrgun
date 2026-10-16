@@ -236,9 +236,16 @@ export const CONTACT_ADDRESS: Text = {
   en: "Bangkok Metropolitan Administration (host and overseer of this service), Bangkok City Hall, 173 Dinso Road, Sao Chingcha, Phra Nakhon, Bangkok 10200 · Hotline 1555",
 };
 
+/**
+ * Privacy requests go to the data controller, the Jurrgun team (owner, 16 Oct 2026), not to the BMA,
+ * which stays the general host contact (CONTACT_ADDRESS). The address is a clearly marked placeholder
+ * on the reserved .example domain until the owner gives the real one: swap PRIVACY_EMAIL then.
+ */
+export const PRIVACY_EMAIL = "privacy@jurrgun.example";
+export const PRIVACY_EMAIL_IS_PLACEHOLDER = true;
 export const PRIVACY_CONTACT: Text = {
-  th: `ติดต่อเรื่องข้อมูลส่วนตัว: ${CONTACT_ADDRESS.th}`,
-  en: `Privacy contact: ${CONTACT_ADDRESS.en}`,
+  th: `ติดต่อเรื่องข้อมูลส่วนตัว: ทีม Jurrgun ที่ ${PRIVACY_EMAIL}${PRIVACY_EMAIL_IS_PLACEHOLDER ? " (ที่อยู่อีเมลชั่วคราว ที่อยู่จริงจะแจ้งเร็ว ๆ นี้)" : ""}`,
+  en: `Privacy contact: the Jurrgun team at ${PRIVACY_EMAIL}${PRIVACY_EMAIL_IS_PLACEHOLDER ? " (placeholder address, the real one is coming soon)" : ""}`,
 };
 
 /** The in-app route for a problem with a person or an event. */
