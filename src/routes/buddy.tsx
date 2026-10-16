@@ -501,6 +501,28 @@ const SHORT_NAMES: Map<string, string> = (() => {
 })();
 const shortName = (en: string) => SHORT_NAMES.get(en) ?? en.slice(0, 3);
 
+/**
+ * Thai stamps show Thai initials (owner card): the first consonant of a common
+ * prefix (บาง, คลอง, ลาด...) and of the rest, so บางกะปิ → บก, ปทุมวัน → ปท,
+ * with a consonant more where two would match.
+ */
+const TH_PREFIX = ["บาง", "คลอง", "ลาด", "หนอง", "ทุ่ง", "ดอน", "ห้วย", "สะพาน", "ราษฎร์", "ภาษี", "ป้อม", "บึง", "มีน", "สาย", "ประ", "ราช", "สาม", "วัง", "พระ", "ดิน", "จอม", "ตลิ่ง", "ทวี", "ยาน", "สวน", "หลัก", "คัน"];
+const SHORT_TH: Map<string, string> = (() => {
+  const consonants = (x: string) => x.replace(/[^\u0E01-\u0E2E]/g, "");
+  const used = new Set<string>();
+  const out = new Map<string, string>();
+  for (const d of [...DISTRICTS].sort((a, b) => a.value.localeCompare(b.value))) {
+    const all = consonants(d.th);
+    const pre = TH_PREFIX.find((x) => d.th.startsWith(x) && d.th.length > x.length + 1);
+    const rest = pre ? consonants(d.th.slice(pre.length)) : "";
+    const tries = pre ? [consonants(pre)[0] + rest[0], consonants(pre)[0] + rest.slice(0, 2), all.slice(0, 3)] : [all.slice(0, 2), all[0] + all[2], all.slice(0, 3)];
+    const code = tries.find((x) => x && !x.includes("undefined") && !used.has(x)) ?? all.slice(0, 4);
+    used.add(code);
+    out.set(d.value, code);
+  }
+  return out;
+})();
+
 /** Stamps earned in the last three days land with a stamp animation. */
 const FRESH_STAMP_MS = 3 * 86_400_000;
 function freshStamps(rows: { district: string; createdAt: Date }[], now = new Date()): Set<string> {
@@ -517,7 +539,7 @@ function Passport(props: {
   wish?: string[];
 }) {
   const { t, lang } = props.v;
-  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: shortName(d.en), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value), fresh: props.fresh?.has(d.value) }));
+  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: lang === "en" ? shortName(d.en) : SHORT_TH.get(d.value) ?? d.th.slice(0, 2), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value), fresh: props.fresh?.has(d.value) }));
   const wish = new Set((props.wish ?? []).filter((d) => !props.stamped.has(d)));
   // Stamped first in the compact view, so progress is visible at a glance; then the ones they want to explore.
   const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on && wish.has(x.key)), ...items.filter((x) => !x.on && !wish.has(x.key))].slice(0, 12);

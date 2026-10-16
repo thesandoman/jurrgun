@@ -29,6 +29,8 @@ export function MeHub(props: {
   steps: MeStep[];
   type: Child;
   badge?: Child;
+  /** A one-time question shown under the numbers (e.g. "Still new to Bangkok?"). */
+  ask?: Child;
   links: MeLink[];
   /** One-tap switches shown above the menu. */
   quick?: Child;
@@ -72,6 +74,8 @@ export function MeHub(props: {
           </a>
         ))}
       </nav>
+
+      {props.ask ?? null}
 
       {pct < 100 ? (
         <section class="me-grow">

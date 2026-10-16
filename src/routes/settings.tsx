@@ -274,6 +274,21 @@ settingsRoutes.get("/settings", async (c) => {
       place={[label(DISTRICTS, p.district, lang), p.showPronouns && p.pronouns ? p.pronouns : ""].filter(Boolean).join(" · ")}
       memberSince={memberSince}
       newcomer={p.newcomer}
+      ask={
+        // Six months in, still marked new: ask once instead of keeping the label (and the newcomer card on Discover) forever.
+        p.newcomer && !bio.newcomerAsked && created && now.getTime() - created.getTime() > 182 * 86_400_000 ? (
+          <form method="post" action="/settings/newcomer" class="card me-ask">
+            <p>
+              <strong>🌱 {t("ยังรู้สึกว่าเพิ่งมากรุงเทพฯ อยู่ไหม?", "Still new to Bangkok?")}</strong>
+              <small class="muted">{t(`อยู่กับเรามา ${memberSince} แล้ว ถ้าไม่ใช่ เราจะเอาป้าย "มาใหม่" ออกให้`, `You've been here since ${memberSince}. If not, we'll take off the "New to Bangkok" label.`)}</small>
+            </p>
+            <div class="row">
+              <button class="btn ghost" name="still" value="1">{t("ยังใหม่อยู่", "Yes, still new")}</button>
+              <button class="btn primary" name="still" value="0">{t("ไม่ใหม่แล้ว", "Not anymore")}</button>
+            </div>
+          </form>
+        ) : undefined
+      }
       interests={p.interests}
       stats={[
         { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไปมา", "Events been"), href: "/me/events#past", tint: "green" },
@@ -354,6 +369,19 @@ settingsRoutes.post("/settings/quick", async (c) => {
       break;
   }
   if (Object.keys(set).length) await getDb(c.env).update(profiles).set({ ...set, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+  return c.redirect("/settings?notice=saved");
+});
+
+// "Still new to Bangkok?" (asked once, six months in): Not anymore takes the label off.
+settingsRoutes.post("/settings/newcomer", async (c) => {
+  const user = me(c);
+  const p = user.profile!;
+  const body = await c.req.parseBody();
+  const still = str(body.still) === "1";
+  await getDb(c.env)
+    .update(profiles)
+    .set({ newcomer: still ? p.newcomer : false, bio: { ...cleanBio(p.bio), newcomerAsked: true }, updatedAt: new Date() })
+    .where(eq(profiles.accountId, user.account.id));
   return c.redirect("/settings?notice=saved");
 });
 

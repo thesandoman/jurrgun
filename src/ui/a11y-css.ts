@@ -167,6 +167,10 @@ main details>summary{min-height:44px;display:flex;align-items:center}
 .me-peek,.me-lang a{display:inline-flex;align-items:center;min-height:44px}
 .passport-card>a,details.how li>a,.safety-row>a{display:inline-flex;align-items:center;min-height:44px}
 
+/* Me: a one-time question under the numbers. */
+.me-ask p{display:grid;gap:4px;margin:0 0 10px}
+.me-ask .row{gap:8px;flex-wrap:wrap}
+
 /* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
 .flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
 .flow-body .field-label+.muted{margin-top:-2px}

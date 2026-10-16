@@ -1304,6 +1304,8 @@ export type Answer = { kind: string; value: string | number | string[]; photoKey
 export type Bio = {
   /** Private, with gender "self": the member's own words. Never shown to anyone, staff included. */
   genderSelf?: string;
+  /** Asked "Still new to Bangkok?" (six months in) and answered: don't ask again. */
+  newcomerAsked?: boolean;
   /** Romance data, with the dating gender identity "self": the member's own words. Private, deleted with romance mode. */
   datingGenderSelf?: string;
   comm?: string[];
@@ -1463,6 +1465,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.bkkTime)) out.bkkTime = s(b.bkkTime);
   if (s(b.hometown)) out.hometown = s(b.hometown);
   if (s(b.genderSelf)) out.genderSelf = s(b.genderSelf)!.slice(0, 30);
+  if (b.newcomerAsked === true) out.newcomerAsked = true;
   if (s(b.datingGenderSelf)) out.datingGenderSelf = s(b.datingGenderSelf)!.slice(0, 30);
   if (b.guide === true) out.guide = true;
   if (s(b.learning)) out.learning = s(b.learning);

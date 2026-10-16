@@ -27,6 +27,12 @@ import {
 
 /** Shape of social_profiles.bio. Kept here so the schema has no app imports. */
 export type ProfileBio = {
+  /** Private: a self-described gender, in the member's own words. */
+  genderSelf?: string;
+  /** Romance data: a self-described dating identity. Deleted with romance mode. */
+  datingGenderSelf?: string;
+  /** "Still new to Bangkok?" has been asked and answered. */
+  newcomerAsked?: boolean;
   comm?: string[];
   occupation?: string;
   occupationOther?: string;

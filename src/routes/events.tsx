@@ -632,7 +632,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
           })}
         </nav>
       </div>
-      <ForYou v={v} segment={segmentOf(user.profile)} />
+      <ForYou v={v} segment={segmentOf(user.profile)} newcomer={cleanBio(user.profile.bio).newcomerAsked ? user.profile.newcomer : undefined} />
       {myVibe.length === 0 ? (
         <Card class="hint quiz-hint">
           <div class="spread">
@@ -764,7 +764,7 @@ function mapChips(list: Event[], lang: Lang): MapChip[] {
  * The first card on Discover, different for locals, newcomers and
  * internationals (domain/segment.ts). Suggestions only: everyone sees every event.
  */
-function ForYou(props: { v: View; segment: Segment }) {
+function ForYou(props: { v: View; segment: Segment; newcomer?: boolean }) {
   const { t } = props.v;
   const card = (title: string, body: string, links: [string, string][]) => (
     <Card class="hint for-you">
@@ -777,6 +777,16 @@ function ForYou(props: { v: View; segment: Segment }) {
       </p>
     </Card>
   );
+  // Settled in (they said "Not anymore"): the same shortcuts, without the welcome.
+  if (props.segment === "international" && props.newcomer === false)
+    return card(
+      t("โต๊ะที่คุยภาษาอังกฤษได้สัปดาห์นี้", "English-friendly this week"),
+      t("โต๊ะที่ใช้ภาษาอังกฤษได้และโต๊ะแลกเปลี่ยนภาษา", "English-friendly and language-exchange tables."),
+      [
+        ["/events?tag=english_friendly", t("โต๊ะที่ใช้ภาษาอังกฤษได้", "English-friendly tables")],
+        ["/events?tag=language_exchange", t("แลกเปลี่ยนภาษา", "Language exchange")],
+      ],
+    );
   if (props.segment === "international")
     return card(
       t("ยินดีต้อนรับสู่กรุงเทพฯ 👋", "Welcome to Bangkok 👋"),
