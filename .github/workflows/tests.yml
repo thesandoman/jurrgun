@@ -1,0 +1,46 @@
+name: Tests
+
+# Runs the full test suite on GitHub's machines instead of a laptop (owner, 2026-10-16:
+# "find a way to delegate"). Push work to a ci/* branch, wait for this to pass, then push
+# the same commit to main, which deploys through deploy.yml (managed by SV Cloud, left alone).
+# Never deploys anything and has no secrets.
+
+on:
+  push:
+    branches: ["ci/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          lfs: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npx vitest run --maxWorkers=2 --testTimeout=30000
