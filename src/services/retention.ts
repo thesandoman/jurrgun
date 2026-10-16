@@ -11,6 +11,7 @@
  *                             and are untouched
  *   expired sessions          once past expires_at
  *   login attempts            after 24 hours (throttling looks back 1 hour at most)
+ *   email sign-in codes       after 24 hours (each one expires after 10 minutes)
  *   check-in and group detail 12 months after the event: group numbers, who
  *                             checked them in and how, +1 links and buddy
  *                             pairs are cleared; the registration row and its
@@ -19,7 +20,8 @@
  *   deactivated accounts      30 days after deactivation, unless a moderation
  *                             hold applies (an open or in-review report about
  *                             them): profile, vibe, sessions, notifications,
- *                             contact shares and consents are hard-deleted, the
+ *                             contact shares, consents, sign-in emails and their
+ *                             codes are hard-deleted, the
  *                             account row is anonymised and its research_id link
  *                             cut, and their feedback comments are blanked
  *                             (the ratings stay, unlinked). Reports, moderation actions and audit rows
@@ -31,6 +33,7 @@
 import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, notExists, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
+import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
 import { deleteObject, type StorageEnv } from "../storage";
 import {
@@ -44,6 +47,8 @@ import {
   events,
   feedback,
   loginAttempts,
+  loginCodes,
+  emailLinks,
   notifications,
   pushSubscriptions,
   oauthLinks,
@@ -84,6 +89,7 @@ export type RetentionCounts = {
   choicesDeleted: number;
   sessionsDeleted: number;
   loginAttemptsDeleted: number;
+  loginCodesDeleted: number;
   checkInsAggregated: number;
   researchAnswersDeleted: number;
   accountsDeleted: number;
@@ -111,7 +117,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .limit(500);
   await dropFiles(env, oldPhotos.map((p) => p.key!));
 
-  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld] = await batch(env, [
+  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld] = await batch(env, [
     db
       .update(registrations)
       .set({ socialSignal: null, signalTopics: null })
@@ -143,6 +149,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     db.delete(wellbeing).where(lt(wellbeing.createdAt, researchCutoff)).returning({ id: wellbeing.id }),
     db.delete(chatMessages).where(lt(chatMessages.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY))),
     db.delete(safeArrivals).where(lt(safeArrivals.createdAt, new Date(now.getTime() - CHAT_RETENTION_DAYS * DAY))),
+    db.delete(loginCodes).where(lt(loginCodes.createdAt, new Date(now.getTime() - CODE_RETENTION_HOURS * HOUR))).returning({ id: loginCodes.id }),
   ]);
 
   // 2. Deactivated accounts past 30 days, without a moderation hold. Bounded.
@@ -175,6 +182,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     choicesDeleted: choices.length,
     sessionsDeleted: sess.length,
     loginAttemptsDeleted: attempts.length,
+    loginCodesDeleted: codesOld.length,
     checkInsAggregated: checkIns.length,
     researchAnswersDeleted: pulseOld.length + wellOld.length,
     accountsDeleted: ids.length,
@@ -201,6 +209,9 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.update(feedback).set({ comment: "" }).where(inArray(feedback.accountId, ids)),
       // Frees their Google / LINE identity, so they can sign up again later.
       db.delete(oauthLinks).where(inArray(oauthLinks.accountId, ids)),
+      // Their sign-in email (a hash only) and any codes still waiting for it.
+      db.delete(loginCodes).where(inArray(loginCodes.emailHash, db.select({ h: emailLinks.emailHash }).from(emailLinks).where(inArray(emailLinks.accountId, ids)))),
+      db.delete(emailLinks).where(inArray(emailLinks.accountId, ids)),
       // Their mutual connections end, so the other person no longer sees them.
       db
         .update(connections)

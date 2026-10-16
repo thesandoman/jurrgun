@@ -82,6 +82,7 @@ import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import { allowedEndpoint } from "../lib/webpush";
 import { vapidKeys } from "../services/push";
 import { PushSwitch } from "../ui/push-switch";
+import { emailEnabled } from "../services/email-code";
 import type { AppEnv } from "../lib/env";
 import { audit } from "../lib/records";
 import { requireMember, SESSION_COOKIE } from "../lib/session";
@@ -100,6 +101,7 @@ import {
   notifications,
   pushSubscriptions,
   oauthLinks,
+  emailLinks,
   strikes,
   vibes,
   profiles,
@@ -356,6 +358,9 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ไม่ระบุตัวตน", "Quick, anonymous city questions"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
         { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ความยินยอม ดาวน์โหลดข้อมูล ปิดบัญชี", "Consents, download my data, deactivate"), tint: "mint", group: gAcct },
+        ...(emailEnabled(c.env)
+          ? [{ href: "/settings/email", emoji: "✉️", title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), hint: t("เข้าสู่ระบบด้วยรหัสทางอีเมล", "Sign in with a code by email"), tint: "sky" as const, group: gAcct }]
+          : []),
         // Google / LINE accounts have no password to change.
         ...(isPasswordless(user.account.username)
           ? []
@@ -1404,7 +1409,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)).limit(20),
   ]);
 
-  const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked] = await Promise.all([
+  const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked, [emails]] = await Promise.all([
     db
       .select({ type: vibes.archetype, modifier: vibes.modifier, scores: vibes.vector, visibleToGroupmates: vibes.visible, takenAt: vibes.takenAt })
       .from(vibes)
@@ -1444,6 +1449,8 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
       .where(eq(invites.usedBy, id))
       .limit(1000),
     db.select({ provider: oauthLinks.provider, linkedAt: oauthLinks.createdAt }).from(oauthLinks).where(eq(oauthLinks.accountId, id)).limit(10),
+    // Only a hash of the address is stored, so the export can say how many, not which.
+    db.select({ n: count() }).from(emailLinks).where(eq(emailLinks.accountId, id)),
   ]);
 
   // Other people in my connections and blocks: nickname only.
@@ -1473,6 +1480,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     invitesICreated: invitesMade.map((x) => ({ event: x.event, used: !!x.used, createdAt: x.createdAt })),
     invitesIAccepted: inviteUsed,
     signInWith: linked,
+    signInEmails: Number(emails?.n ?? 0),
     notifications: notes,
     notificationDevices: pushDevices.length,
     cityPulse: { answers: pulse, wellbeing: wb },
@@ -1520,6 +1528,7 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.delete(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)),
     // Unlink Google / LINE now: signing in with them again starts a fresh account.
     db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
+    db.delete(emailLinks).where(eq(emailLinks.accountId, id)),
     audit(db, id, "account.deactivated", { type: "account", id }),
   ]);
   await releaseUpcomingSeats(c.env, id);
