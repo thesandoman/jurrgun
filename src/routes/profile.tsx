@@ -231,7 +231,8 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
           <ul>
             {metAt.map((e) => (
               <li>
-                <a href={`/events/${e.id}`}>{v.lang === "en" ? e.titleEn || e.title : e.title}</a> <span class="muted">· {fmtDay(e.startsAt, v.lang)}</span>
+                <a href={`/events/${e.id}`}>{v.lang === "en" ? e.titleEn || e.title : e.title}</a>
+                <small class="muted">{fmtDay(e.startsAt, v.lang)}</small>
               </li>
             ))}
           </ul>

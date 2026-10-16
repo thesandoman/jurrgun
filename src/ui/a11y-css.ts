@@ -701,8 +701,10 @@ details.sheet[open]>.sheet-more{background:var(--surface-2)}
 /* B1: the full meeting history now sits on the person's profile. */
 .card.met-at h2.eyebrow{margin:0 0 6px;font-size:.8rem}
 .met-at ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
-.met-at li{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
-.met-at li a{display:inline-flex;align-items:center;min-height:44px}
+.met-at ul{gap:8px}
+.met-at li{display:grid}
+.met-at li a{display:inline-flex;align-items:center;min-height:44px;line-height:1.3}
+.met-at li small{margin-top:-8px}
 /* B4 Buddy: Chat and ⋯ under the buddy card; cards inside the Sheet sit flat. Quest progress in words, ✓ when done. */
 .buddy-acts{margin:0 4px 16px}
 .sheet-body .card{margin:8px 0;padding:12px;box-shadow:none}
