@@ -105,6 +105,9 @@ export function Flow(props: {
       data-start={props.start ? String(props.start) : undefined}
       data-next={t("ต่อไป", "Next")}
       data-skip={t("ข้าม", "Skip")}
+      data-miss-check={t("ติ๊กช่องนี้ก่อนจึงจะไปต่อได้", "Tick this box to continue.")}
+      data-miss-pick={t("เลือกหนึ่งข้อก่อนนะ", "Pick one to continue.")}
+      data-miss-field={t("กรอกช่องนี้ก่อนนะ", "Please fill this in.")}
       data-done={props.submit}
     >
       <div class="flow-top">
@@ -198,7 +201,7 @@ function show(n,dir,push){
 }
 function valid(st){
   var els=[].slice.call(st.querySelectorAll("input,select,textarea"));
-  for(var k=0;k<els.length;k++){if(!els[k].checkValidity()){els[k].reportValidity();return false}}
+  for(var k=0;k<els.length;k++){var el=els[k];el.setCustomValidity("");if(!el.checkValidity()){if(el.validity.valueMissing)el.setCustomValidity(el.type==="checkbox"?f.dataset.missCheck:el.type==="radio"?f.dataset.missPick:f.dataset.missField);el.reportValidity();return false}}
   var need=+(st.dataset.need||0),sum=+(st.dataset.sum||0),msg=st.querySelector(".flow-need");
   function fail(){if(msg){msg.textContent=st.dataset.needText||"";msg.hidden=false}st.classList.remove("shake");void st.offsetWidth;st.classList.add("shake");return false}
   if(need&&st.querySelectorAll("input:checked").length<need)return fail();
@@ -206,14 +209,16 @@ function valid(st){
   if(st.dataset.allOrNone==="1"){var sel=st.querySelectorAll("select"),set=0;[].forEach.call(sel,function(x){if(x.value)set++});if(set&&set<sel.length)return fail()}
   if(msg)msg.hidden=true;return true;
 }
-function quiet(st){var els=st.querySelectorAll("input,select,textarea");for(var k=0;k<els.length;k++){if(!els[k].checkValidity())return false}return true}
+function quiet(st){var els=st.querySelectorAll("input,select,textarea");for(var k=0;k<els.length;k++){els[k].setCustomValidity("");if(!els[k].checkValidity())return false}return true}
 function all(){for(var j=0;j<steps.length;j++){if(!quiet(steps[j])){if(j!==i)show(j,j<i?-1:1,false);valid(steps[j]);return false}}return true}
 function go(){if(busy)return;if(!valid(steps[i]))return;if(i<steps.length-1)show(i+1,1,true);else if(all())submit()}
 function submit(){busy=1;next.disabled=true;next.classList.add("is-busy");if(f.requestSubmit)f.requestSubmit();else f.submit()}
 f.addEventListener("submit",function(e){if(busy)return;if(e.submitter&&e.submitter!==next)return;if(i<steps.length-1){e.preventDefault();go()}else if(!valid(steps[i])||!all()){e.preventDefault()}else{busy=1;next.classList.add("is-busy")}});
 back.addEventListener("click",function(){if(pushed>0&&history.state&&typeof history.state.flow==="number")history.back();else show(i-1,-1,false)});
 window.addEventListener("popstate",function(e){var n=e.state&&typeof e.state.flow==="number"?e.state.flow:0;if(n<i)pushed=Math.max(0,pushed-1);else if(n>i)pushed++;if(n!==i)show(n,n>i?1:-1,false)});
-f.addEventListener("change",function(e){
+function clear(e){var x=e.target;if(!x.setCustomValidity)return;if(x.name)[].forEach.call(f.querySelectorAll('[name="'+x.name+'"]'),function(y){y.setCustomValidity("")});else x.setCustomValidity("")}
+f.addEventListener("input",clear);
+f.addEventListener("change",function(e){clear(e);
   var st=steps[i];if(!st||st.dataset.auto!=="1"||e.target.type!=="radio"||!st.contains(e.target))return;
   setTimeout(function(){if(steps[i]!==st)return;if(i<steps.length-1)show(i+1,1,true);else if(f.dataset.autosubmit==="1"&&all())submit()},reduce?60:220);
 });

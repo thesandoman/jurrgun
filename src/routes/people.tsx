@@ -466,7 +466,8 @@ type CircleRow = {
   id: string;
   level: string;
   createdAt: Date;
-  other: { id: string; name: string; resident: boolean; vibe?: VibeInfo };
+  /** name: nickname with pronouns, for headings; nickname: bare, for use inside sentences. */
+  other: { id: string; name: string; nickname: string; resident: boolean; vibe?: VibeInfo };
   event: { id: string; title: string; startsAt: Date } | null;
   /** A Bangkok Buddy connection rather than one from an event. */
   buddy?: boolean;
@@ -555,7 +556,7 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
       id: r.id,
       level: r.level,
       createdAt: r.createdAt,
-      other: { id: otherId, name: displayName(p), resident: showsResidentBadge(p, p), vibe: vibeMap.get(otherId) },
+      other: { id: otherId, name: displayName(p), nickname: p.nickname, resident: showsResidentBadge(p, p), vibe: vibeMap.get(otherId) },
       event: e ? { id: e.id, title: eventTitle(e, lang), startsAt: e.startsAt } : null,
       buddy: r.eventId.startsWith("buddy:"),
       mine: mine ? { method: mine.method, value: mine.value } : null,
@@ -604,7 +605,7 @@ async function markGraduations(c: Ctx, rows: CircleRow[]) {
       const later = new Date(now.getTime() + 30 * 86_400_000);
       // A friendship to celebrate, with the other person named (owner: the old "you don't need us" read like goodbye).
       const myName = c.var.user!.profile?.nickname ?? "";
-      for (const [who, name] of [[me, r.other.name], [r.other.id, myName]] as const) {
+      for (const [who, name] of [[me, r.other.nickname], [r.other.id, myName]] as const) {
         await notify(db, who, "graduated", `🎉 คุณกับ ${name} เจอกันมา ${meets} ครั้งแล้ว นี่แหละมิตรภาพ`, `🎉 You and ${name} have met ${meets} times. That's a friendship.`, "/connections");
         await db.insert(notifications).values({ id: newId(), accountId: who, kind: "still_in_touch", titleTh: "ยังติดต่อกันอยู่ไหม? แตะเพื่อบอกเรา", titleEn: "Still in touch? Tap to tell us", link: `/connections/${r.id}/still`, createdAt: later });
       }
@@ -843,9 +844,9 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
             ) : null}
             {r.graduated ? (
               <div class="grad">
-                <p>🎉 {t(`คุณกับ ${r.other.name} เจอกันมา ${Math.max(2, r.meets ?? 2)} ครั้งแล้ว นี่แหละมิตรภาพ`, `You and ${r.other.name} have met ${Math.max(2, r.meets ?? 2)} times. That's a friendship.`)}</p>
+                <p>🎉 {t(`คุณกับ ${r.other.nickname} เจอกันมา ${Math.max(2, r.meets ?? 2)} ครั้งแล้ว นี่แหละมิตรภาพ`, `You and ${r.other.nickname} have met ${Math.max(2, r.meets ?? 2)} times. That's a friendship.`)}</p>
                 <a class="btn ghost" href={`/chat/conn:${r.id}?say=${encodeURIComponent(t("สัปดาห์นี้ไปโต๊ะด้วยกันไหม 🙂", "Want to come to a table with me this week? 🙂"))}`}>
-                  {t(`ชวน ${r.other.name} ไปโต๊ะด้วยกัน`, `Invite ${r.other.name} to a table`)}
+                  {t(`ชวน ${r.other.nickname} ไปโต๊ะด้วยกัน`, `Invite ${r.other.nickname} to a table`)}
                 </a>
               </div>
             ) : null}
@@ -897,7 +898,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
             <div class="row safety-row">
               <a href={`/report?account=${r.other.id}${r.event ? `&event=${r.event.id}` : ""}`}>{t("รายงาน", "Report")}</a>
               <details class="more-menu">
-                <summary aria-label={t(`ตัวเลือกเพิ่มเติมสำหรับ ${r.other.name}`, `More options for ${r.other.name}`)}>⋯ {t("เพิ่มเติม", "More")}</summary>
+                <summary aria-label={t(`ตัวเลือกเพิ่มเติมสำหรับ ${r.other.nickname}`, `More options for ${r.other.nickname}`)}>⋯ {t("เพิ่มเติม", "More")}</summary>
                 <div>
                   <form method="post" action={`/connections/${r.id}/remove`}>
                     <Button kind="ghost">{t("ลบออกจากคนรู้จัก", "Remove connection")}</Button>

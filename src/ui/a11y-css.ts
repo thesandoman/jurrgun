@@ -175,6 +175,10 @@ div.grad p{margin:0;font-weight:700}
 .me-ask p{display:grid;gap:4px;margin:0 0 10px}
 .me-ask .row{gap:8px;flex-wrap:wrap}
 
+/* Quiz result: on the dark sunset card, "Close to" takes the card's light text colour (it was dark ink). */
+.tile2 .type-range{color:inherit!important}
+.tile2 .type-range a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+
 /* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
 .flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
 .flow-body .field-label+.muted{margin-top:-2px}
