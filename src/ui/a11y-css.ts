@@ -741,4 +741,16 @@ html:not(.sheet-js) .chat-compose{position:static}
 .flow-hint.with-info{margin:0 0 8px}
 /* D2 ambient motion: decorative shapes sit still (Me's blobs and photo frame no longer morph). Only a live state pulses, 3 times. */
 main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
+/* D4 laptop frames. The signed-out intro: art on the left, copy on the right; the dots and Next sit under the copy. */
+@media (min-width:1024px){
+  .intro-slide{align-self:center;display:grid;grid-template-columns:440px 440px;grid-template-rows:repeat(5,auto) 1fr;justify-content:center;justify-items:start;column-gap:72px;row-gap:8px;text-align:left;padding:72px 48px}
+  .intro-slide p.intro-foot{padding:0;margin-top:8px}
+  .intro-slide .intro-art{grid-column:1;grid-row:1/-1;justify-self:center;align-self:center;width:360px}
+  .intro-slide .intro-art b{font-size:136px}
+  .intro-slide>:not(.intro-art){grid-column:2;margin-top:0;margin-bottom:0}
+  .intro-slide>:first-child+*{margin-top:8px}
+  .intro-slide p{max-width:40ch}
+  .intro-slide .intro-cta{align-items:flex-start;margin-top:16px}
+  .intro>.intro-foot{position:absolute;z-index:2;left:calc(50% + 36px);top:calc(50% + 124px);width:440px;justify-content:flex-start;gap:24px;padding:0}
+}
 `);
