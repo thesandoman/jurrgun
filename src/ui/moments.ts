@@ -5,7 +5,7 @@
  *  - RSVP is a ticket: notched ends, and it gets punched when you press it.
  *  - The pass arrives torn along its perforation; while check-in is open it
  *    glows and says so, and the code flips over to the short code.
- *  - A new district stamp lands like a rubber stamp, with an ink ring.
+ *  - Passport stamps simply appear: no slam, no ink ring (owner, Phase 2A).
  *  - A new mutual connection: two circles slide together and a spark pops.
  *
  * All of it stops for reduced motion (the OS setting or the Accessibility
@@ -55,12 +55,6 @@ export const MOMENTS_CSS = themed(`
 .chip-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border-radius:999px;background:var(--surface);border:1.5px solid var(--field-line,var(--line));color:var(--ink);font-weight:700;text-decoration:none}
 .chip-btn:hover{border-color:var(--brand);color:var(--brand)}
 .caps-warn{display:block;color:var(--warn);font-weight:600}
-
-/* Passport stamp slam */
-.stamps li.on.fresh{position:relative;animation:slam .5s var(--d,0s) cubic-bezier(.3,1.6,.5,1) both}
-.stamps li.on.fresh::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid color-mix(in srgb,var(--brand) 40%,transparent);opacity:0;animation:ink .7s calc(var(--d,0s) + .22s) ease-out both;pointer-events:none}
-@keyframes slam{0%{transform:scale(1.9) rotate(-24deg);opacity:0}55%{transform:scale(.9) rotate(-5deg);opacity:1}100%{transform:rotate(-8deg)}}
-@keyframes ink{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.35);opacity:0}}
 
 /* Mutual connection spark */
 .spark-pop{position:fixed;z-index:45;left:50%;top:40%;display:flex;align-items:center;transform:translate(-50%,-50%);pointer-events:none;animation:sp-out .45s 2.3s ease forwards}

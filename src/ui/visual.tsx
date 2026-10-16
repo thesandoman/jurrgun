@@ -96,31 +96,15 @@ export function PostcardFan(props: { cards: Art[]; lang: Lang }) {
   );
 }
 
-/** A circular progress ring with a value in the middle. */
-export function Ring(props: { value: number; max: number; label: string }) {
-  const r = 34;
-  const c = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(1, props.value / props.max));
-  return (
-    <span class="ring" role="img" aria-label={`${props.value} / ${props.max} ${props.label}`}>
-      <svg viewBox="0 0 80 80" width="88" height="88">
-        <circle cx="40" cy="40" r={r} class="ring-bg" />
-        <circle cx="40" cy="40" r={r} class="ring-fg" stroke-dasharray={`${(c * pct).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 40 40)" />
-      </svg>
-      <span class="ring-in">
-        <strong>{props.value}</strong>
-        <small>/{props.max}</small>
-      </span>
-    </span>
-  );
-}
-
-/** A grid of round stamps; stamped ones are filled, with a short label. */
-export function Stamps(props: { items: { key: string; short: string; name: string; on: boolean; fresh?: boolean }[] }) {
+/**
+ * A grid of round stamps; stamped ones are filled, with a short label. Calm
+ * on purpose (owner, Phase 2A): no progress ring and no landing animation.
+ */
+export function Stamps(props: { items: { key: string; short: string; name: string; on: boolean }[] }) {
   return (
     <ul class="stamps">
-      {props.items.map((x, i) => (
-        <li class={x.on ? (x.fresh ? "on fresh" : "on") : ""} style={x.on && x.fresh ? `--d:${(i % 6) * 0.12}s` : undefined} title={x.name} aria-label={`${x.name}${x.on ? " ✓" : ""}`}>
+      {props.items.map((x) => (
+        <li class={x.on ? "on" : ""} title={x.name} aria-label={`${x.name}${x.on ? " ✓" : ""}`}>
           <span>{x.short}</span>
         </li>
       ))}
@@ -179,12 +163,6 @@ a.tile2:active{transform:scale(.98)}
 .fan.n1 .fan-card{transform:translateX(-50%);width:min(90%,340px)}
 .fan:hover .fan-card:nth-child(1){transform:translateX(-50%) translateX(-34%) rotate(-11deg)}
 .fan:hover .fan-card:nth-child(3){transform:translateX(-50%) translateX(34%) rotate(11deg)}
-.ring{position:relative;display:inline-grid;place-items:center;flex:none}
-.ring-bg{fill:none;stroke:var(--surface-2);stroke-width:9}
-.ring-fg{fill:none;stroke:var(--brand);stroke-width:9;stroke-linecap:round;transition:stroke-dasharray .6s ease}
-.ring-in{position:absolute;display:flex;align-items:baseline;gap:1px}
-.ring-in strong{font-size:1.5rem;font-weight:900}
-.ring-in small{color:var(--ink-3);font-weight:700}
 .stamps{list-style:none;padding:0;margin:10px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:8px}
 .stamps li{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:.62rem;font-weight:800;letter-spacing:.02em;color:var(--ink-3);border:2px dashed var(--line);text-transform:uppercase}
 .stamps li.on{border:2px solid rgba(255,255,255,.55);outline:2px solid var(--brand);outline-offset:-6px;color:#fff;background:var(--hero);transform:rotate(-8deg);box-shadow:var(--shadow)}
@@ -201,8 +179,8 @@ a.tile2:active{transform:scale(.98)}
 .place-card strong{display:block;line-height:1.2}
 .place-card small{color:var(--ink-3)}
 .chips2{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
-.passport-head{display:flex;align-items:center;gap:14px}
-.passport-head h2{margin:0}
+.passport-card>h2{margin:0 0 6px}
+.passport-count{display:block;margin:2px 0 8px}
 .quest-title{font-size:1.15rem;line-height:1.3;margin:4px 0}
 .card.quest.season{background:linear-gradient(160deg,var(--gold-soft),var(--surface) 55%)}
 .stack-card .avstack{margin:6px 0 4px}
@@ -255,13 +233,14 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chips2 span.on{background:var(--brand);color:var(--brand-ink)}
 .deck-stamp{position:absolute;top:22px;padding:4px 12px;border-radius:10px;font-weight:800;font-size:1.1rem;letter-spacing:.04em;opacity:0;border:3px solid currentColor}
 .deck-stamp.keen{left:18px;color:var(--brand);transform:rotate(-12deg)}
-.deck-stamp.pass{right:18px;color:#d64545;transform:rotate(12deg)}
+.deck-stamp.pass{right:18px;color:var(--ink-2);transform:rotate(12deg)}
 .deck-card.dragging{cursor:grabbing}
-.deck-btn{transition:transform .1s ease-out}.deck-btn:active{transform:scale(.92)}
 .deck-acts{display:flex;justify-content:center;gap:28px;margin:14px 0 8px}
-.deck-btn{width:68px;height:68px;border-radius:50%;border:0;font-size:1.7rem;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center}
-.deck-btn.pass{background:var(--surface);color:#d64545;border:1px solid var(--line)}
-.deck-btn.keen{background:var(--lime);color:var(--deep,#06492a)}
+.deck-btn{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:88px;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;font-size:.9rem;cursor:pointer}
+.deck-ico{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;font-size:1.7rem;box-shadow:var(--shadow);transition:transform .1s ease-out}
+.deck-btn:active .deck-ico{transform:scale(.92)}
+.deck-btn.pass .deck-ico{background:var(--surface);color:var(--ink-2);border:1px solid var(--line)}
+.deck-btn.keen .deck-ico{background:var(--lime);color:var(--deep,#06492a)}
 @media (prefers-reduced-motion:reduce){.deck-card{transition:none!important}}
 .chat-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
 .chat-list a{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--surface);color:var(--ink);text-decoration:none;border:1px solid var(--line)}

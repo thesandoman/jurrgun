@@ -7,8 +7,10 @@
  * perforation, with a stamped date, because every Jurrgun plan ends in a
  * real pass and a stamp in your Bangkok passport.
  *
- *  - Success notices float in as a toast and leave by themselves; the big
- *    moments (a seat, a new connection, a stamp) add a short confetti burst.
+ *  - Success notices float in as a calm toast and leave by themselves. Only
+ *    the friendship milestone adds a short confetti burst (a "friendship"
+ *    toast, or a [data-celebrate] block the moment it lands). A seat, a
+ *    check-in, a connection or a stamp stays calm (owner, Phase 2A).
  *  - Buttons squish when pressed and show they are working after submit
  *    (and can't be sent twice).
  *  - Cards rise in one after another; on a mouse they tilt toward the pointer.
@@ -99,8 +101,8 @@ export const ALIVE_JS = `(function(){
 var still=matchMedia("(prefers-reduced-motion: reduce)").matches||document.documentElement.classList.contains("a11y-motion");
 // The toast lives on the page root, so the page's fade-in can't hold it.
 document.querySelectorAll(".notice.toast").forEach(function(n){document.body.appendChild(n)});
-// Confetti for the big moments, in the brand's colours.
-var t=document.querySelector(".toast.party");
+// Confetti for the friendship milestone only, in the brand's colours.
+var t=document.querySelector(".toast.party,[data-celebrate]");
 if(t&&!still){var box=document.createElement("div");box.className="confetti";box.setAttribute("aria-hidden","true");
 var cs=["#b4f03a","#22c55e","#137f45","#fbbf24","#f472b6","#38bdf8"];
 for(var i=0;i<34;i++){var p=document.createElement("i");var a=Math.random()*Math.PI*2,d=120+Math.random()*220;

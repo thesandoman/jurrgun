@@ -502,6 +502,8 @@ type CircleRow = {
   theirs: { method: string; value: string } | null;
   /** Shared contacts and met twice or more: they don't need us anymore. */
   graduated?: boolean;
+  /** The friendship milestone landed on this very page load: the one moment that gets confetti. */
+  celebrate?: boolean;
   /** I've already sent this person a thank-you note for this connection. */
   iThanked?: boolean;
   /** Other events where we chose each other: one card per person, not per meeting. */
@@ -527,6 +529,7 @@ function onePerPerson(rows: CircleRow[]): CircleRow[] {
     first.mine ??= r.mine;
     first.theirs ??= r.theirs;
     first.graduated ||= r.graduated;
+    first.celebrate ||= r.celebrate;
   }
   for (const r of byPerson.values()) r.meets = 1 + (r.alsoMet?.length ?? 0);
   return [...byPerson.values()];
@@ -629,11 +632,12 @@ async function markGraduations(c: Ctx, rows: CircleRow[]) {
     const made = await db.insert(graduations).values({ id: newId(), connectionId: r.id }).onConflictDoNothing().returning({ id: graduations.id });
     r.graduated = true;
     if (made.length) {
+      r.celebrate = true;
       const later = new Date(now.getTime() + 30 * 86_400_000);
       // A friendship to celebrate, with the other person named (owner: the old "you don't need us" read like goodbye).
       const myName = c.var.user!.profile?.nickname ?? "";
       for (const [who, name] of [[me, r.other.nickname], [r.other.id, myName]] as const) {
-        await notify(db, who, "graduated", `🎉 คุณกับ ${name} เจอกันมา ${meets} ครั้งแล้ว นี่แหละมิตรภาพ`, `🎉 You and ${name} have met ${meets} times. That's a friendship.`, "/connections");
+        await notify(db, who, "graduated", `🎉 คุณกับ ${name} เจอกันมา ${meets} ครั้งแล้ว นี่แหละมิตรภาพ`, `🎉 You and ${name} have met ${meets} times. That's a friendship.`, "/connections?notice=friendship");
         await db.insert(notifications).values({ id: newId(), accountId: who, kind: "still_in_touch", titleTh: "ยังติดต่อกันอยู่ไหม? แตะเพื่อบอกเรา", titleEn: "Still in touch? Tap to tell us", link: `/connections/${r.id}/still`, createdAt: later });
       }
     }
@@ -880,7 +884,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
               </p>
             ) : null}
             {r.graduated ? (
-              <div class="grad">
+              <div class="grad" data-celebrate={r.celebrate ? "" : undefined}>
                 <p>🎉 {t(`คุณกับ ${r.other.nickname} เจอกันมา ${Math.max(2, r.meets ?? 2)} ครั้งแล้ว นี่แหละมิตรภาพ`, `You and ${r.other.nickname} have met ${Math.max(2, r.meets ?? 2)} times. That's a friendship.`)}</p>
                 <a class="btn ghost" href={`/chat/conn:${r.id}?say=${encodeURIComponent(t("สัปดาห์นี้ไปโต๊ะด้วยกันไหม 🙂", "Want to come to a table with me this week? 🙂"))}`}>
                   {t(`ชวน ${r.other.nickname} ไปโต๊ะด้วยกัน`, `Invite ${r.other.nickname} to a table`)}

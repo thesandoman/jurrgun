@@ -81,7 +81,7 @@ export const TOPICS: Topic[] = [
           p("ยิ่งมีตัวเลือกให้ไล่ดูไม่รู้จบ ยิ่งเลือกยาก และเลือกแล้วก็ยังสงสัยว่ามีอันที่ดีกว่าไหม ความรู้สึกว่ามีคนหรือกิจกรรมให้เลือกไม่จำกัดเป็นภาพลวงตา เวลาและพลังของเรามีจำกัด", "Endless options make choosing harder, and leave you wondering whether something better was one scroll away. The feeling of infinite people or plans is an illusion: your time and energy are limited."),
           list(
             ["Jurrgun เลือกแผนให้สัปดาห์ละ 2 อย่าง ไม่ต้องไล่ดูทั้งหมด", "Jurrgun picks two plans a week, so you don't have to scroll everything."],
-            ["ปัดดูบัดดี้ได้วันละ 15 คน แล้วพัก", "The buddy deck stops at 15 a day."],
+            ["ดูคนที่อาจเป็นบัดดี้ได้วันละ 15 คน แล้วพัก", "Possible buddies stop at 15 a day."],
             ["ไม่มีสถานะออนไลน์ ไม่มีขึ้นว่าอ่านแล้ว ไม่ต้องคอยเช็ก", "No online status or read receipts, so nothing to keep checking."],
           ),
         ],

@@ -1650,7 +1650,7 @@ settingsRoutes.get("/settings/habits", async (c) => {
           </>
         ) : (
           <>
-            <p class="muted">{t("หยุดจับคู่บัดดี้และการปัดดูไว้ก่อน คนรู้จักและแชตยังอยู่ ลงทะเบียนกิจกรรมเมื่อไหร่ก็กลับมาใช้ได้ทันที", "Pauses buddy matching and the deck. Your people and chats stay. RSVP anytime to come back.")}</p>
+            <p class="muted">{t("หยุดจับคู่บัดดี้และการดูคนที่อาจเป็นบัดดี้ไว้ก่อน คนรู้จักและแชตยังอยู่ ลงทะเบียนกิจกรรมเมื่อไหร่ก็กลับมาใช้ได้ทันที", "Pauses buddy matching and possible buddies. Your people and chats stay. RSVP anytime to come back.")}</p>
             <form method="post" action="/settings/habits" class="row">
               {PAUSE_WEEKS.map((w) => (
                 <button class="btn ghost" name="pause" value={String(w)}>

@@ -14,9 +14,10 @@
  *   GET  /buddy/passport           your 50-district passport
  *
  * Hard rules, the same as People I Met:
- *  - Your "open to more" choice is never shown to your buddy. Romance only
- *    surfaces when both chose it, both are eligible and compatible, after two
- *    finished quests (domain/buddy.ts romanceUnlocked).
+ *  - Bangkok Buddy is friends only for now (owner, Phase 2A). Older opt-ins
+ *    stored as "open" or "dating" still load, and count as friends: they
+ *    don't steer matching and never unlock romance. A mutual
+ *    "เกี่ยวก้อย · Pinky" mode will come later as its own feature.
  *  - No messaging: once both say "meet", the pair becomes a connection in My
  *    Bangkok circle, where contact sharing, reporting and blocking already live.
  *  - Blocked either way, outside each other's age range or with no shared
@@ -28,10 +29,8 @@
  *    shared a contact (they moved off the app), or after a kind wrap-up note
  *    and WRAP_NOTICE_DAYS. Blocking ends it at once (safety first).
  */
-import { datingChips, datingPromptsShown, datingShown, datingTeaser } from "../ui/profile-card";
 import { SafeArrivalForm } from "./safety";
-import { cleanPrefs } from "../content/dating";
-import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio, currentDatingDeck } from "../content/profile";
+import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
@@ -49,22 +48,20 @@ import {
   isWrapNote,
   pickQuest,
   questText,
-  romanceUnlocked,
   weekKey,
   type PoolMember,
 } from "../domain/buddy";
 import { monthKey, seasonQuestFor } from "../domain/seasons";
-import { ageOn, isPaused, romanceCompatible, romanceEligible } from "../domain/rules";
-import { DATING_INTENTS } from "../domain/buddy";
+import { ageOn, isPaused } from "../domain/rules";
 import { DISTRICTS, districtsAZ } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, buddySwipes, meetFeedback, datingIntents, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, buddySwipes, meetFeedback, buddyRounds, buddyOptins, buddyQuests, connections, contactShares, passportStamps, profiles, vibes, type BuddyMatch, type BuddyQuest } from "../schema";
 import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View } from "../ui/kit";
-import { AvatarStack, Bento, Big, Pill, PostcardFan, Ring, Stamps, Tile, artFor } from "../ui/visual";
+import { AvatarStack, Bento, Big, Pill, PostcardFan, Stamps, Tile, artFor } from "../ui/visual";
 import type { Child } from "hono/jsx";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 
@@ -77,9 +74,13 @@ type Write = { toSQL(): { sql: string; params: unknown[] } };
 const INTENT_OPTS = [
   { value: "friends", th: "เพื่อนใหม่", en: "New friends" },
   { value: "activity", th: "เพื่อนทำกิจกรรม", en: "An activity buddy" },
-  { value: "open", th: "เปิดใจมากกว่าเพื่อน ถ้ารู้สึกตรงกันทั้งสองคน", en: "Open to more, only if it's mutual" },
-  { value: "dating", th: "หาเดตอย่างเดียว", en: "Dating only" },
 ] satisfies { value: (typeof BUDDY_INTENTS)[number]; th: string; en: string }[];
+
+/**
+ * What a stored intent means today: friends only. "open" and "dating" rows
+ * from before Phase 2A read as "friends"; nothing romantic follows from them.
+ */
+const friendlyIntent = (x: string | undefined): "friends" | "activity" => (x === "activity" ? "activity" : "friends");
 
 const districtName = (lang: Lang, key: string) => {
   const d = DISTRICTS.find((x) => x.value === key);
@@ -176,13 +177,18 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
 /**
  * Everyone available for a buddy right now (opted in, no current buddy, an
  * active onboarded account with a Bangkok Type), with what they told us:
- * blocks and past buddies, deck flicks, intents and private dating prefs.
+ * blocks, past buddies and their deck picks.
+ *
+ * Friends only for now: a stored "open" or "dating" intent no longer limits
+ * who someone is paired with, and private dating prefs don't score pairs
+ * (PoolMember.datesWith and datingPrefs stay unset). A mutual
+ * "เกี่ยวก้อย · Pinky" mode will come later and decide that on its own.
  */
 async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
   const optins = await db.select().from(buddyOptins).where(eq(buddyOptins.active, true)).orderBy(desc(buddyOptins.updatedAt)).limit(POOL_LIMIT);
   const ids = optins.map((o) => o.accountId);
   if (ids.length < 2) return [];
-  const [history, blockRows, people, types, swipes, prefsRows] = await Promise.all([
+  const [history, blockRows, people, types, swipes] = await Promise.all([
     db
       .select({ a: buddyMatches.aAccount, b: buddyMatches.bAccount, state: buddyMatches.state, endedAt: buddyMatches.endedAt })
       .from(buddyMatches)
@@ -196,7 +202,6 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
     db.select({ account: accounts, profile: profiles }).from(accounts).innerJoin(profiles, eq(profiles.accountId, accounts.id)).where(inArray(accounts.id, ids)).limit(ids.length),
     typeOfAccount(db, ids),
     db.select({ accountId: buddySwipes.accountId, targetId: buddySwipes.targetId, choice: buddySwipes.choice }).from(buddySwipes).where(inArray(buddySwipes.accountId, ids)).limit(50_000),
-    db.select({ accountId: datingIntents.accountId, prefs: datingIntents.prefs }).from(datingIntents).where(inArray(datingIntents.accountId, ids)).limit(ids.length),
   ]);
   const busy = new Set(history.filter((m) => m.state !== "ended").flatMap((m) => [m.a, m.b]));
   const excluded = new Map<string, Set<string>>(ids.map((id) => [id, new Set<string>()]));
@@ -206,7 +211,7 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
     excluded.get(m.b)?.add(m.a);
     if (m.endedAt) for (const x of [m.a, m.b]) lastEnded.set(x, Math.max(lastEnded.get(x) ?? 0, m.endedAt.getTime()));
   }
-  // The deck: a pass rules someone out; a keen flick ranks them higher.
+  // The deck: "not now" (stored as pass) rules someone out; "I'd meet them" (keen) ranks them higher.
   const keen = new Map<string, Set<string>>();
   for (const sw of swipes) {
     if (sw.choice === "pass") excluded.get(sw.accountId)?.add(sw.targetId);
@@ -215,25 +220,11 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
       keen.get(sw.accountId)!.add(sw.targetId);
     }
   }
-  const prefsOf = new Map(prefsRows.map((r) => [r.accountId, cleanPrefs(r.prefs)]));
   for (const b of blockRows) {
     excluded.get(b.blocker)?.add(b.blocked);
     excluded.get(b.blocked)?.add(b.blocker);
   }
   const since = new Map(optins.map((o) => [o.accountId, o.updatedAt.getTime()]));
-  const intentOf = new Map(optins.map((o) => [o.accountId, o.intent]));
-  const profileOf = new Map(people.map((x) => [x.account.id, x.profile]));
-  /** Who a dating-only member can date: open to dating too, both eligible, compatible. */
-  const datesWith = (id: string): Set<string> | undefined => {
-    if (intentOf.get(id) !== "dating") return undefined;
-    const me = profileOf.get(id)!;
-    const out = new Set<string>();
-    if (!romanceEligible(me)) return out;
-    for (const [other, p] of profileOf) {
-      if (other !== id && DATING_INTENTS.includes(intentOf.get(other) ?? "") && romanceEligible(p) && romanceCompatible(me, p)) out.add(other);
-    }
-    return out;
-  };
   const pool: PoolMember[] = [];
   for (const { account, profile } of people) {
     const code = types.get(account.id);
@@ -250,9 +241,7 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
       ageMax: profile.ageMax,
       excluded: excluded.get(account.id) ?? new Set(),
       weeksWaiting: Math.floor((now.getTime() - availableFrom) / WEEK_MS),
-      datesWith: datesWith(account.id),
       keen: keen.get(account.id),
-      datingPrefs: DATING_INTENTS.includes(intentOf.get(account.id) ?? "") ? prefsOf.get(account.id) : undefined,
       gender: profile.gender,
       womenOnly: profile.womenOnly,
     });
@@ -335,7 +324,7 @@ const SAFETY = (v: View) => (
   </details>
 );
 
-function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultIntent?: string; canDate?: boolean; compact?: boolean }) {
+function OptIn(props: { v: View; intent?: string; hasType: boolean; compact?: boolean }) {
   const { t, lang } = props.v;
   return (
     <>
@@ -350,7 +339,7 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
             <Big n="52" label={t("เควสต์ต่อปี", "quests a year")} />
           </Tile>
           <Tile tone="gold">
-            <span class="ico" aria-hidden="true">🏅</span>
+            <span class="ico" aria-hidden="true">🎏</span>
             <Big n="12" label={t("เควสต์เทศกาลต่อปี", "festival quests")} />
           </Tile>
         </Bento>
@@ -364,20 +353,20 @@ function OptIn(props: { v: View; intent?: string; hasType: boolean; defaultInten
         <Card>
           <form method="post" action="/buddy/optin">
             <Choices
-              legend={t("มองหาอะไรอยู่ 🔒", "What you're open to 🔒")}
+              legend={t("อยากได้บัดดี้แบบไหน 🔒", "What kind of buddy 🔒")}
               hint={t("เป็นความลับ บัดดี้ไม่เห็น", "Private: your buddy never sees this")}
               name="intent"
               type="radio"
               required
-              options={props.canDate ? INTENT_OPTS : INTENT_OPTS.filter((o) => o.value !== "dating")}
-              values={[props.intent ?? props.defaultIntent ?? "friends"]}
+              options={INTENT_OPTS}
+              values={[friendlyIntent(props.intent)]}
               lang={lang}
             />
             <details class="how">
               <summary>{t("ใช้งานยังไง", "How it works")}</summary>
               <ul>
                 <li>👀 {t("บัดดี้เห็นชื่อเล่นและไทป์ของคุณ", "Your buddy sees your nickname and type.")}</li>
-                <li>💘 {t("เรื่องหัวใจจะขึ้นก็ต่อเมื่อคุณทั้งสองคนเลือกไว้ตรงกัน และทำเควสต์ด้วยกันครบ 2 ครั้ง", "Romance shows only if you both chose it, after two quests.")}</li>
+                <li>🤝 {t("บัดดี้คือเพื่อนที่ออกไปสำรวจเมืองด้วยกัน", "A buddy is a friend to explore the city with.")}</li>
                 <li>🤝 {t("ไม่หายเงียบ: ปิดได้เมื่อตกลงกัน ย้ายไปคุยนอกแอป หรือส่งข้อความปิดท้าย (7 วัน)", "No ghosting: end by agreeing, moving off the app, or a kind wrap-up (7 days).")}</li>
                 <li>🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัย", "Safety net")}</a></li>
               </ul>
@@ -439,12 +428,12 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
   const hostHref = `/host/new?district=${encodeURIComponent(props.q.district)}&title=${encodeURIComponent(text ? (lang === "en" ? text.en : text.th) : "")}`;
   return (
     <Card class={season ? "quest season" : "quest"}>
-      <span class="eyebrow">{season ? t(`🏅 เควสต์ใหญ่เดือนนี้ · ${season.theme.th}`, `🏅 This month · ${season.theme.en}`) : t("🗺️ เควสต์สัปดาห์นี้", "🗺️ This week's quest")}</span>
+      <span class="eyebrow">{season ? t(`${season.icon} เควสต์ใหญ่เดือนนี้ · ${season.theme.th}`, `${season.icon} This month · ${season.theme.en}`) : t("🗺️ เควสต์สัปดาห์นี้", "🗺️ This week's quest")}</span>
       <PostcardFan cards={cards} lang={lang} />
       {text ? <h3 class="quest-title">{L(lang, text)}</h3> : null}
       <p class="chips2">
         <span>📍 {place}</span>
-        {season ? <span>🏅 {t("แสตมป์ประจำฤดู", "Season stamp")}</span> : picker ? <span>{picker.emoji} {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</span> : null}
+        {season ? <span>🗓️ {t("แสตมป์ประจำฤดู", "Season stamp")}</span> : picker ? <span>{picker.emoji} {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</span> : null}
         <span>{mineDone ? "✅" : "⬜"} {t("คุณ", "You")}</span>
         <span>{theirsDone ? "✅" : "⬜"} {props.buddyName}</span>
       </p>
@@ -523,26 +512,24 @@ const SHORT_TH: Map<string, string> = (() => {
   return out;
 })();
 
-/** Stamps earned in the last three days land with a stamp animation. */
-const FRESH_STAMP_MS = 3 * 86_400_000;
-function freshStamps(rows: { district: string; createdAt: Date }[], now = new Date()): Set<string> {
-  return new Set(rows.filter((r) => now.getTime() - r.createdAt.getTime() < FRESH_STAMP_MS).map((r) => r.district));
-}
-
+/**
+ * The passport as a quiet memory map (owner, Phase 2A): it leads with the
+ * districts you have been to, with a plain "so far" line in small text. No
+ * progress ring, no big number, no medal, and stamps land without a show.
+ */
 function Passport(props: {
   v: View;
   stamped: Set<string>;
-  fresh?: Set<string>;
   compact?: boolean;
   badges?: { key: string; icon: string; theme: { en: string; th: string } }[];
   /** Districts the member hasn't been to yet ("My Bangkok" reflections from the quiz). */
   wish?: string[];
 }) {
   const { t, lang } = props.v;
-  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: lang === "en" ? shortName(d.en) : SHORT_TH.get(d.value) ?? d.th.slice(0, 2), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value), fresh: props.fresh?.has(d.value) }));
+  const items = districtsAZ(lang).map((d) => ({ key: d.value, short: lang === "en" ? shortName(d.en) : SHORT_TH.get(d.value) ?? d.th.slice(0, 2), name: lang === "en" ? d.en : d.th, on: props.stamped.has(d.value) }));
+  const been = items.filter((x) => x.on);
+  const shown = props.compact ? been.slice(0, 8) : been;
   const wish = new Set((props.wish ?? []).filter((d) => !props.stamped.has(d)));
-  // Stamped first in the compact view, so progress is visible at a glance; then the ones they want to explore.
-  const preview = [...items.filter((x) => x.on), ...items.filter((x) => !x.on && wish.has(x.key)), ...items.filter((x) => !x.on && !wish.has(x.key))].slice(0, 12);
   const next = items.filter((x) => wish.has(x.key));
   const nextLine = next.length ? (
     <p class="chips2" aria-label={t("อยากไปสำรวจ", "Next to explore")}>
@@ -553,40 +540,43 @@ function Passport(props: {
   ) : null;
   return (
     <Card class="passport-card">
-      <div class="passport-head">
-        <Ring value={props.stamped.size} max={50} label={t("เขต", "districts")} />
-        <div>
-          <h2>🛂 {t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport")}</h2>
-          <small class="muted">{t("เก็บแสตมป์ให้ครบทุกเขตด้วยกัน", "Stamp every district together")}</small>
-        </div>
-      </div>
+      <h2>🛂 {t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport")}</h2>
+      {been.length ? (
+        <>
+          <p class="chips2 passport-been" aria-label={t("เขตที่ไปมาแล้ว", "Districts you've been to")}>
+            {shown.map((x) => (
+              <span>📍 {x.name}</span>
+            ))}
+            {been.length > shown.length ? <span>{t(`อีก ${been.length - shown.length} เขต`, `${been.length - shown.length} more`)}</span> : null}
+          </p>
+          <small class="muted passport-count">{t(`ไปมาแล้ว ${been.length} จาก 50 เขต`, `${been.length} of 50 districts so far`)}</small>
+        </>
+      ) : (
+        <p class="muted">{t("ยังไม่มีเขตที่ไปด้วยกัน เควสต์แรกกับบัดดี้จะพาไปเขตแรก", "No districts yet. Your first quest with a buddy takes you to one.")}</p>
+      )}
       {props.compact ? (
         <>
-          <Stamps items={preview} />
           {nextLine}
           <a href="/buddy/passport">{t("ดูทั้ง 50 เขต", "All 50 districts")} →</a>
         </>
       ) : (
         <>
+          {next.length ? <h3>🗺️ {t("อยากไปสำรวจ", "Next to explore")}</h3> : null}
+          {nextLine}
+          <h3>{t("แสตมป์ประจำฤดู", "Season stamps")}</h3>
           {props.badges?.length ? (
-            <p class="season-badges">
+            <p class="chips2">
               {props.badges.map((b) => (
-                <span class="season-badge" title={L(lang, b.theme)}>
+                <span>
                   {b.icon} {L(lang, b.theme)}
                 </span>
               ))}
             </p>
           ) : (
-            <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนให้ครบ เพื่อสะสมแสตมป์ประจำฤดู", "Finish monthly big quests to collect season stamps.")}</p>
+            <p class="muted">{t("เควสต์ใหญ่ประจำเดือนที่ทำกับบัดดี้จะมาอยู่ตรงนี้", "Monthly big quests you finish with a buddy show up here.")}</p>
           )}
+          <h3>{t("ทุกเขต", "Every district")}</h3>
           <Stamps items={items} />
-          {next.length ? <h3>🗺️ {t("อยากไปสำรวจ", "Next to explore")}</h3> : null}
-          {nextLine}
-          <p class="chips2">
-            {items.filter((x) => x.on).map((x) => (
-              <span>✅ {x.name}</span>
-            ))}
-          </p>
         </>
       )}
     </Card>
@@ -680,12 +670,8 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
     db.select({ district: passportStamps.district, createdAt: passportStamps.createdAt }).from(passportStamps).where(eq(passportStamps.accountId, me)).limit(60),
   ]);
   const stamped = new Set(stamps.map((s) => s.district));
-  const fresh = freshStamps(stamps, now);
   const buddyName = buddyRows[0]?.nickname ?? "";
   const [quest, bigQuest, offApp] = match?.state === "active" ? await Promise.all([weekQuest(db, match, types, now), monthQuest(db, match, now), movedOffApp(db, match)]) : [null, null, false];
-  const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, me)).limit(1);
-  const canDate = !!c.var.user!.profile && romanceEligible(c.var.user!.profile);
-  const defaultIntent = dating?.mode === "dating_only" && canDate ? "dating" : dating?.mode === "dating" || c.var.user!.profile?.romanceOn ? "open" : "friends";
   const iSaidMeet = match ? (side(match, me) === "a" ? match.aMeetAt : match.bMeetAt) : null;
 
   return page(
@@ -695,7 +681,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
       <h1>🤝 {t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h1>
       <p class="muted">{t("หนึ่งคน หนึ่งเมือง 50 เขต", "One person, one city, 50 districts.")}</p>
       {!optin || !optin.active ? (
-        <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} />
+        <OptIn v={v} intent={optin?.intent} hasType={types.has(me)} />
       ) : !match ? (
         <div class="stack-card">
           <Tile tone="brand" art={{ tone: "dawn", icons: [], seed: 11 }} lang={v.lang}>
@@ -704,7 +690,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
             <h2>{t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
             <small>{t("เราจะแจ้งเตือนคุณ", "We'll notify you")}</small>
             <span class="acts">
-              <a class="glass-btn" href="/buddy/deck">🃏 {t("ปัดดูคนที่อาจเป็นบัดดี้", "Flick through people")}</a>
+              <a class="glass-btn" href="/buddy/deck">{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</a>
             </span>
           </Tile>
         </div>
@@ -756,11 +742,11 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
           </div>
         </>
       )}
-      <Passport v={v} stamped={stamped} fresh={fresh} compact wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
+      <Passport v={v} stamped={stamped} compact wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
       {optin?.active ? (
         <details>
           <summary>{t("ตั้งค่าบัดดี้", "Buddy settings")}</summary>
-          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} defaultIntent={defaultIntent} canDate={canDate} compact />
+          <OptIn v={v} intent={optin.intent} hasType={types.has(me)} compact />
           <form method="post" action="/buddy/pause">
             <Button kind="ghost">{t("หยุดรับบัดดี้ใหม่", "Stop new buddies")}</Button>
           </form>
@@ -785,18 +771,18 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
       <p>
         <a href="/buddy">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
       </p>
-      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} fresh={freshStamps(stamps)} badges={badges} wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
+      <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} badges={badges} wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
     </>,
   );
 });
 
 buddyRoutes.post("/buddy/optin", requireMember, async (c) => {
   const body = await c.req.parseBody();
-  let intent = str(body.intent);
-  if (!isBuddyIntent(intent)) return c.redirect("/buddy");
-  // "Dating only" needs romance mode on (Single, consented); otherwise it's "open to more".
-  const profile = c.var.user!.profile;
-  if (intent === "dating" && !(profile && romanceEligible(profile))) intent = "open";
+  const raw = str(body.intent);
+  if (!isBuddyIntent(raw)) return c.redirect("/buddy");
+  // Friends only for now: an old form or a hand-made post asking for "open"
+  // or "dating" is saved as friends.
+  const intent = friendlyIntent(raw);
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
   const now = new Date();
@@ -958,42 +944,20 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
       .onConflictDoNothing({ target: [passportStamps.accountId, passportStamps.district] }),
     notify(db, them, "buddy_stamp", "ได้แสตมป์เขตใหม่ในพาสปอร์ตแล้ว", "New district stamped in your passport", "/buddy/passport"),
   ];
-  // Romance only when both chose "open to more", both eligible and compatible, after two finished quests.
-  const [intents, people, finished] = await Promise.all([
-    db.select().from(buddyOptins).where(inArray(buddyOptins.accountId, [m.aAccount, m.bAccount])).limit(2),
-    db.select().from(profiles).where(inArray(profiles.accountId, [m.aAccount, m.bAccount])).limit(2),
-    db.select({ a: buddyQuests.aDoneAt, b: buddyQuests.bDoneAt, id: buddyQuests.id }).from(buddyQuests).where(eq(buddyQuests.matchId, m.id)).limit(60),
-  ]);
-  const finishedCount = finished.filter((f) => (f.id === q.id ? true : !!f.a && !!f.b)).length;
-  const pa = people.find((p) => p.accountId === m.aAccount) as Profile | undefined;
-  const pb = people.find((p) => p.accountId === m.bAccount) as Profile | undefined;
-  const ia = intents.find((i) => i.accountId === m.aAccount)?.intent ?? "friends";
-  const ib = intents.find((i) => i.accountId === m.bAccount)?.intent ?? "friends";
-  if (
-    m.connectionId &&
-    pa &&
-    pb &&
-    romanceUnlocked({ intents: [ia, ib], eligible: [romanceEligible(pa), romanceEligible(pb)], compatible: romanceCompatible(pa, pb), finishedQuests: finishedCount })
-  ) {
-    const [conn] = await db.select({ level: connections.level }).from(connections).where(eq(connections.id, m.connectionId)).limit(1);
-    if (conn && conn.level !== "romance") {
-      writes.push(
-        db.update(connections).set({ level: "romance" }).where(eq(connections.id, m.connectionId)),
-        notify(db, m.aAccount, "buddy_mutual", "คุณทั้งสองคนเปิดใจมากกว่าเพื่อนตรงกัน", "You both said you're open to more", "/connections"),
-        notify(db, m.bAccount, "buddy_mutual", "คุณทั้งสองคนเปิดใจมากกว่าเพื่อนตรงกัน", "You both said you're open to more", "/connections"),
-      );
-    }
-  }
+  // Friends only for now: a buddy pairing stays a friendship, even when both
+  // stored "open to more" before Phase 2A. domain/buddy.ts romanceUnlocked
+  // is kept for the mutual "เกี่ยวก้อย · Pinky" mode that will come later.
   await batch(c.env, writes);
   return c.redirect("/buddy?notice=stamped");
 });
 
 // ------------------------------------------------------------- the deck --
 //
-// While someone waits for a buddy they can flick through people in the pool:
-// keen or pass. It is a stated preference for the next daily round, never a
-// match on its own, and the other person never sees it. No photos: people
-// choose on vibe. A short daily deck, so it never becomes endless swiping.
+// While someone waits for a buddy they can meet possible buddies from the
+// pool, one card at a time: "I'd meet them" (stored as keen) or "Not now"
+// (stored as pass). It is a stated preference for the next daily round, never
+// a match on its own, and the other person never sees it. No photos and no
+// dating details: people choose on vibe. A short daily deck, never endless.
 
 export const DECK_PER_DAY = 15;
 
@@ -1035,13 +999,10 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
     const chips = [...shared, ...person.interests.filter((i) => !shared.includes(i))].slice(0, 6);
     const energy = ENERGY.find((x) => x.value === bio.energy);
     const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
-    const shown = datingShown(person, mineP);
-    const dating = shown ? datingChips(shown, lang) : [];
-    const teaser = datingPromptsShown(person, mineP) ? datingTeaser(bio, currentDatingDeck(person.accountId, bio), lang) : null;
     card = (
       <article class="deck-card" data-deck>
-        <span class="deck-stamp keen" aria-hidden="true">{t("สนใจ", "Keen")}</span>
-        <span class="deck-stamp pass" aria-hidden="true">{t("ผ่าน", "Pass")}</span>
+        <span class="deck-stamp keen" aria-hidden="true">{t("อยากลองเจอ", "I'd meet them")}</span>
+        <span class="deck-stamp pass" aria-hidden="true">{t("ไว้ก่อน", "Not now")}</span>
         <div class="deck-face" aria-hidden="true">{a?.emoji ?? "🙂"}</div>
         <h2>
           {person.nickname}
@@ -1051,14 +1012,6 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
           {a ? L(lang, a.name) : null} · 📍 {DISTRICTS.find((d) => d.value === person.district)?.[lang === "en" ? "en" : "th"]}
         </p>
         {why ? <p class="deck-why">🤝 {L(lang, why)}</p> : null}
-        {teaser ? <p class="deck-why">{teaser}</p> : null}
-        {dating.length ? (
-          <p class="chips2">
-            {dating.map((x) => (
-              <span>{x}</span>
-            ))}
-          </p>
-        ) : null}
         <p class="chips2">
           {chips.map((i) => {
             const o = ALL_INTERESTS.find((x) => x.value === i);
@@ -1075,21 +1028,21 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
   }
   return page(
     c,
-    { title: t("ปัดดูบัดดี้", "Buddy deck"), tab: "buddy" },
+    { title: t("คนที่อาจเป็นบัดดี้", "Possible buddies"), tab: "buddy" },
     <>
       <p class="spread">
         <a href="/buddy">← {t("บัดดี้", "Buddy")}</a>
         <small class="muted">{t(`วันนี้เหลือ ${st.left}`, `${st.left} left today`)}</small>
       </p>
-      <h1>🃏 {t("ปัดดูคนที่อาจเป็นบัดดี้", "Flick through people")}</h1>
+      <h1>{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</h1>
       <p class="muted">
         {t(
-          "กด สนใจ แล้วรอบจับคู่ถัดไปจะให้คนนี้มาก่อน แต่ยังไม่ใช่การจับคู่ และอีกฝ่ายจะไม่รู้ ไม่มีรูป เลือกกันจากตัวตน",
-          "Keen helps the next daily round put this person first. It isn't a match, and they never see it. No photos: pick on vibe.",
+          "กด อยากลองเจอ แล้วรอบจับคู่ถัดไปจะให้คนนี้มาก่อน แต่ยังไม่ใช่การจับคู่ และอีกฝ่ายจะไม่รู้ ไม่มีรูป เลือกกันจากตัวตน",
+          "I'd meet them helps the next daily round put this person first. It isn't a match, and they never see it. No photos: pick on vibe.",
         )}
       </p>
       {!st.self ? (
-        <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน แล้วค่อยมาปัดดู", "Take the Bangkok Type quiz first, then come back.")}</Notice>
+        <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน แล้วค่อยกลับมาดู", "Take the Bangkok Type quiz first, then come back.")}</Notice>
       ) : card ? (
         <>
           <div class="deck">
@@ -1100,12 +1053,18 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
             <form method="post" action="/buddy/deck" data-choice="pass">
               <input type="hidden" name="target" value={next} />
               <input type="hidden" name="choice" value="pass" />
-              <button class="deck-btn pass" aria-label={t("ผ่าน", "Pass")}>✕</button>
+              <button class="deck-btn pass" aria-label={t("ไว้ก่อน", "Not now")}>
+                <span class="deck-ico" aria-hidden="true">✕</span>
+                <span class="deck-lbl" aria-hidden="true">{t("ไว้ก่อน", "Not now")}</span>
+              </button>
             </form>
             <form method="post" action="/buddy/deck" data-choice="keen">
               <input type="hidden" name="target" value={next} />
               <input type="hidden" name="choice" value="keen" />
-              <button class="deck-btn keen" aria-label={t("สนใจ", "Keen")}>★</button>
+              <button class="deck-btn keen" aria-label={t("อยากลองเจอ", "I'd meet them")}>
+                <span class="deck-ico" aria-hidden="true">👋</span>
+                <span class="deck-lbl" aria-hidden="true">{t("อยากลองเจอ", "I'd meet them")}</span>
+              </button>
             </form>
           </div>
           <script dangerouslySetInnerHTML={{ __html: DECK_JS }} />

@@ -51,8 +51,12 @@ export type PageOpts = {
   share?: { image?: AssetPath; title?: string; description?: string };
 };
 
-/** Notices worth a little confetti. */
-const PARTY = new Set(["rsvp_confirmed", "offer_accepted", "connected", "stamped", "welcome", "checked_in"]);
+/**
+ * Confetti is kept for one moment only: a friendship (two people who shared
+ * contacts and met at least twice, routes/people.tsx markGraduations). A seat,
+ * a check-in, a connection or a stamp get a calm toast (owner, Phase 2A).
+ */
+const PARTY = new Set(["friendship"]);
 
 /** `?notice=` keys pages can redirect with. */
 const NOTICES: Record<string, [string, string]> = {
@@ -83,7 +87,8 @@ const NOTICES: Record<string, [string, string]> = {
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
   vibe_saved: ["บันทึกแล้ว", "Saved"],
-  stamped: ["ได้แสตมป์เขตใหม่ลงพาสปอร์ตแล้ว!", "New district stamped in your passport!"],
+  stamped: ["ได้แสตมป์เขตใหม่ในพาสปอร์ตแล้ว", "New district stamped in your passport"],
+  friendship: ["นี่แหละมิตรภาพ ชวนกันไปเจออีกนะ", "That's a friendship. Go meet again soon."],
   romance_on: ["เปิดใจมากกว่าเพื่อนแล้ว ไม่มีใครเห็น จะรู้กันก็ต่อเมื่อเลือกตรงกัน ลองตอบคำถามชวนเดตดูนะ", "You're open to something more. It's private and only mutual choices show. Try a dating prompt."],
   romance_off: ["กลับเป็นโหมดเพื่อนแล้ว ลบข้อมูลเรื่องเดตทั้งหมดแล้ว", "Back to friends only. Your dating details are deleted."],
   romance_single: ["เปิดใจมากกว่าเพื่อนได้เฉพาะคนโสด เปลี่ยนสถานะได้ที่นี่", "Open to something more is for people who are single. You can change your status here."],

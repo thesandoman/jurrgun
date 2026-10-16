@@ -26,6 +26,14 @@ describe.skipIf(!HAS_DB)("people before the app", () => {
     expect(html).not.toContain("need us anymore");
     const [note] = await db().select().from(notifications).where(and(eq(notifications.accountId, a.id), eq(notifications.kind, "graduated")));
     expect(note.titleEn).toMatch(/^🎉 You and .+ have met 2 times\. That's a friendship\.$/);
+    // The one moment with confetti (owner, Phase 2A): the friendship lands with a celebration, once.
+    expect(html).toContain("data-celebrate=\"\"");
+    expect(note.link).toBe("/connections?notice=friendship");
+    const fromNote = await (await req("/connections?lang=en&notice=friendship", { cookie: b.cookie })).text();
+    expect(fromNote).toContain("toast party");
+    expect(fromNote).toContain("That&#39;s a friendship. Go meet again soon.");
+    expect(fromNote).not.toContain("data-celebrate=\"\"");
+    expect(await (await req("/connections?lang=en", { cookie: a.cookie })).text()).not.toContain("data-celebrate=\"\"");
     await req("/connections", { cookie: b.cookie });
     expect(await db().select().from(graduations).where(eq(graduations.connectionId, c1))).toHaveLength(1);
     const asks = await db().select().from(notifications).where(and(eq(notifications.accountId, a.id), eq(notifications.kind, "still_in_touch")));

@@ -102,7 +102,7 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy", () => {
       const stamps = await db().select().from(passportStamps).where(eq(passportStamps.accountId, x.id));
       expect(stamps.map((s) => s.district)).toEqual([q.district]);
     }
-    expect(await (await req("/buddy/passport?lang=en", { cookie: a.cookie })).text()).toContain("1 / 50");
+    expect(await (await req("/buddy/passport?lang=en", { cookie: a.cookie })).text()).toContain("1 of 50 districts so far");
     // Friends only: still "activity", no romance.
     expect((await db().select().from(connections).where(eq(connections.id, conn.id)))[0].level).toBe("activity");
 
@@ -127,14 +127,20 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy", () => {
     expect((await matchOf(a)).filter((x) => x.state !== "ended")).toHaveLength(0);
   });
 
-  it("reveals romance only when both chose 'open to more' and finished two quests", async () => {
+  it("friends only for now: two stored 'open to more' opt-ins stay friends after two quests", async () => {
     const romantic = { romanceOn: true, relationship: "single", genderIdentity: "nonbinary", romanceOpenTo: "everyone" as const };
     const a = await createMember({ nickname: "Cy", ...romantic });
     const b = await createMember({ nickname: "Di", ...romantic });
     await withType(a, "CDSN");
     await withType(b, "CFSN");
-    await optIn(a, "open");
-    await optIn(b, "open");
+    // Rows saved before Phase 2A, when "open to more" was still offered.
+    await db().insert(buddyOptins).values([a, b].map((m) => ({ accountId: m.id, intent: "open", active: true, updatedAt: new Date() })));
+    // They still load: the opt-in shows them as friends, with no romance choice.
+    const page = await (await req("/buddy?lang=en", { cookie: a.cookie })).text();
+    expect(page).toContain("Finding your buddy");
+    expect(page).not.toContain('value="open"');
+    expect(page).not.toContain('value="dating"');
+    expect(page).toMatch(/value="friends"[^>]*checked/);
     await only(a, b);
     await roundIfDue(env, nextRoundDate());
     const [m] = await matchOf(a);
@@ -147,7 +153,10 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy", () => {
     expect(conn.level).toBe("activity");
     await req(`/buddy/${m.id}/quest`, { cookie: a.cookie, form: { go: "1" } });
     await req(`/buddy/${m.id}/quest`, { cookie: b.cookie, form: { go: "1" } });
-    expect((await db().select().from(connections).where(eq(connections.id, conn.id)))[0].level).toBe("romance");
+    expect(await db().select().from(passportStamps).where(eq(passportStamps.accountId, a.id))).toHaveLength(1);
+    expect((await db().select().from(connections).where(eq(connections.id, conn.id)))[0].level).toBe("activity");
+    const told = await db().select().from(notifications).where(and(inArray(notifications.accountId, [a.id, b.id]), eq(notifications.kind, "buddy_mutual")));
+    expect(told).toHaveLength(0);
   });
 
   it("keeps romance hidden when only one chose it", async () => {
@@ -420,30 +429,36 @@ describe.skipIf(!HAS_DB)("Here for dating", () => {
     expect(row.challenges).toEqual(["safety", "ghosting"]);
   });
 
-  it("'dating only' needs romance mode; otherwise it's saved as 'open to more'", async () => {
-    const plain = await createMember();
-    await withType2(plain, "BDSH");
-    await req("/buddy/optin", { cookie: plain.cookie, form: { intent: "dating" } });
-    expect((await db().select().from(buddyOptins).where(eq(buddyOptins.accountId, plain.id)))[0].intent).toBe("open");
+  it("Bangkok Buddy is friends only: no dating choices, and old 'open' or 'dating' posts are saved as friends", async () => {
     const romantic = await createMember({ romanceOn: true, relationship: "single", genderIdentity: "woman", romanceOpenTo: "everyone" });
     await withType2(romantic, "CDSH");
     const page = await (await req("/buddy?lang=en", { cookie: romantic.cookie })).text();
-    expect(page).toContain('value="dating"');
-    await req("/buddy/optin", { cookie: romantic.cookie, form: { intent: "dating" } });
-    expect((await db().select().from(buddyOptins).where(eq(buddyOptins.accountId, romantic.id)))[0].intent).toBe("dating");
+    expect(page).not.toContain('value="dating"');
+    expect(page).not.toContain('value="open"');
+    expect(page).not.toMatch(/Dating only|Open to more|Romance shows/);
+    expect(page).toContain('value="friends"');
+    expect(page).toContain('value="activity"');
+    for (const intent of ["dating", "open"]) {
+      await req("/buddy/optin", { cookie: romantic.cookie, form: { intent } });
+      expect((await db().select().from(buddyOptins).where(eq(buddyOptins.accountId, romantic.id)))[0].intent).toBe("friends");
+    }
+    const th = await (await req("/buddy?lang=th", { cookie: romantic.cookie })).text();
+    expect(th).not.toContain("หาเดตอย่างเดียว");
   });
 
-  it("a dating-only member is never paired with someone who only wants friends", async () => {
+  it("a stored dating-only opt-in no longer limits who someone is paired with", async () => {
     const romantic = { romanceOn: true, relationship: "single", genderIdentity: "man", romanceOpenTo: "everyone" as const };
     const a = await createMember(romantic);
     const friendsOnly = await createMember();
     await withType2(a, "BFSN");
     await withType2(friendsOnly, "BDSN"); // a great type fit, same district
-    await req("/buddy/optin", { cookie: a.cookie, form: { intent: "dating" } });
+    // Saved before Phase 2A, when "Dating only" was still offered.
+    await db().insert(buddyOptins).values({ accountId: a.id, intent: "dating", active: true, updatedAt: new Date() });
     await req("/buddy/optin", { cookie: friendsOnly.cookie, form: { intent: "friends" } });
     await only2(a, friendsOnly);
     await roundIfDue(env, nextRoundDate2());
-    expect(await matchOf2(a)).toHaveLength(0);
+    const [m] = await matchOf2(a);
+    expect([m?.aAccount, m?.bAccount].sort()).toEqual([a.id, friendsOnly.id].sort());
   });
 });
 
@@ -470,9 +485,11 @@ describe.skipIf(!HAS_DB)("Safety net and the Buddy tab", () => {
 });
 
 describe.skipIf(!HAS_DB)("Buddy deck", () => {
-  it("while waiting, flick through the pool: keen is stored privately and only for people in your deck", async () => {
-    const a = await createMember({ nickname: "Deckie" });
-    const b = await createMember({ nickname: "Flickable" });
+  it("while waiting, meet possible buddies: 'I'd meet them' is stored privately and only for people in your deck", async () => {
+    // Both open to something more elsewhere in the app: the buddy deck still shows no dating details.
+    const romantic = { romanceOn: true, relationship: "single", genderIdentity: "nonbinary", romanceOpenTo: "everyone" as const };
+    const a = await createMember({ nickname: "Deckie", ...romantic });
+    const b = await createMember({ nickname: "Flickable", ...romantic });
     await withType2(a, "BDSH");
     await withType2(b, "CDSH");
     await req("/buddy/optin", { cookie: a.cookie, form: { intent: "friends" } });
@@ -481,6 +498,25 @@ describe.skipIf(!HAS_DB)("Buddy deck", () => {
     const html = await (await req("/buddy/deck?lang=en", { cookie: a.cookie })).text();
     expect(html).toContain("Flickable");
     expect(html).toContain("left today");
+    // Calm, friends-first words: no swipe language, named buttons, no dating chips.
+    expect(html).toContain("Meet possible buddies");
+    expect(html).toContain('aria-label="I&#39;d meet them"');
+    expect(html).toContain('aria-label="Not now"');
+    expect(html).toMatch(/class="deck-lbl"[^>]*>I&#39;d meet them</);
+    // What a member reads: the page body without scripts and styles.
+    const words = (h: string) => h.slice(h.indexOf("<body")).replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, "");
+    expect(words(html)).not.toMatch(/[Ff]lick through|[Ss]wip|Keen|>Pass</);
+    const deckCard = words(html).slice(words(html).indexOf('class="deck-card"'), words(html).indexOf('class="deck-acts"'));
+    expect(deckCard).toContain("Flickable");
+    expect(deckCard).not.toContain("💘");
+    const th = await (await req("/buddy/deck?lang=th", { cookie: a.cookie })).text();
+    expect(th).toContain("ดูคนที่อาจเป็นบัดดี้");
+    expect(th).toContain("อยากลองเจอ");
+    expect(th).toContain("ไว้ก่อน");
+    expect(words(th)).not.toMatch(/ปัด|>สนใจ<|"สนใจ"/);
+    const waiting = await (await req("/buddy?lang=en", { cookie: a.cookie })).text();
+    expect(waiting).toContain("Meet possible buddies");
+    expect(waiting).not.toMatch(/Flick through|🃏/);
     // Someone not in the deck is ignored.
     await req("/buddy/deck", { cookie: a.cookie, form: { target: "nobody", choice: "keen" } });
     await req("/buddy/deck", { cookie: a.cookie, form: { target: b.id, choice: "keen" } });
@@ -488,5 +524,31 @@ describe.skipIf(!HAS_DB)("Buddy deck", () => {
     expect(rows.map((r) => [r.targetId, r.choice])).toEqual([[b.id, "keen"]]);
     // b never sees it.
     expect(await (await req("/buddy?lang=en", { cookie: b.cookie })).text()).not.toContain("Deckie");
+  });
+});
+
+describe.skipIf(!HAS_DB)("Passport as a quiet memory map", () => {
+  it("leads with the districts visited, a plain 'so far' line, no ring, no medal, no stamp animation", async () => {
+    const m = await createMember();
+    await withType2(m, "BDSH");
+    const empty = await (await req("/buddy/passport?lang=en", { cookie: m.cookie })).text();
+    expect(empty).toContain("No districts yet");
+    await db()
+      .insert(passportStamps)
+      .values(["bang_rak", "pathum_wan"].map((district) => ({ id: randomToken(8), accountId: m.id, district, source: "buddy", createdAt: new Date() })));
+    const html = await (await req("/buddy/passport?lang=en", { cookie: m.cookie })).text();
+    const card = html.slice(html.indexOf("passport-card"));
+    expect(card).toContain("2 of 50 districts so far");
+    // The places come first, before the count and the grid of every district.
+    expect(card.indexOf("Bang Rak")).toBeLessThan(card.indexOf("2 of 50 districts so far"));
+    expect(card.indexOf("2 of 50 districts so far")).toBeLessThan(card.indexOf('class="stamps"'));
+    expect(html).not.toMatch(/class="ring|2 \/ 50|🏅|season-badge|on fresh/);
+    expect(html).toContain("Season stamps");
+    const th = await (await req("/buddy/passport?lang=th", { cookie: m.cookie })).text();
+    expect(th).toContain("ไปมาแล้ว 2 จาก 50 เขต");
+    // Stamping is a calm toast, not a party.
+    const stamped = await (await req("/buddy?lang=en&notice=stamped", { cookie: m.cookie })).text();
+    expect(stamped).toContain("New district stamped in your passport");
+    expect(stamped).not.toContain("toast party");
   });
 });
