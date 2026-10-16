@@ -41,10 +41,6 @@ import {
   type Event,
 } from "../../schema";
 import { loadAttendees, refreshWaitlist, runBuddyRound } from "../../services/events";
-import { checkVenueExtras } from "../../domain/hosting";
-import { STATIONS } from "../../content/stations";
-import { VenueFields, DayStatusForm, EtaSummary } from "../../ui/day-of";
-import { DAY_OF_LEAD_HOURS, cleanNote, dayOfOpen, dayOfOpensAt, isDayStatus, shownDayStatus, shownEta, DAY_STATUS_TEXT } from "../../domain/day-of";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../../storage";
 import {
   Button,
@@ -373,10 +369,6 @@ type Draft = {
   partnerOrgId: string;
   status: string;
   visitBangkokRoute: string;
-  venueNotes: string;
-  venueNotesEn: string;
-  nearestStation: string;
-  walkMinutes: string;
 };
 
 function emptyDraft(): Draft {
@@ -414,10 +406,6 @@ function emptyDraft(): Draft {
     partnerOrgId: "",
     status: "draft",
     visitBangkokRoute: "",
-    venueNotes: "",
-    venueNotesEn: "",
-    nearestStation: "",
-    walkMinutes: "",
   };
 }
 
@@ -456,10 +444,6 @@ function draftFromEvent(e: Event): Draft {
     partnerOrgId: e.partnerOrgId ?? "",
     status: e.status,
     visitBangkokRoute: e.visitBangkokRoute ?? "",
-    venueNotes: e.venueNotes ?? "",
-    venueNotesEn: e.venueNotesEn ?? "",
-    nearestStation: e.nearestStation ?? "",
-    walkMinutes: e.walkMinutes == null ? "" : String(e.walkMinutes),
   };
 }
 
@@ -500,10 +484,6 @@ function draftFromBody(body: Record<string, unknown>): Draft {
     partnerOrgId: s("partnerOrgId"),
     status: s("status"),
     visitBangkokRoute: s("visitBangkokRoute"),
-    venueNotes: s("venueNotes"),
-    venueNotesEn: s("venueNotesEn"),
-    nearestStation: s("nearestStation"),
-    walkMinutes: s("walkMinutes"),
   };
 }
 
@@ -674,8 +654,6 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
   const residentQuota = intIn(d.residentQuota || "0", 0, ORGANISER_MAX_CAPACITY);
   need(residentQuota !== null && (capacity === null || residentQuota <= capacity), "โควตาผู้อยู่อาศัยต้องไม่เกินจำนวนที่นั่ง", "Resident quota can't exceed capacity");
   need(!d.visitBangkokRoute || values(VISITBANGKOK_ROUTES).includes(d.visitBangkokRoute), "เส้นทาง VisitBangkok ไม่ถูกต้อง", "Unknown VisitBangkok route");
-  const extras = checkVenueExtras(d, STATIONS.map((x) => x.key));
-  for (const x of extras.errors) errors.push(t(x.th, x.en));
 
   let status = d.status;
   if (existing?.status === "cancelled") status = "cancelled";
@@ -734,7 +712,6 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
       partnerOrgId,
       status,
       visitBangkokRoute: d.visitBangkokRoute || null,
-      ...extras.values,
     },
   };
 }
@@ -847,7 +824,6 @@ function EventForm(props: {
           )}
         />
         <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
-        <VenueFields v={v} d={d} />
       </Card>
       <Card>
         <h2>{t("ผู้เข้าร่วม", "Who it's for")}</h2>
@@ -1286,19 +1262,6 @@ adminEvents.get(
     const editable = canEdit(a, e);
     const title = lang === "en" && e.titleEn ? e.titleEn : e.title;
 
-    // Day-of: the host's status, and who said they're running late or on the way (first names only).
-    const dayOpen = dayOfOpen(e, now);
-    const etaRows = dayOpen
-      ? await db
-          .select({ etaStatus: registrations.etaStatus, etaAt: registrations.etaAt, checkedInAt: registrations.checkedInAt, nickname: profiles.nickname })
-          .from(registrations)
-          .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
-          .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.etaStatus)))
-          .limit(500)
-      : [];
-    const etaNames = (k: string) =>
-      etaRows.filter((r) => !r.checkedInAt && shownEta(e, r, now) === k).map((r) => (r.nickname ?? noName).trim().split(/\s+/)[0] ?? noName);
-
     const swaps = c.req.query("swaps");
     const isolated = c.req.query("isolated");
     const blockedQ = c.req.query("blocked");
@@ -1519,14 +1482,6 @@ adminEvents.get(
               <Button kind="ghost">{t("ย้าย", "Move")}</Button>
             </form>
           </details>
-        ) : null}
-
-        {e.status === "published" && !ended ? (
-          <>
-            <h2 id="day-of">{t("สถานะวันงาน", "On the day")}</h2>
-            <DayStatusForm v={v} action={`${BASE}/${e.id}/day-status`} shown={shownDayStatus(e, now)} open={dayOpen} opensAt={fmtDate(dayOfOpensAt(e.startsAt), lang)} />
-            {dayOpen ? <EtaSummary t={t} late={etaNames("running_late")} onWay={etaNames("on_my_way")} /> : null}
-          </>
         ) : null}
 
         <h2>{t("คำถามละลายพฤติกรรม", "Icebreaker prompt")}</h2>
@@ -2063,53 +2018,6 @@ adminEvents.post(
       audit(db, me(c).id, prompt ? "event.prompt_set" : "event.prompt_clear", { type: "event", id: e.id }, { prompt }),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=saved`);
-  }),
-);
-
-/**
- * Day-of status: the host (or the organiser) says how the table is doing on
- * the day. Only inside the day-of window. Confirmed attendees hear about a
- * change that matters to them (late, moved, called off); "on time" is quiet.
- */
-adminEvents.post(
-  "/:id/day-status",
-  withEvent(async (c, e, db) => {
-    const { t } = view(c);
-    const now = new Date();
-    if (e.status !== "published" || !dayOfOpen(e, now)) {
-      return refuse(c, e, t(`ตั้งสถานะวันงานได้เฉพาะวันงาน ตั้งแต่ ${DAY_OF_LEAD_HOURS} ชั่วโมงก่อนเริ่มจนจบงาน`, `A day-of status can only be set on the day, from ${DAY_OF_LEAD_HOURS} hours before the start until the end.`), 409);
-    }
-    const body = await c.req.parseBody();
-    if (str(body.clear) === "1") {
-      await batch(c.env, [
-        db.update(events).set({ dayStatus: null, dayStatusNote: null, dayStatusAt: null }).where(eq(events.id, e.id)),
-        audit(db, me(c).id, "event.day_status_clear", { type: "event", id: e.id }),
-      ]);
-      return c.redirect(`${BASE}/${e.id}?notice=saved#day-of`);
-    }
-    const status = str(body.status);
-    const note = cleanNote(str(body.note));
-    if (!isDayStatus(status)) return refuse(c, e, t("เลือกสถานะ", "Choose a status"));
-    if (status === "moved" && !note) return refuse(c, e, t("บอกด้วยว่าย้ายไปที่ไหน", "Say where it moved to"));
-    const text = DAY_STATUS_TEXT[status];
-    const writes = [
-      db.update(events).set({ dayStatus: status, dayStatusNote: note, dayStatusAt: now }).where(eq(events.id, e.id)),
-      audit(db, me(c).id, "event.day_status", { type: "event", id: e.id }, { status }),
-    ];
-    if (status !== "on_time") {
-      const regs = await keysetAll(registrations.id, (after, n) =>
-        db
-          .select({ id: registrations.id, accountId: registrations.accountId })
-          .from(registrations)
-          .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), after))
-          .orderBy(asc(registrations.id))
-          .limit(n),
-      );
-      const th = `โฮสต์อัปเดต: ${text.th}${note ? ` ${note}` : ""}`;
-      const en = `Host update: ${text.en}${note ? `. ${note}` : ""}`;
-      await batchAll(c.env, [...writes, ...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_notice", `/events/${e.id}`)]);
-    } else await batch(c.env, writes);
-    return c.redirect(`${BASE}/${e.id}?notice=saved#day-of`);
   }),
 );
 
