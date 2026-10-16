@@ -10,6 +10,7 @@ import { A11Y_CSS } from "../src/ui/a11y-css";
 import { IcebreakerCard } from "../src/ui/icebreakers";
 import { PROFILE_CSS } from "../src/ui/profile-card";
 import { Notice } from "../src/ui/kit";
+import { SHEET_JS, SHEET_PLACE_JS } from "../src/ui/sheet";
 
 const v = { lang: "en" as const, t: (_th: string, en: string) => en, user: null, path: "/" };
 const rule = (css: string, sel: string) => css.slice(css.indexOf(sel), css.indexOf("}", css.indexOf(sel)) + 1);
@@ -67,6 +68,51 @@ describe("flat surfaces", () => {
     expect(A11Y_CSS).toContain(".card{border:1px solid var(--line)}");
     expect(rule(A11Y_CSS, ".card.link:hover,a.card:hover{")).toContain("box-shadow:none!important");
     expect(rule(A11Y_CSS, ".card.me-next{")).toContain("box-shadow:none");
+  });
+});
+
+describe("the ⋯ popover on laptops never runs past the screen", () => {
+  type Rect = { top: number; bottom: number; left: number; right: number };
+  type Placed = { left: number; top: number; maxHeight: number; up: boolean };
+  const place = new Function(`${SHEET_PLACE_JS};return sheetPlace`)() as (s: Rect, w: number, h: number, W: number, H: number, start: boolean) => Placed;
+  const at = (top: number): Rect => ({ top, bottom: top + 44, left: 1000, right: 1044 });
+  const inside = (x: Placed, h: number, H: number) => {
+    const shown = Math.min(h, x.maxHeight);
+    expect(x.top).toBeGreaterThanOrEqual(8);
+    expect(x.top + shown).toBeLessThanOrEqual(H - 8);
+  };
+
+  it("opens below, at full height, when it fits", () => {
+    const x = place(at(80), 300, 400, 1280, 900, false);
+    expect(x).toMatchObject({ up: false, top: 130 });
+    expect(x.maxHeight).toBeGreaterThanOrEqual(400);
+    inside(x, 400, 900);
+  });
+
+  it("flips above when there is more room there, capped to that room", () => {
+    const x = place(at(620), 300, 560, 1280, 700, false);
+    expect(x.up).toBe(true);
+    expect(x.top).toBe(620 - 6 - 560);
+    inside(x, 560, 700);
+    // Contact shared plus four links in a short window: taller than either side, so it scrolls inside.
+    const y = place(at(330), 300, 900, 1280, 700, false);
+    expect(y.maxHeight).toBe(330 - 6 - 8);
+    expect(y.top).toBe(8);
+    inside(y, 900, 700);
+  });
+
+  it("stays below and capped when below has more room, and keeps 8px from the side edges", () => {
+    const x = place(at(200), 360, 900, 1280, 700, false);
+    expect(x).toMatchObject({ up: false, top: 250, maxHeight: 700 - 250 - 8 });
+    inside(x, 900, 700);
+    expect(place({ top: 100, bottom: 144, left: 1250, right: 1294 }, 360, 200, 1280, 700, true).left).toBe(1280 - 360 - 8);
+    expect(place({ top: 100, bottom: 144, left: 0, right: 44 }, 360, 200, 1280, 700, false).left).toBe(8);
+  });
+
+  it("the sheet script uses it and clears the cap when the sheet closes or becomes a bottom sheet", () => {
+    expect(SHEET_JS).toContain("function sheetPlace(");
+    expect(SHEET_JS).toContain('p.style.maxHeight=x.maxHeight+"px"');
+    expect(SHEET_JS).toContain('p.style.maxHeight="";p.style.left="";p.style.top=""');
   });
 });
 

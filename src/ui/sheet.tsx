@@ -11,8 +11,9 @@
  *    tile or overflow can clip it or tuck it under the tab bar;
  *  - focus moves into the panel, Tab is trapped while it is modal (phones),
  *    Escape or ✕ or the scrim closes it and focus goes back to the trigger;
- *  - on laptops a click outside closes it, and it flips above its trigger
- *    when there is no room below;
+ *  - on laptops a click outside closes it, it flips above its trigger when
+ *    there is more room there, and it is never taller than the room on its
+ *    side of the trigger (it scrolls inside instead);
  *  - it moves on the shared spring (jgMotion, damping 1, no overshoot) and
  *    simply appears when reduced motion is on;
  *  - any element with data-sheet-hold opens the first sheet inside it on a
@@ -59,26 +60,37 @@ export function Sheet(props: {
   );
 }
 
+/**
+ * Where the laptop popover goes (plain function, also run by the tests). `s` is the trigger's rect,
+ * `w` and `h` the panel's full size, `W` and `H` the viewport. It opens below the trigger, or above
+ * it when the panel does not fit below and there is more room above, and its height is capped at the
+ * room on that side (8px from the viewport edge, 6px from the trigger), so it scrolls inside instead
+ * of running off the screen.
+ */
+export const SHEET_PLACE_JS = `function sheetPlace(s,w,h,W,H,start){var M=8,G=6,left=start?s.left:s.right-w;left=Math.max(M,Math.min(W-w-M,left));
+var below=H-s.bottom-G-M,above=s.top-G-M,up=h>below&&above>below,room=Math.max(0,up?above:below),cap=Math.min(h,room);
+return{left:left,top:up?s.top-G-cap:s.bottom+G,maxHeight:room,up:up}}`;
+
 /** Classic script, after SPRING_JS. Event delegation only, so content swapped in later (chat) works too. */
-export const SHEET_JS = `(function(){var D=document,R=D.documentElement;R.classList.add("sheet-js");
+export const SHEET_JS = `(function(){${SHEET_PLACE_JS}
+var D=document,R=D.documentElement;R.classList.add("sheet-js");
 var mq=matchMedia("(max-width:1023px)"),cur=null,anim=null,held=false;
 function M(){return window.jgMotion}
 function still(){var m=M();return !m||m.still()}
 function up(p){try{return p.matches(":popover-open")}catch(e){return false}}
 function panelOf(d){return d.querySelector(":scope>.sheet-panel")}
 function focusables(p){return [].slice.call(p.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select,textarea,summary,[tabindex]:not([tabindex="-1"])')).filter(function(e){return e.offsetParent!==null||e===D.activeElement})}
-function place(d){var p=panelOf(d);if(!p||d.classList.contains("modal")||!up(p))return;var s=d.querySelector(":scope>summary").getBoundingClientRect(),w=p.offsetWidth,h=p.offsetHeight,W=innerWidth,H=innerHeight;
-var left=d.classList.contains("sheet-start")?s.left:s.right-w;left=Math.max(8,Math.min(W-w-8,left));
-var top=s.bottom+6;if(top+h>H-8&&s.top-6-h>8)top=s.top-6-h;p.style.left=left+"px";p.style.top=top+"px"}
-function lift(d){var p=panelOf(d);if(!p)return;var modal=mq.matches;d.classList.toggle("modal",modal);d.classList.add("lifted");p.setAttribute("aria-modal",modal?"true":"false");
+function place(d){var p=panelOf(d);if(!p||d.classList.contains("modal")||!up(p))return;var s=d.querySelector(":scope>summary").getBoundingClientRect(),h=p.scrollHeight+(p.offsetHeight-p.clientHeight);
+var x=sheetPlace(s,p.offsetWidth,h,innerWidth,innerHeight,d.classList.contains("sheet-start"));p.style.maxHeight=x.maxHeight+"px";p.style.left=x.left+"px";p.style.top=x.top+"px";d.classList.toggle("sheet-up",x.up)}
+function lift(d){var p=panelOf(d);if(!p)return;var modal=mq.matches;d.classList.toggle("modal",modal);d.classList.add("lifted");p.setAttribute("aria-modal",modal?"true":"false");if(modal){p.style.maxHeight="";p.style.left="";p.style.top=""}
 if(p.showPopover){try{p.setAttribute("popover","manual");p.showPopover()}catch(e){}}
 place(d);cur=d;var f=focusables(p).filter(function(e){return !e.hasAttribute("data-sheet-close")})[0]||p;try{f.focus({preventScroll:true})}catch(e){}
 if(anim)anim.stop();if(still())return;
 if(modal){var h=p.offsetHeight;p.style.transform="translate3d(0,"+h+"px,0)";anim=M().spring({from:h,to:0,damping:1,response:0.35,onUpdate:function(x){p.style.transform="translate3d(0,"+x+"px,0)"},onDone:function(){p.style.transform=""}})}
 else{p.style.opacity="0";anim=M().spring({from:8,to:0,damping:1,response:0.25,onUpdate:function(x){p.style.transform="translate3d(0,"+(-x)+"px,0)";p.style.opacity=String(1-x/8)},onDone:function(){p.style.transform="";p.style.opacity=""}})}}
 function open(d){if(cur&&cur!==d)shut(cur,true);if(!d.open)d.open=true;lift(d)}
-function done(d,back){var p=panelOf(d);if(p){p.style.transform="";p.style.opacity="";if(p.hidePopover&&up(p))try{p.hidePopover()}catch(e){}}
-var had=p&&p.contains(D.activeElement);d.open=false;d.classList.remove("lifted","modal");if(cur===d)cur=null;if(back||had){var s=d.querySelector(":scope>summary");s&&s.focus({preventScroll:true})}}
+function done(d,back){var p=panelOf(d);if(p){p.style.transform="";p.style.opacity="";p.style.maxHeight="";p.style.left="";p.style.top="";if(p.hidePopover&&up(p))try{p.hidePopover()}catch(e){}}
+var had=p&&p.contains(D.activeElement);d.open=false;d.classList.remove("lifted","modal","sheet-up");if(cur===d)cur=null;if(back||had){var s=d.querySelector(":scope>summary");s&&s.focus({preventScroll:true})}}
 function shut(d,quick,back){var p=panelOf(d);if(anim){anim.stop();anim=null}
 if(quick||still()||!p||!d.classList.contains("modal")){done(d,back);return}
 var h=p.offsetHeight;anim=M().spring({from:0,to:h,damping:1,response:0.3,onUpdate:function(x){p.style.transform="translate3d(0,"+x+"px,0)"},onDone:function(){anim=null;done(d,back)}})}
