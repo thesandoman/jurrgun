@@ -6,7 +6,7 @@
  *
  * It only removes what the retention table says to remove:
  *
- *   social signals            7 days after the event ends
+ *   social signals, hello lines  7 days after the event ends
  *   pending connection choices when the People I Met window closes (72h);
  *                             mutual connections live in social_connections
  *                             and are untouched
@@ -178,11 +178,11 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, reportsOld, actionsOld, strikesOld, auditOld] = await batch(env, [
     db
       .update(registrations)
-      .set({ socialSignal: null, signalTopics: null })
+      .set({ socialSignal: null, signalTopics: null, helloLine: null })
       .where(
         and(
           inArray(registrations.eventId, endedBefore(signalCutoff)),
-          or(isNotNull(registrations.socialSignal), isNotNull(registrations.signalTopics)),
+          or(isNotNull(registrations.socialSignal), isNotNull(registrations.signalTopics), isNotNull(registrations.helloLine)),
         ),
       )
       .returning({ id: registrations.id }),

@@ -170,6 +170,33 @@ export function languageGaps(rows: { scenario: string; lang: string; none: boole
   return [...by.values()].sort((a, b) => Number(b.flag) - Number(a.flag) || b.th.n + b.en.n - (a.th.n + a.en.n));
 }
 
+export type Funnel = { opened: number; steps: { q: number; reached: number }[]; finished: number };
+
+/**
+ * Who finishes (owner card 10-16): from daily totals (segment, question,
+ * reached) to opened → each question → finished, for one group or everyone.
+ * Question 0 is opening the quiz, 99 a saved result.
+ */
+export function reachFunnel(rows: { segment: string; question: number; reached: number }[], segment?: string): Funnel {
+  const by = new Map<number, number>();
+  for (const r of rows) if (!segment || r.segment === segment) by.set(r.question, (by.get(r.question) ?? 0) + r.reached);
+  const steps = [...by]
+    .filter(([q]) => q > 0 && q < 99)
+    .sort((a, b) => a[0] - b[0])
+    .map(([q, reached]) => ({ q, reached }));
+  return { opened: by.get(0) ?? 0, steps, finished: by.get(99) ?? 0 };
+}
+
+/** The question where the most people stopped, from one question to the next (null under k). */
+export function biggestDrop(f: Funnel): { from: number; to: number; lost: number } | null {
+  let best: { from: number; to: number; lost: number } | null = null;
+  for (let k = 1; k < f.steps.length; k++) {
+    const lost = f.steps[k - 1].reached - f.steps[k].reached;
+    if (safeCount(f.steps[k - 1].reached) !== null && lost > 0 && (!best || lost > best.lost)) best = { from: f.steps[k - 1].q, to: f.steps[k].q, lost };
+  }
+  return best;
+}
+
 function rowsOf(res: unknown): unknown[][] {
   return (res as unknown[]).map((r) => (Array.isArray(r) ? r : Object.values(r as Record<string, unknown>)));
 }
@@ -180,7 +207,7 @@ const BLEND = sql`(case when jsonb_typeof(v.blend) = 'string' then (v.blend #>> 
 adminQuizHealth.get("/", async (c) => {
   const { t, lang } = view(c);
   const db = getDb(c.env);
-  const [feelByType, feelBySegment, picks, retakes, feelByLang, picksByLang] = await Promise.all([
+  const [feelByType, feelBySegment, picks, retakes, feelByLang, picksByLang, reach] = await Promise.all([
     db.execute(sql`select v.archetype, ${BLEND}->>'feel', count(*) from social_vibes v where ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`select ${SEGMENT_SQL}, ${BLEND}->>'feel', count(*) from social_vibes v join social_profiles p on p.account_id = v.account_id where ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`
@@ -202,6 +229,7 @@ adminQuizHealth.get("/", async (c) => {
       cross join lateral jsonb_array_elements(case when jsonb_typeof(${BLEND}->'picks') = 'array' then ${BLEND}->'picks' else '[]'::jsonb end) e
       where ${BLEND} ? 'lang'
       group by 1, 2, 3`),
+    db.execute(sql`select segment, question, sum(reached) from social_quiz_reach group by 1, 2`),
   ]);
 
   const tally = (res: unknown) => {
@@ -263,6 +291,15 @@ adminQuizHealth.get("/", async (c) => {
   );
   const SEG: Record<string, string> = { local: t("คนกรุงเทพฯ", "Locals"), newcomer: t("คนมาใหม่", "Newcomers"), international: t("ชาวต่างชาติ", "International") };
 
+  const reachRows = rowsOf(reach).map(([segment, question, n]) => ({ segment: String(segment), question: Number(question), reached: Number(n) }));
+  const funnels = [["all", t("ทั้งหมด", "Everyone")] as const, ...(["local", "newcomer", "international"] as const).map((g) => [g, SEG[g]] as const)].map(
+    ([k, label]) => ({ k, label, f: reachFunnel(reachRows, k === "all" ? undefined : k) }),
+  );
+  const everyone = funnels[0].f;
+  const drop = biggestDrop(everyone);
+  const qNums = [...new Set(everyone.steps.map((x) => x.q))];
+  const ofOpened = (n: number, f: Funnel) => (safeCount(f.opened) === null ? "<10" : share(Math.min(n, f.opened), f.opened));
+
   return page(
     c,
     { title: t("สุขภาพแบบทดสอบ", "Quiz health"), admin: true },
@@ -300,6 +337,45 @@ adminQuizHealth.get("/", async (c) => {
           </table>
         </div>
       </details>
+
+      <h2 id="finish">{t("ใครทำจนจบ", "Who finishes")}</h2>
+      <p class="muted">
+        {t(
+          "นับแค่จำนวนคนที่มาถึงแต่ละข้อ ไม่มีบัญชี ไม่มีคำตอบ ไม่มีเวลา ถ้าคนเลิกกลางทางเพราะคำถามบางข้อ ผลด้านบนจะดูดีเกินจริง",
+          "Only how many reached each question: no account, no answers, no timing. If people quit because of a question, every number above looks better than it is.",
+        )}
+        {drop ? <> {t(`ลดลงมากสุด: ข้อ ${drop.from} → ${drop.to}`, `Biggest drop: question ${drop.from} → ${drop.to}`)}</> : null}
+      </p>
+      {everyone.opened === 0 && everyone.finished === 0 ? (
+        <p class="muted">{t("ยังไม่มีข้อมูล", "Nothing counted yet.")}</p>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{t("ถึง", "Reached")}</th>
+                {funnels.map((x) => <th scope="col">{x.label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" style="font-weight:normal">{t("เปิดแบบทดสอบ", "Opened")}</th>
+                {funnels.map((x) => <td>{count(x.f.opened)}</td>)}
+              </tr>
+              {qNums.map((q) => (
+                <tr data-reach={q}>
+                  <th scope="row" style="font-weight:normal">{t(`ข้อ ${q}`, `Question ${q}`)}</th>
+                  {funnels.map((x) => <td>{ofOpened(x.f.steps.find((st) => st.q === q)?.reached ?? 0, x.f)}</td>)}
+                </tr>
+              ))}
+              <tr>
+                <th scope="row" style="font-weight:normal">{t("ทำจนจบ", "Finished")}</th>
+                {funnels.map((x) => <td>{ofOpened(x.f.finished, x.f)}</td>)}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2 id="language">{t("ไทยกับอังกฤษ", "Thai vs English")}</h2>
       <p class="muted">

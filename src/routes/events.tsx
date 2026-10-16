@@ -20,6 +20,7 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
+import { cleanHello, HELLO_MAX, helloOpen, helloPrompt } from "../domain/hello";
 import { TableIntroPrompt } from "../ui/table-intro";
 import { OfflineSavedNote, SaveNext } from "../ui/offline-next";
 import { IcebreakerCard } from "../ui/icebreakers";
@@ -1141,6 +1142,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const dayOf = event.status === "published" && dayOfOpen(event, now);
   const dayStatus = going || hosting ? shownDayStatus(event, now) : null;
   const eta = dayOf && hosting ? await etaNames(db, event, now) : null;
+  const hello = going && helloOpen(event, now) ? await helloLines(db, event, reg!, user.account.id) : null;
 
   return page(
     c,
@@ -1160,6 +1162,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <Notice kind="info" icon="🔒">{t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
       ) : null}
       <DayStatusLine t={t} lang={lang} shown={dayStatus} />
+      {hello ? <HelloBox t={t} lang={lang} event={event} mine={reg!.helloLine} lines={hello} /> : null}
       {going && dayOf && !reg!.checkedInAt ? <EtaBox t={t} eventId={event.id} current={shownEta(event, reg!, now)} next={`/events/${event.id}`} /> : null}
       {eta ? (
         <Card class="eta-host">
@@ -2366,6 +2369,74 @@ eventRoutes.post("/events/:id/eta", requireMember, async (c) => {
     await notifyHostRunningLate(c.env, db, { eventId: id, hostId, attendeeId: user.account.id, firstName: user.profile.nickname ? firstName(user.profile.nickname) : null, hostLocale: host?.locale ?? null }, now);
   }
   return c.redirect(next);
+});
+
+/**
+ * "Say hi first" (owner card 10-16): the lines of the other people going, or
+ * only those at your own table once groups are out. Blocked people never show.
+ */
+async function helloLines(db: Db, event: Event, reg: { groupNo: number | null }, mine: string): Promise<{ nickname: string; line: string }[]> {
+  const sameTable = event.groupsPublishedAt && reg.groupNo !== null;
+  const rows = await db
+    .select({ accountId: registrations.accountId, line: registrations.helloLine, nickname: profiles.nickname })
+    .from(registrations)
+    .innerJoin(profiles, eq(profiles.accountId, registrations.accountId))
+    .where(
+      and(
+        eq(registrations.eventId, event.id),
+        eq(registrations.status, "confirmed"),
+        ne(registrations.accountId, mine),
+        isNotNull(registrations.helloLine),
+        ...(sameTable ? [eq(registrations.groupNo, reg.groupNo!)] : []),
+      ),
+    )
+    .limit(40);
+  const hidden = await blockedWith(db, mine, rows.map((r) => r.accountId));
+  return rows.filter((r) => !hidden.has(r.accountId) && r.line).map((r) => ({ nickname: firstName(r.nickname), line: r.line! }));
+}
+
+function HelloBox(props: { t: T; lang: Lang; event: Event; mine: string | null; lines: { nickname: string; line: string }[] }) {
+  const { t, lang } = props;
+  const prompt = helloPrompt(props.event.tags);
+  return (
+    <Card class="hello">
+      <h2 class="h3" id="hello">👋 {t("ทักกันก่อน", "Say hi first")}</h2>
+      <p>{lang === "th" ? prompt.th : prompt.en}</p>
+      {props.lines.length ? (
+        <ul>
+          {props.lines.map((x) => (
+            <li>
+              <strong>{x.nickname}</strong> {x.line}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="muted">{t("ยังไม่มีใครทัก คุณเริ่มก่อนก็ได้นะ", "No one has said hi yet. You could be first.")}</p>
+      )}
+      <form method="post" action={`/events/${props.event.id}/hello`}>
+        <Field label={t("หนึ่งบรรทัดของคุณ", "Your one line")} name="hello" value={props.mine ?? ""} maxlength={HELLO_MAX} />
+        <Button>{t("บันทึก", "Save")}</Button>
+      </form>
+      <p class="muted">{t("ไม่บังคับ เห็นเฉพาะคนที่ไปงานนี้ ลบเองหลังงาน 7 วัน", "Optional. Only the people going see it, and it's deleted 7 days after.")}</p>
+    </Card>
+  );
+}
+
+eventRoutes.post("/events/:id/hello", requireMember, async (c) => {
+  const user = me(c);
+  const id = c.req.param("id");
+  const db = getDb(c.env);
+  const body = await c.req.parseBody();
+  const [row] = await db
+    .select({ event: events, reg: registrations })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(and(eq(registrations.eventId, id), eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed")))
+    .limit(1);
+  if (!row || row.event.status !== "published") return notFound(c);
+  if (!helloOpen(row.event, new Date())) return c.redirect(`/events/${id}`);
+  await db.update(registrations).set({ helloLine: cleanHello(str(body.hello)) }).where(eq(registrations.id, row.reg.id));
+  return c.redirect(`/events/${id}#hello`);
 });
 
 /** The pass as a calendar file: only for the member holding a confirmed seat. */

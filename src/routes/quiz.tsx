@@ -15,12 +15,13 @@
 import type { AssetPath } from "../assets";
 import { FirstTable, firstTable } from "./newcomers";
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import type { AppEnv } from "../lib/env";
 import { L, type Lang } from "../lib/i18n";
 import { requireUser } from "../lib/session";
-import { profiles, vibes } from "../schema";
+import { profiles, quizReach, vibes } from "../schema";
+import { DEFAULT_SEGMENT } from "../vibe/curated";
 import { cleanBio } from "../content/profile";
 import { romanceEligible } from "../domain/rules";
 import { segmentOf } from "../domain/segment";
@@ -332,6 +333,9 @@ export function QuizFlow(props: {
       {Object.entries(props.carry ?? {}).flatMap(([k, val]) => (Array.isArray(val) ? val : [val]).map((x) => <input type="hidden" name={k} value={x} />))}
       {/* After the steps, so the radios it sets up are already parsed. */}
       <script dangerouslySetInnerHTML={{ __html: QUIZ_NONE_JS }} />
+      {/* Where people stop (owner card 10-16): one anonymous count per question reached. */}
+      <i hidden id="quiz-reach" data-base={ask[0] ?? 0} data-seed={props.seed} />
+      <script dangerouslySetInnerHTML={{ __html: QUIZ_REACH_JS }} />
     </Flow>
   );
 }
@@ -947,6 +951,7 @@ quizRoutes.post("/quiz", async (c) => {
     .insert(vibes)
     .values({ accountId: user.account.id, ...values })
     .onConflictDoUpdate({ target: vibes.accountId, set: values });
+  await countReach(c.env, personal?.segment ?? DEFAULT_SEGMENT, FINISHED);
   // Style cards go on the profile, merged with earlier answers. "How you date" is
   // romance data, so it lives in the bio and is cleared with romance mode (withoutDating).
   const dateStyle = personal?.openToMore ? styleOf(questions, answers, "open-to-more") : {};
@@ -997,6 +1002,40 @@ quizRoutes.get("/quiz/result", async (c) => {
     {user.account.role === "circle_head" && user.profile ? <HostStyle v={v} bio={user.profile.bio} /> : null}
     </>,
   );
+});
+
+/**
+ * Sends one count the first time each question screen shows (and 0 for the
+ * intro): no answer, no timing, nothing about the person. Once per question
+ * per quiz (sessionStorage), and silent if anything is missing.
+ */
+const QUIZ_REACH_JS = `(function(){var m=document.getElementById("quiz-reach");if(!m||!navigator.sendBeacon||!window.MutationObserver)return;
+var base=+m.dataset.base||0,seed=m.dataset.seed||"",f=m.closest("form");if(!f)return;
+var qs=[].slice.call(f.querySelectorAll(".flow-step.q-choice"));
+function send(q){var k="qr:"+seed+":"+q;try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(e){}var d=new FormData();d.append("q",String(q));navigator.sendBeacon("/quiz/reach",d)}
+if(!base)send(0);
+function check(){qs.forEach(function(st,j){if(st.classList.contains("on"))send(base+j+1)})}
+var mo=new MutationObserver(check);qs.forEach(function(st){mo.observe(st,{attributes:true,attributeFilter:["class"]})});check()})();`;
+
+/** Question numbers a reach count may carry: 0 = opened, 1..40 = a question, FINISHED = saved. */
+export const FINISHED = 99;
+const MAX_REACH_Q = 40;
+
+/** Adds one to today's (Bangkok) count for this segment and question. Totals only. */
+export async function countReach(env: AppEnv["Bindings"], segment: string, question: number, now = new Date()): Promise<void> {
+  const day = new Date(now.getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
+  await getDb(env)
+    .insert(quizReach)
+    .values({ id: `${day}:${segment}:${question}`, day, segment, question, reached: 1 })
+    .onConflictDoUpdate({ target: [quizReach.day, quizReach.segment, quizReach.question], set: { reached: sql`${quizReach.reached} + 1` } });
+}
+
+quizRoutes.post("/quiz/reach", async (c) => {
+  const user = c.var.user!;
+  const q = Number(str((await c.req.parseBody()).q));
+  if (!Number.isInteger(q) || q < 0 || q > MAX_REACH_Q) return c.body(null, 204);
+  await countReach(c.env, personalOf(user.profile, user.account.role)?.segment ?? DEFAULT_SEGMENT, q);
+  return c.body(null, 204);
 });
 
 quizRoutes.post("/quiz/feel", async (c) => {
