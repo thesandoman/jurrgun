@@ -239,7 +239,7 @@ export function ProfileCard(props: {
             {p.pronouns ? <small class="pc-pronouns"> {p.pronouns}</small> : null}
           </h1>
           <p class="pc-where">
-            📍 {label(DISTRICTS, p.district, lang)}
+            <span class="pc-place">📍 {label(DISTRICTS, p.district, lang)}</span>
             {p.newcomer ? <span class="pc-chip pc-new">🌱 {t("มาใหม่ในกรุงเทพฯ", "New to Bangkok")}</span> : null}
           </p>
           {props.badges ? <div class="pc-badges">{props.badges}</div> : null}
@@ -584,7 +584,8 @@ p.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
 .pc-compact .pc-initial span{font-size:2rem}
 .pc-compact .pc-id{flex:1;min-width:0}
 .pc-compact .pc-id h1{font-size:1.6rem}
-.pc-compact .pc-where{margin-top:2px}
+.pc-compact .pc-where{margin-top:2px;gap:4px 8px}
+.pc-place,.pc-new{white-space:nowrap}
 .pc-compact .pc-actions{flex:none;flex-direction:column;align-items:flex-end;gap:6px}
 .pc-compact .pc-actions .btn{min-height:44px;padding-inline:14px}
 @media (max-width:359.98px){.pc-compact .pc-actions{flex-basis:100%;align-items:flex-start}}

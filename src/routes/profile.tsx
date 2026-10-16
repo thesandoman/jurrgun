@@ -201,7 +201,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         actions={
           self ? (
             <>
-              <LinkButton href="/settings/profile">✏️ {t("แก้ไขโปรไฟล์", "Edit profile")}</LinkButton>
+              <a class="btn primary" href="/settings/profile" aria-label={t("แก้ไขโปรไฟล์", "Edit profile")}>✏️ {t("แก้ไข", "Edit")}</a>
               {answered < 3 ? <LinkButton href="/settings/profile#prompts" kind="ghost">💬 {t("ตอบคำถามเพิ่ม", "Answer a few prompts")}</LinkButton> : null}
             </>
           ) : undefined
