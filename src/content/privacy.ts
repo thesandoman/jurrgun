@@ -129,8 +129,8 @@ export const RETENTION: RetentionItem[] = [
   {
     what: { th: "บัญชีที่ปิดแล้ว", en: "Closed accounts" },
     keep: {
-      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที แล้วลบข้อมูลที่เหลือหลัง",
-      en: "profile hidden, and photos, social links and Google, LINE or email sign-in removed at once; the rest is deleted after",
+      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจจะเก็บไว้แบบไม่ระบุตัวตนเพื่อนับยอดรวม แล้วลบข้อมูลที่เหลือหลัง",
+      en: "profile hidden, and photos, social links and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with nothing that identifies you, for totals; the rest is deleted after",
     },
     period: { n: 30, unit: "days" },
     code: "DEACTIVATED_RETENTION_DAYS",
@@ -163,6 +163,7 @@ export const COOKIES: CookieItem[] = [
   { name: "bkk_oauth", what: { th: "ระหว่างเข้าสู่ระบบด้วย Google หรือ LINE", en: "While you sign in with Google or LINE" }, life: { th: "10 นาที", en: "10 minutes" } },
   { name: "bkk_invite", what: { th: "ลิงก์ชวนจากเพื่อน จนกว่าคุณจะสมัครเสร็จ", en: "A friend's invite link, until you finish signing up" }, life: { th: "7 วัน", en: "7 days" } },
   { name: "bkk_intent", what: { th: "สิ่งที่คุณเลือกในหน้าต้อนรับ (เพื่อน หรือเปิดใจมากกว่าเพื่อน)", en: "Your choice on the welcome screen (friends, or open to more)" }, life: { th: "30 วัน", en: "30 days" } },
+  { name: "bkk_dating_pending", what: { th: "คำตอบเรื่องเดตตอนสมัคร เก็บไว้ในเครื่องคุณจนกว่าจะยินยอม ถ้าไม่ยินยอมจะถูกลบ", en: "Your sign-up dating answers, kept on your device until you consent; dropped if you don't" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "bkk_quiz_skip", what: { th: "จำว่าคุณข้ามแบบทดสอบไว้ก่อน", en: "Remembers you skipped the quiz for now" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "jg_new", what: { th: "จำว่าคุณเพิ่งย้ายมากรุงเทพฯ", en: "Remembers you're new to Bangkok" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "jg_intl", what: { th: "จำว่าคุณมาจากต่างประเทศ", en: "Remembers you're from abroad" }, life: { th: "30 วัน", en: "30 days" } },
@@ -306,7 +307,7 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     hint: { th: "เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย เพิ่มหรือลบลิงก์ได้ที่แก้ไขโปรไฟล์", en: "Only mutual connections see them. Add or remove links in Edit profile." },
   },
   {
-    key: "relationship",
+    key: "relationship_data",
     control: "elsewhere",
     href: "/settings/connections",
     sensitive: true,
@@ -314,7 +315,7 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     hint: { th: "ส่วนตัว ทีมงานไม่เห็น ใช้กับเรื่องเปิดใจมากกว่าเพื่อนเท่านั้น", en: "Private, never shown to staff. Used only for Open to something more." },
   },
   {
-    key: "gender",
+    key: "gender_data",
     control: "elsewhere",
     href: "/settings/connections",
     sensitive: true,

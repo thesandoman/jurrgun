@@ -208,7 +208,8 @@ describe("privacy notice: consents", () => {
   function writtenCategories(): Set<string> {
     const out = new Set<string>();
     for (const m of ALL.matchAll(/insert\(consents\)\s*\.values\(\{[^}]*?category: "([a-z_]+)"/g)) out.add(m[1]);
-    for (const m of ALL.matchAll(/category: ([A-Z_]+_CONSENT)\b/g)) {
+    // Consent helpers write categories through named constants (e.g. check(RELATIONSHIP_CONSENT, ...)).
+    for (const m of ALL.matchAll(/(?:category: |check\(|consentRow\([^,]+,[^,]+, )([A-Z_]+_CONSENT)\b/g)) {
       const def = new RegExp(`const ${m[1]} = "([^"]+)"`).exec(ALL);
       if (def) out.add(def[1]);
     }

@@ -97,7 +97,7 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
   it("relationship status is saved with a consent row (PENDING: privacy fixes)", async () => {
     const m = await createMember({ relationship: "prefer_not" });
     await req("/settings/connections", { cookie: m.cookie, form: { relationship: "single" } });
-    expect((await latest(m.id, "relationship"))?.granted).toBe(true);
+    expect((await latest(m.id, "relationship_data"))?.granted).toBe(true);
   });
 
   it("turning City Pulse off deletes or unlinks past answers (PENDING: privacy fixes)", async () => {
@@ -209,6 +209,10 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
         if ((rows as unknown as unknown[]).length || (rows as unknown as { rows?: unknown[] }).rows?.length) left.push(`${cfg.name}.${col.name}`);
       }
     }
-    expect(left).toEqual([]);
+    // Attendance and ratings stay for event totals, pointing at the scrubbed account with nothing personal left (the notice says so).
+    expect(left.sort()).toEqual(["social_feedback.account_id", "social_registrations.account_id"]);
+    const [fb] = await db().select().from(feedback).where(eq(feedback.accountId, m.id));
+    expect(fb?.comment ?? "").toBe("");
+    expect(acct.username).not.toContain(m.username ?? "@@none@@");
   });
 });

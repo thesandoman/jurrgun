@@ -121,6 +121,8 @@ export const CHAT_RETENTION_DAYS = 180;
 export const READ_NOTIFICATION_RETENTION_DAYS = 90;
 /** Closed reports, moderation actions and strikes are deleted after this (R6). */
 export const SAFETY_RETENTION_DAYS = 730;
+/** Strikes follow the same 2 years as the reports they came from. */
+export const STRIKE_RETENTION_DAYS = SAFETY_RETENTION_DAYS;
 /** Audit rows are deleted after this (R6). */
 export const AUDIT_RETENTION_DAYS = 365;
 /** Research ids cut per run (accounts without research consent); the rest wait for the next run. */
