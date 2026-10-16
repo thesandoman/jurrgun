@@ -54,6 +54,32 @@ describe.skipIf(!HAS_DB)("what BMA staff can see", () => {
     expect(log).toContain("[private]");
   });
 
+  it("staff pages never show a member's social links, even when their people can see them", async () => {
+    const handle = `ploy${newId().slice(0, 8).toLowerCase()}`;
+    const m = await createMember({ nickname: "Ploy" });
+    const friend = await createMember();
+    const saved = await req("/settings/profile", {
+      cookie: m.cookie,
+      form: { nickname: "Ploy", district: "bang_rak", languages: ["th"], interests: ["food"], links_present: "1", linksOn: "1", link_instagram: `@${handle}`, link_website: `https://${handle}.example/` },
+    });
+    expect(saved.status).toBe(302);
+    await db().insert(connections).values({ id: newId(), aAccount: m.id < friend.id ? m.id : friend.id, bAccount: m.id < friend.id ? friend.id : m.id, level: "friend", eventId: newId() });
+    // Their mutual connection does see them (so the checks below mean something).
+    expect(await (await req(`/people/${m.id}`, { cookie: friend.cookie })).text()).toContain(handle);
+
+    const [admin, mod, viewer] = await Promise.all([createMember({ role: "bma_admin" }), createMember({ role: "moderator" }), createMember({ role: "insight_viewer" })]);
+    const pages = ["/admin", "/admin/users", `/admin/users?q=${m.id}`, `/admin/users/${m.id}`, "/admin/audit", "/admin/moderation", "/admin/review", "/admin/insights"];
+    for (const staff of [admin, mod, viewer]) {
+      for (const path of pages) {
+        const html = await (await req(path, { cookie: staff.cookie })).text();
+        expect(html, path).not.toContain(handle);
+      }
+      expect((await req(`/people/${m.id}`, { cookie: staff.cookie })).status).toBe(404);
+      // Searching by a handle finds nobody (the search box echoes the query, so check for the member instead).
+      expect(await (await req(`/admin/users?q=${handle}`, { cookie: staff.cookie })).text()).not.toContain(m.username);
+    }
+  });
+
   it("staff can't open members' chats or profiles they aren't part of", async () => {
     const [a, b, admin] = await Promise.all([createMember(), createMember(), createMember({ role: "bma_admin" })]);
     const conn = newId();

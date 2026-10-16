@@ -177,7 +177,7 @@ function normaliseHandle(n: HandleNetwork, raw: string): LinkResult {
     } catch {
       return bad(`ใส่ชื่อผู้ใช้ ${n.th} หรือลิงก์โปรไฟล์ ${n.th}`, `Enter your ${n.en} username or profile link.`);
     }
-    if (!hostMatches(u.hostname, n.hosts)) return bad(`ลิงก์นี้ไม่ใช่ของ ${n.th}`, `That link isn't a ${n.en} link.`);
+    if (!hostMatches(u.hostname, n.hosts)) return bad(`ลิงก์นี้ไม่ใช่ของ ${n.th}`, `That link isn't from ${n.en}.`);
     const path = u.pathname.split("/").filter(Boolean).map((s) => {
       try {
         return decodeURIComponent(s);
