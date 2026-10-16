@@ -313,7 +313,8 @@ settingsRoutes.get("/settings", async (c) => {
       interests={p.interests}
       summary={
         // One plain sentence instead of four big-number tiles (owner, Phase 2); each number still links to its page.
-        <p class="me-summary">
+        // A new member with nothing yet sees no sentence of zeros: the next-table card above already says what to do.
+        Number(been?.n ?? 0) + Number(circle?.n ?? 0) + Number(upcoming?.n ?? 0) + tables.length === 0 ? <></> : <p class="me-summary">
           {t("ไปมาแล้ว ", "You've been to ")}
           <a href="/me/events#past">{t(`${Number(been?.n ?? 0)} กิจกรรม`, `${Number(been?.n ?? 0)} ${Number(been?.n ?? 0) === 1 ? "event" : "events"}`)}</a>
           {t(" เจอคนรู้จัก ", ", met ")}

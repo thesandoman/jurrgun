@@ -102,7 +102,9 @@ describe.skipIf(!HAS_DB)("settings", () => {
     const m = await createMember({ nickname: "Nudge" });
     let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Hey Nudge");
-    expect(html).toContain("You&#39;ve been to");
+    // A brand-new member gets no sentence of zeros, only the next-table card and its one step.
+    expect(html).not.toContain("You&#39;ve been to");
+    expect(html).not.toContain(`class="me-stats"`);
     expect(html).toContain("Your next table");
     expect(html).not.toMatch(/\d+% there/);
     const left = (h: string) => Number(/Help your table get to know you: (\d+) things? left/.exec(h)?.[1]);
