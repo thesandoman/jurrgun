@@ -4,7 +4,7 @@
  * (about 3 hours before, never in quiet hours, never twice, never on top of
  * the day-before one), and two clock runs at once never send anything twice.
  */
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { and, desc, eq, inArray, like } from "drizzle-orm";
 import app from "../src/index";
 import { ENV, HAS_DB, createMember, db } from "./helpers";
@@ -73,6 +73,13 @@ describe("same-day reminder timing", () => {
 });
 
 describe.skipIf(!HAS_DB)("reminders", () => {
+  // These tables start within a day: leave none behind to crowd other files' events off Discover's list.
+  afterAll(async () => {
+    const mineEvents = db().select({ id: events.id }).from(events).where(like(events.title, "REM-%"));
+    await db().delete(registrations).where(inArray(registrations.eventId, mineEvents));
+    await db().delete(events).where(like(events.title, "REM-%"));
+  });
+
   it("turning on notifications on this phone also turns on event reminders, and says so", async () => {
     const m = await createMember();
     await db().insert(consents).values({ id: newId(), accountId: m.id, category: "notifications", granted: false, version: "test", createdAt: new Date(Date.now() + 10) });

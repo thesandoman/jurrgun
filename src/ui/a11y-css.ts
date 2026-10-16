@@ -804,4 +804,13 @@ main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
 .pinky .btn.pinky-btn{background:var(--love-ink);border-color:var(--love-ink);color:var(--surface)}
 .pinky .btn.pinky-btn:hover{background:color-mix(in srgb,var(--love-ink) 88%,var(--ink))}
 .pinky .btn:focus-visible{outline:3px solid var(--love-ink);outline-offset:2px}
+/* Email code sign-in: the "sign in with a code" button under the password form spans the card's width
+   and wraps on a 320px screen; the code step's resend row and the linked-email card stack cleanly. */
+input[type=email],input[type=tel]{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--surface-2);border-radius:14px;padding:10px 12px;min-height:48px}
+.code-signin{margin:16px 0}
+.code-signin .btn{width:100%;white-space:normal;text-align:center}
+.code-resend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0 16px}
+.code-resend p{margin:0}
+.email-linked{display:grid;gap:4px;margin:0 0 12px}
+.reminder-note{display:block;margin-top:4px;color:var(--ink-2)}
 `);
