@@ -4,8 +4,9 @@ Everything that has shipped in Jurrgun (เจอกัน), from the first comm
 oldest version first. Every line links to its commit on GitHub, and each
 version links to the full diff.
 
-The repo has no git tags yet, so these versions were assigned afterwards, one
-per milestone. Internal "Project state" notes, merge commits and reverted
+These versions were assigned afterwards, one per milestone. Each one has a
+git tag (`v0.1.0` and so on) and a
+[GitHub Release](https://github.com/thesandoman/jurrgun/releases) with the same notes. Internal "Project state" notes, merge commits and reverted
 work are left out.
 
 Categories: **Features** · **UX/UI** · **QOL** · **Quiz** · **Branding** ·
