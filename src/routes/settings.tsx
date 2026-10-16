@@ -88,6 +88,17 @@ import { audit } from "../lib/records";
 import { requireMember, SESSION_COOKIE } from "../lib/session";
 import {
   accounts,
+  buddyMatches,
+  buddyOptins,
+  buddySwipes,
+  chatMessages,
+  meetFeedback,
+  passportStamps,
+  pitchJoins,
+  planPitches,
+  safeArrivals,
+  thanks,
+  weeklyPlans,
   connectionChoices,
   connections,
   datingIntents,
@@ -1545,6 +1556,34 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)).limit(20),
   ]);
   const myLinks = await ownLinks(db, id);
+  // Privacy R4: chats (my own messages), dating intents, buddy data, meet feedback, thanks,
+  // plans and "home safe?" answers. Other people appear only as the nickname I already see.
+  const [myMessages, myDating, myOptin, myMatches, mySwipes, myStamps, myMeetFeedback, thanksSent, thanksGot, myPlans, myPitches, myJoins, mySafe] = await Promise.all([
+    db
+      .select({ thread: chatMessages.thread, kind: chatMessages.kind, body: chatMessages.body, hasPhoto: isNotNull(chatMessages.photoKey), pollOptions: chatMessages.pollOptions, hiddenAt: chatMessages.hiddenAt, createdAt: chatMessages.createdAt })
+      .from(chatMessages)
+      .where(eq(chatMessages.sender, id))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(5000),
+    db.select({ mode: datingIntents.mode, reasons: datingIntents.reasons, challenges: datingIntents.challenges, prefs: datingIntents.prefs, updatedAt: datingIntents.updatedAt }).from(datingIntents).where(eq(datingIntents.accountId, id)).limit(1),
+    db.select({ intent: buddyOptins.intent, active: buddyOptins.active, updatedAt: buddyOptins.updatedAt }).from(buddyOptins).where(eq(buddyOptins.accountId, id)).limit(1),
+    db.select().from(buddyMatches).where(or(eq(buddyMatches.aAccount, id), eq(buddyMatches.bAccount, id))).orderBy(desc(buddyMatches.createdAt)).limit(500),
+    db.select({ choice: buddySwipes.choice, createdAt: buddySwipes.createdAt }).from(buddySwipes).where(eq(buddySwipes.accountId, id)).limit(5000),
+    db.select({ district: passportStamps.district, source: passportStamps.source, createdAt: passportStamps.createdAt }).from(passportStamps).where(eq(passportStamps.accountId, id)).limit(100),
+    db
+      .select({ kind: meetFeedback.kind, showedUp: meetFeedback.showedUp, onTime: meetFeedback.onTime, feltSafe: meetFeedback.feltSafe, feltHeard: meetFeedback.feltHeard, wouldMeetAgain: meetFeedback.wouldMeetAgain, comment: meetFeedback.comment, createdAt: meetFeedback.createdAt })
+      .from(meetFeedback)
+      .where(eq(meetFeedback.accountId, id))
+      .limit(1000),
+    db.select({ to: thanks.toAccount, body: thanks.body, createdAt: thanks.createdAt }).from(thanks).where(eq(thanks.fromAccount, id)).limit(1000),
+    db.select({ from: thanks.fromAccount, body: thanks.body, createdAt: thanks.createdAt }).from(thanks).where(eq(thanks.toAccount, id)).limit(1000),
+    db.select({ week: weeklyPlans.week, picks: weeklyPlans.picks, status: weeklyPlans.status, skipReason: weeklyPlans.skipReason, decidedAt: weeklyPlans.decidedAt, createdAt: weeklyPlans.createdAt }).from(weeklyPlans).where(eq(weeklyPlans.accountId, id)).limit(500),
+    db.select({ week: planPitches.week, what: planPitches.what, district: planPitches.district, when: planPitches.whenText, audience: planPitches.audience, createdAt: planPitches.createdAt }).from(planPitches).where(eq(planPitches.accountId, id)).limit(500),
+    db.select({ what: planPitches.what, joinedAt: pitchJoins.createdAt }).from(pitchJoins).innerJoin(planPitches, eq(planPitches.id, pitchJoins.pitchId)).where(eq(pitchJoins.accountId, id)).limit(500),
+    db.select({ context: safeArrivals.context, backBy: safeArrivals.backBy, answer: safeArrivals.answer, answeredAt: safeArrivals.answeredAt, createdAt: safeArrivals.createdAt }).from(safeArrivals).where(eq(safeArrivals.accountId, id)).limit(1000),
+  ]);
+  const buddyIds = myMatches.map((m) => (m.aAccount === id ? m.bAccount : m.aAccount));
+  const thanksIds = [...thanksSent.map((x) => x.to), ...thanksGot.map((x) => x.from)];
 
   const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked, [emails]] = await Promise.all([
     db
@@ -1591,7 +1630,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
   ]);
 
   // Other people in my connections and blocks: nickname only.
-  const otherIds = [...new Set([...conns.map((x) => (x.a === id ? x.b : x.a)), ...myBlocks.map((b) => b.blocked)])];
+  const otherIds = [...new Set([...conns.map((x) => (x.a === id ? x.b : x.a)), ...myBlocks.map((b) => b.blocked), ...buddyIds, ...thanksIds])];
   const others = otherIds.length
     ? await db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, otherIds)).limit(otherIds.length)
     : [];
@@ -1600,7 +1639,8 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
   const data = {
     exportedAt: new Date().toISOString(),
     account: account[0] ?? null,
-    profile: profile[0] ? (({ accountId: _a, ...rest }) => rest)(profile[0]) : null,
+    // The photo is noted, not its private storage key.
+    profile: profile[0] ? (({ accountId: _a, photoKey, ...rest }) => ({ ...rest, hasPhoto: !!photoKey }))(profile[0]) : null,
     consents: consentRows,
     registrations: regs,
     choicesIMade: choices,
@@ -1622,6 +1662,30 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     notifications: notes,
     notificationDevices: pushDevices.length,
     cityPulse: { answers: pulse, wellbeing: wb },
+    // Chat threads are named by kind only (buddy, connection, circle); photos are noted, not exported as storage keys.
+    chatMessagesISent: myMessages.map(({ thread, ...rest }) => ({ thread: thread.split(":")[0], ...rest })),
+    datingIntents: myDating[0] ?? null,
+    bangkokBuddy: {
+      optIn: myOptin[0] ?? null,
+      buddies: myMatches.map((m) => ({
+        with: nick.get(m.aAccount === id ? m.bAccount : m.aAccount) ?? null,
+        week: m.week,
+        state: m.state,
+        iSaidMeetAt: m.aAccount === id ? m.aMeetAt : m.bMeetAt,
+        endedAt: m.endedAt,
+        createdAt: m.createdAt,
+      })),
+      // The deck: my own "I'd meet them" and "Not now" picks, without who they were about.
+      deckPicks: mySwipes,
+      passportStamps: myStamps,
+    },
+    meetFeedbackIGave: myMeetFeedback,
+    thanksISent: thanksSent.map((x) => ({ to: nick.get(x.to) ?? null, body: x.body, createdAt: x.createdAt })),
+    thanksIReceived: thanksGot.map((x) => ({ from: nick.get(x.from) ?? null, body: x.body, createdAt: x.createdAt })),
+    weeklyPlans: myPlans,
+    planPitches: myPitches,
+    pitchesIJoined: myJoins,
+    homeSafeChecks: mySafe.map(({ context, ...rest }) => ({ about: context.split(":")[0], ...rest })),
   };
   return new Response(JSON.stringify(data, null, 2), {
     headers: {
