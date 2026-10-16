@@ -452,7 +452,10 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
           </p>
           ) : null}
           {error ? <Notice kind="warn">{L(lang, error)}</Notice> : null}
-          <textarea name="body" rows={1} maxlength={500} required aria-label={t("ข้อความ", "Message")} placeholder={t("พิมพ์ข้อความ…", "Write a message…")} />
+          {/* ?say= prefills a suggested first line (e.g. from "Invite to a table"); the member still decides to send it. */}
+          <textarea name="body" rows={1} maxlength={500} required aria-label={t("ข้อความ", "Message")} placeholder={t("พิมพ์ข้อความ…", "Write a message…")}>
+            {(c.req.query("say") ?? "").slice(0, 200)}
+          </textarea>
           <Button>{t("ส่ง", "Send")}</Button>
         </form>
       ) : null}

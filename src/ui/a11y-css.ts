@@ -167,6 +167,10 @@ main details>summary{min-height:44px;display:flex;align-items:center}
 .me-peek,.me-lang a{display:inline-flex;align-items:center;min-height:44px}
 .passport-card>a,details.how li>a,.safety-row>a{display:inline-flex;align-items:center;min-height:44px}
 
+/* My people: a friendship milestone with one next step. */
+div.grad{display:grid;gap:8px;justify-items:start;margin:10px 0;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--lime) 22%,var(--surface))}
+div.grad p{margin:0;font-weight:700}
+
 /* Me: a one-time question under the numbers. */
 .me-ask p{display:grid;gap:4px;margin:0 0 10px}
 .me-ask .row{gap:8px;flex-wrap:wrap}

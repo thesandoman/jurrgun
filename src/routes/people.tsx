@@ -478,6 +478,8 @@ type CircleRow = {
   iThanked?: boolean;
   /** Other events where we chose each other: one card per person, not per meeting. */
   alsoMet?: { id: string; title: string; startsAt: Date }[];
+  /** How many times we've met (events where we chose each other). */
+  meets?: number;
 };
 
 /**
@@ -498,6 +500,7 @@ function onePerPerson(rows: CircleRow[]): CircleRow[] {
     first.theirs ??= r.theirs;
     first.graduated ||= r.graduated;
   }
+  for (const r of byPerson.values()) r.meets = 1 + (r.alsoMet?.length ?? 0);
   return [...byPerson.values()];
 }
 
@@ -599,8 +602,10 @@ async function markGraduations(c: Ctx, rows: CircleRow[]) {
     r.graduated = true;
     if (made.length) {
       const later = new Date(now.getTime() + 30 * 86_400_000);
-      for (const who of [me, r.other.id]) {
-        await notify(db, who, "graduated", "🎓 คุณสองคนไม่ต้องพึ่งเราแล้ว ยินดีด้วย!", "🎓 You two don't need us anymore. Congrats!", "/connections");
+      // A friendship to celebrate, with the other person named (owner: the old "you don't need us" read like goodbye).
+      const myName = c.var.user!.profile?.nickname ?? "";
+      for (const [who, name] of [[me, r.other.name], [r.other.id, myName]] as const) {
+        await notify(db, who, "graduated", `🎉 คุณกับ ${name} เจอกันมา ${meets} ครั้งแล้ว นี่แหละมิตรภาพ`, `🎉 You and ${name} have met ${meets} times. That's a friendship.`, "/connections");
         await db.insert(notifications).values({ id: newId(), accountId: who, kind: "still_in_touch", titleTh: "ยังติดต่อกันอยู่ไหม? แตะเพื่อบอกเรา", titleEn: "Still in touch? Tap to tell us", link: `/connections/${r.id}/still`, createdAt: later });
       }
     }
@@ -837,7 +842,12 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
               </p>
             ) : null}
             {r.graduated ? (
-              <p class="grad">🎓 {t("คุณสองคนไม่ต้องพึ่งเราแล้ว ยินดีด้วย!", "You two don't need us anymore. Congrats!")}</p>
+              <div class="grad">
+                <p>🎉 {t(`คุณกับ ${r.other.name} เจอกันมา ${Math.max(2, r.meets ?? 2)} ครั้งแล้ว นี่แหละมิตรภาพ`, `You and ${r.other.name} have met ${Math.max(2, r.meets ?? 2)} times. That's a friendship.`)}</p>
+                <a class="btn ghost" href={`/chat/conn:${r.id}?say=${encodeURIComponent(t("สัปดาห์นี้ไปโต๊ะด้วยกันไหม 🙂", "Want to come to a table with me this week? 🙂"))}`}>
+                  {t(`ชวน ${r.other.name} ไปโต๊ะด้วยกัน`, `Invite ${r.other.name} to a table`)}
+                </a>
+              </div>
             ) : null}
             <p class="acts">
               <a class="btn primary" href={`/chat/conn:${r.id}`}>💬 {t("แชต", "Chat")}</a>

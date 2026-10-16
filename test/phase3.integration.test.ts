@@ -20,7 +20,12 @@ describe.skipIf(!HAS_DB)("people before the app", () => {
     await connect(a, b);
     for (const m of [a, b]) await db().insert(contactShares).values({ id: newId(), connectionId: c1, accountId: m.id, method: "line", value: "x_" + m.id.slice(0, 4) });
     const html = await (await req("/connections?lang=en", { cookie: `${a.cookie}; lang=en` })).text();
-    expect(html).toContain("You two don&#39;t need us anymore");
+    // A friendship to celebrate, with a next step (owner), not a goodbye.
+    expect(html).toMatch(/You and [^<]+ have met 2 times\. That&#39;s a friendship\./);
+    expect(html).toContain("?say=");
+    expect(html).not.toContain("need us anymore");
+    const [note] = await db().select().from(notifications).where(and(eq(notifications.accountId, a.id), eq(notifications.kind, "graduated")));
+    expect(note.titleEn).toMatch(/^🎉 You and .+ have met 2 times\. That's a friendship\.$/);
     await req("/connections", { cookie: b.cookie });
     expect(await db().select().from(graduations).where(eq(graduations.connectionId, c1))).toHaveLength(1);
     const asks = await db().select().from(notifications).where(and(eq(notifications.accountId, a.id), eq(notifications.kind, "still_in_touch")));
