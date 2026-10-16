@@ -26,7 +26,7 @@ import { cleanPrefs, EXIT_REASONS } from "../content/dating";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { and, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { isPasswordless, passwordProblem } from "../domain/rules";
 import { DISTRICTS, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values, districtsAZ } from "../lib/constants";
@@ -77,6 +77,8 @@ import { MeHub, type MeStep } from "../ui/me-hub";
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
+import { allowedEndpoint } from "../lib/webpush";
+import { vapidKeys } from "../services/push";
 import type { AppEnv } from "../lib/env";
 import { audit } from "../lib/records";
 import { requireMember, SESSION_COOKIE } from "../lib/session";
@@ -93,6 +95,7 @@ import {
   feedback,
   invites,
   notifications,
+  pushSubscriptions,
   oauthLinks,
   strikes,
   vibes,
@@ -261,6 +264,7 @@ settingsRoutes.get("/settings", async (c) => {
           }
         />
       )}
+      {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} /> : null}
       {canBeWomenOnly(p.gender) ? <QuickSwitch k="womenOnly" on={p.womenOnly} emoji="🌸" title={t("เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only")} hint={t("บัดดี้ การ์ด แมตช์ และแชต", "Buddies, deck, matches and chats")} /> : null}
     </section>
   );
@@ -331,6 +335,78 @@ settingsRoutes.get("/settings", async (c) => {
     />,
   );
 });
+
+/** Web Push on this phone or browser: the page subscribes, then tells us where to send. */
+settingsRoutes.post("/settings/push", async (c) => {
+  const user = me(c);
+  const body = (await c.req.json().catch(() => null)) as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } | null;
+  const endpoint = typeof body?.endpoint === "string" ? body.endpoint : "";
+  const p256dh = typeof body?.keys?.p256dh === "string" ? body.keys.p256dh : "";
+  const auth = typeof body?.keys?.auth === "string" ? body.keys.auth : "";
+  if (!vapidKeys(c.env)) return c.json({ error: "Notifications aren't switched on yet" }, 503);
+  if (!allowedEndpoint(endpoint) || endpoint.length > 1000 || !/^[\w-]{80,100}$/.test(p256dh) || !/^[\w-]{16,32}$/.test(auth)) return c.json({ error: "Not a push subscription" }, 400);
+  const db = getDb(c.env);
+  // One endpoint belongs to one member: a shared browser moves to whoever turned it on last.
+  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  const mine = await db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, user.account.id)).orderBy(asc(pushSubscriptions.createdAt)).limit(20);
+  if (mine.length >= 10) await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, mine[0].id));
+  await db.insert(pushSubscriptions).values({ id: newId(), accountId: user.account.id, endpoint, p256dh, auth });
+  return c.json({ ok: true });
+});
+
+settingsRoutes.post("/settings/push/off", async (c) => {
+  const user = me(c);
+  const body = (await c.req.json().catch(() => null)) as { endpoint?: unknown } | null;
+  const endpoint = typeof body?.endpoint === "string" ? body.endpoint : "";
+  await getDb(c.env)
+    .delete(pushSubscriptions)
+    .where(and(eq(pushSubscriptions.accountId, user.account.id), eq(pushSubscriptions.endpoint, endpoint)));
+  return c.json({ ok: true });
+});
+
+/**
+ * The phone-notifications switch on Me. Shown only where the browser can do
+ * push and the keys are set; the script reads this browser's own state, so
+ * the server never needs to know which device is looking.
+ */
+function PushSwitch(props: { t: View["t"]; publicKey: string }) {
+  const { t } = props;
+  const text = {
+    on: t("เตือนก่อนวันงาน และตอนที่เลือกคนที่อยากเจออีกได้", "The day before a table, and when you can choose who to meet again"),
+    blocked: t("ถูกปิดไว้ในการตั้งค่าเบราว์เซอร์ เปิดได้ที่การตั้งค่าเว็บไซต์", "Blocked in your browser. Allow notifications in its site settings."),
+    ios: t("บน iPhone ให้เพิ่ม Jurrgun ลงหน้าจอโฮมก่อน", "On iPhone, add Jurrgun to your Home Screen first."),
+    failed: t("เปิดไม่สำเร็จ ลองใหม่อีกครั้ง", "Couldn't switch on. Try again."),
+  };
+  return (
+    <>
+      <form class="push-switch" hidden data-key={props.publicKey} data-text={JSON.stringify(text)} onsubmit="return false">
+        <button type="button" class="qs" aria-pressed="false">
+          <span aria-hidden="true">🔔</span>
+          <span>
+            <b>{t("แจ้งเตือนบนเครื่องนี้", "Notifications on this phone")}</b>
+            <small>{text.on}</small>
+          </span>
+          <span class="sw" aria-hidden="true" />
+        </button>
+      </form>
+      <script dangerouslySetInnerHTML={{ __html: PUSH_SWITCH_JS }} />
+    </>
+  );
+}
+
+const PUSH_SWITCH_JS = `(function(){var f=document.querySelector(".push-switch");if(!f)return;var T=JSON.parse(f.dataset.text),b=f.querySelector("button"),hint=f.querySelector("small");
+var ios=/iP(hone|ad|od)/.test(navigator.userAgent)&&!(navigator.standalone||matchMedia("(display-mode: standalone)").matches);
+if(!("serviceWorker" in navigator)||!("Notification" in window)){if(ios){f.hidden=false;b.disabled=true;hint.textContent=T.ios}return}
+if(!("PushManager" in window))return;f.hidden=false;
+function key(s){s=s.replace(/-/g,"+").replace(/_/g,"/");var r=atob(s+"===".slice((s.length+3)%4)),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
+function show(on){b.setAttribute("aria-pressed",on?"true":"false");hint.textContent=Notification.permission==="denied"?T.blocked:T.on}
+function post(u,d){return fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(d),credentials:"same-origin"}).then(function(r){if(!r.ok)throw r})}
+navigator.serviceWorker.ready.then(function(reg){reg.pushManager.getSubscription().then(function(s){show(!!s)});
+b.addEventListener("click",function(){b.disabled=true;reg.pushManager.getSubscription().then(function(s){
+if(s)return post("/settings/push/off",{endpoint:s.endpoint}).then(function(){return s.unsubscribe()}).then(function(){show(false)});
+return Notification.requestPermission().then(function(p){if(p!=="granted"){show(false);return}
+return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(f.dataset.key)}).then(function(s){return post("/settings/push",s.toJSON())}).then(function(){show(true)})})
+}).catch(function(){hint.textContent=T.failed}).then(function(){b.disabled=false})})})})()`;
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
 function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean }) {
@@ -1236,7 +1312,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
   const id = user.account.id;
   const rid = user.account.researchId;
   const db = getDb(c.env);
-  const [account, profile, consentRows, regs, choices, conns, shares, reps, notes, pulse, wb] = await Promise.all([
+  const [account, profile, consentRows, regs, choices, conns, shares, reps, notes, pulse, wb, pushDevices] = await Promise.all([
     db
       .select({ username: accounts.username, role: accounts.role, status: accounts.status, verification: accounts.verification, bkkRegistered: accounts.bkkRegistered, createdAt: accounts.createdAt })
       .from(accounts)
@@ -1276,6 +1352,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
           .limit(2000)
       : Promise.resolve([]),
     rid ? db.select({ phase: wellbeing.phase, q1: wellbeing.q1, q2: wellbeing.q2, q3: wellbeing.q3, createdAt: wellbeing.createdAt }).from(wellbeing).where(eq(wellbeing.researchId, rid)).limit(10) : Promise.resolve([]),
+    db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)).limit(20),
   ]);
 
   const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked] = await Promise.all([
@@ -1348,6 +1425,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     invitesIAccepted: inviteUsed,
     signInWith: linked,
     notifications: notes,
+    notificationDevices: pushDevices.length,
     cityPulse: { answers: pulse, wellbeing: wb },
   };
   return new Response(JSON.stringify(data, null, 2), {
@@ -1390,6 +1468,7 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.update(accounts).set({ status: "deactivated", deactivatedAt: new Date(), researchId: null }).where(eq(accounts.id, id)),
     db.update(profiles).set({ photoKey: null, bio: {}, updatedAt: new Date() }).where(eq(profiles.accountId, id)),
     db.delete(sessions).where(eq(sessions.accountId, id)),
+    db.delete(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)),
     // Unlink Google / LINE now: signing in with them again starts a fresh account.
     db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
     audit(db, id, "account.deactivated", { type: "account", id }),

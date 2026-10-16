@@ -71,6 +71,8 @@ const NOTICES: Record<string, [string, string]> = {
   shared: ["แชร์ช่องทางติดต่อแล้ว", "Contact shared"],
   deactivated: ["ปิดบัญชีแล้ว", "Account deactivated"],
   done: ["เรียบร้อย", "Done"],
+  clock_unavailable: ["นาฬิกาทำงานได้เฉพาะบนเว็บไซต์จริง", "The clock only runs on the live site"],
+  clock_no_secret: ["ต้องตั้ง TASK_WEBHOOK_SECRET ก่อนเริ่มนาฬิกา", "Set TASK_WEBHOOK_SECRET before starting the clock"],
   connected: ["เป็นคนรู้จักกันแล้ว!", "You're connected!"],
   offered: ["ส่งข้อเสนอที่นั่งให้คิวถัดไปแล้ว", "Offered the spot to the next person"],
   groups_suggested: ["จัดโต๊ะแนะนำแล้ว ตรวจดูแล้วกดเผยแพร่", "Groups suggested, review, then publish"],

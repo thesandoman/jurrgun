@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { CLOCK_TASK, onClockTask } from "./services/clock";
 import type { AppEnv } from "./lib/env";
 import { loadUser, sameOrigin } from "./lib/session";
 import { captureSource } from "./lib/source";
@@ -164,6 +165,12 @@ app.post("/api/tasks/webhook", async (c) => {
     name: task.name,
     firedAt: task.firedAt,
   });
+
+  // The hourly clock: reminders, the People I Met window, daily retention (src/services/clock.ts).
+  if (task.name === CLOCK_TASK) {
+    const run = await onClockTask(c.env, task.firedAt);
+    if (run) createLogger(c.env).info("clock ran", run);
+  }
 
   return c.json({ ok: true });
 });

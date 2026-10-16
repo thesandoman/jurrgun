@@ -19,7 +19,8 @@
     "migrations": "node scripts/build-migrations.mjs",
     "seed": "vite-node scripts/seed.ts",
     "svmap": "node scripts/build-svmap.mjs",
-    "fonts": "node scripts/build-fonts.mjs"
+    "fonts": "node scripts/build-fonts.mjs",
+    "vapid": "node scripts/vapid.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

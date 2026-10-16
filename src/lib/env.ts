@@ -17,6 +17,11 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   GOOGLE_CLIENT_SECRET?: string;
   LINE_CHANNEL_ID?: string;
   LINE_CHANNEL_SECRET?: string;
+  /** Web Push (src/lib/webpush.ts). Push stays off until both keys are set as SV Cloud settings. */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  /** Contact for push services, a URL or mailto:. Defaults to the live site. */
+  VAPID_SUBJECT?: string;
   /** Set in tests: skip calls to outside services (weather). */
   NO_EXTERNAL?: string;
 };

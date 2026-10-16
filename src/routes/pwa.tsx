@@ -13,7 +13,7 @@ import { Card, LinkButton, page, view } from "../ui/kit";
 export const pwaRoutes = new Hono<AppEnv>();
 
 /** Bump when the precached files or this script's logic change. */
-export const SW_VERSION = "bkk-social-v1";
+export const SW_VERSION = "bkk-social-v2";
 
 const SW = `/* Jurrgun service worker. Caches only public shell files, never member pages. */
 const CACHE = ${JSON.stringify(SW_VERSION)};
@@ -60,6 +60,25 @@ self.addEventListener("fetch", (event) => {
 
   // Everything else (HTML fragments, JSON, member data): the browser's
   // normal network handling. Nothing is written to the cache.
+});
+
+// Web Push (src/services/clock.ts): show the message; a tap opens its page.
+self.addEventListener("push", (event) => {
+  let m = {};
+  try { m = event.data ? event.data.json() : {}; } catch (e) {}
+  const url = typeof m.url === "string" && m.url.startsWith("/") ? m.url : "/";
+  event.waitUntil(self.registration.showNotification(m.title || "Jurrgun", { body: m.body || "", tag: m.tag, icon: "/icon.svg", badge: "/icon.svg", data: { url } }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) if (new URL(w.url).origin === self.location.origin && "focus" in w) return w.navigate(url).then((x) => (x || w).focus());
+      return self.clients.openWindow(url);
+    })
+  );
 });
 `;
 

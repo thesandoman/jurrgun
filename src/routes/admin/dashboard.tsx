@@ -25,6 +25,8 @@ import { fmtDate } from "../../lib/i18n";
 import { requireRole } from "../../lib/session";
 import { K_THRESHOLD, safeCount } from "../../domain/rules";
 import { retentionIfDue, runRetention, type RetentionRun } from "../../services/retention";
+import { clockNext, startClock, stopClock } from "../../services/clock";
+import { vapidKeys } from "../../services/push";
 import { alias } from "drizzle-orm/pg-core";
 import { connections, events, registrations, reports } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
@@ -38,6 +40,57 @@ adminDashboard.post("/retention", requireRole("bma_admin"), async (c) => {
   await runRetention(c.env, new Date(), c.var.user!.account.id);
   return c.redirect("/admin?notice=done#retention");
 });
+
+/** The hourly clock (src/services/clock.ts): start once, stop any time. */
+adminDashboard.post("/clock", requireRole("bma_admin"), async (c) => {
+  const on = (await c.req.formData()).get("on") === "1";
+  // Without the signing secret every webhook is refused and the chain would stop after one hour.
+  if (on && !c.env.TASK_WEBHOOK_SECRET) return c.redirect("/admin?notice=clock_no_secret#clock");
+  try {
+    if (on) await startClock(c.env);
+    else await stopClock(c.env);
+  } catch {
+    // Locally there are no stateful objects; the clock only runs deployed.
+    return c.redirect("/admin?notice=clock_unavailable#clock");
+  }
+  return c.redirect("/admin?notice=done#clock");
+});
+
+function ClockCard(props: { next: number | null; push: boolean; t: (th: string, en: string) => string; lang: "th" | "en" }) {
+  const { t } = props;
+  return (
+    <section id="clock">
+      <h2>{t("นาฬิการายชั่วโมง", "Hourly clock")}</h2>
+      <Card>
+        <p class="muted">
+          {t(
+            "รันทุกชั่วโมง: ล้างข้อมูลตามระยะเวลาเก็บรักษาวันละครั้ง เตือนก่อนวันงาน และแจ้งเมื่อเลือกคนที่อยากเจออีกได้ ไม่ส่งข้อความช่วง 21:00 ถึง 08:00",
+            "Runs every hour: retention once a day, the day-before reminder, and the note that People I Met is open. No messages from 21:00 to 08:00.",
+          )}
+        </p>
+        <p>
+          {props.next ? (
+            <>
+              <Tag tone="ok">{t("กำลังทำงาน", "Running")}</Tag> {t("รอบถัดไป ", "Next run ")}
+              <strong>{new Intl.DateTimeFormat(props.lang === "en" ? "en-GB" : "th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(props.next))}</strong>
+            </>
+          ) : (
+            <Tag tone="muted">{t("หยุดอยู่", "Stopped")}</Tag>
+          )}
+        </p>
+        <p class="muted">
+          {props.push
+            ? t("การแจ้งเตือนบนมือถือ: เปิดแล้ว", "Phone notifications: on")
+            : t("การแจ้งเตือนบนมือถือ: ยังไม่ได้ตั้งคีย์ VAPID ข้อความจะอยู่ในแอปเท่านั้น", "Phone notifications: VAPID keys not set, so messages stay in the app")}
+        </p>
+        <form method="post" action="/admin/clock">
+          <input type="hidden" name="on" value={props.next ? "0" : "1"} />
+          <Button kind={props.next ? "ghost" : "primary"}>{props.next ? t("หยุดนาฬิกา", "Stop the clock") : t("เริ่มนาฬิกา", "Start the clock")}</Button>
+        </form>
+      </Card>
+    </section>
+  );
+}
 
 function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: string) => string; lang: "th" | "en" }) {
   const { run, t, lang } = props;
@@ -157,6 +210,7 @@ adminDashboard.get("/", async (c) => {
 
   // Lazy timer: at most one retention run per 24 hours, triggered by an admin visit.
   const retention = isAdmin ? await retentionIfDue(c.env, acct.id, now) : null;
+  const clock = isAdmin ? await clockNext(c.env) : null;
 
   const showTrend = isAdmin || role === "insight_viewer";
 
@@ -248,6 +302,7 @@ adminDashboard.get("/", async (c) => {
             <LinkButton href="/admin/quiz-health" kind="ghost">{t("สุขภาพแบบทดสอบ", "Quiz health")}</LinkButton>
           </div>
           {trend ? <TrendCard weeks={trend} suppress={false} t={t} lang={lang} /> : null}
+          <ClockCard next={clock} push={!!vapidKeys(c.env)} t={t} lang={lang} />
           <RetentionCard run={retention} t={t} lang={lang} />
         </>
       ) : null}
