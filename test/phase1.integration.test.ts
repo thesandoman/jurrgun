@@ -20,18 +20,23 @@ describe("phase 1 rules", () => {
 });
 
 describe.skipIf(!HAS_DB)("phase 1 pages", () => {
-  it("onboarding: the quiz starts at question 1 with \"1 of 4\"; basics has day, month and year", async () => {
+  it("onboarding: one journey bar with chapters, the quiz starts at question 1; basics has day, month and year", async () => {
     const m = await createMember();
     await db().delete(profiles).where(eq(profiles.accountId, m.id));
     const quiz = await (await req("/onboarding/quiz?lang=en", { cookie: m.cookie })).text();
-    expect(quiz).toContain("1 of 4");
+    expect(quiz).toContain("Your Bangkok Type");
+    expect(quiz).toContain("Part 1 of 4");
     expect(quiz).not.toContain("What&#39;s your Bangkok Type?");
-    expect(quiz).toContain('data-span-total="18"');
+    // Welcome is screen 1; the 16 and up to 2 follow-ups come next, of 30 screens through the guide.
+    expect(quiz).toContain('data-j-from="1"');
+    expect(quiz).toContain('data-j-total="30"');
+    // No inner "1 / 16" counter: the bar is the only one.
+    expect(quiz).not.toContain('class="muted q-count"');
     const welcome = await (await req("/onboarding/welcome?lang=en", { cookie: m.cookie })).text();
     expect(welcome).toContain("16 quick Bangkok moments");
     const basics = await (await req("/onboarding/basics?lang=th", { cookie: m.cookie })).text();
     for (const n of ["birthDay", "birthMonth", "birthYear"]) expect(basics).toContain(`name="${n}"`);
-    expect(basics).toContain("2 จาก 4");
+    expect(basics).toContain("ส่วนที่ 2 จาก 4");
     const r = await req("/onboarding/basics", { cookie: m.cookie, form: { nickname: "Lek", birthDay: "5", birthMonth: "3", birthYear: "1996", district: "bang_rak", residency: "lives" } });
     expect(r.headers.get("location")).toBe("/onboarding/privacy");
     const [p] = await db().select({ birthDate: profiles.birthDate }).from(profiles).where(eq(profiles.accountId, m.id));

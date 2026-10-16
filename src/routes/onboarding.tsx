@@ -60,6 +60,7 @@ import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTE
 import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript } from "../ui/profile-form";
 import { safeNext } from "../ui/table-intro";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
+import { INTENT_COOKIE, journeyFor, JourneyTop, type Journey } from "../ui/journey";
 
 export const onboarding = new Hono<AppEnv>();
 onboarding.use("*", requireUser);
@@ -75,14 +76,12 @@ onboarding.use("*", async (c, next) => {
 
 const STEPS = ["welcome", "quiz", "basics", "privacy", "connections", "wellbeing"] as const;
 type Step = (typeof STEPS)[number];
-/** One progress model for the whole journey (owner, Phase 1): 4 named steps, quiz, basics, privacy, private settings. */
-const STAGE_AT: Record<Step, number> = { welcome: 0, quiz: 0, basics: 1, privacy: 2, connections: 3, wellbeing: 3 };
-const stage = (s: Step) => ({ at: STAGE_AT[s], of: 4 });
+// One progress bar for the whole first-time journey, with chapter names: src/ui/journey.tsx (D1).
 
 export const CONSENT_VERSION = "2026-10-proto";
 export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
 /** friends | dating, chosen on the welcome screen before a profile exists (dating_only from older visits reads as dating). */
-export const INTENT_COOKIE = "bkk_intent";
+export { INTENT_COOKIE };
 
 /** The first step this user hasn't completed. */
 async function nextStep(c: Context<AppEnv>, user: CurrentUser): Promise<Step | "done"> {
@@ -146,16 +145,15 @@ const WELCOME_CSS = `.welcome-mode .answer input[value=dating]:checked+span{bord
 .welcome-mode .answer input[value=dating]:focus-visible+span{outline-color:color-mix(in srgb,var(--love) 45%,transparent)}`;
 
 onboarding.get("/welcome", (c) => {
-  const { t, lang } = view(c);
+  const v = view(c);
+  const { t, lang } = v;
   const raw = getCookie(c, INTENT_COOKIE);
   const chosen = raw && isMode(raw) ? offeredMode(raw) : undefined;
   return page(
     c,
     { title: TITLE, bare: true },
     <form method="post" action="/onboarding/welcome">
-      <div class="flow-top">
-        <div class="flow-progress"><i style="width:4%" /></div>
-      </div>
+      <JourneyTop v={v} j={journeyFor(c, "welcome")} />
       <div class="splash">
         <div class="splash-mark" aria-hidden="true">◐</div>
         <h1>{t("ยินดีต้อนรับสู่ Jurrgun", "Welcome to Jurrgun")}</h1>
@@ -170,7 +168,7 @@ onboarding.get("/welcome", (c) => {
       <p class="muted">🔒 {t("เปลี่ยนได้ทุกเมื่อ เรื่องเดตเป็นความลับเสมอ", "Change it anytime. Dating stays private.")}</p>
       {/* The quiz's own intro screen is folded in here, so the quiz starts at question 1. */}
       <p class="welcome-next">
-        🧭 {t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ 16 สถานการณ์สั้น ๆ ราว 3 นาที ตอบตามความรู้สึกแรก มีแค่คุณที่เห็นคำตอบ", "Next: your Bangkok Type. 16 quick Bangkok moments, about 3 minutes. Go with your gut; only you see your answers.")}
+        🧭 {t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ 16 สถานการณ์สั้น ๆ บางคนได้เพิ่มอีก 1 หรือ 2 ข้อ ราว 3 นาที ตอบตามความรู้สึกแรก มีแค่คุณที่เห็นคำตอบ", "Next: your Bangkok Type. 16 quick Bangkok moments, sometimes 1 or 2 more, about 3 minutes. Go with your gut; only you see your answers.")}
       </p>
       <div class="flow-bar">
         <button type="submit" class="btn primary">{t("ไปกันเลย", "Let's go")}</button>
@@ -233,7 +231,7 @@ onboarding.get("/dating", (c) => {
   return page(
     c,
     { title: TITLE, bare: true },
-    <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")} count="steps">
+    <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")} journey={journeyFor(c, "dating")}>
       <FlowStep emoji="💘" title={t("อะไรทำให้อยากมาเดตที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
         <Pills name="reasons" options={DATING_REASONS.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
         <script
@@ -251,7 +249,8 @@ onboarding.get("/dating", (c) => {
 });
 
 onboarding.post("/dating", async (c) => {
-  const { t, lang } = view(c);
+  const v = view(c);
+  const { t, lang } = v;
   const body = await c.req.parseBody({ all: true });
   const reasons = pick(list(body.reasons), DATING_REASONS).slice(0, MAX_REASONS);
   const challenges = pick(list(body.challenges), DATING_CHALLENGES);
@@ -268,6 +267,7 @@ onboarding.post("/dating", async (c) => {
     c,
     { title: TITLE, bare: true },
     <>
+      <JourneyTop v={v} j={journeyFor(c, "heard")} />
       <div class="splash">
         <div class="splash-mark" aria-hidden="true">💚</div>
         <h1>{t("เราเข้าใจนะ", "We hear you")}</h1>
@@ -302,7 +302,7 @@ onboarding.get("/quiz", async (c) => {
   return page(
     c,
     { title: TITLE, bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row, v.lang === "en" ? { explainLocal: true } : undefined)} seed={seed} next="/onboarding/type" stage={stage("quiz")} count={{ at: 1, of: 4 }} noIntro skipAction="/onboarding/quiz/skip" />,
+    <QuizFlow v={v} questions={quizQuestions(seed, row, v.lang === "en" ? { explainLocal: true } : undefined)} seed={seed} next="/onboarding/type" journey={journeyFor(c, "quiz")} noIntro skipAction="/onboarding/quiz/skip" />,
   );
 });
 
@@ -318,18 +318,21 @@ onboarding.get("/type", async (c) => {
   return page(
     c,
     { title: TITLE, bare: true },
-    <ResultView v={v} row={row} reveal continueHref="/onboarding" continueLabel={v.t("ต่อไป", "Continue")} visibilityNext="/onboarding/type" />,
+    <>
+      <JourneyTop v={v} j={journeyFor(c, "type")} />
+      <ResultView v={v} row={row} reveal continueHref="/onboarding" continueLabel={v.t("ต่อไป", "Continue")} visibilityNext="/onboarding/type" />
+    </>,
   );
 });
 
 // --------------------------------------------------------------- basics --
 
-function BasicsForm(props: { v: View; values?: Record<string, string>; error?: string }) {
+function BasicsForm(props: { v: View; j: Journey; values?: Record<string, string>; error?: string }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   const val = props.values ?? {};
   return (
-    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("basics")} count={{ at: 2, of: 4 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} journey={props.j} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep emoji="👋" title={t("เริ่มจากเรื่องพื้นฐาน", "The basics")} hint={t("วันเกิดใช้เช็กว่าอายุ 18+ ไม่แสดงให้ใครเห็น", "Your birthday is only used to check you're 18+. Never shown to others.")}>
         <Field label={t("อยากให้เพื่อนเรียกว่าอะไร (ชื่อเล่น)", "What should people call you? (nickname)")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} autocomplete="nickname" />
         <BirthDateFields v={props.v} value={val.birthDate ?? p?.birthDate} />
@@ -405,7 +408,7 @@ function BirthDateFields(props: { v: View; value?: string | null }) {
 
 // Came in through /new (the newcomer front door): "I'm new in town" starts ticked.
 onboarding.get("/basics", (c) =>
-  page(c, { title: TITLE, bare: true }, <BasicsForm v={view(c)} values={getCookie(c, NEWCOMER_COOKIE) === "1" ? { newcomer: "1" } : undefined} />),
+  page(c, { title: TITLE, bare: true }, <BasicsForm v={view(c)} j={journeyFor(c, "basics")} values={getCookie(c, NEWCOMER_COOKIE) === "1" ? { newcomer: "1" } : undefined} />),
 );
 
 onboarding.post("/basics", async (c) => {
@@ -422,7 +425,7 @@ onboarding.post("/basics", async (c) => {
     residency: str(body.residency) || (str(body.livesInBangkok) === "1" ? "lives" : ""),
     newcomer: str(body.newcomer),
   };
-  const fail = (error: string, _field?: number) => page(c, { title: TITLE, status: 400, bare: true }, <BasicsForm v={v} values={vals} error={error} />);
+  const fail = (error: string, _field?: number) => page(c, { title: TITLE, status: 400, bare: true }, <BasicsForm v={v} j={journeyFor(c, "basics")} values={vals} error={error} />);
   if (!vals.nickname) return fail(t("กรอกชื่อเล่น", "Please add a nickname."), 0);
   // A real calendar date: "1990-02-31" passes the pattern but isn't one.
   const parsed = new Date(`${vals.birthDate}T00:00:00Z`);
@@ -452,10 +455,10 @@ const CONSENT_ITEMS: { key: string; required: boolean; emoji: string; th: string
   { key: "notifications", required: false, emoji: "🔔", th: "แจ้งเตือนกิจกรรม", en: "Event reminders" },
 ];
 
-function PrivacyForm(props: { v: View; error?: string }) {
+function PrivacyForm(props: { v: View; j: Journey; error?: string }) {
   const { t } = props.v;
   return (
-    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("privacy")} count={{ at: 3, of: 4 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} journey={props.j} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep
         emoji="🤝"
         title={t("สิ่งที่จำเป็น", "The must-haves")}
@@ -482,16 +485,20 @@ function PrivacyForm(props: { v: View; error?: string }) {
         <h3 class="flow-sub">
           <span aria-hidden="true">✨</span> {t("ตัวเลือกเพิ่มเติม", "Optional extras")}
         </h3>
-        <p class="flow-hint">{t("เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "Change any of these later in Settings.")}</p>
-        <details class="info">
-          <summary aria-label={`ⓘ ${t("ตัวเลือกเพิ่มเติม", "Optional extras")}`}>ⓘ</summary>
-          <div>
-            {t(
-              "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง",
-              "Seating uses your interests and languages. City Pulse: results are only shown as totals from 10 or more people. Reminders: before events and when a spot opens.",
-            )}
-          </div>
-        </details>
+        <div class="flow-hint with-info">
+          <span>{t("เปลี่ยนได้ทุกเมื่อในการตั้งค่า", "Change any of these later in Settings.")}</span>
+          <details class="more-info">
+            <summary aria-label={`ⓘ ${t("ตัวเลือกเพิ่มเติม", "Optional extras")}`}>
+              <span aria-hidden="true">ⓘ</span>
+            </summary>
+            <div class="more-info-body">
+              {t(
+                "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ City Pulse: แสดงผลเฉพาะภาพรวมจากอย่างน้อย 10 คน แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง",
+                "Seating uses your interests and languages. City Pulse: results are only shown as totals from 10 or more people. Reminders: before events and when a spot opens.",
+              )}
+            </div>
+          </details>
+        </div>
         {CONSENT_ITEMS.filter((i) => !i.required).map((i) => (
           <Toggle name={`consent_${i.key}`} label={`${i.emoji} ${t(i.th, i.en)}`} />
         ))}
@@ -502,7 +509,7 @@ function PrivacyForm(props: { v: View; error?: string }) {
 
 onboarding.get("/privacy", (c) => {
   if (!c.var.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: TITLE, bare: true }, <PrivacyForm v={view(c)} />);
+  return page(c, { title: TITLE, bare: true }, <PrivacyForm v={view(c)} j={journeyFor(c, "privacy")} />);
 });
 
 onboarding.post("/privacy", async (c) => {
@@ -515,7 +522,7 @@ onboarding.post("/privacy", async (c) => {
     return page(
       c,
       { title: TITLE, status: 400, bare: true },
-      <PrivacyForm v={v} error={v.t("ต้องยอมรับเรื่องบริการ ความปลอดภัย และหลักปฏิบัติ ก่อนจึงจะไปต่อได้", "Service, safety and the code of conduct are needed to continue.")} />,
+      <PrivacyForm v={v} j={journeyFor(c, "privacy")} error={v.t("ต้องยอมรับเรื่องบริการ ความปลอดภัย และหลักปฏิบัติ ก่อนจึงจะไปต่อได้", "Service, safety and the code of conduct are needed to continue.")} />,
     );
   }
   const db = getDb(c.env);
@@ -841,7 +848,7 @@ export async function connectionsPatch(
   return { patch, romanceConsent: wantsRomance ? true : current.relationship === "single" ? false : null, genderSelf, datingGenderSelf };
 }
 
-function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?: string }) {
+function ConnectionsFlow(props: { v: View; j: Journey; error?: string; start?: number; mode?: string }) {
   const { t, lang } = props.v;
   const p = props.v.user?.profile;
   const rel = p?.relationship ?? "prefer_not";
@@ -849,8 +856,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
     <Flow
       v={props.v}
       submit={t("ต่อไป", "Next")}
-      stage={stage("connections")}
-      count={{ at: 4, of: 4 }}
+      journey={props.j}
       start={props.start}
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={
@@ -891,7 +897,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
 onboarding.get("/connections", (c) => {
   const v = view(c);
   if (!v.user!.profile) return c.redirect("/onboarding/basics");
-  return page(c, { title: TITLE, bare: true }, <ConnectionsFlow v={v} mode={getCookie(c, INTENT_COOKIE)} />);
+  return page(c, { title: TITLE, bare: true }, <ConnectionsFlow v={v} j={journeyFor(c, "connections")} mode={getCookie(c, INTENT_COOKIE)} />);
 });
 
 onboarding.post("/connections", async (c) => {
@@ -910,7 +916,7 @@ onboarding.post("/connections", async (c) => {
   const result = await connectionsPatch(body, p);
   if ("error" in result) {
     const start = result.error[1].includes("consent") ? 1 : 0;
-    return page(c, { title: TITLE, status: 400, bare: true }, <ConnectionsFlow v={v} error={v.t(...result.error)} start={start} mode={getCookie(c, INTENT_COOKIE)} />);
+    return page(c, { title: TITLE, status: 400, bare: true }, <ConnectionsFlow v={v} j={journeyFor(c, "connections")} error={v.t(...result.error)} start={start} mode={getCookie(c, INTENT_COOKIE)} />);
   }
   const db = getDb(c.env);
   const intents = p.intents.filter((i) => i !== "romance");
@@ -979,7 +985,7 @@ onboarding.get("/wellbeing", async (c) => {
     <Flow
       v={v}
       submit={t("ส่งคำตอบ", "Submit")}
-      stage={stage("wellbeing")}
+      journey={journeyFor(c, "wellbeing")}
       extra={
         <button type="submit" class="skip" name="skip" value="1" formnovalidate>
           {t("ข้ามไปก่อน", "Skip for now")}

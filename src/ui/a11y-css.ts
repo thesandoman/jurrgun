@@ -731,4 +731,12 @@ html:not(.sheet-js) .chat-compose{position:static}
 .bubble-more:focus-visible{outline:3px solid var(--ink);outline-offset:-6px}
 @media (hover:none){.chat-msgs li[data-sheet-hold]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}}
 @media (prefers-reduced-motion:reduce){.bubble-more{transition:none}}
+/* D1 one bar for the first-time journey: the chapter name and "Part 1 of 4" sit above it. */
+.journey-top{flex-wrap:wrap;row-gap:6px;margin:4px 0 16px}
+.journey-label{flex:1 0 100%;display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0;font-size:.82rem;line-height:1.3;color:var(--ink-2)}
+.journey-label b{color:var(--ink);font-weight:700}
+.journey-label span{flex:none;font-variant-numeric:tabular-nums}
+.journey-top .flow-close{margin:-14px 0}
+/* The ⓘ ends the helper line instead of sitting alone on its own line. */
+.flow-hint.with-info{margin:0 0 8px}
 `);

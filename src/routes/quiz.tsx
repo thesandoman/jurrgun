@@ -25,7 +25,8 @@ import { cleanBio } from "../content/profile";
 import { romanceEligible } from "../domain/rules";
 import { segmentOf } from "../domain/segment";
 import { styleLines } from "../vibe/styles";
-import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
+import { Flow, FlowStep, AnswerCard } from "../ui/flow";
+import { journeyFor, type Journey } from "../ui/journey";
 import { Card, FactTiles, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, motiveSentence, POLES } from "../vibe/content";
 import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
@@ -172,6 +173,11 @@ export function isArchetype(key: string): key is ArchetypeKey {
 
 // ------------------------------------------------------------ the quiz --
 
+/** Big type names keep hyphenated words whole ("Old-Town" never splits at its hyphen). */
+function keepHyphens(text: string) {
+  return text.split(/(\S+-\S+)/).map((part, i) => (i % 2 ? <span style="white-space:nowrap">{part}</span> : part));
+}
+
 function AnswerField(props: { v: View; q: AnyQuestion; i: number }) {
   const { lang } = props.v;
   return (
@@ -217,9 +223,6 @@ function HostStyle(props: { v: View; bio: unknown }) {
   );
 }
 
-/** Onboarding's quiz is step 1 of 4 (quiz, basics, privacy, private settings). */
-export const ONBOARDING_QUIZ_STAGE = { at: 0, of: 4 };
-
 export function QuizFlow(props: {
   v: View;
   questions: AnyQuestion[];
@@ -229,7 +232,8 @@ export function QuizFlow(props: {
   carry?: Record<string, string | string[]>;
   seed: string;
   next: string;
-  stage?: Stage;
+  /** Onboarding: the quiz's place in the first-time journey (the main page; follow-ups carry on after the 16). */
+  journey?: Journey;
   close?: string;
   /** "Skip for now" target (onboarding only). */
   skipAction?: string;
@@ -240,8 +244,6 @@ export function QuizFlow(props: {
   reflect?: Reflections | null;
   /** Onboarding: the welcome screen already said what the quiz is, so start at question 1. */
   noIntro?: boolean;
-  /** "1 of 4" beside the bar (onboarding). */
-  count?: { at: number; of: number };
 }) {
   const { t, lang } = props.v;
   const ask = props.ask ?? props.questions.map((_, i) => i);
@@ -254,19 +256,15 @@ export function QuizFlow(props: {
   const hostN = inSet("table-host").length;
   // About 9 seconds a question, over the real total.
   const minutes = Math.max(2, Math.round((n * 9) / 60));
-  // The quiz stage spans its page and up to 2 follow-ups: the bar fills 16 of 18 here and carries on there, never backwards.
-  const stage: Stage | undefined = props.stage;
-  const mainSteps = followUp ? n - ask.length : ask.length + (props.noIntro || followUp ? 0 : 1);
-  const span = props.stage ? { from: followUp ? n - ask.length : 0, total: mainSteps + MAX_FOLLOW_UPS } : undefined;
+  // One bar for the whole first-time journey: the follow-ups carry on straight after the 16, never backwards.
+  const journey = props.journey ? { ...props.journey, from: props.journey.from + (followUp ? n - ask.length : 0) } : undefined;
   return (
     <Flow
       v={props.v}
       action="/quiz"
       submit={t("ดูผลลัพธ์", "See my type")}
       hidden={{ seed: props.seed, next: props.next }}
-      stage={stage}
-      span={span}
-      count={props.count}
+      journey={journey}
       close={props.close}
       autoSubmit
       start={props.startAt !== undefined ? props.startAt + (followUp ? 0 : 1) : undefined}
@@ -318,9 +316,12 @@ export function QuizFlow(props: {
                 {style === "open-to-more" ? t("ต่อด้วยคำถามเรื่องสไตล์การเดตอีกนิด", "Now a few about how you date") : t("ต่อด้วยเรื่องสไตล์เจ้าภาพอีกนิด", "Now a couple about how you host")}
               </span>
             ) : null}
-            <span class="muted q-count">
-              {followUp ? `${i + 1} / ${n}` : style ? `${style === "open-to-more" ? "💘" : "🍽️"} ${inSetAt + 1} / ${ofSet.length}` : `${i + 1} / ${typeN}`}
-            </span>
+            {/* In onboarding the journey bar is the only counter. */}
+            {journey ? null : (
+              <span class="muted q-count">
+                {followUp ? `${i + 1} / ${n}` : style ? `${style === "open-to-more" ? "💘" : "🍽️"} ${inSetAt + 1} / ${ofSet.length}` : `${i + 1} / ${typeN}`}
+              </span>
+            )}
             <AnswerField v={props.v} q={q} i={i} />
             <NoneOfThese v={props.v} q={q} i={i} />
           </FlowStep>
@@ -714,7 +715,7 @@ export function ResultView(props: { v: View; row: VibeRow; continueHref: string;
         <Tile tone="brand" art={{ tone: "evening", icons: [], seed: 3 }} lang={lang}>
           <Pill dot>{t("ตอนนี้คุณดูจะชอบกรุงเทพฯ แบบนี้", "How you seem to enjoy Bangkok right now")}</Pill>
           <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
-          <h1>{L(lang, a.name)}</h1>
+          <h1>{keepHyphens(L(lang, a.name))}</h1>
           <small>{L(lang, a.tagline)}</small>
           <small class="starting-point">
             {t("เป็นจุดเริ่มต้น ไม่ใช่ป้ายติดตัว คนเราเปลี่ยนได้ ทำใหม่เมื่อไหร่ก็ได้", "A starting point, not a label. People change; retake it any time.")}
@@ -892,8 +893,7 @@ quizRoutes.post("/quiz", async (c) => {
         next={next}
         close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
         skipAction={next === "/onboarding/type" ? "/onboarding/quiz/skip" : undefined}
-        stage={next === "/onboarding/type" ? ONBOARDING_QUIZ_STAGE : undefined}
-          count={next === "/onboarding/type" ? { at: 1, of: 4 } : undefined}
+        journey={next === "/onboarding/type" ? journeyFor(c, "quiz") : undefined}
           noIntro={next === "/onboarding/type"}
         error={error}
         startAt={onFollowUps ? bad - base.length : bad}
@@ -917,8 +917,7 @@ quizRoutes.post("/quiz", async (c) => {
           seed={seed}
           next={next}
           close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
-          stage={next === "/onboarding/type" ? ONBOARDING_QUIZ_STAGE : undefined}
-          count={next === "/onboarding/type" ? { at: 1, of: 4 } : undefined}
+          journey={next === "/onboarding/type" ? journeyFor(c, "quiz") : undefined}
           noIntro={next === "/onboarding/type"}
         />,
       );
@@ -1137,7 +1136,7 @@ quizRoutes.get("/types/:slug", async (c) => {
       </p>
       <div class="type-hero">
         <span class="type-emoji" aria-hidden="true">{a.emoji}</span>
-        <h1>{L(lang, a.name)}</h1>
+        <h1>{keepHyphens(L(lang, a.name))}</h1>
         <p>{L(lang, a.tagline)}</p>
         <CodeChips lang={lang} archetype={key} />
       </div>

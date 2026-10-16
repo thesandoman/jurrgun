@@ -15,6 +15,7 @@ import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
 import { consents } from "../schema";
 import { Flow, FlowStep } from "../ui/flow";
+import { journeyFor } from "../ui/journey";
 import { page, view } from "../ui/kit";
 
 export const guideRoutes = new Hono<AppEnv>();
@@ -66,13 +67,26 @@ function Tips(props: { tips: Tip[]; t: (th: string, en: string) => string }) {
   );
 }
 
-guideRoutes.get("/guide", requireMember, (c) => {
+/** Has this member already agreed to the guide? */
+async function guideSeen(env: AppEnv["Bindings"], accountId: string): Promise<boolean> {
+  const [seen] = await getDb(env)
+    .select({ id: consents.id })
+    .from(consents)
+    .where(and(eq(consents.accountId, accountId), eq(consents.category, "guide")))
+    .limit(1);
+  return !!seen;
+}
+
+guideRoutes.get("/guide", requireMember, async (c) => {
   const v = view(c);
   const { t } = v;
+  // The first time, the guide is the last chapter of onboarding: the journey bar, and Back instead of an exit.
+  // Reopened from Learn later, it's a plain card flow with a close.
+  const first = !(await guideSeen(c.env, v.user!.account.id));
   return page(
     c,
     { title: t("เริ่มต้นใช้งาน", "Getting started"), bare: true },
-    <Flow v={v} submit={t("พร้อมแล้ว ไปกันเลย", "I'm in, let's go")} action="/guide" close="/events">
+    <Flow v={v} submit={t("พร้อมแล้ว ไปกันเลย", "I'm in, let's go")} action="/guide" close={first ? undefined : "/learn"} journey={first ? journeyFor(c, "guide") : undefined}>
       <FlowStep emoji="👋" title={t("Jurrgun ใช้งานยังไง", "How Jurrgun works")} hint={t("เพื่อนใหม่มาก่อน เรื่องเดตมีได้ก็ต่อเมื่อทั้งสองคนเลือกเอง", "Friends first. Dating only if you both choose it.")}>
         <Tips tips={HOW} t={t} />
       </FlowStep>
@@ -114,11 +128,6 @@ guideRoutes.post("/guide", requireMember, async (c) => {
   if (body.agree !== "1") return c.redirect("/guide");
   const accountId = c.var.user!.account.id;
   const db = getDb(c.env);
-  const [seen] = await db
-    .select({ id: consents.id })
-    .from(consents)
-    .where(and(eq(consents.accountId, accountId), eq(consents.category, "guide")))
-    .limit(1);
-  if (!seen) await db.insert(consents).values({ id: newId(), accountId, category: "guide", granted: true, version: GUIDE_VERSION });
+  if (!(await guideSeen(c.env, accountId))) await db.insert(consents).values({ id: newId(), accountId, category: "guide", granted: true, version: GUIDE_VERSION });
   return c.redirect("/events?notice=welcome");
 });

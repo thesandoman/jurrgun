@@ -13,8 +13,7 @@
  */
 import type { Child } from "hono/jsx";
 import type { View } from "./kit";
-
-export type Stage = { at: number; of: number };
+import { JourneyTop, type Journey } from "./journey";
 
 export function FlowStep(props: {
   title: string;
@@ -57,12 +56,19 @@ export function FlowStep(props: {
           ) : null}
           {props.title}
         </legend>
-        {props.hint ? <p class="flow-hint">{props.hint}</p> : null}
         {props.info ? (
-          <details class="info">
-            <summary aria-label={`ⓘ ${props.title}`}>ⓘ</summary>
-            <div>{props.info}</div>
-          </details>
+          // The ⓘ sits at the end of the helper line, not alone on a line of its own.
+          <div class="flow-hint with-info">
+            {props.hint ? <span>{props.hint}</span> : null}
+            <details class="more-info">
+              <summary aria-label={`ⓘ ${props.title}`}>
+                <span aria-hidden="true">ⓘ</span>
+              </summary>
+              <div class="more-info-body">{props.info}</div>
+            </details>
+          </div>
+        ) : props.hint ? (
+          <p class="flow-hint">{props.hint}</p>
         ) : null}
         <div class="flow-body">{props.children}</div>
         <p class="flow-need" role="alert" hidden />
@@ -77,8 +83,8 @@ export function Flow(props: {
   submit: string;
   action?: string;
   hidden?: Record<string, string>;
-  /** Where this flow sits in a bigger journey, for the progress bar. */
-  stage?: Stage;
+  /** Where this flow sits in the first-time journey: one bar with chapter names (src/ui/journey.tsx). */
+  journey?: Journey;
   /** Submit as soon as the last auto step is answered. */
   autoSubmit?: boolean;
   /** Extra controls in the bottom bar (e.g. "Skip for now"). */
@@ -88,23 +94,19 @@ export function Flow(props: {
   error?: Child;
   /** Step to open on (e.g. the step a server-side error refers to). */
   start?: number;
-  /** A stage that runs over several pages (the quiz, then its follow-ups): this page's screens fill `from` to `from + steps` of `total`, so the bar never jumps back. */
-  span?: { from: number; total: number };
-  /** "2 of 5" beside the bar: this flow's place in a journey, or "steps" to count its own screens. */
-  count?: { at: number; of: number } | "steps";
+  /** "2 of 5" beside the bar, counting this flow's own screens. */
+  count?: "steps";
   children: Child;
 }) {
   const { t } = props.v;
-  const stage = props.stage ?? { at: 0, of: 1 };
+  const j = props.journey;
   return (
     <form
       method="post"
       action={props.action}
       class="flow"
-      data-stage-at={String(stage.at)}
-      data-stage-of={String(stage.of)}
-      data-span-from={props.span ? String(props.span.from) : undefined}
-      data-span-total={props.span ? String(props.span.total) : undefined}
+      data-j-from={j ? String(j.from) : undefined}
+      data-j-total={j ? String(j.total) : undefined}
       data-autosubmit={props.autoSubmit ? "1" : undefined}
       data-start={props.start ? String(props.start) : undefined}
       data-next={t("ต่อไป", "Next")}
@@ -114,21 +116,21 @@ export function Flow(props: {
       data-miss-field={t("กรอกช่องนี้ก่อนนะ", "Please fill this in.")}
       data-done={props.submit}
     >
-      <div class="flow-top">
-        <div class="flow-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((stage.at / stage.of) * 100)}>
-          <i style={`width:${Math.round((stage.at / stage.of) * 100)}%`} />
+      {j ? (
+        <JourneyTop v={props.v} j={j} close={props.close} />
+      ) : (
+        <div class="flow-top">
+          <div class="flow-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={0}>
+            <i style="width:0%" />
+          </div>
+          {props.count ? <span class="flow-count" data-tpl={t("{n} จาก {of}", "{n} of {of}")} data-steps="1" /> : null}
+          {props.close ? (
+            <a href={props.close} class="flow-close" aria-label={t("ปิด", "Close")}>
+              ✕
+            </a>
+          ) : null}
         </div>
-        {props.count ? (
-          <span class="flow-count" data-tpl={t("{n} จาก {of}", "{n} of {of}")} data-steps={props.count === "steps" ? "1" : undefined}>
-            {props.count === "steps" ? null : t(`${props.count.at} จาก ${props.count.of}`, `${props.count.at} of ${props.count.of}`)}
-          </span>
-        ) : null}
-        {props.close ? (
-          <a href={props.close} class="flow-close" aria-label={t("ปิด", "Close")}>
-            ✕
-          </a>
-        ) : null}
-      </div>
+      )}
       {props.error ? <div class="flow-error">{props.error}</div> : null}
       {Object.entries(props.hidden ?? {}).map(([k, val]) => (
         <input type="hidden" name={k} value={val} />
@@ -187,7 +189,7 @@ var s=document.currentScript,f=s&&s.closest("form.flow");if(!f||f.dataset.ready)
 var steps=[].slice.call(f.querySelectorAll(".flow-step"));if(steps.length<1)return;
 f.classList.add("is-js");f.noValidate=true;
 var back=f.querySelector(".flow-back"),next=f.querySelector(".flow-next"),bar=f.querySelector(".flow-progress i"),pb=f.querySelector(".flow-progress");
-var at=+f.dataset.stageAt||0,of=+f.dataset.stageOf||1,i=0,busy=0,pushed=0;
+var jf=+f.dataset.jFrom||0,jt=+f.dataset.jTotal||0,i=0,busy=0,pushed=0;
 var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
 i=Math.max(0,Math.min(steps.length-1,+f.dataset.start||0));
 function show(n,dir,push){
@@ -196,8 +198,7 @@ function show(n,dir,push){
   var st=steps[n];if(!reduce&&dir)st.classList.add(dir>0?"in-f":"in-b");st.classList.add("on");
   i=n;back.hidden=n===0;
   cta(st);
-  var sf=+f.dataset.spanFrom||0,st2=+f.dataset.spanTotal||0;
-  var pct=Math.round(((at+(st2?(sf+n+1)/st2:(n+1)/steps.length))/of)*100);if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
+  var pct=Math.min(100,Math.round((jt?(jf+n+1)/jt:(n+1)/steps.length)*100));if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
   var cnt=f.querySelector(".flow-count[data-steps]");if(cnt)cnt.textContent=cnt.dataset.tpl.replace("{n}",n+1).replace("{of}",steps.length);
   if(push&&history.pushState){history.pushState({flow:n},"");pushed++}else if(dir&&history.replaceState)history.replaceState({flow:n},"");
   var h=st.querySelector(".flow-title");if(h&&dir){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}

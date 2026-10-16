@@ -55,14 +55,22 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
     r = await req("/onboarding/wellbeing", { cookie, form: { q1: "2", q2: "1", q3: "1" } });
     // New members see the one-time guide, then Discover.
     expect(r.headers.get("location")).toBe("/guide");
-    const guide = await req("/guide", { cookie: `${cookie}; lang=en` });
-    expect(await guide.text()).toContain("Accountability");
+    const guide = await (await req("/guide", { cookie: `${cookie}; lang=en` })).text();
+    expect(guide).toContain("Accountability");
+    // The first time it's the last chapter of the onboarding bar, with Back and no ✕ (D1).
+    expect(guide).toContain("Before you start");
+    expect(guide).toContain("Part 4 of 4");
+    expect(guide).not.toContain('class="flow-close"');
     r = await req("/guide", { cookie, form: { agree: "0" } });
     expect(r.headers.get("location")).toBe("/guide");
     r = await req("/guide", { cookie, form: { agree: "1" } });
     expect(r.headers.get("location")).toBe("/events?notice=welcome");
     const seen = await db().select().from(consents).where(and(eq(consents.accountId, acct.id), eq(consents.category, "guide")));
     expect(seen).toHaveLength(1);
+    // Reopened later from Learn: a plain flow with a close, no onboarding bar.
+    const again = await (await req("/guide", { cookie: `${cookie}; lang=en` })).text();
+    expect(again).toContain('class="flow-close"');
+    expect(again).not.toContain("Part 4 of 4");
   });
 
   it("rejects a wrong password with the same message as an unknown user", async () => {
