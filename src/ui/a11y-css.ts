@@ -179,6 +179,56 @@ div.grad p{margin:0;font-weight:700}
 .tile2 .type-range{color:inherit!important}
 .tile2 .type-range a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
+/* ---- Phase 1 (three-way review, owner-approved 2026-10-16) ---- */
+/* One bottom layer per screen. The Map / Cards switch sits in the page on phones too,
+   never floating over Filters or a focused control (WCAG 2.4.11). */
+body:not(.fullmap-body) .view-switch{position:static;transform:none;display:inline-flex;margin:0 0 12px;box-shadow:none}
+body:has(.view-switch) .discover-list{padding-bottom:0}
+/* A page with its own sticky action bar (quiz result, card flows, edit profile) hides the tab
+   bar on phones and tablets, so the two never stack; the bar sits at the bottom edge. */
+@media (max-width:1023.98px){
+  body:has(main .flow-bar) .tabbar,body:has(main .pf-save) .tabbar{display:none}
+  body:has(main .flow-bar),body:has(main .pf-save){padding-bottom:0}
+  body:has(main .flow-bar) main .flow-bar,body:has(main .pf-save) main .pf-save{bottom:0;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  body:has(main .flow-bar) main .flow-bar::after,body:has(main .pf-save) main .pf-save::after{content:none}
+}
+/* Contrast (1.4.3): the brand tile is a solid deep green, so white text passes everywhere on it;
+   small white text on the type card's art gets a scrim. */
+.tile2.t-brand{background:linear-gradient(160deg,#0b5a30,#137f45)}
+.type-hero2 .tile2-art::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(8,20,14,.78) 0%,rgba(8,20,14,.5) 55%,rgba(8,20,14,.25) 100%)}
+.type-hero2 .tile2-body,.type-hero2 small{text-shadow:0 1px 2px rgba(0,0,0,.45)}
+/* Dark mode stays on the palette: a true red for 💘 (never coral) and a mango centre tab. */
+@media (prefers-color-scheme:dark){
+  :root{--love:#f0505c;--love-ink:#ff9aa3}
+  .tabbar a.center,.tabbar a.center.on{background:linear-gradient(160deg,#ffc766,#ffa53a);color:#3b2400}
+}
+/* Chats: rows never run past the screen (the grid item could not shrink), titles take one or two
+   lines, and unread is bold plus a "New" label, not colour alone (1.4.1). */
+.chat-list>li{min-width:0}
+.chat-list a{min-width:0}
+.chat-list a strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chat-list a.unread strong{color:var(--ink);font-weight:800}
+.chat-list a.unread small{color:var(--ink-2);font-weight:600}
+.chat-new{flex:none;padding:2px 10px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-size:.78rem;font-weight:700}
+
+/* Birthday: day, month and year side by side; the welcome screen's "next" line. */
+.birth-fields{border:0;padding:0;margin:18px 0}
+.birth-fields legend{font-weight:600;font-size:.94rem;margin-bottom:6px}
+.birth-row{display:grid;grid-template-columns:1fr 2fr 1.4fr;gap:8px}
+.birth-row label{display:grid;gap:4px;font-size:.84rem;color:var(--ink-2)}
+.birth-row select{min-height:48px}
+.welcome-next{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);font-size:.94rem}
+
+/* Photo picker: a page-language button over the visually hidden file input; focus shows on the button. */
+.file-btn{align-self:flex-start;cursor:pointer}
+.field:has(#f-photo:focus-visible) .file-btn{outline:3px solid var(--brand);outline-offset:2px}
+.file-name{display:block;font-size:.86rem;margin-top:4px}
+
+/* Headings break evenly (no lone last word). */
+h1,h2,h3,.flow-title{text-wrap:balance}
+/* Staff chip in the header: on narrow phones it drops to the Me menu's job, so the header never overflows. */
+@media (max-width:420px){.topbar .top-actions a.chip[href="/admin"]{display:none}}
+
 /* Merged onboarding screens (D42): sub-headings and labels for groups inside one step. */
 .flow-body .field-label{font-family:var(--sub);font-weight:600;font-size:.94rem;margin:18px 0 6px}
 .flow-body .field-label+.muted{margin-top:-2px}

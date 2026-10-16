@@ -217,6 +217,9 @@ function HostStyle(props: { v: View; bio: unknown }) {
   );
 }
 
+/** Onboarding's quiz is step 1 of 4 (quiz, basics, privacy, private settings). */
+export const ONBOARDING_QUIZ_STAGE = { at: 0, of: 4 };
+
 export function QuizFlow(props: {
   v: View;
   questions: AnyQuestion[];
@@ -235,6 +238,10 @@ export function QuizFlow(props: {
   startAt?: number;
   /** "My Bangkok" reflections after the questions (member quiz only, never onboarding), prefilled with these. */
   reflect?: Reflections | null;
+  /** Onboarding: the welcome screen already said what the quiz is, so start at question 1. */
+  noIntro?: boolean;
+  /** "1 of 4" beside the bar (onboarding). */
+  count?: { at: number; of: number };
 }) {
   const { t, lang } = props.v;
   const ask = props.ask ?? props.questions.map((_, i) => i);
@@ -247,9 +254,10 @@ export function QuizFlow(props: {
   const hostN = inSet("table-host").length;
   // About 9 seconds a question, over the real total.
   const minutes = Math.max(2, Math.round((n * 9) / 60));
-  // A follow-up page carries on the progress bar from where the 16 left off.
-  const outer = props.stage ?? { at: 0, of: 1 };
-  const stage: Stage | undefined = followUp ? { at: (outer.at * n + ask[0]) / ask.length, of: (outer.of * n) / ask.length } : props.stage;
+  // The quiz stage spans its page and up to 2 follow-ups: the bar fills 16 of 18 here and carries on there, never backwards.
+  const stage: Stage | undefined = props.stage;
+  const mainSteps = followUp ? n - ask.length : ask.length + (props.noIntro || followUp ? 0 : 1);
+  const span = props.stage ? { from: followUp ? n - ask.length : 0, total: mainSteps + MAX_FOLLOW_UPS } : undefined;
   return (
     <Flow
       v={props.v}
@@ -257,6 +265,8 @@ export function QuizFlow(props: {
       submit={t("ดูผลลัพธ์", "See my type")}
       hidden={{ seed: props.seed, next: props.next }}
       stage={stage}
+      span={span}
+      count={props.count}
       close={props.close}
       autoSubmit
       start={props.startAt !== undefined ? props.startAt + (followUp ? 0 : 1) : undefined}
@@ -271,7 +281,7 @@ export function QuizFlow(props: {
     >
       <style dangerouslySetInnerHTML={{ __html: QUESTION_ART_CSS + STYLE_SET_CSS + QUIZ_NONE_CSS + REFLECTION_CSS }} />
       <NoneData v={props.v} />
-      {followUp ? null : <FlowStep
+      {followUp || props.noIntro ? null : <FlowStep
         emoji="🧭"
         title={t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}
         hint={t(
@@ -892,7 +902,9 @@ quizRoutes.post("/quiz", async (c) => {
         next={next}
         close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
         skipAction={next === "/onboarding/type" ? "/onboarding/quiz/skip" : undefined}
-        stage={next === "/onboarding/type" ? { at: 1, of: 7 } : undefined}
+        stage={next === "/onboarding/type" ? ONBOARDING_QUIZ_STAGE : undefined}
+          count={next === "/onboarding/type" ? { at: 1, of: 4 } : undefined}
+          noIntro={next === "/onboarding/type"}
         error={error}
         startAt={onFollowUps ? bad - base.length : bad}
         reflect={member ? (reflections ?? null) : undefined}
@@ -915,7 +927,9 @@ quizRoutes.post("/quiz", async (c) => {
           seed={seed}
           next={next}
           close={next === "/quiz/result" ? (row ? "/quiz/result" : "/settings") : undefined}
-          stage={next === "/onboarding/type" ? { at: 1, of: 7 } : undefined}
+          stage={next === "/onboarding/type" ? ONBOARDING_QUIZ_STAGE : undefined}
+          count={next === "/onboarding/type" ? { at: 1, of: 4 } : undefined}
+          noIntro={next === "/onboarding/type"}
         />,
       );
     }

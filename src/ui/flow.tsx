@@ -88,6 +88,8 @@ export function Flow(props: {
   error?: Child;
   /** Step to open on (e.g. the step a server-side error refers to). */
   start?: number;
+  /** A stage that runs over several pages (the quiz, then its follow-ups): this page's screens fill `from` to `from + steps` of `total`, so the bar never jumps back. */
+  span?: { from: number; total: number };
   /** "2 of 5" beside the bar: this flow's place in a journey, or "steps" to count its own screens. */
   count?: { at: number; of: number } | "steps";
   children: Child;
@@ -101,6 +103,8 @@ export function Flow(props: {
       class="flow"
       data-stage-at={String(stage.at)}
       data-stage-of={String(stage.of)}
+      data-span-from={props.span ? String(props.span.from) : undefined}
+      data-span-total={props.span ? String(props.span.total) : undefined}
       data-autosubmit={props.autoSubmit ? "1" : undefined}
       data-start={props.start ? String(props.start) : undefined}
       data-next={t("ต่อไป", "Next")}
@@ -192,8 +196,9 @@ function show(n,dir,push){
   var st=steps[n];if(!reduce&&dir)st.classList.add(dir>0?"in-f":"in-b");st.classList.add("on");
   i=n;back.hidden=n===0;
   var last=n===steps.length-1,auto=st.dataset.auto==="1",picked=!!st.querySelector("input[type=radio]:checked");
-  next.textContent=last?f.dataset.done:(st.dataset.cta||(auto&&!picked&&!st.querySelector("[required]")?f.dataset.skip:f.dataset.next));next.classList.toggle("ghost",auto&&!last);next.classList.toggle("primary",!(auto&&!last));
-  var pct=Math.round(((at+(n+1)/steps.length)/of)*100);if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
+  next.textContent=last?f.dataset.done:(st.dataset.cta||(auto&&!picked&&!st.querySelector("[required]")?f.dataset.skip:f.dataset.next));var quiet=auto&&!last&&!picked;next.classList.toggle("ghost",quiet);next.classList.toggle("primary",!quiet);
+  var sf=+f.dataset.spanFrom||0,st2=+f.dataset.spanTotal||0;
+  var pct=Math.round(((at+(st2?(sf+n+1)/st2:(n+1)/steps.length))/of)*100);if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
   var cnt=f.querySelector(".flow-count[data-steps]");if(cnt)cnt.textContent=cnt.dataset.tpl.replace("{n}",n+1).replace("{of}",steps.length);
   if(push&&history.pushState){history.pushState({flow:n},"");pushed++}else if(dir&&history.replaceState)history.replaceState({flow:n},"");
   var h=st.querySelector(".flow-title");if(h&&dir){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}

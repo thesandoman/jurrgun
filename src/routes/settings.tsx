@@ -542,8 +542,18 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
               </div>
             )}
             <div class="field" style="margin:0;flex:1;min-width:200px">
-              <label for="f-photo">{t("อัปโหลดรูปใหม่", "Upload a new photo")}</label>
-              <input id="f-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+              {/* The browser's own picker speaks the browser's language; this button speaks the page's. */}
+              <span class="field-label" id="f-photo-h">{t("อัปโหลดรูปใหม่", "Upload a new photo")}</span>
+              <label class="btn ghost file-btn" for="f-photo">
+                📷 {t("เลือกรูป", "Choose a photo")}
+              </label>
+              <input id="f-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" aria-labelledby="f-photo-h" />
+              <span class="file-name muted" aria-live="polite">{t("ยังไม่ได้เลือกรูป", "No photo chosen")}</span>
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: `(function(){var i=document.getElementById("f-photo"),n=i&&i.parentNode.querySelector(".file-name");if(!i||!n)return;i.addEventListener("change",function(){if(i.files&&i.files[0])n.textContent=i.files[0].name})})();`,
+                }}
+              />
               <small>{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB ช่วงทดลองไม่ต้องใช้รูปจริง", "JPG, PNG or WebP, up to 5 MB. No real photos needed in the prototype.")}</small>
             </div>
           </div>

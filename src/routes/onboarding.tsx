@@ -73,7 +73,9 @@ onboarding.use("*", async (c, next) => {
 
 const STEPS = ["welcome", "quiz", "basics", "privacy", "connections", "wellbeing"] as const;
 type Step = (typeof STEPS)[number];
-const stage = (s: Step) => ({ at: STEPS.indexOf(s), of: STEPS.length });
+/** One progress model for the whole journey (owner, Phase 1): 4 named steps, quiz, basics, privacy, private settings. */
+const STAGE_AT: Record<Step, number> = { welcome: 0, quiz: 0, basics: 1, privacy: 2, connections: 3, wellbeing: 3 };
+const stage = (s: Step) => ({ at: STAGE_AT[s], of: 4 });
 
 export const CONSENT_VERSION = "2026-10-proto";
 export const QUIZ_SKIP_COOKIE = "bkk_quiz_skip";
@@ -158,6 +160,10 @@ onboarding.get("/welcome", (c) => {
         ))}
       </div>
       <p class="muted">🔒 {t("เปลี่ยนได้ทุกเมื่อ เรื่องเดตเป็นความลับเสมอ", "Change it anytime. Dating stays private.")}</p>
+      {/* The quiz's own intro screen is folded in here, so the quiz starts at question 1. */}
+      <p class="welcome-next">
+        🧭 {t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ 16 สถานการณ์สั้น ๆ ราว 3 นาที ตอบตามความรู้สึกแรก มีแค่คุณที่เห็นคำตอบ", "Next: your Bangkok Type. 16 quick Bangkok moments, about 3 minutes. Go with your gut; only you see your answers.")}
+      </p>
       <div class="flow-bar">
         <button type="submit" class="btn primary">{t("ไปกันเลย", "Let's go")}</button>
       </div>
@@ -288,7 +294,7 @@ onboarding.get("/quiz", async (c) => {
   return page(
     c,
     { title: TITLE, bare: true },
-    <QuizFlow v={v} questions={quizQuestions(seed, row, v.lang === "en" ? { explainLocal: true } : undefined)} seed={seed} next="/onboarding/type" stage={stage("quiz")} skipAction="/onboarding/quiz/skip" />,
+    <QuizFlow v={v} questions={quizQuestions(seed, row, v.lang === "en" ? { explainLocal: true } : undefined)} seed={seed} next="/onboarding/type" stage={stage("quiz")} count={{ at: 1, of: 4 }} noIntro skipAction="/onboarding/quiz/skip" />,
   );
 });
 
@@ -315,10 +321,10 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
   const p = props.v.user?.profile;
   const val = props.values ?? {};
   return (
-    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("basics")} count={{ at: 1, of: 3 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("basics")} count={{ at: 2, of: 4 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep emoji="👋" title={t("เริ่มจากเรื่องพื้นฐาน", "The basics")} hint={t("วันเกิดใช้เช็กว่าอายุ 18+ ไม่แสดงให้ใครเห็น", "Your birthday is only used to check you're 18+. Never shown to others.")}>
         <Field label={t("อยากให้เพื่อนเรียกว่าอะไร (ชื่อเล่น)", "What should people call you? (nickname)")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} autocomplete="nickname" />
-        <Field label={t("วันเกิด", "Date of birth")} name="birthDate" type="date" value={val.birthDate ?? p?.birthDate} required />
+        <BirthDateFields v={props.v} value={val.birthDate ?? p?.birthDate} />
         <Select label={t("ส่วนใหญ่อยู่เขตไหน", "Where do you spend your week? (district)")} name="district" options={districtsAZ(lang)} value={val.district ?? p?.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
         <p class="field-label" id="residency-h">{t("ตอนนี้คุณอยู่กรุงเทพฯ แบบไหน", "You and Bangkok right now")}</p>
         <p class="muted small">{t("ใครอยู่ในหรือรอบ ๆ กรุงเทพฯ ก็มาร่วมได้ ไม่ว่าทะเบียนบ้านจะอยู่ที่ไหน", "Anyone in or around Bangkok can join. Your household registration can be anywhere.")}</p>
@@ -330,6 +336,62 @@ function BasicsForm(props: { v: View; values?: Record<string, string>; error?: s
         <Toggle name="newcomer" label={t("ฉันเพิ่งมาถึงกรุงเทพฯ", "I'm new in town")} checked={val.newcomer === "1" || !!p?.newcomer} />
       </FlowStep>
     </Flow>
+  );
+}
+
+const MONTHS: [string, string][] = [
+  ["มกราคม", "January"], ["กุมภาพันธ์", "February"], ["มีนาคม", "March"], ["เมษายน", "April"], ["พฤษภาคม", "May"], ["มิถุนายน", "June"],
+  ["กรกฎาคม", "July"], ["สิงหาคม", "August"], ["กันยายน", "September"], ["ตุลาคม", "October"], ["พฤศจิกายน", "November"], ["ธันวาคม", "December"],
+];
+const pad2 = (n: number | string) => String(n).padStart(2, "0");
+/** "1996", "5", "3" → "1996-05-03"; empty if any part is missing. */
+export function joinBirthDate(day: string, month: string, year: string): string {
+  return day && month && year ? `${year}-${pad2(month)}-${pad2(day)}` : "";
+}
+
+/**
+ * Birthday as day, month and year in the reading order people use here, with
+ * Thai month names and Buddhist-era years on the Thai page (the browser's own
+ * date box showed a US mm/dd/yyyy). Posts birthDay / birthMonth / birthYear.
+ */
+function BirthDateFields(props: { v: View; value?: string | null }) {
+  const { t, lang } = props.v;
+  const [y, m, d] = (props.value ?? "").split("-");
+  const thisYear = new Date().getUTCFullYear();
+  const years = Array.from({ length: 83 }, (_, i) => thisYear - 18 - i);
+  return (
+    <fieldset class="birth-fields">
+      <legend>{t("วันเกิด", "Date of birth")}</legend>
+      <div class="birth-row">
+        <label>
+          <span>{t("วัน", "Day")}</span>
+          <select name="birthDay" required>
+            <option value="">-</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => (
+              <option value={String(n)} selected={d ? +d === n : undefined}>{n}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{t("เดือน", "Month")}</span>
+          <select name="birthMonth" required>
+            <option value="">-</option>
+            {MONTHS.map(([th, en], i) => (
+              <option value={String(i + 1)} selected={m ? +m === i + 1 : undefined}>{lang === "en" ? en : th}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{t("ปี (พ.ศ.)", "Year")}</span>
+          <select name="birthYear" required>
+            <option value="">-</option>
+            {years.map((n) => (
+              <option value={String(n)} selected={y ? +y === n : undefined}>{lang === "en" ? n : n + 543}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </fieldset>
   );
 }
 
@@ -345,7 +407,8 @@ onboarding.post("/basics", async (c) => {
   const body = await c.req.parseBody();
   const vals = {
     nickname: str(body.nickname).slice(0, 30),
-    birthDate: str(body.birthDate),
+    // Day, month and year pickers (Thai months, Buddhist-era years in Thai); the old single date field still works.
+    birthDate: str(body.birthDate) || joinBirthDate(str(body.birthDay), str(body.birthMonth), str(body.birthYear)),
     district: str(body.district),
     // "livesInBangkok=1" is the old single checkbox (a page left open mid-sign-up).
     residency: str(body.residency) || (str(body.livesInBangkok) === "1" ? "lives" : ""),
@@ -384,7 +447,7 @@ const CONSENT_ITEMS: { key: string; required: boolean; emoji: string; th: string
 function PrivacyForm(props: { v: View; error?: string }) {
   const { t } = props.v;
   return (
-    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("privacy")} count={{ at: 2, of: 3 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
+    <Flow v={props.v} submit={t("ต่อไป", "Next")} stage={stage("privacy")} count={{ at: 3, of: 4 }} error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}>
       <FlowStep
         emoji="🤝"
         title={t("สิ่งที่จำเป็น", "The must-haves")}
@@ -779,7 +842,7 @@ function ConnectionsFlow(props: { v: View; error?: string; start?: number; mode?
       v={props.v}
       submit={t("ต่อไป", "Next")}
       stage={stage("connections")}
-      count={{ at: 3, of: 3 }}
+      count={{ at: 4, of: 4 }}
       start={props.start}
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={

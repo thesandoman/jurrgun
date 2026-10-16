@@ -261,7 +261,7 @@ chatRoutes.get("/chat", async (c) => {
                     <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
                     <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
                   </span>
-                  {!th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : unread ? <i class="dot" aria-label={t("ใหม่", "New")} /> : null}
+                  {!th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : unread ? <b class="chat-new">{t("ใหม่", "New")}</b> : null}
                 </a>
               </li>
             );
