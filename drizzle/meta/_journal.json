@@ -134,6 +134,13 @@
       "when": 1792071821592,
       "tag": "0018_thick_the_order",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792134987099,
+      "tag": "0019_glamorous_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

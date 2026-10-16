@@ -524,6 +524,25 @@ export const notifications = pgTable(
   (t) => [index("social_notifications_account_idx").on(t.accountId, t.createdAt)],
 );
 
+/**
+ * Web Push: one row per phone or browser that said yes to notifications
+ * (src/lib/webpush.ts). Deleted when the push service says it is gone, when
+ * the member turns it off, and with the account.
+ */
+export const pushSubscriptions = pgTable(
+  "social_push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_push_endpoint_idx").on(t.endpoint), index("social_push_account_idx").on(t.accountId)],
+);
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+
 // ---------------------------------------------------------------- research --
 
 export const pulseQuestions = pgTable(

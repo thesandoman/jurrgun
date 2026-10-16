@@ -243,5 +243,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"identity_partner_orgs\" ADD COLUMN \"kind\" text DEFAULT 'events' NOT NULL;",
       "ALTER TABLE \"identity_partner_orgs\" ADD COLUMN \"notes\" text;"
     ]
+  },
+  {
+    "id": "0019_glamorous_lady_bullseye",
+    "statements": [
+      "CREATE TABLE \"social_push_subscriptions\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"endpoint\" text NOT NULL,\n\t\"p256dh\" text NOT NULL,\n\t\"auth\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE UNIQUE INDEX \"social_push_endpoint_idx\" ON \"social_push_subscriptions\" (\"endpoint\");",
+      "CREATE INDEX \"social_push_account_idx\" ON \"social_push_subscriptions\" (\"account_id\");"
+    ]
   }
 ];
