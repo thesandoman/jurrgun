@@ -32,7 +32,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "newfriend",
-        codes: ["BFSH", "CDMN", "CFMH", "BDSN"],
+        codes: ["CFMH", "CDMN", "BFSH", "BDSN"],
       },
       {
         scenario: "meetup-slot",
@@ -60,7 +60,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "drive-yes-tonight",
-        codes: ["BDMN", "BFMN", "CFSH", "CDSH"],
+        codes: ["CDSH", "BFMN", "CFSH", "BDMN"],
       },
       {
         scenario: "family-trip",
@@ -137,7 +137,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "newfriend",
-        codes: ["BFSH", "CDMN", "CFMH", "BDSN"],
+        codes: ["CFMH", "CDMN", "BFSH", "BDSN"],
       },
       {
         scenario: "meetup-slot",
@@ -165,7 +165,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "drive-yes-tonight",
-        codes: ["BDMN", "BFMN", "CFSH", "CDSH"],
+        codes: ["CDSH", "BFMN", "CFSH", "BDMN"],
       },
       {
         scenario: "family-trip",
@@ -242,7 +242,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "newfriend",
-        codes: ["BFSH", "CDMN", "CFMH", "BDSN"],
+        codes: ["CFMH", "CDMN", "BFSH", "BDSN"],
       },
       {
         scenario: "meetup-slot",
@@ -270,7 +270,7 @@ export const CURATED_SETS: CuratedSets = {
       },
       {
         scenario: "drive-yes-tonight",
-        codes: ["BDMN", "BFMN", "CFSH", "CDSH"],
+        codes: ["CDSH", "BFMN", "CFSH", "BDMN"],
       },
       {
         scenario: "family-trip",

@@ -140,6 +140,13 @@ describe("the curated quiz (owner D26, quiz-curated.md)", () => {
     }
   });
 
+  it("the first answer is each letter's side equally often, so a habit of picking the top answer tilts nothing (owner card 10-16)", () => {
+    for (const segment of ["local", "newcomer", "international"] as const) {
+      const first = session("s", { personal: { segment }, month: 10 }).map((q) => q.options[0].type);
+      for (let i = 0; i < 4; i++) expect(first.filter((t) => t[i] === "BDMN"[i]).length, `${segment} letter ${i + 1}`).toBe(first.length / 2);
+    }
+  });
+
   it("someone answering at random lands evenly: the paired-letter pushes cancel in every set", () => {
     // See scripts/curate-quiz.ts randomTilt: for each split of the four letters into two pairs, the
     // questions whose two opposite pairs agree on both halves must cancel, or random answers tilt.
