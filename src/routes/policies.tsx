@@ -79,6 +79,7 @@ policyRoutes.get("/privacy", (c) => {
         ["ความปลอดภัย: รายงาน การบล็อก คำเตือน และใบเตือน", "Safety: reports, blocks, warnings and strikes."],
         ["City Pulse และแบบสอบถามความรู้สึก: เมื่อคุณยินยอม เก็บใต้รหัสวิจัยแทนตัวตน", "City Pulse and wellbeing answers: with your consent, under a research code instead of your identity."],
         ["ข้อมูลทางเทคนิค: ค่าแฮชแบบมีกุญแจของ IP เพื่อกันการเดารหัสผ่าน ที่อยู่สำหรับส่งการแจ้งเตือนถ้าคุณเปิด และลิงก์ที่พาคุณมาสมัคร", "Technical: a keyed hash of your IP address to stop password guessing, a push address if you turn notifications on, and the link that brought you to sign up."],
+        ["แหล่งที่มาตอนสมัคร: ถ้าคุณเข้ามาจากลิงก์แคมเปญหรือพาร์ตเนอร์ เราจำชื่อลิงก์นั้นไว้ในคุกกี้ 30 วัน บันทึกไว้กับบัญชีตอนสมัคร และนับเป็นภาพรวมเท่านั้น", "Sign-up source: if a campaign or partner link brought you here, we keep that link's name in a cookie for 30 days, save it with your account when you sign up, and count it only as totals."],
         ["เราไม่เก็บตำแหน่ง GPS ปุ่มตำแหน่งของฉันบนแผนที่ทำงานในเบราว์เซอร์เท่านั้น ไม่ส่งมาหาเรา", "We don't collect GPS location. The map's my location button works in your browser only and is never sent to us."],
       ])}
 
