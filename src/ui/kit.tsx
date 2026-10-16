@@ -374,7 +374,6 @@ export function Field(props: {
   autocomplete?: string;
   maxlength?: number;
   pattern?: string;
-  inputmode?: "numeric" | "email" | "text";
   /** Password fields: labels for a Show / Hide toggle (needs JS; without it the field stays hidden-text). */
   reveal?: { show: string; hide: string; caps?: string };
   /** What's wrong with the value, shown under the field and read with it. */
@@ -397,7 +396,6 @@ export function Field(props: {
         autocomplete={props.autocomplete}
         maxlength={props.maxlength}
         pattern={props.pattern}
-        inputmode={props.inputmode}
       />
   );
   return (

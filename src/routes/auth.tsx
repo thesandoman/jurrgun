@@ -12,8 +12,7 @@ import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { accountUsable, endSession, startSession } from "../lib/session";
-import { accounts, loginAttempts, type Account } from "../schema";
-import { emailEnabled } from "../services/email-code";
+import { accounts, loginAttempts } from "../schema";
 import { signupSource } from "../lib/source";
 import { enabledProviders, SocialSignIn } from "./oauth";
 import { Button, Card, Field, Notice, page, safeNext, str, view } from "../ui/kit";
@@ -54,7 +53,7 @@ export async function ipKey(c: Context<AppEnv>): Promise<{ ipHash: string; known
  * Requests with no client IP at all (local dev, tests) skip the IP limit:
  * deployed on Cloudflare every request carries cf-connecting-ip.
  */
-export async function loginThrottled(c: Context<AppEnv>, username: string, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
+async function loginThrottled(c: Context<AppEnv>, username: string, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
   const since = new Date(now.getTime() - LOGIN_WINDOW_MS);
   const [row] = await getDb(c.env)
     .select({
@@ -214,13 +213,6 @@ authRoutes.get("/login", (c) => {
       <h1>{t("ยินดีต้อนรับกลับมา", "Welcome back")}</h1>
       <SocialSignIn t={t} providers={enabledProviders(c.env)} next={next} />
       <AuthForm mode="login" t={t} next={next} />
-      {emailEnabled(c.env) ? (
-        <p class="code-signin">
-          <a class="btn ghost" href={next ? `/login/code?next=${encodeURIComponent(next)}` : "/login/code"}>
-            <span aria-hidden="true">✉️</span> {t("เข้าสู่ระบบด้วยรหัสทางอีเมล", "Sign in with a code by email")}
-          </a>
-        </p>
-      ) : null}
       <p>
         {t("ยังไม่มีบัญชี?", "New here?")} <a href="/signup">{t("สมัครสมาชิก", "Create an account")}</a>
       </p>
@@ -229,7 +221,7 @@ authRoutes.get("/login", (c) => {
 });
 
 authRoutes.post("/login", async (c) => {
-  const { t } = view(c);
+  const { t, lang } = view(c);
   const body = await c.req.parseBody();
   const username = normalizeUsername(str(body.username));
   const password = typeof body.password === "string" ? body.password : "";
@@ -261,17 +253,6 @@ authRoutes.post("/login", async (c) => {
   }
   // Correct password: forget this username's failures.
   await db.delete(loginAttempts).where(eq(loginAttempts.username, username));
-  return signIn(c, acct, next, fail);
-});
-
-/**
- * The last step of every sign-in that proved who someone is (password or
- * email code): refuse suspended, deactivated and banned accounts with the
- * reason, lift a suspension that has ended, then start the session.
- */
-export async function signIn(c: Context<AppEnv>, acct: Account, next: string, fail: (msg: string, status: 403) => Response | Promise<Response>): Promise<Response> {
-  const { t, lang } = view(c);
-  const db = getDb(c.env);
   if (!accountUsable(acct)) {
     if (acct.status === "suspended" && acct.suspendedUntil) {
       return fail(t(`บัญชีนี้ถูกระงับถึง ${fmtDay(acct.suspendedUntil, lang)}`, `This account is suspended until ${fmtDay(acct.suspendedUntil, lang)}.`), 403);
@@ -286,7 +267,7 @@ export async function signIn(c: Context<AppEnv>, acct: Account, next: string, fa
   }
   await startSession(c, acct.id);
   return c.redirect(next || "/events");
-}
+});
 
 authRoutes.post("/logout", async (c) => {
   await endSession(c);
