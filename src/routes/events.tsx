@@ -2311,7 +2311,7 @@ eventRoutes.get("/me/events/:id/calendar.ics", requireMember, async (c) => {
 const COUNTDOWN_JS = `(function(){var el=document.querySelector(".countdown[data-start]");if(!el)return;var start=new Date(el.dataset.start).getTime(),th=el.dataset.lang!=="en";
 function span(ms){var m=Math.max(0,Math.round(ms/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;if(th)return d?d+" วัน "+h+" ชม.":h?h+" ชม. "+mm+" นาที":mm+" นาที";return d?d+" d "+h+" h":h?h+" h "+mm+" m":mm+" m"}
 function tick(){var now=Date.now(),left=start-now,open=left-30*60000;if(left<=0){el.textContent=th?"เริ่มแล้ว":"It's started";return}
-var s=(th?"เริ่มในอีก ":"Starts in ")+span(left);s+=open>0?(th?" · เปิดเช็กอินในอีก ":" · check-in opens in ")+span(open):(th?" · เปิดเช็กอินแล้ว":" · check-in is open");el.textContent=s}
+var s=(th?"เริ่มในอีก ":"Starts in ")+span(left);s+=open>0?(th?" · เปิดเช็กอินในอีก ":" · check‑in opens in ")+span(open):(th?" · เปิดเช็กอินแล้ว":" · check‑in is open");el.textContent=s}
 tick();setInterval(tick,60000)})()`;
 
 // ---------------------------------------------------------------- live --

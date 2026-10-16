@@ -470,7 +470,7 @@ body:has(.disc) .discover-list{padding-bottom:0}
 .ev-card .event-cover{flex-direction:column-reverse;justify-content:flex-start;gap:6px;padding:14px 6px}
 .ev-card .ev-date{background:none;border:0;box-shadow:none;padding:0;min-width:0;color:var(--ink);display:grid;justify-items:center;line-height:1.05}
 .ev-card .ev-date b{font-size:1.5rem}
-.ev-card .ev-date small{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--ink-2)}
+.ev-card .ev-date small{font-size:.75rem;font-weight:700;letter-spacing:.06em;color:var(--ink-2)}
 .ev-card .event-cover .scene-badge{width:34px;height:34px;border-radius:11px;font-size:1.1rem;box-shadow:none;background:color-mix(in srgb,var(--surface) 80%,transparent)}
 .ev-card .chips2{gap:2px 12px}
 .ev-card .chips2 span:not(:last-child)::after{content:none}
@@ -544,4 +544,32 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 .pc-tile dt{font-size:.78rem;color:var(--ink-3)}
 .pc-tile.pc-wide{grid-column:1/-1}
 .pc-tile dd{font-size:.95rem}
+/* Events review (jurrgun-ui, 2026-10-16). Plain fixes: the pass's day card stacks each label over its value on
+   phones (values were squeezed into a narrow column), and the +1 invite gets room and a rule after Cancel. */
+@media (max-width:519.98px){
+  .essentials dl.facts{grid-template-columns:1fr;gap:2px}
+  .essentials dl.facts dt{margin-top:10px}
+  .essentials dl.facts dd{margin:0}
+}
+#invite{margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+/* Owner cards, recommended options (owner away, approved in advance):
+   E1 tickets drop the seat-dot row; the "N spots left" tag already says it. */
+.ev-card .seats{display:none}
+/* E2 the event page hero is one calm tint per category, like the ticket stubs, and shorter. */
+.event-cover.ev-scene{background:var(--stub-bg,#eef4ef);height:120px}
+.event-cover.ev-scene.scene-food{--stub-bg:#fff0d4}
+.event-cover.ev-scene.scene-park{--stub-bg:#e2f3e7}
+.event-cover.ev-scene.scene-river{--stub-bg:#def0f4}
+.event-cover.ev-scene.scene-art{--stub-bg:#fbeacb}
+.event-cover.ev-scene.scene-play{--stub-bg:#e8f5dc}
+.event-cover.ev-scene.scene-city{--stub-bg:#e6efe9}
+.event-cover.ev-scene::before,.event-cover.ev-scene::after{content:none}
+@media (prefers-color-scheme:dark){
+  .event-cover.ev-scene{--stub-bg:#1d2a22}
+  .event-cover.ev-scene.scene-food,.event-cover.ev-scene.scene-art{--stub-bg:#33291a}
+  .event-cover.ev-scene.scene-park,.event-cover.ev-scene.scene-play{--stub-bg:#1c3324}
+  .event-cover.ev-scene.scene-river{--stub-bg:#17303a}
+}
+/* E3 fact tiles: labels and sub-lines in sentence case, not small capitals (place names were shouting). */
+.fact small{text-transform:none;letter-spacing:0;font-weight:600}
 `);
