@@ -54,7 +54,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .fullmap .svm-k.highlight{font-size:.75rem}
 /* Staff overview: an odd number tile out spans the row on phones. */
 @media (max-width:520px){body.admin .stats>:last-child:nth-child(odd){grid-column:1/-1}}
-.fullmap .fd-logo small{font-size:.66rem;letter-spacing:-.01em}
+.fullmap .fd-logo small{font-size:.75rem;letter-spacing:-.02em}
 
 /* Tap targets at least 24px tall (2.5.8, WCAG 2.2 AA). */
 .foot a{display:inline-flex;align-items:center;min-height:32px}

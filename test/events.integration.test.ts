@@ -89,15 +89,22 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect((await req("/events")).status).toBe(302);
   });
 
-  it("Discover is a full-screen map with ticker, status card, tools, events sheet and centre button", async () => {
+  it("Discover is a full-screen map with calm chrome: search with filters, two rail buttons, the count on the sheet handle", async () => {
     const m = await createMember();
     const ev = await mkEvent({ district: "bang_bon", tags: ["city_quest"], startsAt: new Date(Date.now() + 2 * HOUR) });
     const html = await (await req("/events?district=bang_bon", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain('class="fullmap-body"');
-    expect(html).toContain('class="fd-ticker"');
+    // D3: no ticker, no green banner over the map; the week's count sits on the sheet handle.
+    expect(html).not.toContain('class="fd-ticker"');
+    expect(html).not.toContain('class="fd-status');
+    expect(html).toContain('class="fd-handle-title ok"');
     expect(html).toContain("events this week");
-    expect(html).toContain('class="fd-status ok"');
     for (const id of ['id="fd-q"', 'id="a11y"', 'id="fd-style"', 'id="fd-quests"', 'id="fd-me"', 'id="discover-sheet"', 'id="fd-filters"']) expect(html).toContain(id);
+    // City Quests and the map style moved into the Filters sheet; the rail keeps Cards and Near me.
+    const sheet = html.slice(html.indexOf('id="fd-filters"'), html.indexOf('class="fd-rail"'));
+    expect(sheet).toContain('id="fd-quests"');
+    expect(sheet).toContain('id="fd-style"');
+    expect(html.slice(html.indexOf('class="fd-rail"')).match(/class="fd-rail-btn"/g)).toHaveLength(2);
     expect(html).toContain('class="center');
     expect(html).toContain(`EV-${ev.slice(0, 8)}`);
     expect(html).not.toContain('class="topbar"'); // the page draws its own floating header

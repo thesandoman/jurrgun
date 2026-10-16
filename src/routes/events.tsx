@@ -101,8 +101,7 @@ import {
   FactIcon,
   FactTiles,
 } from "../ui/kit";
-import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
-import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
+import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
 import { canView } from "../domain/hosting";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
 import { blockedAmong, getTable, hostTable, memberIds, rejoinAfterFor, seatedFor, standing } from "../services/regular-tables";
@@ -526,7 +525,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(100);
   const ids = list.map((e) => e.id);
   const hintHidden = getCookie(c, QUIZ_HINT_COOKIE) === "hide";
-  const [taken, mine, myVibe, coverPairs, weather, [plan]] = await Promise.all([
+  const [taken, mine, myVibe, coverPairs, [plan]] = await Promise.all([
     takenCounts(db, ids),
     ids.length
       ? db
@@ -537,7 +536,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
       : Promise.resolve([] as { eventId: string; status: string }[]),
     hintHidden ? Promise.resolve([{ id: "hidden" }]) : db.select({ id: vibes.accountId }).from(vibes).where(eq(vibes.accountId, user.account.id)).limit(1),
     Promise.all(list.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(c.env, e)] as const)),
-    mapView ? bangkokWeather(c.env).catch(() => null) : Promise.resolve(null),
     // This week's plan, if it's been made: its picks get a tag in the list rather than looking like separate events.
     db.select({ picks: weeklyPlans.picks }).from(weeklyPlans).where(and(eq(weeklyPlans.accountId, user.account.id), eq(weeklyPlans.week, weekKey(new Date())))).limit(1),
   ]);
@@ -606,7 +604,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
       </>
     );
   };
-  const cards = cardList();
   const filterCount = [q.district, q.tag, q.free, q.short, q.small, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
   const forYouHidden = getCookie(c, FOR_YOU_COOKIE) === "hide";
   const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
@@ -618,12 +615,10 @@ eventRoutes.get("/events", requireMember, async (c) => {
       ? {
           ok: true,
           title: t(`✓ ${week.length} กิจกรรมสัปดาห์นี้ · ${open} ยังมีที่ว่าง`, `✓ ${week.length} event${week.length === 1 ? "" : "s"} this week · ${open} with spots left`),
-          sub: t(`นับจากฐานข้อมูลตอนเปิดหน้านี้ · ${fmtTime(now, lang)}`, `Counted from the database when this page loaded · ${fmtTime(now, lang)}`),
         }
       : {
           ok: false,
           title: t("ยังไม่มีกิจกรรมสัปดาห์นี้ · แตะดูทั้งหมด", "No events this week yet · tap to see all"),
-          sub: t(`อัปเดตตอนเปิดหน้านี้ · ${fmtTime(now, lang)}`, `Updated when this page loaded · ${fmtTime(now, lang)}`),
         };
     return page(
       c,
@@ -635,7 +630,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
         lang={lang}
         points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
         chips={mapChips(list, lang)}
-        ticker={tickerItems({ v, list, taken, weather, hasVibe: myVibe.length > 0, newcomer: user.profile.newcomer })}
         status={status}
         search={q.text}
         filtered={filtered}
@@ -643,7 +637,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
         list={
           <>
             {unplacedNote}
-            {cards}
+            {/* The quiz card used to ride in the ticker; it sits after the third event, as in the list view. */}
+            {cardList(quizHint)}
           </>
         }
         count={list.length}
@@ -780,50 +775,6 @@ const CHIP_EMOJI: Record<string, string> = {
   language_exchange: "💬", newcomers: "👋", queer_friendly: "🏳️‍🌈", lgbtq_community: "🏳️‍🌈", english_friendly: "🇬🇧",
   step_free: "♿", city_quest: "🧭", festival: "🎉", daytime: "☀️",
 };
-
-function fmtTime(d: Date, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }).format(d);
-}
-
-/**
- * The Discover ticker, Sanroo style: city conditions first (heat, rain and
- * PM2.5 decide whether an outdoor meet-up is pleasant), then what's on.
- */
-function tickerItems(p: { v: View; list: Event[]; taken: Map<string, number>; weather: Weather | null; hasVibe: boolean; newcomer: boolean }): TickerItem[] {
-  const { t, lang } = p.v;
-  const out: TickerItem[] = [];
-  const w = p.weather;
-  if (w?.rain3h != null) {
-    out.push({ icon: w.rain3h >= 60 ? "🌧️" : "⛅", text: t(`โอกาสฝนตกใน 3 ชม. ${w.rain3h}%${w.rain24h != null ? ` · ฝนใน 24 ชม. ข้างหน้า ${w.rain24h} มม.` : ""}`, `Rain chance next 3h ${w.rain3h}%${w.rain24h != null ? ` · next 24h ${w.rain24h} mm` : ""}`), tone: w.rain3h >= 60 ? "warn" : undefined });
-  }
-  if (w?.feelsLike != null) {
-    const b = heatBand(w.feelsLike);
-    out.push({ icon: "🌡️", text: t(`รู้สึกเหมือน ${w.feelsLike}°C · ${b.th}`, `Feels like ${w.feelsLike}°C · ${b.en}`), tone: b.tone === "ok" ? undefined : b.tone });
-  }
-  if (w?.pm25 != null) {
-    const b = pm25Band(w.pm25);
-    out.push({ icon: "😷", text: t(`PM2.5 ${w.pm25} มคก./ลบ.ม. · ${b.th}`, `PM2.5 ${w.pm25} µg/m³ · ${b.en}`), tone: b.tone === "ok" ? "ok" : b.tone });
-  }
-  const now = Date.now();
-  const week = p.list.filter((e) => e.startsAt.getTime() < now + 7 * 86_400_000);
-  out.push({ icon: "🎟️", text: t(`${week.length} กิจกรรมสัปดาห์นี้ · ฟรี ${week.filter((e) => e.costThb === 0).length}`, `${week.length} events this week · ${week.filter((e) => e.costThb === 0).length} free`) });
-  const next = p.list[0];
-  if (next) out.push({ icon: "⏰", text: t(`ถัดไป: ${title(next, lang)} · ${fmtDate(next.startsAt, lang)}`, `Next up: ${title(next, lang)} · ${fmtDate(next.startsAt, lang)}`), href: `/events/${next.id}` });
-  const filling = p.list
-    .map((e) => ({ e, left: e.capacity - (p.taken.get(e.id) ?? 0) }))
-    .filter((x) => x.left > 0 && x.left <= 5)
-    .sort((a, b) => a.left - b.left)[0];
-  if (filling) out.push({ icon: "🔥", text: t(`ใกล้เต็ม: ${title(filling.e, lang)} · เหลือ ${filling.left} ที่`, `Filling up: ${title(filling.e, lang)} · ${filling.left} left`), href: `/events/${filling.e.id}`, tone: "warn" });
-  const quest = p.list.find((e) => e.tags.includes("city_quest"));
-  if (quest) out.push({ icon: "🧭", text: t(`ซิตี้เควสต์: ${title(quest, lang)}`, `City Quest: ${title(quest, lang)}`), href: `/events/${quest.id}` });
-  if (p.newcomer) out.push({ icon: "👋", text: t("มาใหม่ในกรุงเทพฯ? ลองกิจกรรมสำหรับคนมาใหม่", "New to Bangkok? Try a newcomers meet-up"), href: "/events?tag=newcomers" });
-  if (!p.hasVibe) out.push({ icon: "🧩", text: t("มาหาไทป์กรุงเทพฯ ของคุณกัน (16 ข้อ ราว 3 นาที)", "Find your Bangkok Type (16 quick questions, about 3 minutes)"), href: "/quiz" });
-  out.push({ icon: "🤝", text: t("ความยินยอม: “ได้” ที่แท้จริงต้องชัดเจน เต็มใจ และเปลี่ยนใจได้เสมอ", "Consent: a real yes is clear, free and can change"), href: "/learn/consent" });
-  out.push({ icon: "🛡️", text: t("ฉุกเฉินโทร 191 · เจ็บป่วย 1669", "Emergency 191 · medical 1669"), href: "/learn/date-responsibly" });
-  out.push({ icon: "⚠️", text: t("เวอร์ชันทดลอง: อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data") });
-  if (w) out.push({ icon: "ℹ️", text: t("ข้อมูลอากาศจาก Open-Meteo.com", "Weather data by Open-Meteo.com"), href: "https://open-meteo.com/" });
-  return out;
-}
 
 /** Category chips for the map: the categories these events actually have, most common first (up to 8). */
 function mapChips(list: Event[], lang: Lang): MapChip[] {
