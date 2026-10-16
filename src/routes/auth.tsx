@@ -24,7 +24,9 @@ export const authRoutes = new Hono<AppEnv>();
 
 // ------------------------------------------------------------ throttling --
 // PRD §11: rate limiting. Failed sign-ins and sign-ups are rows in
-// identity_login_attempts (the IP is stored only as a SHA-256). Retention
+// identity_login_attempts. The IP and the username are stored only as keyed
+// HMACs (ipKey and attemptUser below, keyed with IP_HASH_SECRET, or with
+// EMAIL_HASH_SALT when that is unset), never in the clear. Retention
 // (src/services/retention.ts) deletes rows older than 24 hours.
 
 const MINUTE = 60_000;
