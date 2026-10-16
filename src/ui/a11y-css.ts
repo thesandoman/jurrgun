@@ -914,4 +914,8 @@ main .me-stat-sub{padding:0;background:none;font-weight:600}
 @keyframes live-glow{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--brand) 16%,transparent)}}
 /* Dark mode: a slightly lighter line, so card edges and hairlines show but stay quiet on the dark green. */
 @media (prefers-color-scheme:dark){:root{--line:#2c4536}}
+/* A card's first heading starts at the card's padding (My registration had about 50px of empty space above it). */
+.card>:is(h2,h3):first-child{margin-top:0}
+/* "All details" closing an open section needs no line of its own: the next section's line follows. */
+main .open-sec>details.how:last-child{border-bottom:0}
 `);
