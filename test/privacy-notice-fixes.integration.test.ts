@@ -69,11 +69,12 @@ describe.skipIf(!HAS_DB)("contact shares last only as long as the connection", (
     const blocked = await sharedPair();
     await db().insert(blocks).values({ id: newId(), blocker: blocked.y.id, blocked: blocked.x.id });
     const live = await sharedPair();
+    // Another test file's run may get there first, so the rows are checked, not this run's count.
     const counts = await runRetention(ENV);
     expect(await sharesOn(removed.conn)).toEqual([]);
     expect(await sharesOn(blocked.conn)).toEqual([]);
     expect(await sharesOn(live.conn)).toHaveLength(2);
-    expect(counts.contactSharesDeleted).toBeGreaterThanOrEqual(4);
+    expect(counts.contactSharesDeleted).toEqual(expect.any(Number));
   });
 });
 

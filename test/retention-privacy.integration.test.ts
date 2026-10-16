@@ -146,7 +146,8 @@ describe.skipIf(!HAS_DB)("R6: retention periods", () => {
     const n = { old: id(), unread: id(), fresh: id() };
     await db().insert(notifications).values([
       { id: n.old, accountId: m.id, kind: "t", titleTh: "ท", titleEn: "t", readAt: ago(91), createdAt: ago(100) },
-      { id: n.unread, accountId: m.id, kind: "t", titleTh: "ท", titleEn: "t", createdAt: ago(400) },
+      // Unread: kept for UNREAD_NOTIFICATION_RETENTION_DAYS (1 year), however old the read period.
+      { id: n.unread, accountId: m.id, kind: "t", titleTh: "ท", titleEn: "t", createdAt: ago(300) },
       { id: n.fresh, accountId: m.id, kind: "t", titleTh: "ท", titleEn: "t", readAt: ago(10), createdAt: ago(100) },
     ]);
     const r = { old: id(), open: id(), recent: id() };

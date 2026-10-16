@@ -59,6 +59,12 @@ export async function createMember(
   const username = `t_${randomToken(6).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
   const researchId = newId();
   const d = db();
+  // Consents first: a retention run from another test file (the research-consent sweep) must
+  // never see this account holding a research_id before its research consent row exists.
+  const cats = ["service", "safety", "personalization", "notifications", ...(opts.research ? ["research"] : [])];
+  for (const category of cats) {
+    await d.insert(consents).values({ id: newId(), accountId: id, category, granted: true, version: "test" });
+  }
   await d.insert(accounts).values({
     id,
     username,
@@ -85,10 +91,6 @@ export async function createMember(
     ageMax: opts.ageMax ?? 99,
     onboardedAt: new Date(),
   });
-  const cats = ["service", "safety", "personalization", "notifications", ...(opts.research ? ["research"] : [])];
-  for (const category of cats) {
-    await d.insert(consents).values({ id: newId(), accountId: id, category, granted: true, version: "test" });
-  }
   // Agreed to the current Terms at sign-up, so Me shows no "updated Terms" card.
   await d.insert(consents).values({ id: newId(), accountId: id, category: TERMS_CONSENT, granted: true, version: TERMS_VERSION });
   const token = randomToken();
