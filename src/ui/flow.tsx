@@ -195,8 +195,7 @@ function show(n,dir,push){
   steps.forEach(function(st,j){st.classList.remove("on","in-f","in-b");st.hidden=j!==n;st.setAttribute("aria-hidden",j!==n?"true":"false")});
   var st=steps[n];if(!reduce&&dir)st.classList.add(dir>0?"in-f":"in-b");st.classList.add("on");
   i=n;back.hidden=n===0;
-  var last=n===steps.length-1,auto=st.dataset.auto==="1",picked=!!st.querySelector("input[type=radio]:checked");
-  next.textContent=last?f.dataset.done:(st.dataset.cta||(auto&&!picked&&!st.querySelector("[required]")?f.dataset.skip:f.dataset.next));var quiet=auto&&!last&&!picked;next.classList.toggle("ghost",quiet);next.classList.toggle("primary",!quiet);
+  cta(st);
   var sf=+f.dataset.spanFrom||0,st2=+f.dataset.spanTotal||0;
   var pct=Math.round(((at+(st2?(sf+n+1)/st2:(n+1)/steps.length))/of)*100);if(bar)bar.style.width=pct+"%";if(pb)pb.setAttribute("aria-valuenow",pct);
   var cnt=f.querySelector(".flow-count[data-steps]");if(cnt)cnt.textContent=cnt.dataset.tpl.replace("{n}",n+1).replace("{of}",steps.length);
@@ -204,6 +203,8 @@ function show(n,dir,push){
   var h=st.querySelector(".flow-title");if(h&&dir){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}
   if(dir)window.scrollTo(0,0);
 }
+function cta(st){var last=st===steps[steps.length-1],auto=st.dataset.auto==="1",picked=!!st.querySelector("input[type=radio]:checked");
+  next.textContent=last?f.dataset.done:(st.dataset.cta||(auto&&!picked&&!st.querySelector("[required]")?f.dataset.skip:f.dataset.next));var quiet=auto&&!last&&!picked;next.classList.toggle("ghost",quiet);next.classList.toggle("primary",!quiet);}
 function valid(st){
   var els=[].slice.call(st.querySelectorAll("input,select,textarea"));
   for(var k=0;k<els.length;k++){var el=els[k];el.setCustomValidity("");if(!el.checkValidity()){if(el.validity.valueMissing)el.setCustomValidity(el.type==="checkbox"?f.dataset.missCheck:el.type==="radio"?f.dataset.missPick:f.dataset.missField);el.reportValidity();return false}}
@@ -225,6 +226,7 @@ function clear(e){var x=e.target;if(!x.setCustomValidity)return;if(x.name)[].for
 f.addEventListener("input",clear);
 f.addEventListener("change",function(e){clear(e);
   var st=steps[i];if(!st||st.dataset.auto!=="1"||e.target.type!=="radio"||!st.contains(e.target))return;
+  cta(st);
   setTimeout(function(){if(steps[i]!==st)return;if(i<steps.length-1)show(i+1,1,true);else if(f.dataset.autosubmit==="1"&&all())submit()},reduce?60:220);
 });
 if(history.replaceState)history.replaceState({flow:i},"");

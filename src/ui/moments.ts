@@ -52,8 +52,6 @@ export const MOMENTS_CSS = themed(`
 .countdown{text-align:center;text-wrap:balance;font-weight:700;color:var(--ink-2);margin:-4px 0 10px;font-variant-numeric:tabular-nums}
 .pass-actions,.ev-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 16px}
 .ev-actions{justify-content:flex-start;margin:4px 0 10px}
-.chip-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border-radius:999px;background:var(--surface);border:1.5px solid var(--field-line,var(--line));color:var(--ink);font-weight:700;text-decoration:none}
-.chip-btn:hover{border-color:var(--brand);color:var(--brand)}
 .caps-warn{display:block;color:var(--warn);font-weight:600}
 
 /* Mutual connection spark */

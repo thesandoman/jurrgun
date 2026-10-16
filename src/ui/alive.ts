@@ -30,11 +30,7 @@ export const ALIVE_CSS = `
 .confetti i:nth-child(3n){border-radius:50%;width:9px;height:9px}
 @keyframes confetti{to{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
 
-/* buttons: a soft press, then a working state */
-.btn{transition:transform .12s ease,background-color .2s ease,box-shadow .2s ease}
-.btn:active{transform:scale(.96)}
-.btn.is-busy{pointer-events:none;opacity:.85}
-.btn.is-busy::after{content:"";display:inline-block;width:1.1em;height:.3em;margin-left:8px;vertical-align:middle;background:radial-gradient(circle,currentColor 45%,transparent 50%) 0 50%/33% 100% repeat-x;animation:busy .9s steps(3) infinite;clip-path:inset(0 100% 0 0)}
+/* buttons: the working state's dots (the button rules are in a11y-css) */
 @keyframes busy{to{clip-path:inset(0 0 0 0)}}
 
 /* event cards as ticket stubs: perforation and two punched notches */

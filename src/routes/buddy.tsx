@@ -690,7 +690,7 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
             <h2>{t("กำลังหาบัดดี้ให้คุณ", "Finding your buddy")}</h2>
             <small>{t("เราจะแจ้งเตือนคุณ", "We'll notify you")}</small>
             <span class="acts">
-              <a class="glass-btn" href="/buddy/deck">{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</a>
+              <a class="btn ghost" href="/buddy/deck">{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</a>
             </span>
           </Tile>
         </div>
@@ -715,8 +715,8 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
         <>
           <BuddyCard v={v} eyebrow={t("บัดดี้ของคุณ", "Your buddy")} nickname={buddyName} theirs={otherId ? types.get(otherId) : undefined} mine={types.get(me)}>
             <span class="acts">
-              <a class="glass-btn" href={`/people/${otherId}`}>👤 {t("โปรไฟล์", "Card")}</a>
-              <a class="glass-btn" href={`/chat/buddy:${match.id}`}>💬 {t("แชต", "Chat")}</a>
+              <a class="btn ghost" href={`/people/${otherId}`}>👤 {t("โปรไฟล์", "Card")}</a>
+              <a class="btn ghost" href={`/chat/buddy:${match.id}`}>💬 {t("แชต", "Chat")}</a>
             </span>
           </BuddyCard>
           {quest ? <QuestCard v={v} m={match} q={quest} me={me} buddyName={buddyName} types={types} /> : null}

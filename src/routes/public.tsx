@@ -34,12 +34,12 @@ publicRoutes.get("/", (c) => {
           <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
           <div class="hero-cta">
             {user ? (
-              <a href="/onboarding" class="btn hero-btn">
+              <a href="/onboarding" class="btn primary">
                 {t("ทำโปรไฟล์ต่อ", "Continue setting up")}
               </a>
             ) : (
               <>
-                <a href="/signup" class="btn hero-btn">
+                <a href="/signup" class="btn primary">
                   {t("เริ่มเลย", "Get started")}
                 </a>
                 <a href="/login" class="hero-link">

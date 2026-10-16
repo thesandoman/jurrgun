@@ -26,7 +26,7 @@ import { romanceEligible } from "../domain/rules";
 import { segmentOf } from "../domain/segment";
 import { styleLines } from "../vibe/styles";
 import { Flow, FlowStep, AnswerCard, type Stage } from "../ui/flow";
-import { Card, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
+import { Card, FactTiles, LinkButton, Notice, page, safeNext, str, view, type View } from "../ui/kit";
 import { CATEGORIES, motiveSentence, POLES } from "../vibe/content";
 import { QuestionArt, QUESTION_ART_CSS } from "../ui/question-art";
 import { REFLECTION_CSS, ReflectionSteps } from "../ui/reflections";
@@ -660,17 +660,7 @@ function TypeFacts(props: { v: View; a: Archetype }) {
     ["🪫", t("อะไรทำให้คุณหมดแรง", "What drains you"), a.drain],
     ["🕰️", t("ช่วงเวลาที่ใช่", "Best time"), a.bestTime],
   ];
-  return (
-    <div class="facts3">
-      {facts.map(([icon, label, text]) => (
-        <div class="fact">
-          <b aria-hidden="true">{icon}</b>
-          <small>{label}</small>
-          <span>{L(lang, text)}</span>
-        </div>
-      ))}
-    </div>
-  );
+  return <FactTiles cols={3} class="type-facts" facts={facts.map(([icon, label, text]) => ({ icon, label, answer: L(lang, text) }))} />;
 }
 
 /** The type's places as swipeable postcards: classic spots, then hangouts. */

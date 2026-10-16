@@ -117,11 +117,6 @@ fieldset{border:none;padding:0;margin:14px 0}
 .toggle{display:flex;gap:10px;align-items:flex-start;margin:10px 0;cursor:pointer}
 .toggle input{width:22px;height:22px;margin-top:2px;accent-color:var(--brand)}
 .toggle small{display:block}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-weight:600;border-radius:999px;padding:10px 18px;min-height:46px;border:1px solid transparent;cursor:pointer;text-decoration:none}
-.btn.primary{background:var(--brand);color:var(--brand-ink)}
-.btn.ghost{background:transparent;color:var(--brand);border-color:var(--line)}
-.btn.danger{background:var(--err-soft);color:var(--err);border-color:transparent}
-.btn.block{width:100%}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .row.end{justify-content:flex-end}
 .spread{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -210,9 +205,8 @@ hr{border:none;border-top:1px solid var(--line);margin:18px 0}
 /* ---- native polish ---- */
 [hidden]{display:none!important}
 a,button,label,summary,.btn,.card.link,.pill span,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-.btn,.card.link,.pill span,.answer span,.tile,.rail a,.chip,.tabbar a{transition:transform 60ms ease,background-color .15s ease,border-color .15s ease}
-.btn:active,.card.link:active,.pill:active span,.answer:active span,.tile:active,.rail a:active,.chip:active,.tabbar a:active{transform:scale(.97)}
-.btn{min-height:48px}
+.card.link,.pill span,.answer span,.tile,.rail a,.chip,.tabbar a{transition:transform 60ms ease,background-color .15s ease,border-color .15s ease}
+.card.link:active,.pill:active span,.answer:active span,.tile:active,.rail a:active,.chip:active,.tabbar a:active{transform:scale(.97)}
 main.wrap{animation:page-in .22s ease both}
 @keyframes page-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .topbar{padding:8px 16px}
@@ -251,7 +245,6 @@ body:has(.tabbar) .flow-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
 .flow-bar .flow-next,.flow-bar>.btn:first-child{flex:1}
 .flow-bar .flow-back{min-width:52px;font-size:1.2rem}
 .flow-bar .skip{flex-basis:100%;background:none;border:none;color:var(--ink-3);font:inherit;font-size:.9rem;min-height:44px;cursor:pointer;text-decoration:underline}
-.btn.is-busy{opacity:.7}
 .flow-step.in-f{animation:slide-f .26s cubic-bezier(.2,.8,.2,1) both}
 .flow-step.in-b{animation:slide-b .26s cubic-bezier(.2,.8,.2,1) both}
 @keyframes slide-f{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
@@ -411,13 +404,6 @@ h2{font-weight:700}
 .topbar .icon-link{color:var(--on-deep)}
 .proto-banner{background:var(--lime);color:var(--deep);font-weight:600}
 main.wrap{padding-top:26px}
-
-/* Buttons: deep green */
-.btn{border-radius:16px;font-weight:700;letter-spacing:-.005em}
-.btn.primary{background:var(--deep);color:var(--on-deep);box-shadow:0 6px 18px color-mix(in srgb,var(--deep) 30%,transparent)}
-.btn.primary:hover{background:var(--deep-2)}
-.btn.ghost{background:var(--surface);color:var(--deep);border:2px solid color-mix(in srgb,var(--deep) 35%,var(--line))}
-@media (prefers-color-scheme:dark){.btn.ghost{color:var(--on-deep-2)}.btn.primary{background:var(--brand);color:var(--brand-ink)}.btn.primary:hover{background:var(--fresh)}}
 
 /* Cards: softer and greener */
 .card{border-radius:var(--radius);border-color:color-mix(in srgb,var(--brand) 14%,var(--line))}

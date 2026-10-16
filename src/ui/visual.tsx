@@ -187,9 +187,6 @@ a.tile2:active{transform:scale(.98)}
 .fan{overflow:visible;contain:layout}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .acts form{margin:0}
-.acts .btn{min-height:44px;padding:0 14px;font-size:.9rem}
-.glass-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);color:inherit;text-decoration:none;font-weight:700;font-size:.88rem}
-.glass-btn:hover{background:rgba(255,255,255,.26)}
 .type-hero2 .tile2{min-height:260px;text-align:left}
 .type-hero2 .type-emoji{font-size:3.6rem;line-height:1;filter:drop-shadow(0 6px 12px rgba(0,0,0,.35))}
 .type-hero2 h1{color:#fff;margin:.1rem 0;font-size:1.9rem;line-height:1.1}
@@ -198,11 +195,10 @@ a.tile2:active{transform:scale(.98)}
 .blend3{grid-template-columns:repeat(3,1fr)}
 .blend3 .tile2{min-height:150px;padding:12px}
 .blend3 .big-n{font-size:1.7rem}
-.facts3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
 .fact{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:18px;background:var(--surface);border:1px solid var(--line);font-size:.86rem;line-height:1.3}
 .fact b{font-size:1.5rem}
 .fact small{color:var(--ink-3);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
-@media (max-width:420px){.facts3{grid-template-columns:1fr}.fact{flex-direction:row;flex-wrap:wrap;align-items:center}.fact span{flex-basis:100%}}
+@media (max-width:420px){.fact{flex-direction:row;flex-wrap:wrap;align-items:center}.fact span{flex-basis:100%}}
 .type-row{display:flex;gap:14px;flex-wrap:wrap}
 .type-pick{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:var(--ink);font-weight:600;max-width:96px;text-align:center}
 .type-pick small{font-size:.8rem;line-height:1.2}
@@ -212,9 +208,6 @@ a.tile2:active{transform:scale(.98)}
 .seats i{width:10px;height:10px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line)}
 .seats i.on{background:var(--brand);border-color:var(--brand)}
 .seats small{color:var(--ink-3);font-size:.72rem;margin-left:2px}
-.facts4{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
-@media (min-width:720px){.facts4{grid-template-columns:repeat(4,1fr)}}
-.facts4 .fact span{font-weight:700}
 details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .guide-tips{list-style:none;padding:0;margin:8px 0 12px;display:grid;gap:10px}
 .guide-tips li{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:var(--surface);border:1px solid var(--line);line-height:1.35}
@@ -280,7 +273,6 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chat-send{position:sticky;bottom:calc(104px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;padding:8px 0;background:linear-gradient(to top,var(--bg) 80%,transparent)}
 .chat-send>.chat-starters,.chat-send>.notice{grid-column:1/-1}
 .chat-send textarea{min-height:46px;resize:none}
-.chat-send .btn{min-height:46px}
 .chat-starters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0}
 .chat-starters button{flex:none;white-space:nowrap}
 .chat-starters button{border:0;border-radius:999px;padding:6px 12px;background:var(--surface-2);color:var(--ink-2);font:inherit;font-size:.85rem;cursor:pointer;text-align:left}

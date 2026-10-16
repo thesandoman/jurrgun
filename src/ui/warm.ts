@@ -41,11 +41,6 @@ const RULES = `
   & .top-nav a.on{background:var(--brand);color:#fff}
   & .top-nav a.center:not(.on){color:#9a5100}
 
-  /* buttons: friendly green, softer shadow */
-  & .btn.primary{background:var(--brand);color:#fff;box-shadow:0 6px 16px rgba(19,127,69,.22)}
-  & .btn.primary:hover{background:var(--deep-2)}
-  & .btn.ghost{background:var(--surface);color:var(--brand);border-color:color-mix(in srgb,var(--brand) 30%,var(--line))}
-
   /* hero cards and teasers: warm gradients with dark text instead of dark green blocks */
   & .card.hero,& .teaser{background:linear-gradient(135deg,#fff3dc 0%,#ffe6da 55%,#e6f6e9 100%);color:var(--ink);border:1px solid var(--line)}
   & .card.hero *,& .teaser *{color:inherit}

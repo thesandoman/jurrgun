@@ -68,9 +68,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 
 /* /new: the hero carries its own call to action. */
 .hero-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:14px}
-.hero-btn{background:#fff;color:#0e5f33;border:0;box-shadow:0 6px 18px rgba(0,0,0,.18)}
-.hero-btn:hover{background:#f2fbf5}
-.tile2 .hero-btn{text-shadow:none}
 .hero-link{color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center}
 
 /* Discover list: shorter covers, so more events fit on a phone screen. */
@@ -99,7 +96,7 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 .pill span{column-gap:.35em}
 /* Flows: "2 of 5" beside the bar; a compact round Back so Next is the one big button. */
 .flow-count{flex:none;font-size:.82rem;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
-.flow-bar>.btn.flow-back{flex:0 0 52px;width:52px;padding:0;border-radius:50%}
+.flow-bar>.btn.flow-back{flex:0 0 52px;width:52px;padding:0}
 /* Calmer flow screens: the emoji sits inline with the question, no tile. */
 .flow-emoji{display:inline;width:auto;height:auto;margin:0 .3em 0 0;padding:0;background:none;border-radius:0;transform:none;font-size:1em}
 /* Prototype notice: a small chip in the header; tap for the full sentence. */
@@ -158,7 +155,7 @@ main nav.me-stats{grid-template-columns:repeat(2,1fr)}
 .topbar summary,.topbar .chip,.proto-chip>summary,.topbar .brand{min-height:44px}
 .topbar summary{min-width:44px}
 .topbar .chip{display:inline-flex;align-items:center}
-main .btn,.chip-btn,.glass-btn,.pf-jump a,.view-switch a,.seg a,.a11y-reset{min-height:44px}
+.pf-jump a,.view-switch a,.seg a,.a11y-reset{min-height:44px}
 .seg a{display:inline-flex;align-items:center;justify-content:center}
 /* Titles and heading links that open something (not links inside a sentence). */
 main :is(h2,h3)>a,.me-h a,.me-todo a,.me-type>a,main h2.spread>a{display:inline-flex;align-items:center;min-height:44px}
@@ -230,8 +227,6 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .qs-sheet>summary::-webkit-details-marker{display:none}
 .qs-consent{display:grid;gap:10px;margin:8px 0 4px;padding:14px;border-radius:16px;background:var(--love-soft);border:1px solid color-mix(in srgb,var(--love) 30%,var(--line))}
 .qs-consent p{margin:0;font-size:.92rem}
-.btn.love{background:#c0222f;border-color:#c0222f;color:#fff}
-.btn.love:hover{background:#a51c27;border-color:#a51c27}
 
 /* Me: the next table first, then one sentence of numbers (links inside the sentence). */
 .me-next{display:grid;gap:2px;margin:12px 0 8px;padding:14px 16px;text-decoration:none;color:var(--ink);border-left:0}
@@ -274,7 +269,6 @@ main .card:has(.safety-row) details.how>form{padding:4px 0 8px}
 .card.link:hover,a.card:hover{box-shadow:var(--lift)!important}
 .tabbar a.center{box-shadow:0 0 0 5px var(--bg),var(--lift)!important}
 .tabbar a.center.on{box-shadow:0 0 0 5px var(--bg),0 0 0 8px var(--brand),var(--lift)!important}
-.btn.primary{box-shadow:var(--lift)}
 
 /* Wide staff tables on phones: a shadow at the edge shows there is more to scroll sideways (1.4.10 cue). */
 @media (max-width:600px){
@@ -304,7 +298,7 @@ h1,h2,h3,.flow-title{text-wrap:balance}
 .sticky-cta{position:fixed;z-index:8;left:12px;right:12px;bottom:calc(106px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:616px;margin:0 auto;padding:10px 10px 10px 16px;border-radius:20px;background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.16);transition:transform .25s ease,opacity .25s ease}
 .sticky-cta.is-off{transform:translateY(16px);opacity:0;pointer-events:none;visibility:hidden}
 .sticky-cta-note{font-weight:700;color:var(--ink-2)}
-.sticky-cta .btn{min-height:48px;flex:none}
+.sticky-cta .btn{flex:none}
 body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 @media (min-width:900px){.sticky-cta{bottom:20px}}
 
@@ -534,16 +528,6 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 .chat-ice button{display:flex;gap:8px;align-items:flex-start;width:100%;min-height:44px;padding:10px 14px;border-radius:14px;border:1.5px solid var(--brand);background:var(--surface);color:var(--ink);font:inherit;text-align:left;line-height:1.45;white-space:normal;cursor:pointer}
 .chat-ice button:hover{background:var(--brand-soft)}
 .chat-ice button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
-/* Profile facts as two-column tiles (owner card): the answer in bold with its icon, the label small
-   underneath, about half the height of label-over-value rows. */
-.pc-facts:has(.pc-tile){grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-@media (min-width:900px){.pc-facts:has(.pc-tile){grid-template-columns:repeat(3,minmax(0,1fr))}}
-.pc-tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--surface-2);min-width:0}
-.pc-tile dd{order:-1;margin:0;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
-.pc-tile dd span[aria-hidden]{margin-right:4px}
-.pc-tile dt{font-size:.78rem;color:var(--ink-3)}
-.pc-tile.pc-wide{grid-column:1/-1}
-.pc-tile dd{font-size:.95rem}
 /* Events review (jurrgun-ui, 2026-10-16). Plain fixes: the pass's day card stacks each label over its value on
    phones (values were squeezed into a narrow column), and the +1 invite gets room and a rule after Cancel. */
 @media (max-width:519.98px){
@@ -631,4 +615,45 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 .pass-steps small{font-size:.8125rem;line-height:1.35;color:var(--ink-2)}
 .pass-steps .ps-now{justify-self:start;padding:0 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:.75rem}
 .countdown{white-space:nowrap}
+/* A2 One button family (finalize review): the only .btn definition. Three kinds share one radius and
+   48px: solid primary, tonal (class ghost or tonal, soft green fill) and quiet text. Danger and the
+   💘 love red are variants. Contrast: primary 5.7:1 light, 9.6:1 dark; tonal 5.0:1 light, 7.1:1 dark. */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 20px;border-radius:16px;border:1.5px solid transparent;font:inherit;font-family:var(--sub);font-weight:700;letter-spacing:-.005em;line-height:1.3;text-align:center;text-decoration:none;cursor:pointer;transition:transform .12s ease,background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.btn:active{transform:scale(.97)}
+.btn.block{width:100%}
+.btn.primary{background:var(--brand);color:var(--brand-ink);box-shadow:var(--lift)}
+.btn.primary:hover{background:color-mix(in srgb,var(--brand) 88%,#000)}
+.btn:is(.ghost,.tonal),.chip-btn{background:var(--brand-soft);color:var(--brand);border-color:color-mix(in srgb,var(--brand) 22%,transparent)}
+.btn:is(.ghost,.tonal):hover,.chip-btn:hover{border-color:var(--brand)}
+.btn.quiet{background:transparent;color:var(--brand);padding-inline:12px;text-decoration:underline;text-underline-offset:3px}
+.btn.quiet:hover{background:var(--brand-soft)}
+.btn.danger{background:var(--err-soft);color:var(--err);border-color:color-mix(in srgb,var(--err) 25%,transparent)}
+.btn.danger:hover{border-color:var(--err)}
+.btn.love{background:#c0222f;border-color:#c0222f;color:#fff}
+.btn.love:hover{background:#a51c27;border-color:#a51c27}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed;transform:none}
+.btn.is-busy{pointer-events:none;opacity:.85}
+.btn.is-busy::after{content:"";display:inline-block;width:1.1em;height:.3em;margin-left:8px;vertical-align:middle;background:radial-gradient(circle,currentColor 45%,transparent 50%) 0 50%/33% 100% repeat-x;animation:busy .9s steps(3) infinite;clip-path:inset(0 100% 0 0)}
+/* Pick chips and calendar or directions links take the tonal kind's look and height. */
+.chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 18px;border-radius:16px;border-width:1.5px;border-style:solid;font:inherit;font-family:var(--sub);font-weight:700;text-decoration:none;cursor:pointer}
+/* On a green or photo tile: primary turns white with deep green text (7.8:1), tonal a dark glass with white text (4.7:1 or more). */
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.primary{background:#fff;color:#0e5f33;border-color:#fff;text-shadow:none;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.primary:hover{background:#f2fbf5}
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.ghost{background:rgba(0,0,0,.28);color:#fff;border-color:rgba(255,255,255,.5);text-shadow:none}
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.ghost:hover{background:rgba(0,0,0,.38)}
+/* A3 One fact tile: icon and bold answer, an optional quiet line, then the small sentence-case label.
+   Two columns on phones; a tile alone at the end of a row stretches across it. */
+.fact-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+@media (min-width:720px){.fact-tiles[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.fact-tiles[data-cols="4"]{grid-template-columns:repeat(4,minmax(0,1fr))}.fact-tiles[data-cols] .ft-lone{grid-column:auto}}
+.fact-tile{display:flex;flex-direction:column;gap:2px;min-width:0;margin:0;padding:10px 12px;border-radius:14px;background:var(--surface-2)}
+.fact-tile.ft-wide,.fact-tile.ft-lone{grid-column:1/-1}
+.fact-tile dt{order:1;margin:0;font-size:.78rem;font-weight:600;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.fact-tile dd{margin:0}
+.fact-tile .ft-a{order:-1;font-size:.95rem;font-weight:700;line-height:1.3;color:var(--ink);overflow-wrap:anywhere}
+.fact-tile .ft-i{margin-right:2px}
+.fact-tile .ft-sub{font-size:.82rem;line-height:1.35;color:var(--ink-2)}
+.fact-tile .ft-sub .seats{margin:4px 0 0}
+.pc-group-h+.fact-tiles{margin-top:8px}
+/* Tiles straight on the page (the quiz result) get the card surface and an edge. */
+.type-facts .fact-tile{background:var(--surface);border:1px solid var(--line)}
 `);

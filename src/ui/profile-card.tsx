@@ -36,7 +36,7 @@ import {
 } from "../content/profile";
 import { DISTRICTS, GENDER_IDENTITIES, INTENTS, LANGUAGES, ORIENTATIONS, label } from "../lib/constants";
 import { romanceCompatible, romanceEligible, type RomanceSide } from "../domain/rules";
-import type { View } from "./kit";
+import { FactTiles, type View } from "./kit";
 import { styleLines } from "../vibe/styles";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
@@ -275,16 +275,7 @@ export function ProfileCard(props: {
           {factGroups.map((g) => (
             <>
               <h3 class="pc-group-h">{t(g.th, g.en)}</h3>
-              <dl class="pc-facts">
-                {g.items.map(([e, k, val]) => (
-                  <div class={[...val].length > 22 ? "pc-tile pc-wide" : "pc-tile"}>
-                    <dt>{k}</dt>
-                    <dd>
-                      <span aria-hidden="true">{e}</span> {val}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              <FactTiles cols={3} class="pc-tiles" facts={g.items.map(([e, k, val]) => ({ icon: e, label: k, answer: val, wide: [...val].length > 22 }))} />
             </>
           ))}
           {tableCount > 1 ? (
@@ -580,7 +571,7 @@ p.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
 .pc-compact .pc-where{margin-top:2px;gap:4px 8px}
 .pc-place,.pc-new{white-space:nowrap}
 .pc-compact .pc-actions{flex:none;flex-direction:column;align-items:flex-end;gap:6px}
-.pc-compact .pc-actions .btn{min-height:44px;padding-inline:14px}
+.pc-compact .pc-actions .btn{padding-inline:14px}
 @media (max-width:359.98px){.pc-compact .pc-actions{flex-basis:100%;align-items:flex-start}}
 @media (min-width:700px){.pc-hero.pc-compact{align-items:center}.pc-hero.pc-compact .pc-photo{width:72px}.pc-compact .pc-actions{flex-direction:row}}
 .pc-jump{position:sticky;top:var(--disc-top,60px);z-index:3;display:flex;gap:8px;overflow-x:auto;margin:-8px calc(-1 * var(--gx,20px)) 0;padding:8px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}

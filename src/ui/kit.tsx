@@ -549,19 +549,82 @@ export function MoreInfo(props: { t: T; children: Child }) {
   );
 }
 
-export function Button(props: { children: Child; kind?: "primary" | "ghost" | "danger"; name?: string; value?: string; formaction?: string }) {
+/**
+ * The one button family (finalize review A2). Three kinds share one radius and
+ * a 48px height: `primary` (solid), `tonal` (soft green fill; `ghost` is the
+ * same kind under its older name, and both render the class `ghost`) and
+ * `quiet` (text only). `danger` and `love` (💘 only) are variants of the solid
+ * and tonal shapes. Styles: the "One button family" block in a11y-css.ts.
+ */
+export type ButtonKind = "primary" | "tonal" | "ghost" | "quiet" | "danger" | "love";
+export function btnClass(kind: ButtonKind = "primary", extra?: string): string {
+  const k = kind === "tonal" ? "ghost" : kind;
+  return extra ? `btn ${k} ${extra}` : `btn ${k}`;
+}
+
+export function Button(props: { children: Child; kind?: ButtonKind; class?: string; name?: string; value?: string; formaction?: string }) {
   return (
-    <button type="submit" class={`btn ${props.kind ?? "primary"}`} name={props.name} value={props.value} formaction={props.formaction}>
+    <button type="submit" class={btnClass(props.kind, props.class)} name={props.name} value={props.value} formaction={props.formaction}>
       {props.children}
     </button>
   );
 }
 
-export function LinkButton(props: { href: string; children: Child; kind?: "primary" | "ghost" | "danger" }) {
+export function LinkButton(props: { href: string; children: Child; kind?: ButtonKind; class?: string; target?: string; rel?: string; download?: string }) {
   return (
-    <a href={props.href} class={`btn ${props.kind ?? "primary"}`}>
+    <a href={props.href} class={btnClass(props.kind, props.class)} target={props.target} rel={props.rel} download={props.download}>
       {props.children}
     </a>
+  );
+}
+
+/** One fact for FactTiles: the answer in bold with its icon, the label small underneath. */
+export type Fact = { icon: Child; label: Child; answer: Child; sub?: Child; wide?: boolean };
+
+/**
+ * One fact tile (finalize review A3): icon and bold answer, an optional quiet
+ * sub-line, then the small sentence-case label. A screen reader hears the
+ * label first (dt before dd); the tile shows the answer first.
+ */
+export function FactTile(props: Fact & { lone?: boolean }) {
+  const cls = ["fact-tile", props.wide ? "ft-wide" : "", props.lone ? "ft-lone" : ""].filter(Boolean).join(" ");
+  return (
+    <div class={cls}>
+      <dt>{props.label}</dt>
+      <dd class="ft-a">
+        <span class="ft-i" aria-hidden="true">
+          {props.icon}
+        </span>{" "}
+        {props.answer}
+      </dd>
+      {props.sub ? <dd class="ft-sub">{props.sub}</dd> : null}
+    </div>
+  );
+}
+
+/**
+ * A group of fact tiles: two columns on phones, `cols` from 720px. A tile left
+ * alone at the end of a row of two stretches across the row (on phones, and
+ * always when `cols` is 2).
+ */
+export function FactTiles(props: { facts: Fact[]; cols?: 2 | 3 | 4; class?: string }) {
+  const lone = new Set<number>();
+  let open = -1; // index of a tile sitting alone in the left column
+  props.facts.forEach((f, i) => {
+    if (f.wide) {
+      if (open >= 0) lone.add(open);
+      open = -1;
+    } else if (open >= 0) open = -1;
+    else open = i;
+  });
+  if (open >= 0) lone.add(open);
+  const cols = props.cols ?? 2;
+  return (
+    <dl class={props.class ? `fact-tiles ${props.class}` : "fact-tiles"} data-cols={cols === 2 ? undefined : String(cols)}>
+      {props.facts.map((f, i) => (
+        <FactTile {...f} lone={lone.has(i)} />
+      ))}
+    </dl>
   );
 }
 

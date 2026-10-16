@@ -99,6 +99,7 @@ import {
   ViewSwitch,
   type View,
   FactIcon,
+  FactTiles,
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint, type TickerItem } from "../ui/discover-map";
 import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
@@ -1194,32 +1195,26 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             <Tag tone="accent">🧭 City Quest</Tag> {quest}
           </p>
         ) : null}
-        <div class="facts4">
-          <div class="fact">
-            <b aria-hidden="true">📅</b>
-            <small>{t("เมื่อไหร่", "When")}</small>
-            <span>{fmtDate(event.startsAt, lang)}</span>
-            <small>{t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`)}</small>
-          </div>
-          <div class="fact">
-            <b aria-hidden="true">📍</b>
-            <small>{t("ที่ไหน", "Where")}</small>
-            <span>{event.venueName}</span>
-            <small>{label(DISTRICTS, event.district, lang)}</small>
-          </div>
-          <div class="fact">
-            <b aria-hidden="true">👥</b>
-            <small>{t("โต๊ะ", "Table")}</small>
-            <span>{t(`โต๊ะละ ${event.groupMin} ถึง ${event.groupMax} คน`, `Tables of ${event.groupMin}-${event.groupMax}`)}</span>
-            <small>{label(INTENSITY, event.intensity, lang)}</small>
-          </div>
-          <div class="fact">
-            <b aria-hidden="true">🪑</b>
-            <small>{t("ที่นั่ง", "Spots")}</small>
-            <span>{left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : reg?.status === "confirmed" ? t("เต็มแล้ว คุณได้ที่แล้ว", "Full, you're in") : t("เต็มแล้ว", "Full")}</span>
-            <Seats capacity={event.capacity} taken={state.taken} />
-          </div>
-        </div>
+        <FactTiles
+          cols={4}
+          class="ev-facts"
+          facts={[
+            { icon: "📅", label: t("เมื่อไหร่", "When"), answer: fmtDate(event.startsAt, lang), sub: t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`) },
+            { icon: "📍", label: t("ที่ไหน", "Where"), answer: event.venueName, sub: label(DISTRICTS, event.district, lang) },
+            {
+              icon: "👥",
+              label: t("โต๊ะ", "Table"),
+              answer: t(`โต๊ะละ ${event.groupMin} ถึง ${event.groupMax} คน`, `Tables of ${event.groupMin}-${event.groupMax}`),
+              sub: label(INTENSITY, event.intensity, lang),
+            },
+            {
+              icon: "🪑",
+              label: t("ที่นั่ง", "Spots"),
+              answer: left > 0 ? t(`เหลือ ${left} ที่`, `${left} left`) : reg?.status === "confirmed" ? t("เต็มแล้ว คุณได้ที่แล้ว", "Full, you're in") : t("เต็มแล้ว", "Full"),
+              sub: <Seats capacity={event.capacity} taken={state.taken} />,
+            },
+          ]}
+        />
         {reg?.status === "confirmed" && !started ? <TableIntroPrompt v={v} next={`/events/${event.id}`} /> : null}
         {reg?.status === "confirmed" && event.status === "published" && !ended ? <SaveNext paths={[`/me/events/${event.id}/pass`]} /> : null}
         {event.venueAddress || event.mapUrl ? (
@@ -1233,9 +1228,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           </p>
         ) : null}
         <p class="ev-actions">
-          <a class="chip-btn" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
+          <LinkButton kind="tonal" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
             <span aria-hidden="true">🧭</span> {t("เส้นทาง", "Directions")}
-          </a>
+          </LinkButton>
         </p>
         <div class="tags">
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}

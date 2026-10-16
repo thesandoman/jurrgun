@@ -128,7 +128,7 @@ async function landing(c: Ctx, audience: Audience) {
           <small>{L2(k.sub)}</small>
           <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
           <div class="hero-cta">
-            <a href={join} class="btn hero-btn">
+            <a href={join} class="btn primary">
               {member ? t("ดูกิจกรรมทั้งหมด", "See all events") : t("เริ่มเลย ฟรี", "Get started, it's free")}
             </a>
             {member ? null : (
