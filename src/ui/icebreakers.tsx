@@ -11,7 +11,7 @@ export function IcebreakerCard(props: { v: View; eventId: string; chatKey?: stri
   const { t, lang } = props.v;
   const list = icebreakersFor(props.eventId);
   return (
-    <section class="card icebreakers" aria-labelledby="ice-h">
+    <section class="open-sec icebreakers" aria-labelledby="ice-h">
       <h2 id="ice-h" class="h3">
         <span aria-hidden="true">💬</span> {t("คำถามชวนคุยสำหรับโต๊ะนี้", "Icebreakers for your table")}
       </h2>

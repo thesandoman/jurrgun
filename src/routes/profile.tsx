@@ -147,7 +147,7 @@ function Together(props: { v: ReturnType<typeof view>; mine: keyof typeof ARCHET
   const why = clickReason(props.mine, props.theirs);
   const place = theirs.hangouts[0];
   return (
-    <section class="card together">
+    <section class="open-sec together">
       <span class="eyebrow">{t("ด้วยกัน", "Together")}</span>
       <p>
         {t(`คุณเป็น${L(lang, mine.name)} เขาเป็น${L(lang, theirs.name)}`, `You're ${L(lang, mine.name)}, they're ${L(lang, theirs.name)}.`)} {why ? L(lang, why) : null}
@@ -236,7 +236,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
       />
       {!self && theirVibe?.visible && vibes.get(me.account.id) ? <Together v={v} mine={vibes.get(me.account.id)!.archetype} theirs={theirVibe.archetype} /> : null}
       {metAt.length ? (
-        <section class="card met-at" aria-labelledby="met-at-h">
+        <section class="open-sec met-at" aria-labelledby="met-at-h">
           <h2 id="met-at-h" class="eyebrow">{t("เจอกันที่", "Where you've met")}</h2>
           <ul>
             {metAt.map((e) => (

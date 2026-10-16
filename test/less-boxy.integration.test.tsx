@@ -7,6 +7,11 @@ import { HAS_DB, createMember, db, req } from "./helpers";
 import { chatMessages, connections, events, notifications, registrations } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
 import { A11Y_CSS } from "../src/ui/a11y-css";
+import { IcebreakerCard } from "../src/ui/icebreakers";
+import { PROFILE_CSS } from "../src/ui/profile-card";
+
+const v = { lang: "en" as const, t: (_th: string, en: string) => en, user: null, path: "/" };
+const rule = (css: string, sel: string) => css.slice(css.indexOf(sel), css.indexOf("}", css.indexOf(sel)) + 1);
 
 const HOUR = 3_600_000;
 
@@ -17,6 +22,25 @@ describe("grouped lists: the shared style", () => {
     expect(A11Y_CSS).toMatch(/\.glist>\*\+\*::before\{[^}]*left:var\(--glist-inset,16px\)[^}]*height:1px/);
     // A ⋯ popover inside a row must never be cut off by the group.
     expect(A11Y_CSS).not.toMatch(/\.glist\{[^}]*overflow:hidden/);
+  });
+});
+
+describe("open sections", () => {
+  it("a read-only section is open on the page with a thin line above it, no card surface or shadow", () => {
+    const open = rule(A11Y_CSS, ".open-sec{");
+    expect(open).toContain("border-top:1px solid var(--line)");
+    expect(open).toContain("background:none");
+    expect(open).toContain("box-shadow:none");
+    expect(String(<IcebreakerCard v={v} eventId="ev-1" />)).toContain('<section class="open-sec icebreakers"');
+  });
+
+  it("profile sections and prompt answers are open too", () => {
+    for (const sel of [".pc-sec{", ".pc-card{"]) {
+      const r = rule(PROFILE_CSS, sel);
+      expect(r, sel).toContain("border-top:1px solid var(--line)");
+      expect(r, sel).not.toMatch(/background|box-shadow|border-radius/);
+    }
+    expect(rule(PROFILE_CSS, ".pc-dating{")).not.toContain("background");
   });
 });
 

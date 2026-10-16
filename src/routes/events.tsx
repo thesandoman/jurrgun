@@ -1021,7 +1021,7 @@ function BuddyBox(props: { names: string[] | null; event: Event; t: T }) {
   const { names, t } = props;
   if (!names || names.length === 0) return null;
   return (
-    <Card class="buddy">
+    <section class="open-sec buddy">
       <h2>🤝 {t("บัดดี้ของคุณ", "Your event buddy")}</h2>
       <p>
         <strong>{names.join(", ")}</strong>
@@ -1030,7 +1030,7 @@ function BuddyBox(props: { names: string[] | null; event: Event; t: T }) {
         {t("นัดเจอกันที่จุดนัดพบก่อนเริ่ม 15 นาที", "Meet at the meeting point 15 minutes early.")}
         {props.event.safetyInfo ? ` · ${props.event.safetyInfo}` : ""}
       </p>
-    </Card>
+    </section>
   );
 }
 
@@ -1068,7 +1068,7 @@ function TableBox(props: { box: TableBoxData; t: T }) {
   const { box, t } = props;
   if (!box) return null;
   return (
-    <Card class="hint">
+    <section class="open-sec table-box">
       <h2>👥 {t(`โต๊ะประจำ "${box.name}"`, `Regular Table "${box.name}"`)}</h2>
       {box.seated ? (
         <LinkButton href={`/tables/${box.id}`} kind="ghost">
@@ -1080,7 +1080,7 @@ function TableBox(props: { box: TableBoxData; t: T }) {
           <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this Regular Table")}</Button>
         </form>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -1228,7 +1228,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <IcebreakerCard v={v} eventId={event.id} chatKey={event.visibility === "private" ? `circle:${event.id}` : null} />
       ) : null}
 
-      <Card>
+      <section class="open-sec ev-details">
         <h2>{t("รายละเอียด", "Details")}</h2>
         <p class="chips2">
           <span>🧑‍🤝‍🧑 {host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</span>
@@ -1302,7 +1302,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           ) : null}
         </dl>
         </details>
-      </Card>
+      </section>
 
       <BuddyBox names={buddies} event={event} t={t} />
       <TableBox box={tableBox} t={t} />

@@ -196,8 +196,10 @@ const ME_CSS = `
 .me-sticker{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;background:var(--lime);color:var(--deep);font-size:.85rem;font-weight:600;transform:rotate(-3deg);box-shadow:var(--shadow)}
 .me-peek{display:inline-block;margin-top:12px;font-weight:600;font-size:.92rem;text-decoration:none;padding:8px 16px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow)}
 
-.me-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 18px}
-.me-stat{display:flex;flex-direction:column;align-items:center;gap:0;padding:14px 6px 12px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:24px;transition:transform .2s}
+/* Numbers sit open on the page in one row, a thin line between them (owner, 2026-10-16: less boxy). */
+.me-stats{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;margin:8px 0 16px}
+.me-stat{display:flex;flex-direction:column;align-items:center;gap:0;min-height:44px;padding:8px 4px;text-decoration:none;color:var(--ink);transition:transform .2s}
+.me-stat+.me-stat{border-left:1px solid var(--line)}
 .me-stat:active{transform:scale(.97)}
 .me-stat-emoji{display:grid;place-items:center;width:40px;height:40px;font-size:1.2rem;line-height:1;border-radius:50%;background:color-mix(in srgb,var(--tint) 22%,var(--surface))}
 .me-stat-sub{margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--surface-2);font-weight:600}
@@ -214,7 +216,7 @@ const ME_CSS = `
 .me-todo a{padding:7px 13px;border-radius:999px;font-size:.88rem;font-weight:600;text-decoration:none;background:var(--brand-soft);color:var(--brand)}
 
 .me-type{margin:18px 0}
-.me-type .teaser{display:flex;width:100%;box-sizing:border-box;margin:0;border-radius:24px}
+.me-type .teaser{display:flex;width:100%;box-sizing:border-box;margin:0;border-radius:0;padding:4px 0;background:none;border:0;box-shadow:none}
 .me-type .card{border-radius:24px}
 
 .me-h{display:flex;justify-content:space-between;align-items:baseline}

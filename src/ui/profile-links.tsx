@@ -29,7 +29,7 @@ export function ProfileLinksCard(props: { t: T; name: string; links: ShownLink[]
   const { t } = props;
   if (!props.links.length) return null;
   return (
-    <section class="card plinks" aria-labelledby="plinks-h">
+    <section class="open-sec plinks" aria-labelledby="plinks-h">
       <h2 id="plinks-h" class="eyebrow">{t(`ลิงก์ของ ${props.name}`, `${props.name}'s links`)}</h2>
       <ul>
         {props.links.map((l) => (

@@ -498,7 +498,7 @@ export function PromptCard(props: { v: View; q: Prompt; a: Answer; photo: string
 }
 
 export const PROFILE_CSS = `
-.pc{display:flex;flex-direction:column;gap:22px;margin:8px 0 40px}
+.pc{display:flex;flex-direction:column;gap:24px;margin:8px 0 40px}
 .pc h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:0 0 12px;font-weight:600}
 .pc-hero{display:flex;flex-direction:column;gap:18px}
 .pc-photo{width:100%;aspect-ratio:4/5;max-height:440px;object-fit:cover;border-radius:28px;box-shadow:var(--shadow);display:block}
@@ -510,21 +510,20 @@ export const PROFILE_CSS = `
 .pc-badges{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pc-badges .type-spark small{margin-top:6px}
 .pc-lines{display:grid;gap:10px}
-.pc-dating{display:grid;gap:12px;padding:14px;border-radius:var(--radius);background:var(--love-soft);border:1px solid color-mix(in srgb,var(--love) 30%,transparent)}
+/* Open sections (owner, 2026-10-16): straight on the page, a thin line above each; the 💘 one keeps a love-red line. */
+.pc-dating{display:grid;gap:12px;padding:24px 0 0;border-top:1px solid color-mix(in srgb,var(--love) 45%,var(--line))}
 .pc-dating .eyebrow{margin:0;color:var(--love-ink)}
-.pc-datestyle{background:var(--surface);border-radius:var(--radius);padding:14px 16px}
+.pc-datestyle{padding:0}
 .pc-datestyle h2{margin:0 0 8px;font-size:1.05rem}
 .pc-datestyle .pc-facts{margin:0}
 .pc-group-h{margin:18px 0 0;font-size:.82rem;font-weight:700;color:var(--ink-2);text-transform:none}
 .pc-group-h+.pc-facts{margin-top:8px}
 .pc-sec h2.pc-tables-h{margin-top:20px}
-/* No coloured stripe on prompt cards (craft floor, Phase 3): the question label carries the colour. */
-.pc-card::before{content:none!important}
 .pc-lock{margin:-4px 0 10px;font-size:.86rem;color:var(--love-ink)}
 .pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
 .pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
 .pc-actions{display:flex;gap:10px;flex-wrap:wrap}
-.pc-sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+.pc-sec{padding:24px 0 0;border-top:1px solid var(--line)}
 .pc-chips{display:flex;flex-wrap:wrap;gap:8px}
 .pc-chip{display:inline-flex;align-items:center;gap:4px;padding:7px 13px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);font-size:.9rem;line-height:1.2}
 .pc-brand{background:var(--brand-soft);color:var(--brand);font-weight:600}
@@ -540,8 +539,7 @@ export const PROFILE_CSS = `
 .pc-comm-item b{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--brand-soft);font-size:1.35rem;font-weight:400;flex:none}
 .pc-comm-item span{display:flex;flex-direction:column}
 .pc-comm-item small{color:var(--ink-3)}
-.pc-card{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px 22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.pc-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(var(--brand),var(--fresh))}
+.pc-card{padding:24px 0 0;border-top:1px solid var(--line)}
 .pc-q{margin:0 0 12px;font-size:.92rem;font-weight:600;color:var(--ink-2)}
 .pc-a{margin:0;font-size:1.35rem;line-height:1.4;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
 .pc-pick{display:flex;align-items:center;gap:14px;margin:0}

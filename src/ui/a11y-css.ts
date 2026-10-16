@@ -137,9 +137,6 @@ html[lang="th"] body{line-height:1.7}
 .pf-clear input{width:22px;height:22px;margin:0}
 /* Me: the stat tiles line up (the playful offset read as broken). */
 .me-stat:nth-child(2){transform:none}
-/* Four tiles (events, people, tables, coming up): 2 by 2 on phones, one row on wider screens. */
-main nav.me-stats{grid-template-columns:repeat(2,1fr)}
-@media (min-width:680px){main nav.me-stats{grid-template-columns:repeat(4,1fr)}}
 /* Public profile on laptops: three wider fact columns instead of five narrow ones. */
 @media (min-width:900px){.pc-facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
@@ -696,7 +693,7 @@ details.sheet[open]>.sheet-more{background:var(--surface-2)}
 .pc-row .avstack{flex:0 0 auto;margin:0}
 .pc-met{margin:2px 0 0;color:var(--ink-2);font-size:.9rem;line-height:1.45}
 /* B1: the full meeting history now sits on the person's profile. */
-.card.met-at h2.eyebrow{margin:0 0 6px;font-size:.8rem}
+.met-at h2.eyebrow{margin:0 0 6px;font-size:.8rem}
 .met-at ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
 .met-at ul{gap:8px}
 .met-at li{display:grid}
@@ -797,7 +794,7 @@ input[type=email],input[type=tel]{width:100%;font:inherit;font-size:16px;color:v
 /* Social links (mutual connections only): each link is a 48px row with a plain icon, the network's
    name small above the handle, and long handles wrap instead of pushing the page sideways. */
 .plinks ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
-.card.plinks h2.eyebrow{margin:0 0 8px;font-size:.8rem}
+.plinks h2.eyebrow{margin:0 0 8px;font-size:.8rem}
 a.plink{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 12px;border-radius:12px;background:var(--surface-2);color:var(--ink);text-decoration:none}
 a.plink:hover{background:color-mix(in srgb,var(--surface-2) 80%,var(--ink) 6%)}
 a.plink:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
@@ -862,4 +859,24 @@ html.a11y-motion .topbar .brand,html.a11y-motion .fd-logo{touch-action:auto}
 .quick-list>:first-child .qs{border-top-left-radius:15px;border-top-right-radius:15px}
 .quick-list>:last-child .qs{border-bottom-left-radius:15px;border-bottom-right-radius:15px}
 .quick-list .qs-consent{margin:0 12px 12px}
+/* 2. Open sections: a section that is only read sits straight on the page under its heading, with a
+   thin line above it and 24px either side. Cards stay only for things you act on (next table, pass,
+   RSVP, flows, forms, the 💘 consent, sheets). */
+.open-sec{margin:24px 0;padding:24px 0 0;border-top:1px solid var(--line);background:none;border-radius:0;box-shadow:none}
+.open-sec>:first-child{margin-top:0}
+.open-sec>:last-child{margin-bottom:0}
+.open-sec>h2{margin-bottom:8px}
+@media (min-width:1024px){.open-sec{margin:32px 0;padding-top:32px}}
+/* Event page: Details, the event buddy and the Regular Table follow the header as open sections. */
+.open-sec.table-box .btn{margin-top:4px}
+/* Me: each titled section (type, things I love, settings) starts with a thin line; the type link is a
+   plain row, and the numbers sit open in one row with a line between them. */
+main .me .sec-head{margin-top:24px;padding-top:24px;border-top:1px solid var(--line)}
+main .me-type>a.teaser{padding:8px 0;background:none;border:0;border-radius:0;box-shadow:none}
+main .me-type>a.teaser:hover{background:none}
+main .me-stats{margin:16px 0}
+.me-stat b{font-size:1.5rem}
+/* A person's profile: "Together", "Where you've met" and their links follow the profile's own open sections. */
+.pc+.open-sec{margin-top:0}
+.open-sec.together .eyebrow{display:block;margin-bottom:4px}
 `);
