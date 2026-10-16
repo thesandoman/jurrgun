@@ -10,22 +10,19 @@ import type { notifications } from "../schema";
 import type { Lang } from "../lib/i18n";
 import { fmtDate } from "../lib/i18n";
 import { safeNext } from "./kit";
+import { NewBadge, UnreadCount, unreadLabel } from "./unread";
 
 type T = (th: string, en: string) => string;
 type Notification = typeof notifications.$inferSelect;
 
 export function NotifMenu(props: { t: T; unread: number }) {
   const { t, unread } = props;
-  const label = unread ? t(`การแจ้งเตือน (ยังไม่อ่าน ${unread})`, `Notifications (${unread} unread)`) : t("การแจ้งเตือน", "Notifications");
+  const label = unreadLabel(t, { th: "การแจ้งเตือน", en: "Notifications" }, unread);
   return (
     <details class="notif" id="notif">
       <summary aria-label={label} title={label}>
         <span aria-hidden="true">🔔</span>
-        {unread ? (
-          <span class="notif-dot" aria-hidden="true">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        ) : null}
+        <UnreadCount n={unread} class="notif-dot" />
       </summary>
       <div class="notif-panel" role="region" aria-label={t("การแจ้งเตือน", "Notifications")} data-src="/notifications/panel">
         <p class="notif-h">{t("การแจ้งเตือน", "Notifications")}</p>
@@ -52,7 +49,9 @@ export function NotifItems(props: { t: T; lang: Lang; rows: Notification[] }) {
         const inner = (
           <>
             <span class="notif-title">{title}</span>
-            <small>{fmtDate(n.createdAt, lang)}</small>
+            <small>
+              {n.readAt ? null : <NewBadge t={t} />} {fmtDate(n.createdAt, lang)}
+            </small>
           </>
         );
         return <li class={n.readAt ? undefined : "unread"}>{href ? <a href={href}>{inner}</a> : <div>{inner}</div>}</li>;

@@ -21,7 +21,7 @@
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { getDb } from "../db";
-import { EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
+import { CHAT_KIND, EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate, fmtDay, L } from "../lib/i18n";
@@ -33,6 +33,7 @@ import { PROMPT_BANK } from "../content/profile";
 import { getStatefulObject } from "../state";
 import { blockedAmong, getTable, memberIds, myTables, standing } from "../services/regular-tables";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
+import { NewBadge, UnreadCount } from "../ui/unread";
 
 export const chatRoutes = new Hono<AppEnv>();
 chatRoutes.use("/chat", requireMember);
@@ -238,21 +239,29 @@ chatRoutes.get("/chat", async (c) => {
   }
   const readOf = new Map(reads.map((r) => [r.thread, r.lastReadAt.getTime()]));
   const rows = threads
-    .map((th) => ({ th, last: lastOf.get(th.key) }))
+    .map((th) => {
+      const last = lastOf.get(th.key);
+      return { th, last, unread: !!last && last.sender !== me && last.createdAt.getTime() > (readOf.get(th.key) ?? 0) };
+    })
     .sort((a, b) => (b.last?.createdAt.getTime() ?? 0) - (a.last?.createdAt.getTime() ?? 0));
+  const unreadCount = rows.filter((r) => r.unread).length;
   return page(
     c,
     { title: t("แชต", "Chats"), tab: "connections" },
     <>
       <h1>💬 {t("แชต", "Chats")}</h1>
       <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์ และไม่บอกว่าอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
+      {unreadCount > 0 ? (
+        <p class="unread-sum">
+          <UnreadCount n={unreadCount} /> {t(`ยังไม่ได้อ่าน ${unreadCount} แชต`, `${unreadCount} unread ${unreadCount === 1 ? "chat" : "chats"}`)}
+        </p>
+      ) : null}
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a Regular Table or a private hangout.")}</Empty>
       ) : (
         <ul class="chat-list">
-          {rows.map(({ th, last }) => {
+          {rows.map(({ th, last, unread }) => {
             const who = th.members.filter((x) => x !== me).map((x) => nameOf.get(x) ?? "?");
-            const unread = !!last && last.sender !== me && last.createdAt.getTime() > (readOf.get(th.key) ?? 0);
             return (
               <li>
                 <a href={`/chat/${th.key}`} class={unread ? "unread" : undefined}>
@@ -261,7 +270,7 @@ chatRoutes.get("/chat", async (c) => {
                     <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
                     <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
                   </span>
-                  {!th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : unread ? <b class="chat-new">{t("ใหม่", "New")}</b> : null}
+                  {unread ? <NewBadge t={t} /> : !th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : null}
                 </a>
               </li>
             );
@@ -375,10 +384,23 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
   ]);
   const isCircle = isGroup(th.key);
   const hostLabel = key.startsWith("table:") ? t("👑 เจ้าภาพโต๊ะ", "👑 Table Host") : headOf[0]?.name ? `👑 ${headOf[0].name}` : t("👑 ผู้จัด", "👑 Host");
-  await db
-    .insert(chatReads)
-    .values({ thread: key, accountId: me, lastReadAt: now })
-    .onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } });
+  // Opening the chat reads it: its waiting "new message" (any of the person's threads) clears too,
+  // including one held back for quiet hours, so the My people count drops straight away.
+  const links = keysOf(th).map((k) => `/chat/${k}`);
+  const [, cleared] = await Promise.all([
+    db
+      .insert(chatReads)
+      .values({ thread: key, accountId: me, lastReadAt: now })
+      .onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } }),
+    db
+      .update(notifications)
+      .set({ readAt: now })
+      .where(and(eq(notifications.accountId, me), eq(notifications.kind, CHAT_KIND), inArray(notifications.link, links), isNull(notifications.readAt)))
+      .returning({ link: notifications.link, createdAt: notifications.createdAt }),
+  ]);
+  // This page's own tab badge no longer counts the chat being read (the count was taken before this request).
+  const counted = new Set(cleared.filter((r) => r.createdAt.getTime() <= now.getTime()).map((r) => r.link)).size;
+  c.var.user!.chatUnread = Math.max(0, (c.var.user!.chatUnread ?? 0) - counted);
   const title = isCircle ? L(lang, th.title) : others.map((x) => nameOf.get(x) ?? "?").join(", ");
   return page(
     c,
@@ -522,7 +544,7 @@ chatRoutes.post("/chat/:thread", async (c) => {
   const due = notifyAt(now);
   const fresh = others.filter((x) => !already.has(x));
   if (fresh.length) {
-    await db.insert(notifications).values(fresh.map((accountId) => ({ id: newId(), accountId, kind: "chat", titleTh: "มีข้อความใหม่", titleEn: "New message", link, createdAt: due })));
+    await db.insert(notifications).values(fresh.map((accountId) => ({ id: newId(), accountId, kind: CHAT_KIND, titleTh: "มีข้อความใหม่", titleEn: "New message", link, createdAt: due })));
   }
   await db.insert(chatReads).values({ thread: th.key, accountId: me, lastReadAt: now }).onConflictDoUpdate({ target: [chatReads.thread, chatReads.accountId], set: { lastReadAt: now } });
   // Tell open pages in this thread to refetch. Never fail the send over it.

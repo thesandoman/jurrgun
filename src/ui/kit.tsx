@@ -28,6 +28,7 @@ import { asset, type AssetPath } from "../assets";
 import { A11Y_FORM_JS, A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
 import { CLEAR_OFFLINE_JS } from "./offline-next";
+import { UnreadCount } from "./unread";
 
 export type View = { lang: Lang; t: T; user: CurrentUser | null; path: string };
 
@@ -275,12 +276,20 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
     // City Pulse lives under Me (and in the Discover ticker).
     ["me", "/settings", TAB_ICONS.me, t("ฉัน", "Me")],
   ];
+  // Unread chats show on My people, where Chats live: the same pill as the bell, and the count in the name.
+  const chats = props.v.user?.chatUnread ?? 0;
   return (
     <nav class={props.top ? "top-nav" : "tabbar"} aria-label={t("เมนูหลัก", "Main")}>
       {items.map(([key, href, icon, text]) => (
-        <a href={href} class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && (props.tab === "pulse" || props.tab === "learn")) ? "on" : ""}`.trim() || undefined} aria-current={props.tab === key ? "page" : undefined}>
+        <a
+          href={href}
+          class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && (props.tab === "pulse" || props.tab === "learn")) ? "on" : ""}`.trim() || undefined}
+          aria-current={props.tab === key ? "page" : undefined}
+          aria-label={key === "connections" && chats > 0 ? t(`${text} แชตยังไม่ได้อ่าน ${chats}`, `${text}, ${chats} unread ${chats === 1 ? "chat" : "chats"}`) : undefined}
+        >
           <span aria-hidden="true">{icon}</span>
           {text}
+          {key === "connections" ? <UnreadCount n={chats} class="tab-badge" /> : null}
         </a>
       ))}
     </nav>

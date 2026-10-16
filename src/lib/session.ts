@@ -11,6 +11,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { accounts, notifications, profiles, sessions, type Role } from "../schema";
+import { CHAT_KIND } from "../domain/chat";
 import { randomToken, sha256 } from "./crypto";
 import type { AppEnv } from "./env";
 import { langFromHeader, pickLang } from "./i18n";
@@ -55,7 +56,10 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
         account: accounts,
         profile: profiles,
         // Unread count for the bell, in the same trip (no extra query per page).
-        unread: sql<number>`(select count(*) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now())`.mapWith(Number),
+        // Chats count on their own (the My people tab and the Chats chip): one waiting
+        // "new message" notification per chat, read when that chat is opened.
+        unread: sql<number>`(select count(*) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} <> ${CHAT_KIND})`.mapWith(Number),
+        chatUnread: sql<number>`(select count(distinct ${notifications.link}) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} = ${CHAT_KIND})`.mapWith(Number),
       })
       .from(sessions)
       .innerJoin(accounts, eq(accounts.id, sessions.accountId))
@@ -64,7 +68,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
       .limit(1);
     const row = rows[0];
     if (row && accountUsable(row.account)) {
-      c.set("user", { account: row.account, profile: row.profile, unread: Number(row.unread ?? 0) });
+      c.set("user", { account: row.account, profile: row.profile, unread: Number(row.unread ?? 0), chatUnread: Number(row.chatUnread ?? 0) });
       // An explicit ?lang= or language cookie wins; otherwise use the profile's.
       if (!c.req.query("lang") && !getCookie(c, "lang") && row.profile) c.set("lang", pickLang(row.profile.locale));
     } else {

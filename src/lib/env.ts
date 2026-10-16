@@ -32,6 +32,8 @@ export type CurrentUser = {
   profile: Profile | null;
   /** Unread notifications, for the bell's badge. */
   unread?: number;
+  /** Chats with a message not yet read, for the My people tab and the Chats chip. */
+  chatUnread?: number;
 };
 
 export type AppEnv = {

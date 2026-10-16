@@ -13,6 +13,14 @@
  */
 
 export const MAX_CHARS = 500;
+
+/**
+ * The notification kind for "new message": one waiting per chat per person.
+ * It is counted on its own (the My people tab and the Chats chip), kept out
+ * of the bell, and marked read when that chat is opened.
+ */
+export const CHAT_KIND = "chat";
+
 export const PER_THREAD_PER_DAY = 40;
 export const PER_DAY_TOTAL = 120;
 /** Messages each person may send before the first meet. */

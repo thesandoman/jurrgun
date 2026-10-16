@@ -120,8 +120,8 @@ describe.skipIf(!HAS_DB)("hourly clock", () => {
     const withKeys = { ...ENV, VAPID_PUBLIC_KEY: "x".repeat(87), VAPID_PRIVATE_KEY: "y".repeat(43) };
     const html = await (await app.request("/notifications", { headers: { cookie: `${m.cookie}; lang=en` } }, withKeys)).text();
     expect(html).toContain("Test");
-    expect(html).toContain('class="notif-new"');
-    expect(html).not.toContain('class="notif-dot"');
+    expect(html).toContain('<b class="unread-badge unread-new">New</b>');
+    expect(html).not.toContain('notif-dot" aria-hidden');
     expect(html).toContain('id="push"');
     expect(html).toContain("Notifications on this phone");
     const without = await (await req("/notifications", { cookie: m.cookie })).text();

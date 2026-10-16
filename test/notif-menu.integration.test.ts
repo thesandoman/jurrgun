@@ -20,7 +20,8 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
 
     let html = await (await req("/events?view=list", { cookie })).text();
     expect(html).toContain('id="notif"');
-    expect(html).toContain('<span class="notif-dot" aria-hidden="true">2</span>');
+    expect(html).toContain('<span class="unread-badge notif-dot" aria-hidden="true">2</span>');
+    expect(html).toContain('aria-label="Notifications, 2 unread"');
     expect(html).toContain('href="/notifications"');
 
     const panel = await req("/notifications/panel", { cookie });
@@ -33,7 +34,7 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
     expect(await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), isNull(notifications.readAt)))).toHaveLength(0);
 
     html = await (await req("/events?view=list", { cookie })).text();
-    expect(html).not.toContain('class="notif-dot"');
+    expect(html).not.toContain('notif-dot" aria-hidden');
   });
 
   it("only marks what the dropdown showed as read", async () => {

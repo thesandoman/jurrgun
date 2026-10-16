@@ -504,4 +504,19 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
 .offline-next-list ul{list-style:none;margin:12px 0 16px;padding:0;display:grid;gap:12px}
 .offline-next-list a.card{display:grid;gap:4px;min-height:44px;padding:12px 16px;text-decoration:none;color:var(--ink)}
 .offline-next-list a.card small{color:var(--ink-2)}
+/* Clearer unread: one style everywhere (bell, My people tab, Chats chip, chat rows, notification rows).
+   A brand-green pill with a number or "New" in it (white on green 5.9:1, dark on bright green in dark
+   mode), so it reads on the light glass bars and the dark ones alike; unread rows also get a tint and
+   a bold title, never colour alone (1.4.1). */
+.unread-badge,.notif-dot,.chat-list a>b.unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;width:auto;height:20px;padding:0 6px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-family:var(--sub);font-size:.75rem;font-weight:800;line-height:1;vertical-align:middle;flex:none;white-space:nowrap}
+.unread-badge.unread-new,.chat-list a>b.unread-badge.unread-new{padding:0 8px}
+.notif-dot{position:absolute;top:2px;right:0;box-shadow:0 0 0 2px var(--surface)}
+.tabbar a{position:relative}
+.tabbar .tab-badge{position:absolute;top:2px;left:calc(50% + 4px);box-shadow:0 0 0 2px var(--surface)}
+.top-nav .tab-badge{box-shadow:0 0 0 2px var(--surface)}
+.circle-chips a .unread-badge,.spread a .unread-badge{margin-left:2px}
+.chat-list a.unread,.notif-list li.unread a,.notif-list li.unread div{background:color-mix(in srgb,var(--brand) 9%,var(--surface));border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+.chat-list a.unread strong,.notif-list li.unread .notif-title{color:var(--ink);font-weight:800}
+.notif-list small .unread-badge{margin-right:4px}
+.unread-sum{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-weight:700;color:var(--ink)}
 `);

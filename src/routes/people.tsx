@@ -64,6 +64,8 @@ import {
 import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
 import { NotifItems } from "../ui/notif-menu";
+import { ChatsLink, NewBadge } from "../ui/unread";
+import { CHAT_KIND } from "../domain/chat";
 import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
@@ -724,7 +726,7 @@ function CircleTop(props: { v: View; extras: CircleExtras }) {
   const hostsTable = tables.some((x) => x.hosting);
   return (
     <nav class="circle-chips" aria-label={t("ทางลัด", "Shortcuts")}>
-      <a href="/chat">💬 {t("แชต", "Chats")}</a>
+      <ChatsLink t={t} n={props.v.user?.chatUnread ?? 0} />
       <a href="/buddy" class="circle-buddy">
         🤝{" "}
         {buddy
@@ -829,7 +831,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
       {props.extras ? null : (
         <p class="spread">
           <span />
-          <a href="/chat">💬 {t("แชต", "Chats")}</a>
+          <ChatsLink t={t} n={props.v.user?.chatUnread ?? 0} />
         </p>
       )}
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My people in Bangkok")}</h1>
@@ -1286,7 +1288,8 @@ peopleRoutes.get("/notifications/panel", requireMember, async (c) => {
   const { t, lang } = view(c);
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
-  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(12);
+  // New messages live with Chats (their own count on My people), so the bell leaves them out.
+  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), ne(notifications.kind, CHAT_KIND), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(12);
   // Only what the dropdown actually shows becomes read; older unread ones keep the badge.
   const shown = rows.filter((r) => !r.readAt).map((r) => r.id);
   if (shown.length) {
@@ -1301,9 +1304,10 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
   const { t, lang } = v;
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
-  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(50);
+  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), ne(notifications.kind, CHAT_KIND), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(50);
   if (rows.some((r) => !r.readAt)) {
-    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), isNull(notifications.readAt), lte(notifications.createdAt, new Date())));
+    // A chat's "new message" stays unread until that chat is opened.
+    await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), ne(notifications.kind, CHAT_KIND), isNull(notifications.readAt), lte(notifications.createdAt, new Date())));
   }
   // They are read now: the bell on this page shows no badge (it was counted before this request marked them).
   c.var.user!.unread = 0;
@@ -1332,8 +1336,7 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
                       {count > 1 ? <b class="notif-count"> ×{count}</b> : null}
                     </span>
                     <small>
-                      {!n.readAt ? <b class="notif-new">{t("ใหม่", "New")} · </b> : null}
-                      {fmtDate(n.createdAt, lang)}
+                      {!n.readAt ? <NewBadge t={t} /> : null} {fmtDate(n.createdAt, lang)}
                     </small>
                   </>
                 );
