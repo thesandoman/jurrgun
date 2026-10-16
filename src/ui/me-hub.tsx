@@ -193,8 +193,8 @@ const ME_CSS = `
 .me-wave{display:inline-block;transform-origin:70% 70%;animation:me-wave 2.4s ease-in-out 1}
 @keyframes me-wave{10%,30%{transform:rotate(14deg)}20%,40%{transform:rotate(-8deg)}50%{transform:none}}
 .me-sub{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;color:var(--ink-2);font-size:.92rem;margin:0}
-.me-sticker{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;background:var(--lime);color:var(--deep);font-size:.85rem;font-weight:600;transform:rotate(-3deg);box-shadow:var(--shadow)}
-.me-peek{display:inline-block;margin-top:12px;font-weight:600;font-size:.92rem;text-decoration:none;padding:8px 16px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow)}
+.me-sticker{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;background:var(--lime);color:var(--deep);font-size:.85rem;font-weight:600;transform:rotate(-3deg)}
+.me-peek{display:inline-block;margin-top:12px;font-weight:600;font-size:.92rem;text-decoration:none;padding:8px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
 
 /* Numbers sit open on the page in one row, a thin line between them (owner, 2026-10-16: less boxy). */
 .me-stats{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;margin:8px 0 16px}
@@ -206,7 +206,7 @@ const ME_CSS = `
 .me-stat b{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;line-height:1.2;margin-top:4px}
 .me-stat small{font-size:.78rem;color:var(--ink-2);text-align:center;line-height:1.25}
 
-.me-grow{background:var(--surface);border-radius:26px;padding:16px 18px;margin:14px 0;box-shadow:var(--shadow)}
+.me-grow{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin:16px 0}
 .me-grow-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .me-grow-head span{font-size:1.4rem}
 .me-bar{height:12px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin:10px 0 6px}
@@ -217,7 +217,6 @@ const ME_CSS = `
 
 .me-type{margin:18px 0}
 .me-type .teaser{display:flex;width:100%;box-sizing:border-box;margin:0;border-radius:0;padding:4px 0;background:none;border:0;box-shadow:none}
-.me-type .card{border-radius:24px}
 
 .me-h{display:flex;justify-content:space-between;align-items:baseline}
 .me-h h2{margin:22px 0 10px}
@@ -242,7 +241,7 @@ const ME_CSS = `
 
 .me-lang{display:flex;gap:6px;padding:5px;margin:10px auto;border-radius:999px;background:var(--surface-2);width:max-content;max-width:100%}
 .me-lang a{padding:8px 18px;border-radius:999px;text-decoration:none;color:var(--ink-2);font-weight:600;font-size:.92rem}
-.me-lang a[aria-current]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.me-lang a[aria-current]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 
 .me-foot{text-align:center;margin:18px 0 8px}
 .me-out{margin-top:10px;background:none;border:none;font:inherit;font-weight:600;color:var(--err);padding:10px 18px;border-radius:999px;cursor:pointer}

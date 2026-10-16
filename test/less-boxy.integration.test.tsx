@@ -60,6 +60,16 @@ describe("no boxes inside boxes", () => {
   });
 });
 
+describe("flat surfaces", () => {
+  it("cards keep a 1px soft line and 16px corners, and no drop shadow, hover included", () => {
+    expect(A11Y_CSS).toContain(":root{--radius:16px}");
+    expect(A11Y_CSS).toMatch(/\.card,\.card\.hero,\.ticket,[^{]*\{box-shadow:none\}/);
+    expect(A11Y_CSS).toContain(".card{border:1px solid var(--line)}");
+    expect(rule(A11Y_CSS, ".card.link:hover,a.card:hover{")).toContain("box-shadow:none!important");
+    expect(rule(A11Y_CSS, ".card.me-next{")).toContain("box-shadow:none");
+  });
+});
+
 describe.skipIf(!HAS_DB)("grouped lists on member pages", () => {
   it("Me: each settings group is one list of rows, the hint shown under the title", async () => {
     const m = await createMember();

@@ -223,7 +223,7 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .me-next b{font-size:1.06rem}
 .me-next span{color:var(--ink-2);font-size:.9rem}
 /* Owner cards: the next table reads as a link (green line with an arrow) and matches the profile card under it. */
-.card.me-next{border:0;border-radius:26px;padding:16px 18px;margin:12px 0 16px;box-shadow:var(--shadow);gap:4px}
+.card.me-next{border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0 16px;box-shadow:none;gap:4px}
 .me-next .me-next-go{display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:var(--brand);font-size:1.06rem}
 .me-next .me-next-go span{color:inherit;font-size:1.1rem;flex:none}
 .me-next:hover .me-next-go,.me-next:focus-visible .me-next-go{text-decoration:underline;text-underline-offset:3px}
@@ -255,8 +255,9 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 
 /* Neutral elevation, no coloured glows (craft, Phase 3). */
 :root{--lift:0 1px 2px rgba(20,30,24,.08),0 6px 16px rgba(20,30,24,.08)}
-/* !important: the warm layer nests these under a theme selector that outranks plain classes. */
-.card.link:hover,a.card:hover{box-shadow:var(--lift)!important}
+/* Flat cards (owner, 2026-10-16): a card link answers hover with a stronger edge, not a shadow.
+   !important: the warm layer nests these under a theme selector that outranks plain classes. */
+.card.link:hover,a.card:hover{box-shadow:none!important;border-color:color-mix(in srgb,var(--brand) 45%,var(--line))!important}
 .tabbar a.center{box-shadow:0 0 0 5px var(--bg),var(--lift)!important}
 .tabbar a.center.on{box-shadow:0 0 0 5px var(--bg),0 0 0 8px var(--brand),var(--lift)!important}
 
@@ -898,4 +899,16 @@ main .me-stats{margin:16px 0}
 main .open-sec details.how{margin:8px 0 0;padding:0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;background:none;box-shadow:none}
 /* Me: the "from N events" breakdown under a number is plain small text, not a pill. */
 main .me-stat-sub{padding:0;background:none;font-weight:600}
+/* 4. Flat surfaces: the cards that remain have no drop shadow, a 1px soft line and 16px corners.
+   Floating layers (sheets, popovers, the tab bar, the sticky RSVP bar, map chips) keep their shadow. */
+:root{--radius:16px}
+.card,.card.hero,.ticket,.rail a,.place-card,.tile2,.answer span,.chat-photo,.chat-poll{box-shadow:none}
+.card{border:1px solid var(--line)}
+.ticket,.place-card,.tile2,.chat-poll{border-radius:16px}
+.card.ev-sheet{border-radius:16px}
+/* The live pass keeps its ring (status), without the shadow under it. */
+.ticket.is-live{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent)}
+@keyframes live-glow{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--brand) 16%,transparent)}}
+/* Dark mode: a slightly lighter line, so card edges and hairlines show but stay quiet on the dark green. */
+@media (prefers-color-scheme:dark){:root{--line:#2c4536}}
 `);

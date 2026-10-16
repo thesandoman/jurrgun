@@ -540,7 +540,7 @@ export const PROFILE_FORM_CSS = `
 .pf-card-opt small{color:var(--ink-3)}
 .pf-card-opt input:checked+span{border-color:var(--brand);background:var(--brand-soft);box-shadow:inset 0 0 0 1px var(--brand)}
 .pf-card-opt input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--brand) 45%,transparent)}
-.pf-prompt{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:16px 0;box-shadow:var(--shadow)}
+.pf-prompt{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:16px 0}
 .pf-prompt-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}
 .pf-prompt-emoji{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border-radius:14px;background:var(--brand-soft);font-size:1.25rem}
 .pf-prompt textarea,.pf-prompt input[type=text]{width:100%;font:inherit;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--bg);color:var(--ink)}

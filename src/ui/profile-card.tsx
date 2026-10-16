@@ -501,7 +501,7 @@ export const PROFILE_CSS = `
 .pc{display:flex;flex-direction:column;gap:24px;margin:8px 0 40px}
 .pc h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:0 0 12px;font-weight:600}
 .pc-hero{display:flex;flex-direction:column;gap:18px}
-.pc-photo{width:100%;aspect-ratio:4/5;max-height:440px;object-fit:cover;border-radius:28px;box-shadow:var(--shadow);display:block}
+.pc-photo{width:100%;aspect-ratio:4/5;max-height:440px;object-fit:cover;border-radius:28px;display:block}
 .pc-initial{display:grid;place-items:center;background:var(--hero);aspect-ratio:16/11}
 .pc-initial span{font-size:5rem;font-weight:700;color:#fff;letter-spacing:-.04em;text-shadow:0 4px 24px rgba(0,0,0,.15)}
 .pc-id h1{font-size:2rem;margin:0;letter-spacing:-.03em;line-height:1.15}
