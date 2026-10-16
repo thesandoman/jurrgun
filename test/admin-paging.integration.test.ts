@@ -40,7 +40,7 @@ describe.skipIf(!HAS_DB)("moderation queue paging and search", () => {
     const cookie = `${mod.cookie}; lang=en`;
 
     const p1 = await (await req("/admin/moderation?status=open", { cookie })).text();
-    expect(p1).toMatch(/Showing 1–50 of [\d,]+/);
+    expect(p1).toMatch(/Showing 1 to 50 of [\d,]+/);
     expect(p1).toMatch(/rel="next"/);
     expect(p1).toContain("page=2");
     expect(p1).not.toContain(needle);
@@ -49,25 +49,25 @@ describe.skipIf(!HAS_DB)("moderation queue paging and search", () => {
     expect(p1).not.toContain('data-filter="admin-reports"');
 
     const p2 = await (await req("/admin/moderation?status=open&page=2", { cookie })).text();
-    expect(p2).toMatch(/Showing 51–/);
+    expect(p2).toMatch(/Showing 51 to /);
     expect(p2).toMatch(/rel="prev"/);
 
     // Server search reaches the needle wherever it sits in the queue.
     const found = await (await req(`/admin/moderation?status=open&q=needle${tag}`, { cookie })).text();
     expect(found).toContain(`/admin/moderation/${needle}`);
-    expect(found).toContain("Showing 1–1 of 1");
+    expect(found).toContain("Showing 1 to 1 of 1");
 
     // Searching by reporter: 55 results over two pages, the search kept in the links.
     const byReporter = await (await req(`/admin/moderation?status=open&q=Rep${tag}`, { cookie })).text();
-    expect(byReporter).toContain("Showing 1–50 of 55");
+    expect(byReporter).toContain("Showing 1 to 50 of 55");
     expect(byReporter).toContain(`q=Rep${tag}&amp;page=2`);
     const byReporter2 = await (await req(`/admin/moderation?status=open&q=Rep${tag}&page=2`, { cookie })).text();
-    expect(byReporter2).toContain("Showing 51–55 of 55");
+    expect(byReporter2).toContain("Showing 51 to 55 of 55");
     expect(byReporter2).toContain(needle);
 
     // The reason's label matches too, and LIKE wildcards are literal.
     const byLabel = await (await req(`/admin/moderation?status=open&q=${encodeURIComponent("Spam / scam")}`, { cookie })).text();
-    expect(Number(byLabel.match(/Showing 1–50 of ([\d,]+)/)?.[1].replace(/,/g, ""))).toBeGreaterThanOrEqual(55);
+    expect(Number(byLabel.match(/Showing 1 to 50 of ([\d,]+)/)?.[1].replace(/,/g, ""))).toBeGreaterThanOrEqual(55);
     const wild = await (await req(`/admin/moderation?status=open&q=${encodeURIComponent(`Rep${tag}%`)}`, { cookie })).text();
     expect(wild).toContain("No reports with this status match your search");
 
@@ -142,12 +142,12 @@ describe.skipIf(!HAS_DB)("events with more than 2,000 registrations", () => {
 
     const p1 = await (await req(`/admin/events/${id}`, { cookie })).text();
     expect(p1).toContain(`${BIG} / 3000`);
-    expect(p1).toContain(`Showing 1–200 of ${BIG.toLocaleString("en-US")}`);
+    expect(p1).toContain(`Showing 1 to 200 of ${BIG.toLocaleString("en-US")}`);
     expect(p1).toContain(`href="/admin/events/${id}?ap=2#attendees" rel="next"`);
     expect(p1.match(/<tr>/g)?.length).toBe(201); // heading row + 200
 
     const last = await (await req(`/admin/events/${id}?ap=11`, { cookie })).text();
-    expect(last).toContain(`Showing 2,001–2,050 of 2,050`);
+    expect(last).toContain(`Showing 2,001 to 2,050 of 2,050`);
     expect(last).toContain('rel="prev"');
     expect(last).not.toContain('rel="next"');
     // Past the end: back to the last page.

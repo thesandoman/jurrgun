@@ -73,11 +73,11 @@ export const attendedWithHost = (regs: { status: string; startsAt: Date }[], now
   regs.some((r) => r.status === "confirmed" && r.startsAt.getTime() <= now.getTime());
 
 export const JOIN_TEXT: Record<JoinRefusal, { th: string; en: string }> = {
-  full: { th: `โต๊ะนี้เต็มแล้ว (${MAX_MEMBERS} คน)`, en: `This regular table is full (${MAX_MEMBERS} people).` },
-  blocked: { th: "เข้าร่วมโต๊ะนี้ไม่ได้", en: "You can't join this regular table." },
-  women_only: { th: "โต๊ะนี้สำหรับผู้หญิงและคนนอนไบนารีเท่านั้น", en: "This regular table is for women and non-binary people." },
+  full: { th: `โต๊ะนี้เต็มแล้ว (${MAX_MEMBERS} คน)`, en: `This Regular Table is full (${MAX_MEMBERS} people).` },
+  blocked: { th: "เข้าร่วมโต๊ะนี้ไม่ได้", en: "You can't join this Regular Table." },
+  women_only: { th: "โต๊ะนี้สำหรับผู้หญิงและคนนอนไบนารีเท่านั้น", en: "This Regular Table is for women and non-binary people." },
   no_invite: { th: "เข้าร่วมได้ผ่านลิงก์ชวนจากเจ้าภาพโต๊ะ หรือหลังไปแฮงเอาต์ด้วยกันแล้ว", en: "Join with the Table Host's invite link, or after a hangout with them." },
-  archived: { th: "โต๊ะประจำนี้ปิดแล้ว", en: "This regular table has closed." },
+  archived: { th: "โต๊ะประจำนี้ปิดแล้ว", en: "This Regular Table has closed." },
   host: { th: "คุณเป็นเจ้าภาพโต๊ะนี้อยู่แล้ว", en: "You're already this table's host." },
   stepped_back: { th: `ตอนนี้ยังกลับเข้าโต๊ะนี้ไม่ได้ ลองใหม่หลังครบ ${STEP_BACK_DAYS} วันนะ`, en: `You can join this table again ${STEP_BACK_DAYS} days after you stepped back.` },
 };

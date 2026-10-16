@@ -61,7 +61,7 @@ const NOTICES: Record<string, [string, string]> = {
   rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ในกิจกรรมของฉัน", "You're in, your pass is in My events"],
   rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่ เราจะบอกทันทีนะ", "You're on the waitlist, we'll tell you if a spot opens"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
-  late_cancel: ["ยกเลิกแล้ว แต่ยกเลิกไม่ถึง 24 ชั่วโมงก่อนงาน เลยนับเป็น 1 strike", "Cancelled, cancelling within 24h counts as 1 strike"],
+  late_cancel: ["ยกเลิกแล้ว แต่ยกเลิกไม่ถึง 24 ชั่วโมงก่อนงาน เลยนับเป็นใบเตือน 1 ใบ", "Cancelled, cancelling within 24h counts as 1 strike"],
   offer_accepted: ["รับที่นั่งแล้ว!", "Spot accepted!"],
   checked_in: ["เช็กอินสำเร็จ", "Checked in"],
   choices_saved: ["บันทึกแล้ว เราจะบอกก็ต่อเมื่อเลือกกันทั้งสองคน", "Saved, you'll only hear if it's mutual"],
@@ -203,7 +203,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
           <a href="/privacy">{t("ความเป็นส่วนตัว", "Privacy")}</a>
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
-          <span>{t("แอปนัดเจอเพื่อนใหม่ในกรุงเทพฯ", "Social meetups for Bangkok")}</span>
+          <span>{t(BRAND.tagline.th, BRAND.tagline.en)}</span>
           <span class="foot-endorse">🏛️ {t(BRAND.bma.th, BRAND.bma.en)}</span>
         </footer>
           </>
@@ -558,7 +558,7 @@ export function Pager(props: { t: T; label: string; page: number; size: number; 
   const fmt = (n: number) => n.toLocaleString("en-US");
   return (
     <nav class="pager" aria-label={props.label}>
-      <p>{t(`แสดง ${fmt(from)}–${fmt(to)} จาก ${fmt(total)} รายการ`, `Showing ${fmt(from)}–${fmt(to)} of ${fmt(total)}`)}</p>
+      <p>{t(`แสดง ${fmt(from)} ถึง ${fmt(to)} จาก ${fmt(total)} รายการ`, `Showing ${fmt(from)} to ${fmt(to)} of ${fmt(total)}`)}</p>
       {page > 1 ? (
         <a href={props.href(page - 1)} rel="prev" class="btn ghost">
           {t("← ก่อนหน้า", "← Previous")}

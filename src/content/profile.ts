@@ -1013,7 +1013,7 @@ export const PROMPT_BANK: Prompt[] = [
   choice("noodle_type", "🍜", "เส้นที่ใช่", "My noodle of choice", [o("sen_lek", "🍜", "เส้นเล็ก", "Sen lek"), o("ba_mee", "🍝", "บะหมี่", "Egg noodles"), o("woon_sen", "🥢", "วุ้นเส้น", "Glass noodles"), o("sen_yai", "🍲", "เส้นใหญ่", "Wide noodles")]),
   choice("rain_plan", "☔", "ฝนตกหนักตอนนัด", "Heavy rain before plans", [o("go_anyway", "☔", "ไปต่อ เปียกก็ช่าง", "Go anyway"), o("move_inside", "🏠", "ย้ายเข้าร่ม", "Move it indoors"), o("reschedule", "📅", "เลื่อนนัด", "Reschedule")]),
   choice("coffee_order", "☕", "กาแฟแก้วโปรด", "My coffee order", [o("black", "☕", "อเมริกาโน่", "Americano"), o("thai_iced", "🧋", "โอเลี้ยงหรือกาแฟเย็น", "Thai iced coffee"), o("latte", "🥛", "ลาเต้", "Latte"), o("no_coffee", "🍵", "ไม่ดื่มกาแฟ", "No coffee, thanks")]),
-  choice("meet_where", "📍", "เจอกันครั้งแรกที่ไหนดี", "Best first hangout spot", [o("cafe", "☕", "คาเฟ่", "A café"), o("park", "🌳", "สวน", "A park"), o("activity", "🎳", "ทำกิจกรรม", "An activity"), o("food_walk", "🍢", "เดินกิน", "A food walk")]),
+  choice("meet_where", "📍", "เจอกันครั้งแรกที่ไหนดี", "Best first meetup spot", [o("cafe", "☕", "คาเฟ่", "A café"), o("park", "🌳", "สวน", "A park"), o("activity", "🎳", "ทำกิจกรรม", "An activity"), o("food_walk", "🍢", "เดินกิน", "A food walk")]),
   choice("songkran", "💦", "สงกรานต์ ฉัน…", "At Songkran I", [o("splash", "🔫", "ลุยเต็มที่", "Splash all day"), o("temple", "🏮", "รดน้ำดำหัว", "Visit family and temples"), o("escape", "🏝️", "หนีไปพัก", "Escape the city")]),
   choice("night_in_out", "🌙", "คืนวันศุกร์", "This Friday night", [o("out", "🌃", "ออกไปข้างนอก", "Out and about"), o("in", "🛋️", "อยู่บ้านสบาย ๆ", "Cosy night in"), o("both", "🍜", "กินข้าวแล้วกลับ", "Dinner, then home")]),
 

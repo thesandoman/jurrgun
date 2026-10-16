@@ -203,7 +203,7 @@ export async function raiseConflicts(env: DatabaseEnv, x: string, y: string): Pr
       t.hostAccountId,
       "table_conflict",
       `สองคนในโต๊ะประจำของคุณมีเรื่องไม่สบายใจกัน: ${n(a)} กับ ${n(b)}`,
-      `Two people at your regular table aren't comfortable with each other: ${n(a)} and ${n(b)}`,
+      `Two people at your Regular Table aren't comfortable with each other: ${n(a)} and ${n(b)}`,
       `/tables/${t.id}/conflicts`,
     );
   }

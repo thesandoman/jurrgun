@@ -183,8 +183,8 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
       </h1>
       <p class="muted">
         {t(
-          "แบบทดสอบ Bangkok Vibe ดูว่าคุณชอบใช้เวลาในเมืองแบบไหน จาก 6 ด้าน ไม่มีเรื่องการเมือง 4 ด้านรวมกันเป็นไทป์ตัวอักษร 4 ตัวของคุณ อีก 2 ด้านเป็นสัญลักษณ์เพิ่มสีสัน ทั้ง 6 ด้านช่วยหาโต๊ะที่เข้ากับคุณ",
-          "The Bangkok Vibe quiz looks at six sides of how you like to spend time in the city, nothing political. Four of them make your 4-letter type; the other two add a flavour badge. All six help seat you at the right table.",
+          "แบบทดสอบไทป์กรุงเทพฯ ดูว่าคุณชอบใช้เวลาในเมืองแบบไหน จาก 6 ด้าน ไม่มีเรื่องการเมือง 4 ด้านรวมกันเป็นไทป์ตัวอักษร 4 ตัวของคุณ อีก 2 ด้านเป็นสัญลักษณ์เพิ่มสีสัน ทั้ง 6 ด้านช่วยให้เราจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก",
+          "The Bangkok Type quiz looks at six sides of how you like to spend time in the city, nothing political. Four of them make your 4-letter type; the other two add flavour icons. All six help us seat a good mix, with something in common to start.",
         )}
       </p>
       <Legend lang={lang} />

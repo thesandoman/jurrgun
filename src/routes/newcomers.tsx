@@ -153,7 +153,7 @@ async function landing(c: Ctx, audience: Audience) {
         <Tile href="/quiz" tone="deep">
           <span class="ico" aria-hidden="true">🧩</span>
           <h3>{t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}</h3>
-          <small>{t("18 ข้อ ราว 3 นาที ช่วยจัดโต๊ะให้เข้ากับคุณ", "18 taps, about 3 minutes. It seats you at the right table.")}</small>
+          <small>{t("16 ข้อ ราว 3 นาที ช่วยจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก", "16 quick questions, about 3 minutes. It helps us seat a good mix, with something in common to start.")}</small>
         </Tile>
       </Bento>
 

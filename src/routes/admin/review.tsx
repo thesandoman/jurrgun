@@ -55,9 +55,9 @@ adminReview.get("/", async (c) => {
     <>
       <h1>{t("คำขอเป็นเจ้าภาพโต๊ะ", "Table Host requests")}</h1>
       <p class="muted">
-        {t("เจ้าภาพโต๊ะจัดแฮงเอาต์ให้โต๊ะประจำของตัวเองได้ อนุมัติเมื่อมั่นใจว่าจะดูแลคนในโต๊ะได้ดี", "Table Hosts can run hangouts for their regular table. Approve people you trust to look after a group.")}
+        {t("เจ้าภาพโต๊ะจัดแฮงเอาต์ให้โต๊ะประจำของตัวเองได้ อนุมัติเมื่อมั่นใจว่าจะดูแลคนในโต๊ะได้ดี", "Table Hosts can run hangouts for their Regular Table. Approve people you trust to look after a group.")}
       </p>
-      {notice === "circle_approved" ? <Notice kind="ok">{t("อนุมัติแล้ว เปิดโต๊ะประจำให้แล้ว และจัดแฮงเอาต์ได้เลย", "Approved. Their regular table is open and they can host now.")}</Notice> : null}
+      {notice === "circle_approved" ? <Notice kind="ok">{t("อนุมัติแล้ว เปิดโต๊ะประจำให้แล้ว และจัดแฮงเอาต์ได้เลย", "Approved. Their Regular Table is open and they can host now.")}</Notice> : null}
       {notice === "circle_declined" ? <Notice kind="ok">{t("ปฏิเสธแล้ว และแจ้งสมาชิกแล้ว", "Declined, and the member has been told.")}</Notice> : null}
       {requests.length === 0 ? (
         <Empty>{t("ไม่มีคำขอรอตรวจ", "No requests waiting.")}</Empty>

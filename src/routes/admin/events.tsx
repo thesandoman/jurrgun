@@ -1311,7 +1311,7 @@ adminEvents.get(
           <Stat label={t("ยืนยัน / ที่นั่ง", "Confirmed / capacity")} value={`${confirmedCount} / ${e.capacity}`} />
           <Stat label={t("คาดว่าจะมา", "Expected")} value={confirmedCount} />
           <Stat label={t("เช็กอินแล้ว", "Checked in")} value={checkedCount} />
-          <Stat label={t("ไม่มาตามนัด", "No-shows")} value={ended ? noShows : "–"} hint={ended ? undefined : t("นับหลังจบงาน", "Counted after the end")} />
+          <Stat label={t("ไม่มาตามนัด", "No-shows")} value={ended ? noShows : t("ยังไม่มี", "Not yet")} hint={ended ? undefined : t("นับหลังจบงาน", "Counted after the end")} />
           <Stat label={t("คิวสำรอง", "Waitlist")} value={waitlistedCount} />
         </div>
 
@@ -1402,7 +1402,7 @@ adminEvents.get(
             {waitlistCount > waitRows.length ? (
               <p class="muted">{t(`แสดง ${waitRows.length} คนแรกจากทั้งหมด ${waitlistCount} คน`, `Showing the first ${waitRows.length} of ${waitlistCount}`)}</p>
             ) : null}
-            <small>{t("ตอนเสนอที่นั่ง ระบบจะใช้สิทธิ์ผู้อยู่อาศัยและกฎ strike มาจัดลำดับด้วย", "Offers apply resident priority and strike rules on top of this order")}</small>
+            <small>{t("ตอนเสนอที่นั่ง ระบบจะใช้สิทธิ์ผู้อยู่อาศัยและกฎใบเตือนมาจัดลำดับด้วย", "Offers apply resident priority and strike rules on top of this order")}</small>
           </>
         )}
         {e.status === "published" && !ended ? (
@@ -1577,7 +1577,7 @@ adminEvents.get(
             onsubmit={`return confirm(${JSON.stringify(
               ((n) =>
                 t(
-                  `บันทึก ${n} คนเป็นผู้ไม่มาตามนัด? แต่ละคนจะได้ 1 strike และได้รับแจ้ง (ยกเว้นให้ได้ภายหลัง)`,
+                  `บันทึก ${n} คนเป็นผู้ไม่มาตามนัด? แต่ละคนจะได้ใบเตือน 1 ใบ และได้รับแจ้ง (ยกเว้นให้ได้ภายหลัง)`,
                   `Record ${n} ${n === 1 ? "person" : "people"} as no-shows? Each gets 1 strike and a private notice (you can waive one later).`,
                 ))(noShowPending),
             )})`}
@@ -1585,7 +1585,7 @@ adminEvents.get(
             <p>
               <small>
                 {t(
-                  "คนที่ยืนยันแล้วแต่ไม่ได้เช็กอินจะได้ 1 strike (หมดอายุใน 90 วัน) และได้รับแจ้งเป็นการส่วนตัว ยกเว้นให้ได้ในตารางด้านบน",
+                  "คนที่ยืนยันแล้วแต่ไม่ได้เช็กอินจะได้ใบเตือน 1 ใบ (หมดอายุใน 90 วัน) และได้รับแจ้งเป็นการส่วนตัว ยกเว้นให้ได้ในตารางด้านบน",
                   "Confirmed attendees who never checked in get 1 strike (expires in 90 days) and a private notice. You can waive one in the table above.",
                 )}
               </small>
@@ -2121,7 +2121,7 @@ adminEvents.post(
     );
     if (missing.length) {
       const expiresAt = strikeExpiry(now);
-      const th = `คุณไม่ได้เช็กอินที่ "${e.title}" เลยได้ 1 strike (หมดอายุใน 90 วัน) ถ้ามีเหตุจำเป็น ติดต่อโฮสต์ได้`;
+      const th = `คุณไม่ได้เช็กอินที่ "${e.title}" เลยได้ใบเตือน 1 ใบ (หมดอายุใน 90 วัน) ถ้ามีเหตุจำเป็น ติดต่อโฮสต์ได้`;
       const en = `You didn't check in at "${e.titleEn ?? e.title}", so you got 1 strike (expires in 90 days). If something came up, contact the host.`;
       // One batch per WRITE_CHUNK people: their flag, strike and notice land
       // together, so a retry after a failure picks up exactly the rest.
@@ -2156,12 +2156,12 @@ adminEvents.post(
       .from(strikes)
       .where(and(eq(strikes.eventId, e.id), eq(strikes.accountId, accountId)))
       .limit(1);
-    if (!s) return refuse(c, e, t("ไม่พบ strike นี้", "Strike not found"), 404);
+    if (!s) return refuse(c, e, t("ไม่พบใบเตือนนี้", "Strike not found"), 404);
     if (s.waivedBy) return refuse(c, e, t("ยกเว้นไปแล้ว", "Already waived"), 409);
     await batch(c.env, [
       db.update(strikes).set({ waivedBy: me(c).id, waivedReason: reason }).where(eq(strikes.id, s.id)),
       audit(db, me(c).id, "strike.waive", { type: "strike", id: s.id }, { eventId: e.id, accountId, reason }),
-      notify(db, accountId, "strike_waived", `ยกเว้น strike จาก "${e.title}" ให้แล้ว`, `Your strike from "${e.titleEn ?? e.title}" was waived`, "/me/events"),
+      notify(db, accountId, "strike_waived", `ยกเว้นใบเตือนจาก "${e.title}" ให้แล้ว`, `Your strike from "${e.titleEn ?? e.title}" was waived`, "/me/events"),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=done`);
   }),

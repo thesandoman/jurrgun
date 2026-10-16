@@ -373,7 +373,7 @@ describe.skipIf(!HAS_DB)("Circle: group hangouts", () => {
     await req(`/host/${id}/circle`, { cookie: a.cookie, form: { go: "1" } });
     expect(await db().select().from(circleShares).where(eq(circleShares.eventId, id))).toHaveLength(1);
     const circle = await (await req("/connections?lang=en", { cookie: b.cookie })).text();
-    expect(circle).toContain("Group hangouts");
+    expect(circle).toContain("Plans from your people");
     expect(circle).toContain("Circle dinner");
     expect(circle).toContain(`/events/${id}?t=${token}`);
     expect(circle).toContain("Bangkok Buddy");

@@ -89,13 +89,13 @@ describe.skipIf(!HAS_DB)("regular tables", () => {
     expect(html).toContain("Khlong Toei");
     expect(html).not.toContain(nick(a));
     expect(html).not.toContain("Table chat");
-    expect(html).not.toContain("Join this regular table");
+    expect(html).not.toContain("Join this Regular Table");
     expect(html).not.toContain(table.joinToken);
     await join(table, b, "wrong-token");
     expect(await isMember(table, b)).toBe(false);
 
     // With the link: the join button, then the member view.
-    expect(await (await req(`/tables/${table.id}?t=${table.joinToken}`, { cookie: en(b) })).text()).toContain("Join this regular table");
+    expect(await (await req(`/tables/${table.id}?t=${table.joinToken}`, { cookie: en(b) })).text()).toContain("Join this Regular Table");
     await join(table, b);
     expect(await isMember(table, b)).toBe(true);
     const inside = await (await req(`/tables/${table.id}`, { cookie: en(b) })).text();
@@ -132,12 +132,12 @@ describe.skipIf(!HAS_DB)("regular tables", () => {
     await db().insert(events).values({ id, title: "Picnic", startsAt, endsAt: new Date(startsAt.getTime() + 3600_000), venueName: "Park", district: "khlong_toei", capacity: 8, status: "published", createdBy: host.id, hostAccountId: host.id });
     await db().insert(registrations).values({ id: newId(), eventId: id, accountId: guest.id, status: "confirmed", passToken: randomToken(16) });
     const page = await (await req(`/events/${id}`, { cookie: en(guest) })).text();
-    expect(page).toContain("Join this regular table");
+    expect(page).toContain("Join this Regular Table");
     expect(page).toContain(`/tables/${table.id}/join`);
     // No invite token needed: the hangout is the invitation.
     expect((await req(`/tables/${table.id}/join`, { cookie: guest.cookie, method: "POST", form: {} })).status).toBe(302);
     expect(await isMember(table, guest)).toBe(true);
-    expect(await (await req(`/events/${id}`, { cookie: en(guest) })).text()).toContain("Go to the regular table");
+    expect(await (await req(`/events/${id}`, { cookie: en(guest) })).text()).toContain("Go to the Regular Table");
     // Someone who wasn't there can't join that way.
     await req(`/tables/${table.id}/join`, { cookie: notThere.cookie, method: "POST", form: {} });
     expect(await isMember(table, notThere)).toBe(false);
@@ -157,8 +157,8 @@ describe.skipIf(!HAS_DB)("regular tables", () => {
     expect(await isMember(table, blockedByHost)).toBe(false);
     // Blocked with a member: can't join even with the link.
     const html = await (await req(`/tables/${table.id}?t=${table.joinToken}`, { cookie: en(blockedByMember) })).text();
-    expect(html).toContain("t join this regular table.");
-    expect(html).not.toContain("Join this regular table");
+    expect(html).toContain("t join this Regular Table.");
+    expect(html).not.toContain("Join this Regular Table");
     await join(table, blockedByMember);
     expect(await isMember(table, blockedByMember)).toBe(false);
     // A member who blocks the host afterwards is outside the table and its chat.

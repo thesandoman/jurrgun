@@ -444,7 +444,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
       {text ? <h3 class="quest-title">{L(lang, text)}</h3> : null}
       <p class="chips2">
         <span>📍 {place}</span>
-        {season ? <span>🏅 {t("เหรียญประจำฤดู", "Season badge")}</span> : picker ? <span>{picker.emoji} {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</span> : null}
+        {season ? <span>🏅 {t("แสตมป์ประจำฤดู", "Season stamp")}</span> : picker ? <span>{picker.emoji} {t(`สไตล์${L(lang, picker.name)}`, `${L(lang, picker.name)}'s pick`)}</span> : null}
         <span>{mineDone ? "✅" : "⬜"} {t("คุณ", "You")}</span>
         <span>{theirsDone ? "✅" : "⬜"} {props.buddyName}</span>
       </p>
@@ -577,7 +577,7 @@ function Passport(props: {
               ))}
             </p>
           ) : (
-            <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนให้ครบ เพื่อสะสมเหรียญประจำฤดู", "Finish monthly big quests to collect season badges.")}</p>
+            <p class="muted">🏅 {t("ทำเควสต์ใหญ่ประจำเดือนให้ครบ เพื่อสะสมแสตมป์ประจำฤดู", "Finish monthly big quests to collect season stamps.")}</p>
           )}
           <Stamps items={items} />
           {next.length ? <h3>🗺️ {t("อยากไปสำรวจ", "Next to explore")}</h3> : null}

@@ -34,8 +34,8 @@ export const HELPLINES: Helpline[] = [
 
 /** What Jurrgun is, in one or two sentences. Shown on top of /learn; reuse it anywhere. */
 export const ABOUT = t(
-  "Jurrgun คือแอปพบปะผู้คนในกรุงเทพฯ ที่ช่วยให้คุณมีเพื่อนใหม่และรู้สึกเป็นส่วนหนึ่งของเมือง ผ่านกิจกรรมกลุ่มเล็ก โต๊ะอาหาร และแฮงเอาต์ในสถานที่จริง แบบทดสอบสั้น ๆ จะบอก ‘ไทป์กรุงเทพฯ’ ของคุณ เพื่อจัดให้นั่งกับคนที่น่าจะคลิกกัน ส่วนเรื่องหัวใจเป็นทางเลือก และเกิดขึ้นเมื่อทั้งสองฝ่ายต้องการเท่านั้น",
-  "Jurrgun is a social meetup app for Bangkok that helps you make friends and feel at home in the city through small group meetups, shared tables and hangouts. A short quiz gives you your Bangkok Type so we can seat you with people you'll click with; romance is optional, and only when both people want it.",
+  "Jurrgun คือแอปพบปะผู้คนในกรุงเทพฯ ที่ช่วยให้คุณมีเพื่อนใหม่และรู้สึกเป็นส่วนหนึ่งของเมือง ผ่านกิจกรรมกลุ่มเล็กและโต๊ะอาหารในสถานที่จริง แบบทดสอบสั้น ๆ จะบอก ‘ไทป์กรุงเทพฯ’ ของคุณ ช่วยให้เราจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก ส่วนเรื่องหัวใจเป็นทางเลือก และเกิดขึ้นเมื่อทั้งสองฝ่ายต้องการเท่านั้น",
+  "Jurrgun is a social meetup app for Bangkok that helps you make friends and feel at home in the city through small group meetups and shared tables in real places. A short quiz gives you your Bangkok Type, which helps us seat a good mix, with something in common to start. Romance is optional, and only when both people want it.",
 );
 
 export type Block =
@@ -326,7 +326,7 @@ export const TOPICS: Topic[] = [
   {
     slug: "making-friends",
     icon: "👋",
-    title: t("หาเพื่อนใหม่และแฮงเอาต์เป็นกลุ่ม", "Making friends in Bangkok"),
+    title: t("หาเพื่อนใหม่ในกรุงเทพฯ", "Making friends in Bangkok"),
     summary: t("เริ่มจากกลุ่มเล็ก ไปตามนัด แล้วนัดกันต่อ มิตรภาพเกิดจากการเจอกันซ้ำ ๆ", "Start small, show up, follow up. Friendship grows from seeing people again."),
     sections: [
       {
@@ -797,7 +797,7 @@ export const FAQ: { q: Text; a: Text }[] = [
   },
   {
     q: t("ถ้าไปไม่ได้ต้องทำอย่างไร?", "What if I can't make it?"),
-    a: t("ยกเลิกในแอปล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนกิจกรรมเริ่มได้ฟรี ถ้ายกเลิกช้าหรือไม่มาตามนัด จะได้ 1 strike ซึ่งหมดอายุใน 90 วัน", "Cancel in the app at least 24 hours before, and it's free. Late cancellations or no-shows get a strike that expires after 90 days."),
+    a: t("ยกเลิกในแอปล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนกิจกรรมเริ่มได้ฟรี ถ้ายกเลิกช้าหรือไม่มาตามนัด จะได้ใบเตือน 1 ใบ ซึ่งหมดอายุใน 90 วัน", "Cancel in the app at least 24 hours before, and it's free. Late cancellations or no-shows get a strike that expires after 90 days."),
   },
   {
     q: t("ทีมงานเห็นข้อมูลอะไรของฉันบ้าง?", "What can the team see about me?"),

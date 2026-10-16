@@ -50,7 +50,7 @@ const ACCOUNTABLE: Tip[] = [
   ["🧑‍⚖️", "ทีมงานตรวจทุกรายงานด้วยตัวเอง แค่ถูกรายงานไม่ทำให้ใครโดนเชิญออก", "A person reviews every report. A report alone never removes anyone"],
   ["🚩", "คำเตือนที่ยืนยันแล้วนับเป็น 1 ธง ธงนับอยู่ 1 ปี", "An upheld warning is a flag. Flags count for a year"],
   ["⚖️", "จะโดนเชิญออกก็ต่อเมื่อทำผิดกฎชัดเจน หรือครบ 3 ธง", "Removal only for a clear rule break, or 3 flags"],
-  ["🎟️", "ไม่มาตามนัดนับเป็น strike จะพักสิทธิ์ลงทะเบียนชั่วคราว แต่ไม่ปิดบัญชี", "No-shows are strikes: they pause RSVPs, never close your account"],
+  ["🎟️", "ไม่มาตามนัดนับเป็นใบเตือน จะพักสิทธิ์ลงทะเบียนชั่วคราว แต่ไม่ปิดบัญชี", "No-shows are strikes: they pause RSVPs, never close your account"],
 ];
 
 function Tips(props: { tips: Tip[]; t: (th: string, en: string) => string }) {

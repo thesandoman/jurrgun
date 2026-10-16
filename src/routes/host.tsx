@@ -207,10 +207,10 @@ hostRoutes.get("/host", async (c) => {
       {c.req.query("notice") === "published" ? <Notice kind="ok">{t("เผยแพร่แล้ว!", "It's live!")}</Notice> : null}
       {c.req.query("notice") === "link_reset" ? <Notice kind="ok">{t("สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีก", "New private link made. The old one no longer works.")}</Notice> : null}
       {c.req.query("notice") === "circle_sent" ? <Notice kind="ok">{t("ส่งให้คนรู้จักของคุณแล้ว", "Sent to your people.")}</Notice> : null}
-      {c.req.query("notice") === "table_sent" ? <Notice kind="ok">{t("ส่งให้คนในโต๊ะประจำแล้ว", "Sent to your regular table.")}</Notice> : null}
+      {c.req.query("notice") === "table_sent" ? <Notice kind="ok">{t("ส่งให้คนในโต๊ะประจำแล้ว", "Sent to your Regular Table.")}</Notice> : null}
       {table ? (
         <p>
-          <a href={`/tables/${table.id}`}>👥 {t(`โต๊ะประจำของคุณ: ${table.name}`, `Your regular table: ${table.name}`)}</a>
+          <a href={`/tables/${table.id}`}>👥 {t(`โต๊ะประจำของคุณ: ${table.name}`, `Your Regular Table: ${table.name}`)}</a>
         </p>
       ) : null}
       <p>
@@ -228,7 +228,7 @@ hostRoutes.get("/host", async (c) => {
             <p class="muted" style="margin:4px 0">
               {fmtDate(e.startsAt, lang)} · {e.venueName} · {label(DISTRICTS, e.district, lang)}
               {e.visibility === "private" ? ` · 🔒 ${t("ส่วนตัว", "Private")}` : ""}
-              {e.regularTableId ? ` · 👥 ${t("โต๊ะประจำ", "Regular table")}` : ""}
+              {e.regularTableId ? ` · 👥 ${t("โต๊ะประจำ", "Regular Table")}` : ""}
             </p>
             {e.status === "rejected" && e.reviewNote ? (
               <Notice kind="warn">
@@ -258,7 +258,7 @@ hostRoutes.get("/host", async (c) => {
               ) : null}
               {table && e.regularTableId === table.id && e.status === "published" ? (
                 <form method="post" action={`/host/${e.id}/table`}>
-                  <Button kind="ghost">👥 {t("ส่งให้โต๊ะประจำ", "Send to my regular table")}</Button>
+                  <Button kind="ghost">👥 {t("ส่งให้โต๊ะประจำ", "Send to my Regular Table")}</Button>
                 </form>
               ) : null}
               {e.visibility === "private" && e.status === "published" ? (
@@ -344,7 +344,7 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
             label={t("ชวนใคร", "Who's it for")}
             name="audience"
             options={[
-              { value: "table", th: `โต๊ะประจำ "${props.table.name}": ส่งให้ทุกคนในโต๊ะ (เป็นกิจกรรมส่วนตัว)`, en: `Your regular table "${props.table.name}": everyone at the table gets it (private)` },
+              { value: "table", th: `โต๊ะประจำ "${props.table.name}": ส่งให้ทุกคนในโต๊ะ (เป็นกิจกรรมส่วนตัว)`, en: `Your Regular Table "${props.table.name}": everyone at the table gets it (private)` },
               { value: "none", th: "ไม่ใช่ของโต๊ะ: ใครเห็นตามที่ตั้งไว้ข้างบน", en: "Not for the table: as set above" },
             ]}
             value={props.audience ?? "none"}
@@ -596,7 +596,7 @@ hostRoutes.post("/host/:id/circle", async (c) => {
         .values(to.map((id) => ({ id: newId(), eventId: e.id, fromAccount: me, toAccount: id, createdAt: new Date() })))
         .onConflictDoNothing({ target: [circleShares.eventId, circleShares.toAccount] }),
       ...to.map((id) =>
-        notify(db, id, "circle_hangout", `${nick} ชวนคุณไปแฮงเอาต์ส่วนตัว: ${e.title}`, `${nick} invited you to a private hangout: ${title}`, `/events/${e.id}?t=${encodeURIComponent(e.privateToken!)}`),
+        notify(db, id, "circle_hangout", `${nick} ชวนคุณไปนัดส่วนตัว: ${e.title}`, `${nick} invited you to a private plan: ${title}`, `/events/${e.id}?t=${encodeURIComponent(e.privateToken!)}`),
       ),
       audit(db, me, "event.circle_share", { type: "event", id: e.id }),
     ]);

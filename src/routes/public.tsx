@@ -106,12 +106,13 @@ publicRoutes.get("/intro", (c) => {
   const { t, user, lang } = view(c);
   setCookie(c, INTRO_COOKIE, "seen", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
   const done = user ? (user.profile?.onboardedAt ? "/events" : "/onboarding") : "/signup";
-  const slides: { art: string; tone: string; title: string; body: string; foot?: string }[] = [
+  const slides: { art: string; tone: string; title: string; body: string; note?: string; foot?: string }[] = [
     {
       art: "mark",
       tone: "s1",
       title: t("เจอกัน 👋", "Jurrgun 👋"),
-      body: t("ที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ แล้วเจอกันนะ!", "“Jurrgun” (เจอกัน, say “jer-gun”) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
+      body: t(BRAND.tagline.th, BRAND.tagline.en),
+      note: t("“เจอกัน” คือที่ที่คนกรุงเทพฯ ได้เจอเพื่อนใหม่กันจริง ๆ", "“Jurrgun” (เจอกัน, say “jer-gun”) means “see you later” in Thai. It's where people in Bangkok actually meet new friends."),
       foot: t(BRAND.bma.th, BRAND.bma.en),
     },
     {
@@ -130,7 +131,7 @@ publicRoutes.get("/intro", (c) => {
       art: "🧩",
       tone: "s4",
       title: t("คุณเป็นไทป์ไหน?", "What's your Bangkok Type?"),
-      body: t("แบบทดสอบสั้น ๆ 3 นาที ตัวละคร 16 แบบ ไม่มีเรื่องการเมือง ช่วยหาโต๊ะที่เข้ากับคุณ", "A 3-minute quiz, 16 characters, nothing political. It helps seat you at the right table."),
+      body: t("16 ข้อ ราว 3 นาที มีตัวละคร 16 แบบ ไม่มีเรื่องการเมือง ช่วยจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก", "16 quick questions, about 3 minutes. 16 characters, nothing political. It helps us seat a good mix, with something in common to start."),
     },
     {
       art: "🌈",
@@ -154,6 +155,7 @@ publicRoutes.get("/intro", (c) => {
             </div>
             {i === 0 ? <h1>{sl.title}</h1> : <h2>{sl.title}</h2>}
             <p>{sl.body}</p>
+            {sl.note ? <p class="muted">{sl.note}</p> : null}
             {sl.foot ? <p class="intro-foot">🏛️ {sl.foot}</p> : null}
             {i === slides.length - 1 ? (
               <div class="intro-cta">
@@ -233,7 +235,7 @@ publicRoutes.get("/privacy", (c) => {
 
       {H("เราใช้ข้อมูลเพื่ออะไร", "Why we use it")}
       <ul>
-        {Li("ให้บริการ: จัดโต๊ะ บัดดี้ โต๊ะประจำ แชต และการเช็กอิน (ตามสัญญาการใช้บริการ)", "To run the service: seating tables, buddies, regular tables, chat and check-in (to provide the service you signed up for).")}
+        {Li("ให้บริการ: จัดโต๊ะ บัดดี้ โต๊ะประจำ แชต และการเช็กอิน (ตามสัญญาการใช้บริการ)", "To run the service: seating tables, buddies, Regular Tables, chat and check-in (to provide the service you signed up for).")}
         {Li("ความปลอดภัย: ตรวจรายงาน ป้องกันการคุกคามและการหลอกลวง (ประโยชน์โดยชอบด้วยกฎหมาย)", "Safety: reviewing reports, preventing harassment and scams (legitimate interest).")}
         {Li("การแนะนำและการวิจัยเมือง: ใช้เมื่อคุณยินยอมเท่านั้น และถอนได้ทุกเมื่อ", "Suggestions and city research: only with your consent, which you can withdraw at any time.")}
       </ul>

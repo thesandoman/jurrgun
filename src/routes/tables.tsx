@@ -63,19 +63,19 @@ tableRoutes.get("/tables", async (c) => {
       : [];
   return page(
     c,
-    { title: t("โต๊ะประจำของฉัน", "My regular tables"), tab: "connections" },
+    { title: t("โต๊ะประจำของฉัน", "My Regular Tables"), tab: "connections" },
     <>
       <p>
         <a href="/connections">← {t("คนรู้จัก", "My people")}</a>
       </p>
-      <h1>👥 {t("โต๊ะประจำของฉัน", "My regular tables")}</h1>
+      <h1>👥 {t("โต๊ะประจำของฉัน", "My Regular Tables")}</h1>
       <p class="muted">{t("กลุ่มเล็ก ๆ ที่นัดเจอกันบ่อย ๆ มีเจ้าภาพโต๊ะคอยชวน", "Small groups that keep meeting, with a Table Host who brings everyone together.")}</p>
       {c.req.query("notice") === "left" ? <Notice kind="ok">{t("ออกจากโต๊ะแล้ว อยากกลับมาเมื่อไหร่ ขอลิงก์ชวนจากเจ้าภาพได้เลย", "You've left the table. Ask the host for the invite link if you'd like to come back.")}</Notice> : null}
       {isTableHost && !hosting ? (
         <Card>
-          <h2 style="margin-top:0">{t("เปิดโต๊ะประจำของคุณ", "Open your regular table")}</h2>
+          <h2 style="margin-top:0">{t("เปิดโต๊ะประจำของคุณ", "Open your Regular Table")}</h2>
           <form method="post" action="/tables/start">
-            <Field label={t("ชื่อโต๊ะประจำ", "Regular table name")} name="name" value={lastApproved?.name ?? ""} maxlength={NAME_MAX} required />
+            <Field label={t("ชื่อโต๊ะประจำ", "Regular Table name")} name="name" value={lastApproved?.name ?? ""} maxlength={NAME_MAX} required />
             <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={user.profile?.district} lang={lang} required />
             <Button>{t("เปิดโต๊ะ", "Open the table")}</Button>
           </form>
@@ -83,8 +83,8 @@ tableRoutes.get("/tables", async (c) => {
       ) : null}
       {tables.length === 0 ? (
         <Card>
-          <Empty>{t("ยังไม่มีโต๊ะประจำ ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง หรือขอลิงก์ชวนจากเขาได้เลย", "No regular tables yet. Go to a hangout with a Table Host, or ask one for their invite link.")}</Empty>
-          {isTableHost ? null : <LinkButton href="/circles/lead" kind="ghost">👑 {t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table")}</LinkButton>}
+          <Empty>{t("ยังไม่มีโต๊ะประจำ ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง หรือขอลิงก์ชวนจากเขาได้เลย", "No Regular Tables yet. Go to a hangout with a Table Host, or ask one for their invite link.")}</Empty>
+          {isTableHost ? null : <LinkButton href="/circles/lead" kind="ghost">👑 {t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table")}</LinkButton>}
         </Card>
       ) : (
         tables.map((x) => (
@@ -152,10 +152,10 @@ function notFound(c: C) {
   const { t } = view(c);
   return page(
     c,
-    { title: t("ไม่พบโต๊ะประจำ", "Regular table not found"), tab: "connections", status: 404 },
+    { title: t("ไม่พบโต๊ะประจำ", "Regular Table not found"), tab: "connections", status: 404 },
     <>
-      <h1>{t("ไม่พบโต๊ะประจำนี้", "We couldn't find that regular table")}</h1>
-      <LinkButton href="/tables" kind="ghost">← {t("โต๊ะประจำของฉัน", "My regular tables")}</LinkButton>
+      <h1>{t("ไม่พบโต๊ะประจำนี้", "We couldn't find that Regular Table")}</h1>
+      <LinkButton href="/tables" kind="ghost">← {t("โต๊ะประจำของฉัน", "My Regular Tables")}</LinkButton>
     </>,
   );
 }
@@ -171,7 +171,7 @@ tableRoutes.get("/tables/:id", async (c) => {
   const head = (
     <>
       <p>
-        <a href="/tables">← {t("โต๊ะประจำของฉัน", "My regular tables")}</a>
+        <a href="/tables">← {t("โต๊ะประจำของฉัน", "My Regular Tables")}</a>
       </p>
       <p class="eyebrow">👥 {t("โต๊ะประจำ", "Regular Table")}</p>
       <h1>{table.name}</h1>
@@ -196,7 +196,7 @@ tableRoutes.get("/tables/:id", async (c) => {
               <input type="hidden" name="t" value={token} />
               <h2 style="margin-top:0">{t("มานั่งโต๊ะเดียวกันไหม", "Pull up a chair?")}</h2>
               <p class="muted">{t("คนในโต๊ะจะได้ชวนกันไปแฮงเอาต์ และคุยกันในแชตของโต๊ะ ออกได้ทุกเมื่อ", "You'll get the table's hangouts and its group chat. Leave any time.")}</p>
-              <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this regular table")}</Button>
+              <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this Regular Table")}</Button>
             </form>
           ) : (
             <p class="muted" style="margin:0">{t(JOIN_TEXT[check.reason].th, JOIN_TEXT[check.reason].en)}</p>
@@ -266,7 +266,7 @@ tableRoutes.get("/tables/:id", async (c) => {
         {[`👑 ${hostName}`, ...seen.map((id) => nameOf.get(id) ?? "")].filter(Boolean).join(" · ")}
         {st.isHost ? null : ` · ${t("คุณ", "you")}`}
       </p>
-      <p class="muted">{t(`โต๊ะหนึ่งนั่งได้ไม่เกิน ${MAX_MEMBERS} คน`, `Up to ${MAX_MEMBERS} people per regular table.`)}</p>
+      <p class="muted">{t(`โต๊ะหนึ่งนั่งได้ไม่เกิน ${MAX_MEMBERS} คน`, `Up to ${MAX_MEMBERS} people per Regular Table.`)}</p>
 
       {st.isHost ? (
         <>
@@ -283,7 +283,7 @@ tableRoutes.get("/tables/:id", async (c) => {
           <Card>
             <h2 style="margin-top:0">{t("แก้ไขโต๊ะ", "Edit the table")}</h2>
             <form method="post" action={`/tables/${table.id}/edit`}>
-              <Field label={t("ชื่อโต๊ะประจำ", "Regular table name")} name="name" value={table.name} maxlength={NAME_MAX} required />
+              <Field label={t("ชื่อโต๊ะประจำ", "Regular Table name")} name="name" value={table.name} maxlength={NAME_MAX} required />
               <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={table.district} lang={lang} required />
               <TextArea label={t("เล่าสั้น ๆ ว่าโต๊ะนี้ทำอะไรกัน", "A line about your table")} name="description" value={table.description} rows={2} maxlength={DESCRIPTION_MAX} />
               {hostProfile && canSetWomenOnly(hostProfile) ? (
@@ -510,13 +510,13 @@ tableRoutes.post("/tables/:id/conflicts/:cid", async (c) => {
       reporter: me,
       targetAccount: r.aAccount,
       reason: "other",
-      details: `Regular table "${table.name}": the Table Host asks moderators to look at two members who aren't comfortable with each other (@${u(r.aAccount)} and @${u(r.bAccount)}). No reason or direction is recorded.`,
+      details: `Regular Table "${table.name}": the Table Host asks moderators to look at two members who aren't comfortable with each other (@${u(r.aAccount)} and @${u(r.bAccount)}). No reason or direction is recorded.`,
       severity: "standard",
     }),
     close("reported"),
     audit(db, me, "regular_table.conflict_report", target, { report: reportId }),
     ...(staff.length
-      ? [db.insert(notifications).values(staff.map((s) => ({ id: newId(), accountId: s.id, kind: "report", titleTh: "มีรายงานจากโต๊ะประจำรอตรวจสอบ", titleEn: "Regular table report to review", link: "/admin/moderation" })))]
+      ? [db.insert(notifications).values(staff.map((s) => ({ id: newId(), accountId: s.id, kind: "report", titleTh: "มีรายงานจากโต๊ะประจำรอตรวจสอบ", titleEn: "Regular Table report to review", link: "/admin/moderation" })))]
       : []),
   ]);
   return c.redirect(`${back}?notice=reported`);

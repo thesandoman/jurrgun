@@ -362,9 +362,9 @@ describe.skipIf(!HAS_DB)("events", () => {
 
     // The friends-only member never sees spark wording, even from a groupmate.
     const html = await (await req(`/events/${ev}/live`, { cookie: `${friendsOnly.cookie}; lang=en` })).text();
-    expect(html).not.toContain("Open to a spark");
+    expect(html).not.toContain("💘 Open to something more");
     const html2 = await (await req(`/events/${ev}/live`, { cookie: `${single.cookie}; lang=en` })).text();
-    expect(html2).toContain("Open to a spark");
+    expect(html2).toContain("💘 Open to something more");
 
     // Cleared.
     await req(`/events/${ev}/signal`, { cookie: single.cookie, form: { signal: "" } });
@@ -470,7 +470,7 @@ describe.skipIf(!HAS_DB)("events", () => {
   it("shows the Bangkok Type card until I take the quiz or hide it", async () => {
     const m = await createMember();
     const html = async (cookie = m.cookie) => (await req("/events", { cookie: `${cookie}; lang=en` })).text();
-    expect(await html()).toContain("Find your Bangkok Type (3 min)");
+    expect(await html()).toContain("Find your Bangkok Type (16 quick questions, about 3 minutes)");
     const hide = await req("/events/quiz-hint/dismiss", { cookie: m.cookie, method: "POST" });
     expect(hide.status).toBe(302);
     expect(hide.headers.get("set-cookie") ?? "").toContain("bkk_quiz_hint=hide");

@@ -11,7 +11,7 @@ export const FAIR_PROCESS: [string, string][] = [
     "You're only suspended or banned for clearly breaking a rule in our Terms or this code, or for reaching 3 flags. The third flag means a 30-day suspension.",
   ],
   [
-    "การไม่มาตามนัดหรือยกเลิกช้า (น้อยกว่า 24 ชั่วโมงก่อนเริ่ม) นับเป็น strike ของกิจกรรม ซึ่งจะพักสิทธิ์ลงทะเบียนชั่วคราว แต่จะไม่ทำให้บัญชีของคุณถูกปิด",
+    "การไม่มาตามนัดหรือยกเลิกช้า (น้อยกว่า 24 ชั่วโมงก่อนเริ่ม) นับเป็นใบเตือน ซึ่งจะพักสิทธิ์ลงทะเบียนชั่วคราว แต่จะไม่ทำให้บัญชีของคุณถูกปิด",
     "No-shows and late cancels (under 24 hours) are event strikes. They pause RSVPs for a while, but never remove your account.",
   ],
   ["เราจะแจ้งคุณทุกครั้งที่คุณได้รับคำเตือนหรือถูกระงับ", "We always tell you when you get a warning or a suspension."],

@@ -247,7 +247,7 @@ chatRoutes.get("/chat", async (c) => {
       <h1>💬 {t("แชต", "Chats")}</h1>
       <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์ และไม่บอกว่าอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
       {rows.length === 0 ? (
-        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a regular table or a private hangout.")}</Empty>
+        <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a Regular Table or a private hangout.")}</Empty>
       ) : (
         <ul class="chat-list">
           {rows.map(({ th, last }) => {

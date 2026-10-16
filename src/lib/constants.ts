@@ -187,7 +187,7 @@ export const SIGNALS: Opt[] = [
   o("small_group", "ขอกลุ่มเล็ก ๆ", "Small group please"),
   o("talk_about", "คุยกับฉันเรื่อง…", "Talk to me about…"),
   o("came_with_friend", "มากับเพื่อน", "I came with a friend"),
-  o("open_to_spark", "เปิดใจให้ความรู้สึกดี ๆ", "Open to a spark"),
+  o("open_to_spark", "💘 เปิดใจมากกว่าเพื่อน", "💘 Open to something more"),
 ];
 
 export const CHOICE_LABELS: Opt[] = [

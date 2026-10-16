@@ -223,7 +223,7 @@ describe.skipIf(!HAS_DB)("Bangkok Vibe quiz", () => {
     expect(result).toContain('action="/quiz/visibility"');
     expect(result).toContain("How sure we are");
     expect(result).toContain("Clicks with");
-    expect(result).toContain("Hangouts and areas");
+    expect(result).toContain("Places and areas");
 
     // Retake: the same questions in the same order, so a change in the result is a real change.
     const again = await (await req("/quiz", { cookie: m.cookie })).text();

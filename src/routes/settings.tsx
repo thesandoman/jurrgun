@@ -225,7 +225,7 @@ settingsRoutes.get("/settings", async (c) => {
         <b class="big" aria-hidden="true">🧭</b>
         <span>
           <strong>{t("หาไทป์กรุงเทพฯ ของคุณ", "Find your Bangkok Type")}</strong>
-          <small class="muted">{t("แตะเลือก 18 ข้อ ราว 3 นาที", "18 quick taps, about 3 minutes")}</small>
+          <small class="muted">{t("16 ข้อ ราว 3 นาที", "16 quick questions, about 3 minutes")}</small>
         </span>
       </a>
     );
@@ -316,7 +316,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("จัดกิจกรรมของคุณ ฟรีหรือจ่ายที่สถานที่", "Your events, free or pay at the venue"), tint: "lime" as const, group: gOut }
-          : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table"), hint: t("ขอเป็นเจ้าภาพโต๊ะเพื่อจัดแฮงเอาต์", "Ask to become a Table Host and run hangouts"), tint: "lime" as const, group: gOut },
+          : { href: "/circles/lead", emoji: "👑", title: t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table"), hint: t("ขอเป็นเจ้าภาพโต๊ะเพื่อจัดแฮงเอาต์", "Ask to become a Table Host and run hangouts"), tint: "lime" as const, group: gOut },
         ...(dates
           ? [{ href: "/settings/dating", emoji: "💘", title: t("สิ่งที่มองหาในการเดต", "Dating preferences"), hint: t("เป้าหมาย จังหวะ เดตแรก (ส่วนตัว)", "Goal, pace, first dates (private)"), tint: "teal" as const, group: gYou }]
           : []),

@@ -59,7 +59,7 @@ describe.skipIf(!HAS_DB)("regular table conflicts", () => {
     const notes = await db().select().from(notifications).where(and(eq(notifications.accountId, host.id), eq(notifications.kind, "table_conflict")));
     expect(notes).toHaveLength(1);
     expect(notes[0].titleTh).toContain("สองคนในโต๊ะประจำของคุณมีเรื่องไม่สบายใจกัน");
-    expect(notes[0].titleEn).toContain("Two people at your regular table aren't comfortable with each other");
+    expect(notes[0].titleEn).toContain("Two people at your Regular Table aren't comfortable with each other");
     for (const text of [notes[0].titleTh, notes[0].titleEn]) {
       expect(text).toContain(nickA);
       expect(text).toContain(nickB);

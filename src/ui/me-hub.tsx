@@ -86,7 +86,7 @@ export function MeHub(props: {
           <div class="me-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <i style={`width:${Math.max(pct, 6)}%`} />
           </div>
-          <p class="muted">{t("ยิ่งโปรไฟล์ครบ เรายิ่งจัดโต๊ะให้เข้ากับคุณได้ดี", "A fuller profile helps us seat you with the right people.")}</p>
+          <p class="muted">{t("ยิ่งโปรไฟล์ครบ เรายิ่งจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรกได้ดี", "A fuller profile helps us seat a good mix, with something in common to start.")}</p>
           <div class="me-todo">
             {todo.map((s) => (
               <a href={s.href}>+ {s.label}</a>

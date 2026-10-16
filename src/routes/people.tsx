@@ -701,11 +701,11 @@ function CircleTop(props: { v: View; extras: CircleExtras }) {
           : t("หาบัดดี้", "Get a buddy")}
       </a>
       {host && hostsTable ? (
-        <a href="/host/new?table=1">＋ {t("ชวนโต๊ะประจำไปแฮงเอาต์", "Plan a hangout for your regular table")}</a>
+        <a href="/host/new?table=1">＋ {t("ชวนโต๊ะประจำไปแฮงเอาต์", "Plan a hangout for your Regular Table")}</a>
       ) : host ? (
-        <a href="/host/new?visibility=private">＋ {t("ชวนคนรู้จักไปแฮงเอาต์", "Host a hangout for your people")}</a>
+        <a href="/host/new?visibility=private">＋ {t("ชวนคนรู้จักไปด้วยกัน", "Plan something with your people")}</a>
       ) : (
-        <a href="/circles/lead">👑 {t("เป็นเจ้าภาพโต๊ะประจำ", "Host a regular table")}</a>
+        <a href="/circles/lead">👑 {t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table")}</a>
       )}
       <a href="/events">🗓️ {t("กิจกรรมกลุ่ม", "Browse group events")}</a>
     </nav>
@@ -722,17 +722,17 @@ function CircleGroups(props: { v: View; extras: CircleExtras }) {
       <Card class="circle-none">
         <p class="muted">
           {t(
-            "ยังไม่มีโต๊ะประจำหรือแฮงเอาต์กลุ่ม ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง แล้วเข้าร่วมโต๊ะได้จากหน้ากิจกรรมนั้น",
-            "No regular tables or group hangouts yet. Go to a hangout with a Table Host, then join their table from that event's page.",
+            "ยังไม่มีโต๊ะประจำหรือนัดจากคนรู้จัก ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง แล้วเข้าร่วมโต๊ะได้จากหน้ากิจกรรมนั้น",
+            "No Regular Tables or plans from your people yet. Go to a hangout with a Table Host, then join their table from that event's page.",
           )}
         </p>
-        <a href="/tables">🪑 {t("ดูโต๊ะประจำ", "See regular tables")}</a>
+        <a href="/tables">🪑 {t("ดูโต๊ะประจำ", "See Regular Tables")}</a>
       </Card>
     );
   return (
     <>
       <h2 class="spread">
-        <span>🪑 {t("โต๊ะประจำของฉัน", "My regular tables")}</span>
+        <span>🪑 {t("โต๊ะประจำของฉัน", "My Regular Tables")}</span>
         <a href="/tables" class="muted">{t("ดูทั้งหมด", "See all")}</a>
       </h2>
       {tables.length ? (
@@ -748,9 +748,9 @@ function CircleGroups(props: { v: View; extras: CircleExtras }) {
           ))}
         </div>
       ) : (
-        <p class="muted">{t("ยังไม่ได้นั่งโต๊ะประจำไหน ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง แล้วเข้าร่วมได้จากหน้ากิจกรรมนั้น", "No regular tables yet. Go to a hangout with a Table Host, then join from that event's page.")}</p>
+        <p class="muted">{t("ยังไม่ได้นั่งโต๊ะประจำไหน ไปแฮงเอาต์กับเจ้าภาพโต๊ะสักครั้ง แล้วเข้าร่วมได้จากหน้ากิจกรรมนั้น", "No Regular Tables yet. Go to a hangout with a Table Host, then join from that event's page.")}</p>
       )}
-      <h2>👥 {t("แฮงเอาต์กลุ่ม", "Group hangouts")}</h2>
+      <h2>👥 {t("นัดจากคนรู้จัก", "Plans from your people")}</h2>
       {hangouts.length ? (
         <div class="rail2">
           {hangouts.map((h) => (
@@ -766,7 +766,7 @@ function CircleGroups(props: { v: View; extras: CircleExtras }) {
           ))}
         </div>
       ) : (
-        <p class="muted">{t("ยังไม่มีแฮงเอาต์จากคนรู้จักของคุณ", "No hangouts from your people yet.")}</p>
+        <p class="muted">{t("ยังไม่มีนัดจากคนรู้จักของคุณ", "No plans from your people yet.")}</p>
       )}
       {ideas.length ? (
         <>
@@ -806,7 +806,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         }}
       />
       <p class="muted">
-        {t("คนที่เลือกกันและกัน บัดดี้ และแฮงเอาต์กลุ่ม", "People you chose each other with, your buddy, and group hangouts.")}
+        {t("คนที่เลือกกันและกัน บัดดี้ และนัดจากคนรู้จัก", "People you chose each other with, your buddy, and plans from your people.")}
       </p>
       {props.extras ? <CircleTop v={props.v} extras={props.extras} /> : null}
       {props.extras ? (

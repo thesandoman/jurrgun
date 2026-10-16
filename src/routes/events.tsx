@@ -707,7 +707,7 @@ function quizHintCard(t: T) {
     <Card class="hint quiz-hint">
       <div class="spread">
         <a href="/quiz">
-          <strong>{t("🧭 มาหาไทป์กรุงเทพฯ ของคุณกัน (3 นาที)", "🧭 Find your Bangkok Type (3 min)")}</strong>
+          <strong>{t("🧭 มาหาไทป์กรุงเทพฯ ของคุณกัน (16 ข้อ ราว 3 นาที)", "🧭 Find your Bangkok Type (16 quick questions, about 3 minutes)")}</strong>
         </a>
         <form method="post" action="/events/quiz-hint/dismiss">
           <button type="submit" class="btn ghost" aria-label={t("ซ่อนการ์ดนี้", "Hide this card")}>
@@ -715,7 +715,7 @@ function quizHintCard(t: T) {
           </button>
         </form>
       </div>
-      <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยหาโต๊ะที่เข้ากับคุณ ไม่มีเรื่องการเมือง และเป็นความลับจนกว่าคุณจะเลือกให้คนอื่นเห็น", "A short lifestyle quiz that helps seat you at the right table. Nothing political, and private unless you choose to show it.")}</p>
+      <p class="muted">{t("แบบทดสอบไลฟ์สไตล์สั้น ๆ ช่วยจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก ไม่มีเรื่องการเมือง และเป็นความลับจนกว่าคุณจะเลือกให้คนอื่นเห็น", "A short lifestyle quiz. It helps us seat a good mix, with something in common to start. Nothing political, and private unless you choose to show it.")}</p>
     </Card>
   );
 }
@@ -801,7 +801,7 @@ function tickerItems(p: { v: View; list: Event[]; taken: Map<string, number>; we
   const quest = p.list.find((e) => e.tags.includes("city_quest"));
   if (quest) out.push({ icon: "🧭", text: t(`ซิตี้เควสต์: ${title(quest, lang)}`, `City Quest: ${title(quest, lang)}`), href: `/events/${quest.id}` });
   if (p.newcomer) out.push({ icon: "👋", text: t("มาใหม่ในกรุงเทพฯ? ลองกิจกรรมสำหรับคนมาใหม่", "New to Bangkok? Try a newcomers meet-up"), href: "/events?tag=newcomers" });
-  if (!p.hasVibe) out.push({ icon: "🧩", text: t("มาหาไทป์กรุงเทพฯ ของคุณกัน (3 นาที)", "Find your Bangkok Type (3 min)"), href: "/quiz" });
+  if (!p.hasVibe) out.push({ icon: "🧩", text: t("มาหาไทป์กรุงเทพฯ ของคุณกัน (16 ข้อ ราว 3 นาที)", "Find your Bangkok Type (16 quick questions, about 3 minutes)"), href: "/quiz" });
   out.push({ icon: "🤝", text: t("ความยินยอม: “ได้” ที่แท้จริงต้องชัดเจน เต็มใจ และเปลี่ยนใจได้เสมอ", "Consent: a real yes is clear, free and can change"), href: "/learn/consent" });
   out.push({ icon: "🛡️", text: t("ฉุกเฉินโทร 191 · เจ็บป่วย 1669", "Emergency 191 · medical 1669"), href: "/learn/date-responsibly" });
   out.push({ icon: "⚠️", text: t("เวอร์ชันทดลอง: อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data") });
@@ -1040,15 +1040,15 @@ function TableBox(props: { box: TableBoxData; t: T }) {
   if (!box) return null;
   return (
     <Card class="hint">
-      <h2>👥 {t(`โต๊ะประจำ "${box.name}"`, `Regular table "${box.name}"`)}</h2>
+      <h2>👥 {t(`โต๊ะประจำ "${box.name}"`, `Regular Table "${box.name}"`)}</h2>
       {box.seated ? (
         <LinkButton href={`/tables/${box.id}`} kind="ghost">
-          {t("ไปที่โต๊ะประจำ", "Go to the regular table")}
+          {t("ไปที่โต๊ะประจำ", "Go to the Regular Table")}
         </LinkButton>
       ) : (
         <form method="post" action={`/tables/${box.id}/join`}>
-          <p class="muted">{t("สนุกไหม อยากเจอกันอีกก็นั่งโต๊ะนี้ประจำเลย เจ้าภาพจะชวนไปแฮงเอาต์ครั้งต่อไป", "Had a good time? Join the regular table and the host will invite you to the next hangout.")}</p>
-          <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this regular table")}</Button>
+          <p class="muted">{t("สนุกไหม อยากเจอกันอีกก็นั่งโต๊ะนี้ประจำเลย เจ้าภาพจะชวนไปแฮงเอาต์ครั้งต่อไป", "Had a good time? Join the Regular Table and the host will invite you to the next hangout.")}</p>
+          <Button>{t("เข้าร่วมโต๊ะประจำ", "Join this Regular Table")}</Button>
         </form>
       )}
     </Card>
@@ -1118,7 +1118,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review: members can't see this yet")}</Notice> : null}
       {event.status === "rejected" ? <Notice kind="warn">{t("ทีมงานส่งกลับให้แก้ไข", "Sent back by the team for changes")}{event.reviewNote ? `: ${event.reviewNote}` : ""}</Notice> : null}
       {event.visibility === "private" && event.regularTableId ? (
-        <Notice kind="info">🔒 {t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A regular table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
+        <Notice kind="info">🔒 {t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A Regular Table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
       ) : event.visibility === "private" ? (
         <Notice kind="info">🔒 {t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
       ) : null}
@@ -1405,7 +1405,7 @@ function RegistrationBox(props: {
             <form method="post" action={`${base}/cancel`}>
               <p class="muted">
                 {isLateCancel(event.startsAt)
-                  ? t("เหลือไม่ถึง 24 ชม. ถ้ายกเลิกตอนนี้จะนับเป็น 1 strike", "Less than 24h to go, so cancelling now counts as 1 strike.")
+                  ? t("เหลือไม่ถึง 24 ชม. ถ้ายกเลิกตอนนี้จะนับเป็นใบเตือน 1 ใบ", "Less than 24h to go, so cancelling now counts as 1 strike.")
                   : t("ยกเลิกได้ฟรีจนถึง 24 ชม. ก่อนเริ่มงาน", "Free to cancel until 24h before the start.")}
               </p>
               <Button kind="danger">{t("ยกเลิกการเข้าร่วม", "Cancel my spot")}</Button>
@@ -1458,7 +1458,7 @@ function RegistrationBox(props: {
       {status === "cancelled" || status === "late_cancelled" ? <p class="muted">{t("คุณยกเลิกไปแล้ว ลงทะเบียนใหม่ได้ถ้ายังมีที่", "You cancelled. You can sign up again if there's room.")}</p> : null}
       {props.standing.blockedUntil ? (
         <Notice kind="warn">
-          {t(`คุณมี ${props.standing.active} strike จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `You have ${props.standing.active} strikes, so you can RSVP again after ${fmtDate(props.standing.blockedUntil, lang)}`)}
+          {t(`คุณมีใบเตือน ${props.standing.active} ใบ จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `You have ${props.standing.active} strikes, so you can RSVP again after ${fmtDate(props.standing.blockedUntil, lang)}`)}
         </Notice>
       ) : null}
       <form method="post" action={`${base}/rsvp`} id="rsvp">
@@ -1542,7 +1542,7 @@ export async function rsvpGate(
   const standing = strikeStanding(await myStrikes(db, user.account.id), now);
   if (standing.blockedUntil) {
     return no(
-      `คุณมี ${standing.active} strike จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(standing.blockedUntil, "th")}`,
+      `คุณมีใบเตือน ${standing.active} ใบ จึงลงทะเบียนได้อีกครั้งหลัง ${fmtDate(standing.blockedUntil, "th")}`,
       `You have ${standing.active} strikes, so you can RSVP again after ${fmtDate(standing.blockedUntil, "en")}.`,
       403,
     );
@@ -1565,7 +1565,7 @@ export async function rsvpGate(
       .limit(standing.maxUpcoming);
     if (held.length >= standing.maxUpcoming) {
       return no(
-        "คุณมี 2 strike จึงจองล่วงหน้าได้ครั้งละ 1 กิจกรรม ยกเลิกอันเดิมหรือรอให้จบก่อน",
+        "คุณมีใบเตือน 2 ใบ จึงจองล่วงหน้าได้ครั้งละ 1 กิจกรรม ยกเลิกอันเดิมหรือรอให้จบก่อน",
         "With 2 strikes you can hold only 1 upcoming RSVP at a time. Cancel it or wait until it's over.",
         403,
       );
@@ -1943,9 +1943,9 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       <h1>{t("กิจกรรมของฉัน", "My events")}</h1>
       {standing.active > 0 ? (
         <Card class="strikes">
-          <h2>{t("สถานะ strike ของคุณ (เห็นเฉพาะคุณ)", "Your strikes (only you can see this)")}</h2>
+          <h2>{t("ใบเตือนของคุณ (เห็นเฉพาะคุณ)", "Your strikes (only you can see this)")}</h2>
           <p>
-            {t(`strike ที่ยังมีผล: ${standing.active}`, `Active strikes: ${standing.active}`)}
+            {t(`ใบเตือนที่ยังมีผล: ${standing.active}`, `Active strikes: ${standing.active}`)}
           </p>
           <ul>
             {activeStrikes.map((s) => (
@@ -1964,9 +1964,9 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
               {t("ตอนนี้จองล่วงหน้าได้ครั้งละ 1 กิจกรรม และไม่ได้ลำดับก่อนในคิวสำรอง", "For now you can hold 1 upcoming RSVP at a time, and you lose waitlist priority.")}
             </Notice>
           ) : (
-            <p class="muted">{t("ถ้ามี 2 strike จะจองได้ครั้งละ 1 กิจกรรม ถ้ามี 3 strike จะลงทะเบียนไม่ได้ 30 วัน", "At 2 strikes you can hold 1 RSVP at a time; at 3 you can't RSVP for 30 days.")}</p>
+            <p class="muted">{t("ถ้ามีใบเตือน 2 ใบ จะจองได้ครั้งละ 1 กิจกรรม ถ้ามี 3 ใบ จะลงทะเบียนไม่ได้ 30 วัน", "At 2 strikes you can hold 1 RSVP at a time; at 3 you can't RSVP for 30 days.")}</p>
           )}
-          <p class="muted">{t("ยกเลิกก่อนงาน 24 ชม. ขึ้นไปไม่นับ strike · strike หมดอายุใน 90 วัน", "Cancelling 24h+ ahead is free · strikes expire after 90 days")}</p>
+          <p class="muted">{t("ยกเลิกก่อนงาน 24 ชม. ขึ้นไปไม่นับเป็นใบเตือน · ใบเตือนหมดอายุใน 90 วัน", "Cancelling 24h+ ahead is free · strikes expire after 90 days")}</p>
         </Card>
       ) : null}
 
@@ -2313,7 +2313,7 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
                       {m.signal ? (
                         <>
                           {" "}
-                          <Tag>{label(SIGNALS, m.signal, lang)}</Tag>
+                          <Tag tone={m.signal === "open_to_spark" ? "love" : undefined}>{label(SIGNALS, m.signal, lang)}</Tag>
                         </>
                       ) : null}
                       {m.topics.length ? <small> {m.topics.join(" · ")}</small> : null}

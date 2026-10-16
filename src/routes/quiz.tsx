@@ -691,7 +691,7 @@ function TypeSpots(props: { v: View; a: Archetype; mine?: boolean }) {
           </div>
         ))}
       </div>
-      <h3>🏙️ {t("ที่เที่ยวและย่านที่ใช่", "Hangouts and areas")}</h3>
+      <h3>🏙️ {t("ที่เที่ยวและย่านที่ใช่", "Places and areas")}</h3>
       <div class="rail2">
         {a.hangouts.map((h) => (
           <div class="place-card">
@@ -1073,7 +1073,7 @@ export function Legend(props: { lang: Lang; highlight?: string[] }) {
       <h2>{lang === "en" ? "Legend" : "คำอธิบายสัญลักษณ์"}</h2>
       <p class="muted">
         {lang === "en"
-          ? "Four letters make your type; two badges add your flavour."
+          ? "Four letters make your type; two icons add your flavour."
           : "ตัวอักษร 4 ตัวคือไทป์ของคุณ และสัญลักษณ์ 2 แบบบอกสไตล์เพิ่มเติม"}
       </p>
       <ul>

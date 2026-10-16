@@ -155,7 +155,7 @@ export function tally(optionCount: number, votes: { option: number }[]): number[
 
 export const EXTRA_TEXT: Record<string, { th: string; en: string }> = {
   closed: { th: "ห้องแชตนี้ปิดแล้ว", en: "This chat has closed." },
-  not_circle: { th: "รูปและโพลใช้ได้ในแชตโต๊ะประจำเท่านั้น", en: "Photos and polls are for regular table chats." },
+  not_circle: { th: "รูปและโพลใช้ได้ในแชตโต๊ะประจำเท่านั้น", en: "Photos and polls are for Regular Table chats." },
   not_yet: { th: "แชร์รูปได้เมื่อแฮงเอาต์เริ่มแล้ว", en: "You can share photos once the hangout has started." },
   type: { th: "รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", en: "Photos must be JPG, PNG or WebP." },
   size: { th: "รูปต้องมีขนาดไม่เกิน 5 MB", en: "Photos must be 5 MB or smaller." },
