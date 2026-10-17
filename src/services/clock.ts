@@ -11,6 +11,8 @@
  *                  hour before the start (sameDayDue)
  *   window open    checked-in members of events that ended 1 to 14 hours ago,
  *                  while the 72-hour People I Met window is open
+ *   summary        once a day from 18:00: one push per member counting the
+ *                  day's unread non-urgent notifications (src/domain/digest.ts)
  *
  * Messages are in-app notifications, plus Web Push for members who turned it
  * on. Nothing is sent from 21:00 to 08:00 Bangkok time: the windows above are
@@ -24,13 +26,14 @@
  * An admin starts and stops the chain from /admin. Locally there are no
  * stateful objects; tests call runClock directly.
  */
-import { and, desc, eq, gt, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import type { Bindings } from "../lib/env";
 import { fmtParts, type Lang } from "../lib/i18n";
 import { sha256 } from "../lib/crypto";
 import { createLogger } from "../logger";
 import { OPEN_TO_MORE_TAG, PEOPLE_WINDOW_HOURS } from "../domain/rules";
+import { DIGEST_HOUR, DIGEST_KINDS, KIND_DIGEST, digestText, isDigest } from "../domain/digest";
 import { accounts, consents, events, notifications, profiles, registrations, type Event } from "../schema";
 import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
@@ -49,7 +52,7 @@ export const SAME_DAY_LEAD_MS = 3 * HOUR;
 /** Below this, the day-before reminder's window (18 to 30 hours) has passed. */
 const DAY_BEFORE_MIN_MS = 18 * HOUR;
 
-export type ClockRun = { retention: boolean; quiet: boolean; tomorrow: number; today: number; windowOpen: number; pushed: number };
+export type ClockRun = { retention: boolean; quiet: boolean; tomorrow: number; today: number; windowOpen: number; digest: number; pushed: number };
 
 /** The next hourly slot after `firedAt`, skipping any that already passed. */
 export function nextSlot(firedAt: number, now: number): number {
@@ -58,9 +61,14 @@ export function nextSlot(firedAt: number, now: number): number {
   return next;
 }
 
+/** The hour of the day in Bangkok, 0 to 23. */
+export function bangkokHour(now: Date): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Bangkok" }).format(now));
+}
+
 /** 21:00 to 07:59 in Bangkok: hold messages until morning. */
 export function quietHours(now: Date): boolean {
-  const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Bangkok" }).format(now));
+  const h = bangkokHour(now);
   return h >= 21 || h < 8;
 }
 
@@ -129,7 +137,7 @@ function usable(now: Date) {
 }
 
 export async function runClock(env: Bindings, now: Date = new Date()): Promise<ClockRun> {
-  const out: ClockRun = { retention: false, quiet: false, tomorrow: 0, today: 0, windowOpen: 0, pushed: 0 };
+  const out: ClockRun = { retention: false, quiet: false, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, pushed: 0 };
   const before = await retentionIfDue(env, "system", now);
   out.retention = !!before && before.at.getTime() === now.getTime();
   if (quietHours(now)) {
@@ -211,7 +219,102 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   const sentWindow = await sendOnce(env, KIND_WINDOW, ended, (d) => `/events/${d.event.id}/people`, (d, lang) => windowText(d.event, lang, now), 24 * 3600);
   out.windowOpen = sentWindow.sent;
   out.pushed += sentWindow.pushed;
+
+  const summary = await runDigest(env, now);
+  out.digest = summary.sent;
+  out.pushed += summary.pushed;
   return out;
+}
+
+/** The Bangkok calendar date, "2026-10-17". */
+function bangkokDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
+/**
+ * The evening summary (src/domain/digest.ts), at the first run from 18:00
+ * Bangkok (runClock has already returned in quiet hours). For each member who
+ * said yes to notifications and has unread non-urgent rows written since
+ * their last summary (at most 24 hours back), it writes one marker row of
+ * kind "digest" (already read, never listed in the bell) and pushes one
+ * message with the counts. The marker's id is made from the member and the
+ * Bangkok date, so two runs at once insert it once and only that run pushes:
+ * no schema change. Rows stay unread in the bell either way.
+ */
+export async function runDigest(env: Bindings, now: Date): Promise<{ sent: number; pushed: number }> {
+  if (quietHours(now) || bangkokHour(now) < DIGEST_HOUR) return { sent: 0, pushed: 0 };
+  const db = getDb(env);
+  const t = now.getTime();
+  const rows = await db
+    .select({ accountId: notifications.accountId, kind: notifications.kind, link: notifications.link, createdAt: notifications.createdAt, locale: profiles.locale })
+    .from(notifications)
+    .innerJoin(accounts, eq(accounts.id, notifications.accountId))
+    .innerJoin(profiles, eq(profiles.accountId, notifications.accountId))
+    .where(
+      and(
+        inArray(notifications.kind, Object.keys(DIGEST_KINDS)),
+        isNull(notifications.readAt),
+        gt(notifications.createdAt, new Date(t - 24 * HOUR)),
+        lte(notifications.createdAt, now),
+        usable(now),
+      ),
+    )
+    .limit(BATCH * 20);
+  const due = rows.filter((r) => isDigest(r.kind, r.link));
+  if (!due.length) return { sent: 0, pushed: 0 };
+  const ids = [...new Set(due.map((r) => r.accountId))];
+  const [said, last] = await Promise.all([
+    db
+      .selectDistinctOn([consents.accountId], { accountId: consents.accountId, granted: consents.granted })
+      .from(consents)
+      .where(and(eq(consents.category, "notifications"), inArray(consents.accountId, ids)))
+      .orderBy(consents.accountId, desc(consents.createdAt))
+      .limit(ids.length),
+    // Each member's last summary in the past two days: rows before it were already counted.
+    db
+      .selectDistinctOn([notifications.accountId], { accountId: notifications.accountId, createdAt: notifications.createdAt })
+      .from(notifications)
+      .where(and(eq(notifications.kind, KIND_DIGEST), inArray(notifications.accountId, ids), gt(notifications.createdAt, new Date(t - 48 * HOUR))))
+      .orderBy(notifications.accountId, desc(notifications.createdAt))
+      .limit(ids.length),
+  ]);
+  // Only a yes counts: no answer at all means no (privacy R7).
+  const optedIn = new Set(said.filter((c) => c.granted).map((c) => c.accountId));
+  const since = new Map(last.map((r) => [r.accountId, r.createdAt.getTime()]));
+  const byMember = new Map<string, { locale: string; kinds: string[] }>();
+  for (const r of due) {
+    if (!optedIn.has(r.accountId) || r.createdAt.getTime() <= (since.get(r.accountId) ?? 0)) continue;
+    const m = byMember.get(r.accountId) ?? { locale: r.locale, kinds: [] };
+    m.kinds.push(r.kind);
+    byMember.set(r.accountId, m);
+  }
+  if (!byMember.size) return { sent: 0, pushed: 0 };
+  const date = bangkokDate(now);
+  const todo = await Promise.all(
+    [...byMember].map(async ([accountId, m]) => ({
+      row: {
+        id: `dig_${await sha256(`digest ${accountId} ${date}`)}`,
+        accountId,
+        kind: KIND_DIGEST,
+        titleTh: digestText(m.kinds, "th"),
+        titleEn: digestText(m.kinds, "en"),
+        link: "/notifications",
+        createdAt: now,
+        readAt: now,
+      },
+      lang: (m.locale === "en" ? "en" : "th") as Lang,
+    })),
+  );
+  const inserted = new Set<string>();
+  for (let i = 0; i < todo.length; i += BATCH) {
+    const part = todo.slice(i, i + BATCH).map((x) => x.row);
+    for (const r of await db.insert(notifications).values(part).onConflictDoNothing({ target: notifications.id }).returning({ id: notifications.id })) inserted.add(r.id);
+  }
+  let pushed = 0;
+  for (const x of todo.filter((x) => inserted.has(x.row.id))) {
+    pushed += await pushToAccount(env, db, x.row.accountId, { title: "Jurrgun", body: x.lang === "en" ? x.row.titleEn : x.row.titleTh, url: "/notifications", tag: `${KIND_DIGEST}:${date}` }, 3 * 3600);
+  }
+  return { sent: inserted.size, pushed };
 }
 
 /**

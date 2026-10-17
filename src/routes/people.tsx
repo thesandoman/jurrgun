@@ -20,7 +20,7 @@ import { MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
 import { myTables, raiseConflicts } from "../services/regular-tables";
 import { Hono, type Context } from "hono";
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   ageOn,
@@ -67,6 +67,7 @@ import { NotifItems } from "../ui/notif-menu";
 import { ChatsLink, NewBadge } from "../ui/unread";
 import { ChatRow, chatRows, type ChatRowData } from "./chat";
 import { CHAT_KIND } from "../domain/chat";
+import { KIND_DIGEST, isDigest } from "../domain/digest";
 import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
@@ -114,7 +115,10 @@ function displayName(p: Pick<Profile, "nickname" | "pronouns" | "showPronouns">)
 }
 
 type NotifRow = typeof notifications.$inferSelect;
-/** Today / Yesterday / Earlier, newest first; same title and link on the same day folds into one row. */
+/**
+ * Today / Today's summary / Yesterday / Earlier, newest first; same title and link on the same day folds
+ * into one row. Today's non-urgent items (src/domain/digest.ts) sit under "สรุปวันนี้ / Today's summary".
+ */
 function groupNotifications(rows: NotifRow[], lang: "th" | "en") {
   const dayKey = (d: Date) => new Date(d.getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
   const today = dayKey(new Date());
@@ -122,10 +126,10 @@ function groupNotifications(rows: NotifRow[], lang: "th" | "en") {
   const groups: { key: string; th: string; en: string; items: { n: NotifRow; count: number }[] }[] = [];
   for (const n of rows) {
     const d = dayKey(n.createdAt);
-    const key = d === today ? "today" : d === yesterday ? "yesterday" : "earlier";
+    const key = d === today ? (isDigest(n.kind, n.link) ? "summary" : "today") : d === yesterday ? "yesterday" : "earlier";
     let g = groups.find((x) => x.key === key);
     if (!g) {
-      g = { key, th: key === "today" ? "วันนี้" : key === "yesterday" ? "เมื่อวาน" : "ก่อนหน้านี้", en: key === "today" ? "Today" : key === "yesterday" ? "Yesterday" : "Earlier", items: [] };
+      g = { key, ...NOTIF_GROUPS[key], items: [] };
       groups.push(g);
     }
     const title = lang === "en" ? n.titleEn : n.titleTh;
@@ -135,8 +139,14 @@ function groupNotifications(rows: NotifRow[], lang: "th" | "en") {
       if (!n.readAt) same.n = { ...same.n, readAt: null };
     } else g.items.push({ n, count: 1 });
   }
-  return groups;
+  return groups.sort((a, b) => Object.keys(NOTIF_GROUPS).indexOf(a.key) - Object.keys(NOTIF_GROUPS).indexOf(b.key));
 }
+const NOTIF_GROUPS: Record<string, { th: string; en: string }> = {
+  today: { th: "วันนี้", en: "Today" },
+  summary: { th: "สรุปวันนี้", en: "Today's summary" },
+  yesterday: { th: "เมื่อวาน", en: "Yesterday" },
+  earlier: { th: "ก่อนหน้านี้", en: "Earlier" },
+};
 
 /** Ids of everyone I blocked or who blocked me. */
 async function blockedSet(db: Db, me: string): Promise<Set<string>> {
@@ -1376,7 +1386,7 @@ peopleRoutes.get("/notifications/panel", requireMember, async (c) => {
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
   // New messages live with Chats (their own count on My people), so the bell leaves them out.
-  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), ne(notifications.kind, CHAT_KIND), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(12);
+  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), notInArray(notifications.kind, [CHAT_KIND, KIND_DIGEST]), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(12);
   // Only what the dropdown actually shows becomes read; older unread ones keep the badge.
   const shown = rows.filter((r) => !r.readAt).map((r) => r.id);
   if (shown.length) {
@@ -1391,7 +1401,7 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
   const { t, lang } = v;
   const me = c.var.user!.account.id;
   const db = getDb(c.env);
-  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), ne(notifications.kind, CHAT_KIND), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(50);
+  const rows = await db.select().from(notifications).where(and(eq(notifications.accountId, me), notInArray(notifications.kind, [CHAT_KIND, KIND_DIGEST]), lte(notifications.createdAt, new Date()))).orderBy(desc(notifications.createdAt)).limit(50);
   if (rows.some((r) => !r.readAt)) {
     // A chat's "new message" stays unread until that chat is opened.
     await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), ne(notifications.kind, CHAT_KIND), isNull(notifications.readAt), lte(notifications.createdAt, new Date())));
