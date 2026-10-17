@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { STYLES, themed } from "../src/ui/styles";
 import { A11Y_HEAD_JS } from "../src/ui/a11y";
+import { PALETTE_CSS } from "../src/ui/palette";
 
 describe("themed()", () => {
   it("scopes each dark media block to 'not forced light', and repeats it for 'forced dark'", () => {
@@ -19,10 +20,12 @@ describe("themed()", () => {
   });
 
   it("leaves no unscoped dark rule in the app stylesheet", () => {
-    const blocks = STYLES.split("@media (prefers-color-scheme:dark){").slice(1);
+    // Dark tokens live in the palette sheet (one source of colour), served through themed() like the rest.
+    const SHEET = themed(PALETTE_CSS) + STYLES;
+    const blocks = SHEET.split("@media (prefers-color-scheme:dark){").slice(1);
     expect(blocks.length).toBeGreaterThan(0);
     for (const b of blocks) expect(b.trimStart().startsWith('html:not([data-theme="light"])')).toBe(true);
-    expect(STYLES).toContain('html[data-theme="dark"]{');
+    expect(SHEET).toContain('html[data-theme="dark"]{');
   });
 
   it("the head script sets data-theme from the saved choice", () => {
