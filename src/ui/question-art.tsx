@@ -76,7 +76,7 @@ export const QUESTION_ART_CSS = `
 .q-art-icons{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:18px;pointer-events:none}
 .q-art-icons b{font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 6px rgba(0,0,0,.25));animation:qpop .5s ease both}
 .q-art-icons.n3 b:nth-child(2){font-size:1.6rem;opacity:.9}
-.q-art figcaption{position:absolute;left:10px;bottom:8px;padding:2px 10px;border-radius:999px;background:rgba(0,0,0,.45);color:#fff;font-size:.78rem}
+.q-art figcaption{position:absolute;left:10px;bottom:8px;padding:2px 10px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-size:.78rem}
 .answer-icon{font-size:1.5rem;line-height:1;flex:none}
 @keyframes qpop{from{transform:scale(.6) translateY(6px);opacity:0}to{transform:none;opacity:1}}
 .q-count{display:block;font-size:.8rem;margin-bottom:4px}

@@ -147,7 +147,7 @@ a.tile2:active{transform:scale(.98)}
 .pill2{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.2);backdrop-filter:blur(6px);font-size:.78rem;font-weight:700}
 .pill2-dot{width:8px;height:8px;border-radius:50%;background:var(--lime)}
 .avstack{display:inline-flex;align-items:center}
-.av{width:var(--av);height:var(--av);margin-left:calc(var(--av) * -.3);border-radius:50%;display:grid;place-items:center;font-size:calc(var(--av) * .5);font-weight:800;color:#fff;background:linear-gradient(135deg,hsl(var(--h) 70% 50%),hsl(calc(var(--h) + 40) 75% 60%));border:3px solid var(--surface);box-shadow:var(--shadow)}
+.av{width:var(--av);height:var(--av);margin-left:calc(var(--av) * -.3);border-radius:50%;display:grid;place-items:center;font-size:calc(var(--av) * .5);font-weight:800;color:#fff;background:linear-gradient(135deg,hsl(var(--h) 50% 30%),hsl(calc(var(--h) + 30) 50% 30%));border:3px solid var(--surface);box-shadow:var(--shadow)}
 .av:first-child{margin-left:0}
 .av.more{background:var(--surface-2);color:var(--ink);font-size:calc(var(--av) * .32)}
 .t-brand .av,.t-deep .av,.tile2:has(.tile2-art) .av{border-color:rgba(255,255,255,.6)}

@@ -193,7 +193,7 @@ const ME_CSS = `
 .me-wave{display:inline-block;transform-origin:70% 70%;animation:me-wave 2.4s ease-in-out 1}
 @keyframes me-wave{10%,30%{transform:rotate(14deg)}20%,40%{transform:rotate(-8deg)}50%{transform:none}}
 .me-sub{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;color:var(--ink-2);font-size:.92rem;margin:0}
-.me-sticker{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;background:var(--lime);color:var(--deep);font-size:.85rem;font-weight:600;transform:rotate(-3deg)}
+.me-sticker{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;background:var(--lime);color:#06492a;font-size:.85rem;font-weight:600;transform:rotate(-3deg)}
 .me-peek{display:inline-block;margin-top:12px;font-weight:600;font-size:.92rem;text-decoration:none;padding:8px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
 
 /* Numbers sit open on the page in one row, a thin line between them (owner, 2026-10-16: less boxy). */

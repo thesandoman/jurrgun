@@ -13,7 +13,7 @@ const RULES = `
   --bg:#fff9f0;--surface:#ffffff;--surface-2:#fff1df;
   --ink:#1e2b22;--ink-2:#46564b;--ink-3:#5f6d63;
   --line:#f0e2cc;--brand:#11763f;--brand-ink:#ffffff;--brand-soft:#e3f5ea;--fresh:#2fb866;--lime:#c6ef6e;
-  --gold:#f5a524;--gold-soft:#fff0d6;--sun:#ffb443;--sun-soft:#fff0d6;--coral:#ff7a5c;--coral-soft:#ffe8e1;--sky-soft:#e3f2fc;
+  --gold:#f5a524;--gold-soft:#fff0d6;--sun:#ffb443;--sun-soft:#fff0d6;
   --deep:#11763f;--deep-2:#0e6b39;--on-deep:#ffffff;--on-deep-2:#e3f5ea;
   --shadow:0 1px 2px rgba(120,80,30,.06),0 10px 28px rgba(160,110,40,.10);
   --hero:linear-gradient(135deg,#2fb866 0%,#8fd96b 55%,#ffd27a 120%);
@@ -46,10 +46,12 @@ const RULES = `
   & .card.hero *,& .teaser *{color:inherit}
   & .teaser small,& .teaser .muted,& .card.hero .muted{color:var(--ink-2)}
   & .teaser::after{color:var(--brand)}
-  & .ticket-top{background:linear-gradient(135deg,#2fb866,#137f45);color:#fff}
+  & .ticket-top{background:linear-gradient(160deg,#18884d,#0e6b39 70%);color:#fff}
 
   /* tiles: brighter greens, and light small print on every dark or photo tile */
-  & .tile2.t-deep{background:linear-gradient(160deg,#2fb866,#137f45 70%)}
+  & .tile2.t-deep,& .tile2.t-brand{background:linear-gradient(160deg,#18884d,#0e6b39 70%)}
+  /* The light hero gradient is too pale for white text (2.57 at best): initials and stamps on it use deep green. */
+  & .me-avatar,& .pf-initial,& .pc-initial span,& .stamps li.on{color:#06492a}
   & .tile2.t-deep small,& .tile2.t-brand small,& .tile2:has(.tile2-art) small,& .tile2.t-deep .muted,& .tile2:has(.tile2-art) .muted{color:rgba(255,255,255,.92);opacity:1}
 
   /* picked pills and answers */

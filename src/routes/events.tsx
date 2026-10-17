@@ -329,7 +329,11 @@ function SpotsTag(props: { e: Event; taken: number; t: T; going?: boolean }) {
   // Someone already going doesn't need "Full, join the waitlist".
   if (props.going) return <Tag tone="ok">{props.t("✓ คุณได้ที่นั่งแล้ว", "✓ You're in")}</Tag>;
   return left > 0 ? (
-    <Tag tone="ok">{props.t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`)}</Tag>
+    left <= 3 ? (
+      <Tag tone="warn">⏳ {props.t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`)}</Tag>
+    ) : (
+      <Tag>{props.t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`)}</Tag>
+    )
   ) : (
     <Tag tone="warn">{props.t("เต็มแล้ว ต่อคิวสำรองได้", "Full, join the waitlist")}</Tag>
   );
@@ -385,7 +389,7 @@ function statusLabel(status: string, t: T): string {
     case "confirmed":
       return t("ยืนยันแล้ว", "Confirmed");
     case "waitlisted":
-      return t("อยู่ในคิวสำรอง", "Waitlisted");
+      return t("⏳ อยู่ในคิวสำรอง", "⏳ Waitlisted");
     case "offered":
       return t("มีที่ว่างรอคุณ", "Spot offered");
     case "late_cancelled":

@@ -82,7 +82,7 @@ small,.muted{color:var(--ink-3);font-size:.86rem}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
 .tag.ok{background:var(--ok-soft);color:var(--ok)}
 .tag.love{background:var(--love-soft);color:var(--love-ink)}
-.tag.muted{opacity:.75}
+.tag.muted{color:var(--ink-3)}
 .notice{border-radius:12px;padding:10px 14px;margin:10px 0;font-size:.94rem}
 .notice.ok{background:var(--ok-soft);color:var(--ok)}
 .notice.error{background:var(--err-soft);color:var(--err)}
