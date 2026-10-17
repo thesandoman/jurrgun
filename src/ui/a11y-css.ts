@@ -964,4 +964,11 @@ main .open-sec>details.how:last-child{border-bottom:0}
 .me-terms .btn{white-space:normal;min-height:44px}
 /* 💘 row in the settings list (owner card): no box around it; the love-red switch plus a small "On" tag mark it. */
 .qs-on{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--love-soft,#fde8ea);color:var(--love-ink);font-size:.78rem;font-weight:700;vertical-align:middle;white-space:nowrap}
+/* Event page status strip (owner card, 2026-10-17): one line under the title, my status and the one next action, between hairlines. */
+.ev-strip{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:8px 0 12px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.ev-strip-text{display:flex;flex-direction:column;justify-content:center;min-height:44px;margin:0;min-width:0;flex:1 1 auto}
+.ev-strip-text b{font-weight:800;color:var(--ink)}
+.ev-strip-text small{color:var(--ink-2);font-size:.85rem}
+.ev-strip.is-ok .ev-strip-text b{color:var(--brand)}
+.ev-strip .btn{flex:none;min-height:44px;margin:0}
 `);

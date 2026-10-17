@@ -1175,6 +1175,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       <Card class="ev-sheet">
         <p class="eyebrow">{eyebrow(event, t, lang)}</p>
         <h1>{title(event, lang)}</h1>
+        <StatusStrip event={event} reg={reg} v={v} left={left} waitPos={waitPos} started={started} ended={ended} standing={standing} />
         {quest ? (
           <p>
             <Tag tone="accent">🧭 City Quest</Tag> {quest}
@@ -1220,7 +1221,6 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         </p>
         <div class="tags">
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
-          <SpotsTag e={event} taken={state.taken} t={t} going={reg?.status === "confirmed"} />
           {event.tags.map((tag) => (
             <Tag tone={tag === OPEN_TO_MORE_TAG ? "love" : "muted"}>{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
@@ -1335,8 +1335,89 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
 }
 
 /**
+ * The status strip under the title (owner card, 2026-10-17): where I stand and
+ * the ONE next action. Its buttons drive the forms in My registration
+ * (form="rsvp", form="offer"), so it posts nothing of its own.
+ */
+export function StatusStrip(props: {
+  event: Event;
+  reg: Registration | null;
+  v: View;
+  left: number;
+  waitPos: number | null;
+  started: boolean;
+  ended: boolean;
+  standing: StrikeStanding;
+  class?: string;
+}) {
+  const { event, reg, left, started, ended } = props;
+  const { t, lang } = props.v;
+  if (event.status !== "published" || ended) return null;
+  const status = reg?.status;
+  const strip = (tone: string, text: string, sub: string | null, action: Child | null) => (
+    <div class={["ev-strip", `is-${tone}`, props.class].filter(Boolean).join(" ")}>
+      <p class="ev-strip-text">
+        <b>{text}</b>
+        {sub ? <small>{sub}</small> : null}
+      </p>
+      {action}
+    </div>
+  );
+  if (status === "confirmed") {
+    if (started && reg!.checkedInAt) {
+      return strip("ok", t("✓ เช็กอินแล้ว", "✓ You're checked in"), null, <LinkButton href={`/events/${event.id}/live`}>{t("หน้าในงาน", "Live page")}</LinkButton>);
+    }
+    return strip(
+      "ok",
+      t("✓ คุณได้ที่แล้ว", "✓ You're going"),
+      started ? t("กิจกรรมเริ่มแล้ว", "Happening now") : null,
+      <LinkButton href={`/me/events/${event.id}/pass`}>{t("🎟️ บัตรของฉัน", "🎟️ My pass")}</LinkButton>,
+    );
+  }
+  if (status === "offered" && !started) {
+    return strip(
+      "accent",
+      t("มีที่ว่างรอคุณ", "A spot opened for you"),
+      reg!.offeredUntil ? t(`ยืนยันภายใน ${fmtDate(reg!.offeredUntil, lang)}`, `Confirm by ${fmtDate(reg!.offeredUntil, lang)}`) : null,
+      <button type="submit" form="offer" name="action" value="accept" class="btn primary">
+        {t("รับที่นั่ง", "Accept the spot")}
+      </button>,
+    );
+  }
+  if (status === "waitlisted" && !started) {
+    return strip(
+      "warn",
+      t("อยู่ในคิวสำรอง", "On the waitlist"),
+      props.waitPos ? t(`ราวคิวที่ ${props.waitPos} มีที่ว่างเราจะแจ้ง`, `About #${props.waitPos} in line. We'll tell you if a spot opens.`) : null,
+      null,
+    );
+  }
+  if (started) return null;
+  if (props.standing.blockedUntil) {
+    return strip("muted", t("ยังลงทะเบียนไม่ได้", "You can't RSVP yet"), t(`ได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `Again after ${fmtDate(props.standing.blockedUntil, lang)}`), null);
+  }
+  // With choices to make first (+1, buddy, a free seat) the button takes you to them; otherwise it RSVPs at once.
+  const choices = event.plusOneAllowed || event.buddyEnabled || (event.freeSeats > 0 && event.costThb > 0);
+  const label = left > 0 ? t("ลงทะเบียนเข้าร่วม", "RSVP") : t("ต่อคิวสำรอง", "Join the waitlist");
+  return strip(
+    left > 0 ? "open" : "full",
+    left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full"),
+    null,
+    choices ? (
+      <a href="#rsvp" class="btn primary">
+        {label}
+      </a>
+    ) : (
+      <button type="submit" form="rsvp" class="btn primary">
+        {label}
+      </button>
+    ),
+  );
+}
+
+/**
  * The main action, always in reach: a bar above the tab bar that jumps to the
- * RSVP form. It hides while the form itself is on screen.
+ * RSVP form. It hides while the status strip or the form is on screen.
  */
 function StickyRsvp(props: { t: T; left: number }) {
   const { t, left } = props;
@@ -1350,7 +1431,7 @@ function StickyRsvp(props: { t: T; left: number }) {
       </a>
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){var b=document.getElementById("sticky-rsvp"),f=document.getElementById("rsvp");if(!b||!f)return;if("IntersectionObserver" in window)new IntersectionObserver(function(e){b.classList.toggle("is-off",e[0].isIntersecting)}).observe(f);b.querySelector("a").addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("input:not([type=hidden]),button");if(c)c.focus({preventScroll:true})},350)})})()`,
+          __html: `(function(){var b=document.getElementById("sticky-rsvp"),f=document.getElementById("rsvp");if(!b||!f)return;if("IntersectionObserver" in window){var seen=new Map(),io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});var on=false;seen.forEach(function(x){if(x)on=true});b.classList.toggle("is-off",on)});io.observe(f);document.querySelectorAll(".ev-strip").forEach(function(s){io.observe(s)})}b.querySelector("a").addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("input:not([type=hidden]),button");if(c)c.focus({preventScroll:true})},350)})})()`,
         }}
       />
     </div>
@@ -1483,7 +1564,7 @@ function RegistrationBox(props: {
           <Tag tone="accent">{statusLabel("offered", t)}</Tag>{" "}
           {reg!.offeredUntil ? t(`ยืนยันภายใน ${fmtDate(reg!.offeredUntil, lang)}`, `Confirm by ${fmtDate(reg!.offeredUntil, lang)}`) : null}
         </p>
-        <form method="post" action={`${base}/offer`} class="row">
+        <form method="post" action={`${base}/offer`} class="row" id="offer">
           <Button name="action" value="accept">{t("รับที่นั่ง", "Accept the spot")}</Button>
           <Button name="action" value="decline" kind="ghost">{t("ไม่รับ", "Decline")}</Button>
         </form>
