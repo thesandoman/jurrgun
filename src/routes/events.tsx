@@ -473,6 +473,99 @@ const WHEN_OPTS = [
   { value: "weekend", th: "สุดสัปดาห์นี้", en: "This weekend" },
 ];
 
+/**
+ * What Discover may list for this member at all, before any filter: the list
+ * and its popular picks both start here. Private events open only through
+ * their link; dating events exist only with romance mode on (romanceEventOk);
+ * women-only events are listed only for women and non-binary members (and
+ * anyone who hasn't said).
+ */
+function listable(profile: Profile, now: Date) {
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now)];
+  if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
+  if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
+  return where;
+}
+
+/**
+ * Popularity for Discover's picks (owner, 2026-10-17), any category: events
+ * with a seat still open first (a pick you can't join helps nobody), then the
+ * most seats held (confirmed and offered), then the fullest, then the
+ * soonest. Members never see the numbers, only the order.
+ */
+export function rankPopular<E extends { id: string; capacity: number; startsAt: Date }>(list: E[], taken: Map<string, number>): E[] {
+  const held = (e: E) => taken.get(e.id) ?? 0;
+  const open = (e: E) => (held(e) < e.capacity ? 1 : 0);
+  const fill = (e: E) => held(e) / Math.max(1, e.capacity);
+  return [...list].sort((a, b) => open(b) - open(a) || held(b) - held(a) || fill(b) - fill(a) || a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id));
+}
+
+/** How many events lead Discover's list, and how far ahead "this week" looks. */
+const PICKS = 3;
+const TOP_WEEK = 10;
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * The popular picks and the top 10 this week for this member: upcoming events
+ * they may see (listable) and that fit their age, minus the ones they're
+ * already going to, ranked by rankPopular. Two queries: the candidates, then
+ * seats held and my own seats together.
+ */
+async function discoverPicks(env: AppEnv["Bindings"], db: Db, user: CurrentUser & { profile: Profile }, now: Date) {
+  const age = ageOn(user.profile.birthDate, now);
+  const candidates = await db
+    .select()
+    .from(events)
+    .where(and(...listable(user.profile, now), gt(events.startsAt, now), lte(events.ageMin, age), gte(events.ageMax, age)))
+    .orderBy(asc(events.startsAt))
+    .limit(200);
+  const ids = candidates.map((e) => e.id);
+  const [taken, going] = await Promise.all([
+    takenCounts(db, ids),
+    ids.length
+      ? db
+          .select({ eventId: registrations.eventId })
+          .from(registrations)
+          .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.eventId, ids), inArray(registrations.status, [...ACTIVE])))
+          .limit(200)
+      : Promise.resolve([] as { eventId: string }[]),
+  ]);
+  const mine = new Set(going.map((r) => r.eventId));
+  const ranked = rankPopular(
+    candidates.filter((e) => !mine.has(e.id)),
+    taken,
+  );
+  // A pick is popular: someone has to be going already.
+  const picks = ranked.filter((e) => (taken.get(e.id) ?? 0) > 0).slice(0, PICKS);
+  const shown = new Set(picks.map((e) => e.id));
+  const week = ranked.filter((e) => !shown.has(e.id) && e.startsAt.getTime() < now.getTime() + WEEK_MS).slice(0, TOP_WEEK);
+  const covers = new Map(await Promise.all(picks.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(env, e)] as const)));
+  return { picks, week, taken, covers };
+}
+
+/** "10 อันดับสัปดาห์นี้ / Top 10 this week": one plain numbered row per event, no card, no score. */
+function TopWeek(props: { list: Event[]; taken: Map<string, number>; v: View }) {
+  const { t, lang } = props.v;
+  return (
+    <ol class="top-week" role="list">
+      {props.list.map((e) => {
+        const p = fmtParts(e.startsAt, lang);
+        const left = Math.max(0, e.capacity - (props.taken.get(e.id) ?? 0));
+        return (
+          <li>
+            <a href={`/events/${e.id}`}>
+              <span class="tw-title">{title(e, lang)}</span>
+              <small>
+                {p.weekday} {p.day} · {p.time} · {label(DISTRICTS, e.district, lang)} · {left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full")}
+              </small>
+            </a>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 eventRoutes.get("/events", requireMember, async (c) => {
   // Arrived from an invite link before signing up: go back to it, once.
   const pending = getCookie(c, INVITE_COOKIE);
@@ -501,16 +594,11 @@ eventRoutes.get("/events", requireMember, async (c) => {
   };
   const mapView = c.req.query("view") !== "list"; // the map is the default
 
-  // Private events open only through their link; they are never listed.
-  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now)];
+  const where = listable(user.profile, now);
   const win = whenWindow(q.when, now);
   if (win) where.push(gte(events.startsAt, win[0]), lt(events.startsAt, win[1]));
   if (values(DISTRICTS).includes(q.district)) where.push(eq(events.district, q.district));
   if (values(EVENT_TAGS).includes(q.tag)) where.push(jsonHas(events.tags, q.tag));
-  // Dating events exist only for members with romance mode on (romanceEventOk).
-  if (!romanceEligible(user.profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
-  // Women-only events are only listed for women and non-binary members (and anyone who hasn't said).
-  if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], user.profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   if (q.free) where.push(eq(events.costThb, 0));
   // Short and sweet: 90 minutes or less, for carers and long work days.
   if (q.short) where.push(sql`${events.endsAt} - ${events.startsAt} <= interval '90 minutes'`);
@@ -552,6 +640,11 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const covers = new Map(coverPairs);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
   const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.small || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
+  // The plain list leads with the popular picks and the top 10 this week (owner, 2026-10-17); once you
+  // filter, you see just your matches. The full list below leaves out the events already shown above.
+  const top = mapView || filtered ? null : await discoverPicks(c.env, db, user, now);
+  const above = new Set(top ? [...top.picks, ...top.week].map((e) => e.id) : []);
+  const rest = above.size ? list.filter((e) => !above.has(e.id)) : list;
   // The same filters, in list or map view.
   const params = new URLSearchParams(c.req.query());
   params.delete("view");
@@ -593,14 +686,15 @@ eventRoutes.get("/events", requireMember, async (c) => {
     ) : null;
   // The events, with `extra` (the For you and quiz cards) after the third one, so events come first.
   const cardList = (extra?: Child) => {
-    if (list.length === 0)
+    if (rest.length === 0 && above.size) return extra;
+    if (rest.length === 0)
       return (
         <>
           <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ แวะมาดูใหม่นะ", "No events match these filters yet. Check back soon.")}</Empty>
           {extra}
         </>
       );
-    const items = list.map((e) => (
+    const items = rest.map((e) => (
       <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
         <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} pick={picked.has(e.id)} />
       </div>
@@ -669,6 +763,20 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <a href="/plan" class="plan-line">
         <span aria-hidden="true">🗓️</span> {t("แผนสัปดาห์นี้: เราเลือกให้ 2 อย่าง", "This week's plan: 2 picks made for you")} <span aria-hidden="true">›</span>
       </a>
+      {top?.picks.length ? (
+        <section class="disc-picks" aria-labelledby="disc-picks-h">
+          <h2 id="disc-picks-h">{t("ยอดนิยม", "Popular picks")}</h2>
+          {top.picks.map((e) => (
+            <EventCard e={e} taken={top.taken.get(e.id) ?? 0} v={v} cover={top.covers.get(e.id)} pick={picked.has(e.id)} />
+          ))}
+        </section>
+      ) : null}
+      {top?.week.length ? (
+        <section class="disc-top" aria-labelledby="disc-top-h">
+          <h2 id="disc-top-h">{t(`${top.week.length} อันดับสัปดาห์นี้`, `Top ${top.week.length} this week`)}</h2>
+          <TopWeek list={top.week} taken={top.taken} v={v} />
+        </section>
+      ) : null}
       <div class="disc">
         {/* Phones: one sticky bar above the cards. Laptops: a sticky rail with the filters open. */}
         <div class="disc-mark" aria-hidden="true" />
@@ -700,7 +808,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
           </div>
         </div>
         <script dangerouslySetInnerHTML={{ __html: RAIL_OPEN_JS }} />
-        <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>
+        {above.size ? <h2 class="disc-more-h">{t("กิจกรรมอื่น ๆ", "More events")}</h2> : <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>}
         <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
           {cardList(
             <>

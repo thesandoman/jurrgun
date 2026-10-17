@@ -1041,4 +1041,21 @@ fieldset legend{padding-inline:0}
 .deck-acts form{margin:0}
 .deck-acts .btn{width:100%;min-height:44px;white-space:normal}
 @media (max-width:359px){.deck-acts{grid-template-columns:1fr}}
+/* Discover (owner, 2026-10-17): popular picks, then the top 10 this week as plain numbered rows, then the filters and the rest. */
+.disc-picks,.disc-top{margin:16px 0 24px}
+.disc-picks h2,.disc-top h2,.disc-more-h{margin:0 0 8px;font-size:1.2rem}
+.disc-picks{display:grid;gap:12px}
+.disc-picks>h2{grid-column:1/-1}
+.disc-picks .ev-card{margin:0}
+@media (min-width:900px){.disc-picks{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}}
+.top-week{list-style:none;counter-reset:tw;margin:0;padding:0;border-top:1px solid var(--line)}
+.top-week li{counter-increment:tw;border-bottom:1px solid var(--line)}
+.top-week a{display:grid;grid-template-columns:2em 1fr;column-gap:8px;align-items:baseline;min-height:44px;padding:10px 0;color:var(--ink);text-decoration:none}
+.top-week a::before{content:counter(tw);grid-row:1/3;font-family:var(--display);font-size:1.15rem;color:var(--ink-2);text-align:right}
+.top-week .tw-title{font-weight:700;line-height:1.35}
+.top-week small{grid-column:2;color:var(--ink-2)}
+.top-week a:hover .tw-title{text-decoration:underline}
+.top-week a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media (min-width:900px){.top-week{columns:2;column-gap:32px;border-top:0}.top-week li{break-inside:avoid}}
+.disc-more-h{margin-top:8px}
 `);
