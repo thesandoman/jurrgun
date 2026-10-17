@@ -291,5 +291,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"social_registrations\" ADD COLUMN \"hello_line\" text;",
       "CREATE UNIQUE INDEX \"social_quiz_reach_idx\" ON \"social_quiz_reach\" (\"day\",\"segment\",\"question\");"
     ]
+  },
+  {
+    "id": "0024_event_announcements",
+    "statements": [
+      "CREATE TABLE \"social_event_announcements\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"event_id\" text NOT NULL,\n\t\"author_account_id\" text,\n\t\"kind\" text NOT NULL,\n\t\"body\" text DEFAULT '' NOT NULL,\n\t\"detail\" jsonb,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE INDEX \"social_event_announcements_event_idx\" ON \"social_event_announcements\" (\"event_id\",\"created_at\");",
+      "CREATE INDEX \"social_event_announcements_author_idx\" ON \"social_event_announcements\" (\"author_account_id\");"
+    ]
   }
 ];
