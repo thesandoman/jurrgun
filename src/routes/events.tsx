@@ -808,8 +808,9 @@ eventRoutes.get("/events", requireMember, async (c) => {
           </div>
         </div>
         <script dangerouslySetInnerHTML={{ __html: RAIL_OPEN_JS }} />
-        {above.size ? <h2 class="disc-more-h">{t("กิจกรรมอื่น ๆ", "More events")}</h2> : <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>}
+        {above.size ? null : <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>}
         <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
+          {above.size ? <h2 class="disc-more-h">{t("กิจกรรมอื่น ๆ", "More events")}</h2> : null}
           {cardList(
             <>
               {forYouHidden ? null : (

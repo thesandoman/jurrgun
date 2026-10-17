@@ -1109,8 +1109,8 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
       <h1>{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</h1>
       <p class="muted">
         {t(
-          "อ่านก่อนแล้วค่อยเลือก ถ้ากด อยากรู้จักเขา รอบจับคู่ถัดไปจะให้คนนี้มาก่อน และอีกฝ่ายจะไม่รู้",
-          "Read first, then choose. I'm curious to know them puts this person first in the next round. They never see it.",
+          "อ่านก่อนแล้วค่อยเลือก ถ้ากด “อยากรู้จักเขา” รอบจับคู่ถัดไปจะให้คนนี้มาก่อน และอีกฝ่ายจะไม่รู้",
+          "Read first, then choose. “I'm curious to know them” puts this person first in the next round. They never see it.",
         )}
       </p>
       {!st.self ? (

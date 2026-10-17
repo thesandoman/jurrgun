@@ -1037,7 +1037,8 @@ fieldset legend{padding-inline:0}
 .deck-h{margin:0 0 4px;font-size:.95rem;font-weight:700;color:var(--ink-2)}
 .deck-card .chips2{margin:0 0 12px}
 .deck-type{margin:0;color:var(--ink-2)}
-.deck-acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 8px}
+.deck-acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 8px;max-width:560px}
+.deck-card{max-width:560px}
 .deck-acts form{margin:0}
 .deck-acts .btn{width:100%;min-height:44px;white-space:normal}
 @media (max-width:359px){.deck-acts{grid-template-columns:1fr}}
@@ -1057,7 +1058,7 @@ fieldset legend{padding-inline:0}
 .top-week a:hover .tw-title{text-decoration:underline}
 .top-week a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 @media (min-width:900px){.top-week{columns:2;column-gap:32px;border-top:0}.top-week li{break-inside:avoid}}
-.disc-more-h{margin-top:8px}
+.discover-list>.disc-more-h{grid-column:1/-1;margin:0}
 /* Unread on the bell and the My people tab is a small dot, not a number (owner, 2026-10-17). The count stays
    in the accessible name. A filled 10px circle with a ring: a shape, not colour alone. */
 .unread-dot,.unread-dot.notif-dot,.unread-dot.tab-badge{display:block;width:10px;height:10px;min-width:0;padding:0;border-radius:50%;background:var(--brand);font-size:0;line-height:0;box-shadow:0 0 0 2px var(--surface)}
