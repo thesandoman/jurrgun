@@ -38,6 +38,7 @@ export const DIGEST_KINDS: Record<string, Group> = {
   buddy_quest: "other", // your buddy marked the quest done
   buddy_stamp: "other", // a new district stamp
   buddy_keep: "other", // your buddy took back a wrap-up
+  event_update: "other", // a host's plain update (time, venue and cancel changes stay urgent)
 };
 
 /** Whether a notification waits for the evening summary instead of counting as urgent. */

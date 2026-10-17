@@ -136,6 +136,12 @@ export const RETENTION: RetentionItem[] = [
     code: "UNREAD_NOTIFICATION_RETENTION_DAYS",
   },
   {
+    what: { th: "ประกาศจากโฮสต์ถึงคนที่มา", en: "Host announcements to people going" },
+    keep: { th: "ลบหลังจบกิจกรรม", en: "deleted after the event ends, after" },
+    period: { n: 180, unit: "days" },
+    code: "ANNOUNCEMENT_RETENTION_DAYS",
+  },
+  {
     what: { th: "รายงาน การดำเนินการของทีมงาน และใบเตือน", en: "Reports, moderation actions and strikes" },
     keep: { th: "เก็บเพื่อความปลอดภัย ลบหลัง", en: "kept for safety, deleted after" },
     period: { n: 2, unit: "years" },
