@@ -492,7 +492,7 @@ describe.skipIf(!HAS_DB)("Safety net and the Buddy tab", () => {
 });
 
 describe.skipIf(!HAS_DB)("Buddy deck", () => {
-  it("while waiting, meet possible buddies: 'I'd meet them' is stored privately and only for people in your deck", async () => {
+  it("while waiting, meet possible buddies: 'I'm curious to know them' is stored privately and only for people in your deck", async () => {
     // Both open to something more elsewhere in the app: the buddy deck still shows no dating details.
     const romantic = { romanceOn: true, relationship: "single", genderIdentity: "nonbinary", romanceOpenTo: "everyone" as const };
     const a = await createMember({ nickname: "Deckie", ...romantic });
@@ -504,23 +504,23 @@ describe.skipIf(!HAS_DB)("Buddy deck", () => {
     await only2(a, b);
     const html = await (await req("/buddy/deck?lang=en", { cookie: a.cookie })).text();
     expect(html).toContain("Flickable");
-    expect(html).toContain("left today");
-    // Calm, friends-first words: no swipe language, named buttons, no dating chips.
+    expect(html).toContain("1 of 15 today");
+    // Calm, friends-first words: no swipe language, named buttons with their words on them, no dating chips.
     expect(html).toContain("Meet possible buddies");
-    expect(html).toContain('aria-label="I&#39;d meet them"');
-    expect(html).toContain('aria-label="Not now"');
-    expect(html).toMatch(/class="deck-lbl"[^>]*>I&#39;d meet them</);
+    expect(html).toMatch(/<button type="submit"[^>]*>I&#39;m curious to know them<\/button>/);
+    expect(html).toMatch(/<button type="submit"[^>]*>Not now<\/button>/);
     // What a member reads: the page body without scripts and styles.
     const words = (h: string) => h.slice(h.indexOf("<body")).replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, "");
-    expect(words(html)).not.toMatch(/[Ff]lick through|[Ss]wip|Keen|>Pass</);
+    expect(words(html)).not.toMatch(/[Ff]lick through|[Ss]wip|Keen|>Pass<|I&#39;d meet them/);
     const deckCard = words(html).slice(words(html).indexOf('class="deck-card"'), words(html).indexOf('class="deck-acts"'));
     expect(deckCard).toContain("Flickable");
     expect(deckCard).not.toContain("💘");
     const th = await (await req("/buddy/deck?lang=th", { cookie: a.cookie })).text();
     expect(th).toContain("ดูคนที่อาจเป็นบัดดี้");
-    expect(th).toContain("อยากลองเจอ");
+    expect(th).toContain("อยากรู้จักเขา");
     expect(th).toContain("ไว้ก่อน");
-    expect(words(th)).not.toMatch(/ปัด|>สนใจ<|"สนใจ"/);
+    expect(th).toContain("1 จาก 15 วันนี้");
+    expect(words(th)).not.toMatch(/ปัด|>สนใจ<|"สนใจ"|อยากลองเจอ/);
     const waiting = await (await req("/buddy?lang=en", { cookie: a.cookie })).text();
     expect(waiting).toContain("Meet possible buddies");
     expect(waiting).not.toMatch(/Flick through|🃏/);
@@ -531,6 +531,37 @@ describe.skipIf(!HAS_DB)("Buddy deck", () => {
     expect(rows.map((r) => [r.targetId, r.choice])).toEqual([[b.id, "keen"]]);
     // b never sees it.
     expect(await (await req("/buddy?lang=en", { cookie: b.cookie })).text()).not.toContain("Deckie");
+  });
+
+  it("no swiping: the card leads with their own words and what you share, and the buttons sit below it", async () => {
+    const a = await createMember({ nickname: "Reader", interests: ["street_food", "cafes", "running", "museums"], district: "bang_rak" });
+    const b = await createMember({ nickname: "Writer", interests: ["street_food", "cafes", "museums", "karaoke"], district: "bang_rak" });
+    await withType2(a, "BDSH");
+    await withType2(b, "CDSH");
+    const bio = { deck: ["small_thing"], answers: { small_thing: { kind: "text", value: "Mango sticky rice after a long Monday" } } };
+    await db().update(profiles).set({ bio }).where(eq(profiles.accountId, b.id));
+    for (const m of [a, b]) await req("/buddy/optin", { cookie: m.cookie, form: { intent: "friends" } });
+    await only2(a, b);
+    const html = await (await req("/buddy/deck?lang=en", { cookie: a.cookie })).text();
+    // No drag or swipe code and no swipe stamps anywhere on the page.
+    const body = html.slice(html.indexOf("<body")).replace(/<style[\s\S]*?<\/style>/g, "");
+    expect(body).not.toMatch(/data-deck|deck-stamp|deck-under|\[data-deck\]|LINE=110/);
+    expect(html).not.toMatch(/\.deck-stamp|\.deck-under/);
+    const card = html.slice(html.indexOf('class="deck-card"'), html.indexOf('class="deck-acts"'));
+    // A small initial beside the name, never a big photo.
+    expect(card).toContain('class="deck-init"');
+    expect(card).not.toContain("<img");
+    // Their own words first, then what you share (two or three), then their visible Bangkok Type.
+    expect(card).toContain("Mango sticky rice after a long Monday");
+    expect(card).toContain("What you share");
+    const shared = card.slice(card.indexOf("What you share"));
+    expect((shared.match(/class="on"/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect((shared.match(/class="on"/g) ?? []).length).toBeLessThanOrEqual(3);
+    expect(card.indexOf("Mango sticky rice")).toBeLessThan(card.indexOf("What you share"));
+    // The decision buttons come after the card, so you read it to reach them.
+    const acts = html.indexOf('class="deck-acts"');
+    expect(acts).toBeGreaterThan(html.indexOf("Mango sticky rice"));
+    expect(html.indexOf(">I&#39;m curious to know them</button>")).toBeGreaterThan(acts);
   });
 });
 

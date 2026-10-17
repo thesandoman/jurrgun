@@ -116,7 +116,7 @@ export function cleanPrefs(raw: unknown): DatingPrefs {
 
 /** How Jurrgun answers each challenge, shown right after the questions. */
 export const CHALLENGE_ANSWERS: Record<string, Text> = {
-  swiping: t("No endless swiping: a short daily deck, small tables, and one Bangkok Buddy at a time.", "ไม่ต้องปัดไม่รู้จบ วันละไม่กี่คน โต๊ะเล็ก ๆ และบัดดี้ทีละคน"),
+  swiping: t("No swiping at all: up to 15 people a day, each one read before you choose, small tables, and one Bangkok Buddy at a time.", "ไม่มีการปัดเลย วันละไม่เกิน 15 คน อ่านก่อนแล้วค่อยเลือก โต๊ะเล็ก ๆ และบัดดี้ทีละคน"),
   meet: t("Tables of 4 to 6 at real places, every week.", "โต๊ะละ 4 ถึง 6 คน ที่สถานที่จริง ทุกสัปดาห์"),
   time: t("Quests and tables near your district.", "เควสต์และโต๊ะใกล้ย่านของคุณ"),
   safety: t("Public places only, plus a safety net to share your plans.", "นัดในที่สาธารณะเท่านั้น และมีตัวช่วยแชร์แผนให้คนที่ไว้ใจ"),

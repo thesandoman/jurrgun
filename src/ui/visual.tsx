@@ -213,27 +213,7 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .guide-tips li b{flex:none;font-size:1.5rem;width:36px;text-align:center}
 .guide-promise{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:var(--brand-soft);font-weight:600;line-height:1.4}
 .guide-promise input{width:22px;height:22px;flex:none;margin-top:2px}
-.deck{position:relative;margin:12px auto 4px;max-width:420px}
-.deck-card{position:relative;z-index:2;will-change:transform;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:28px 22px 22px;box-shadow:0 18px 40px rgba(6,40,22,.18);touch-action:pan-y;user-select:none;cursor:grab;text-align:center}
-.deck-card:active{cursor:grabbing}
-.deck-under{position:absolute;z-index:1;transform-origin:50% 100%;transform:scale(.95) translateY(10px);will-change:transform;left:14px;right:14px;top:14px;bottom:-10px;border-radius:28px;background:var(--surface-2);border:1px solid var(--line)}
-.deck-face{font-size:3.4rem;line-height:1;width:92px;height:92px;margin:0 auto 10px;display:grid;place-items:center;border-radius:36px;background:var(--brand-soft)}
-.deck-card h2{margin:4px 0 2px;font-size:1.6rem}
-.deck-sub{margin:0 0 8px;color:var(--ink-2)}
-.deck-why{margin:6px 0 10px;font-weight:600}
-.deck-card .chips2{justify-content:center}
 .chips2 span.on{background:var(--brand);color:var(--brand-ink)}
-.deck-stamp{position:absolute;top:22px;padding:4px 12px;border-radius:10px;font-weight:800;font-size:1.1rem;letter-spacing:.04em;opacity:0;border:3px solid currentColor}
-.deck-stamp.keen{left:18px;color:var(--brand);transform:rotate(-12deg)}
-.deck-stamp.pass{right:18px;color:var(--ink-2);transform:rotate(12deg)}
-.deck-card.dragging{cursor:grabbing}
-.deck-acts{display:flex;justify-content:center;gap:28px;margin:14px 0 8px}
-.deck-btn{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:88px;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;font-size:.9rem;cursor:pointer}
-.deck-ico{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;font-size:1.7rem;box-shadow:var(--shadow);transition:transform .1s ease-out}
-.deck-btn:active .deck-ico{transform:scale(.92)}
-.deck-btn.pass .deck-ico{background:var(--surface);color:var(--ink-2);border:1px solid var(--line)}
-.deck-btn.keen .deck-ico{background:var(--lime);color:var(--deep,#06492a)}
-@media (prefers-reduced-motion:reduce){.deck-card{transition:none!important}}
 .chat-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
 .chat-list a{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--surface);color:var(--ink);text-decoration:none;border:1px solid var(--line)}
 .chat-list a>b{font-size:1.4rem;width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:var(--brand-soft);flex:none}

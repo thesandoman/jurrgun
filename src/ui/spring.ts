@@ -1,5 +1,5 @@
 /**
- * A tiny motion kit for gestures (the deck, the map's events sheet), after
+ * A tiny motion kit for gestures (sheets, the map's events sheet), after
  * Apple's "Designing Fluid Interfaces" (see the apple-design skill):
  *
  *  - spring(): a damped spring in Apple's two designer terms, damping ratio

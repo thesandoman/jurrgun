@@ -31,7 +31,7 @@
  */
 import { SafeArrivalForm } from "./safety";
 import { Sheet } from "../ui/sheet";
-import { ALL_INTERESTS, ENERGY, WEEKEND_RHYTHM, cleanBio } from "../content/profile";
+import { ALL_INTERESTS, cleanBio, promptById } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
@@ -981,12 +981,33 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
 // ------------------------------------------------------------- the deck --
 //
 // While someone waits for a buddy they can meet possible buddies from the
-// pool, one card at a time: "I'd meet them" (stored as keen) or "Not now"
-// (stored as pass). It is a stated preference for the next daily round, never
-// a match on its own, and the other person never sees it. No photos and no
-// dating details: people choose on vibe. A short daily deck, never endless.
+// pool, one person at a time (owner, 2026-10-17: "eliminate mindless swiping
+// + clicking"). There is no swipe or drag: each card leads with the person's
+// own words and what you share, and the two buttons sit below it, so you read
+// before you choose. "I'm curious to know them" is stored as keen and "Not
+// now" as pass. It is a stated preference for the next daily round, never a
+// match on its own, and the other person never sees it. No photos (privacy
+// promise: a small initial instead) and no dating details. 15 a day.
 
 export const DECK_PER_DAY = 15;
+
+type DeckBio = { deck?: string[]; answers?: Record<string, { kind: string; value: unknown }> };
+
+/** The answer a deck card leads with: the first written answer in their deck, else the first picked one. */
+export function deckQuote(bio: DeckBio, lang: Lang): { q: string; emoji: string; a: string } | null {
+  for (const id of bio.deck ?? []) {
+    const q = promptById(id);
+    const a = bio.answers?.[id];
+    if (q?.kind === "text" && typeof a?.value === "string" && a.value.trim()) return { q: L(lang, q), emoji: q.emoji, a: a.value.trim() };
+  }
+  for (const id of bio.deck ?? []) {
+    const q = promptById(id);
+    const a = bio.answers?.[id];
+    const o = q?.kind === "choice" ? q.options?.find((x) => x.value === a?.value) : undefined;
+    if (q && o) return { q: L(lang, q), emoji: q.emoji, a: `${o.emoji} ${L(lang, o)}` };
+  }
+  return null;
+}
 
 async function deckState(c: Ctx) {
   const db = getDb(c.env);
@@ -1002,7 +1023,7 @@ async function deckState(c: Ctx) {
   const today = dayKey(now);
   const usedToday = mine.filter((x) => dayKey(x.createdAt) === today).length;
   const deck = self ? deckFor(self, pool, new Set(mine.map((x) => x.targetId)), today) : [];
-  return { db, me, self, deck, left: Math.max(0, DECK_PER_DAY - usedToday) };
+  return { db, me, self, deck, used: Math.min(DECK_PER_DAY, usedToday), left: Math.max(0, DECK_PER_DAY - usedToday) };
 }
 
 buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
@@ -1015,43 +1036,65 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
   if (next) {
     const [[person], types, [shown]] = await Promise.all([
       st.db.select().from(profiles).where(eq(profiles.accountId, next)).limit(1),
-      typeOfAccount(st.db, [st.me, next]),
+      typeOfAccount(st.db, [next]),
       st.db.select({ visible: vibes.visible }).from(vibes).where(eq(vibes.accountId, next)).limit(1),
     ]);
     const mineP = c.var.user!.profile!;
     // Privacy R8: a stranger's Bangkok Type shows on the deck only when they chose to show it.
     const theirs = shown?.visible ? types.get(next) : undefined;
     const a = theirs ? ARCHETYPES[theirs] : null;
-    const why = theirs && types.get(st.me) ? clickReason(types.get(st.me)!, theirs) : null;
-    const bio = cleanBio(person.bio);
-    const shared = person.interests.filter((i) => mineP.interests.includes(i));
-    const chips = [...shared, ...person.interests.filter((i) => !shared.includes(i))].slice(0, 6);
-    const energy = ENERGY.find((x) => x.value === bio.energy);
-    const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
+    const quote = deckQuote(cleanBio(person.bio), lang);
+    // What you share: two or three interests in common, plus your district when it's the same.
+    const sameDistrict = person.district && person.district === mineP.district ? districtName(lang, person.district) : null;
+    const shared = person.interests.filter((i) => mineP.interests.includes(i)).slice(0, sameDistrict ? 2 : 3);
+    const theirOwn = shared.length || sameDistrict ? [] : person.interests.slice(0, 3);
+    const chip = (i: string, on: boolean) => {
+      const o = ALL_INTERESTS.find((x) => x.value === i);
+      return o ? (
+        <span class={on ? "on" : undefined}>
+          {o.emoji} {L(lang, o)}
+        </span>
+      ) : null;
+    };
+    const initial = [...person.nickname.trim()][0]?.toUpperCase() ?? "?";
     card = (
-      <article class="deck-card" data-deck>
-        <span class="deck-stamp keen" aria-hidden="true">{t("อยากลองเจอ", "I'd meet them")}</span>
-        <span class="deck-stamp pass" aria-hidden="true">{t("ไว้ก่อน", "Not now")}</span>
-        <div class="deck-face" aria-hidden="true">{a?.emoji ?? "🙂"}</div>
-        <h2>
-          {person.nickname}
-          {person.showPronouns && person.pronouns ? <small class="muted"> {person.pronouns}</small> : null}
-        </h2>
-        <p class="deck-sub">
-          {a ? L(lang, a.name) : null} · 📍 {DISTRICTS.find((d) => d.value === person.district)?.[lang === "en" ? "en" : "th"]}
-        </p>
-        {why ? <p class="deck-why">🤝 {L(lang, why)}</p> : null}
-        <p class="chips2">
-          {chips.map((i) => {
-            const o = ALL_INTERESTS.find((x) => x.value === i);
-            return o ? <span class={shared.includes(i) ? "on" : undefined}>{o.emoji} {L(lang, o)}</span> : null;
-          })}
-        </p>
-        <p class="chips2">
-          {energy ? <span>{energy.emoji} {L(lang, energy)}</span> : null}
-          {weekend ? <span>{weekend.emoji} {L(lang, weekend)}</span> : null}
-          <span>🗣️ {person.languages.join(" · ").toUpperCase()}</span>
-        </p>
+      <article class="deck-card" aria-labelledby="deck-name">
+        <header class="deck-head">
+          <span class="deck-init" aria-hidden="true">
+            {initial}
+          </span>
+          <h2 id="deck-name">
+            {person.nickname}
+            {person.showPronouns && person.pronouns ? <small class="muted"> {person.pronouns}</small> : null}
+          </h2>
+        </header>
+        {quote ? (
+          <figure class="deck-quote">
+            <figcaption>
+              <span aria-hidden="true">{quote.emoji}</span> {quote.q}
+            </figcaption>
+            <blockquote>{quote.a}</blockquote>
+          </figure>
+        ) : null}
+        {shared.length || sameDistrict ? (
+          <>
+            <h3 class="deck-h">{t("สิ่งที่คุณมีเหมือนกัน", "What you share")}</h3>
+            <p class="chips2">
+              {shared.map((i) => chip(i, true))}
+              {sameDistrict ? <span class="on">📍 {sameDistrict}</span> : null}
+            </p>
+          </>
+        ) : theirOwn.length ? (
+          <>
+            <h3 class="deck-h">{t(`${person.nickname} ชอบ`, `${person.nickname} is into`)}</h3>
+            <p class="chips2">{theirOwn.map((i) => chip(i, false))}</p>
+          </>
+        ) : null}
+        {a ? (
+          <p class="deck-type">
+            <span aria-hidden="true">{a.emoji}</span> {t("ไทป์กรุงเทพฯ", "Bangkok Type")}: {L(lang, a.name)}
+          </p>
+        ) : null}
       </article>
     );
   }
@@ -1061,42 +1104,32 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
     <>
       <p class="spread">
         <a href="/buddy">← {t("บัดดี้", "Buddy")}</a>
-        <small class="muted">{t(`วันนี้เหลือ ${st.left}`, `${st.left} left today`)}</small>
+        {card ? <small class="muted">{t(`${st.used + 1} จาก ${DECK_PER_DAY} วันนี้`, `${st.used + 1} of ${DECK_PER_DAY} today`)}</small> : null}
       </p>
       <h1>{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</h1>
       <p class="muted">
         {t(
-          "กด อยากลองเจอ แล้วรอบจับคู่ถัดไปจะให้คนนี้มาก่อน แต่ยังไม่ใช่การจับคู่ และอีกฝ่ายจะไม่รู้ ไม่มีรูป เลือกกันจากตัวตน",
-          "I'd meet them helps the next daily round put this person first. It isn't a match, and they never see it. No photos: pick on vibe.",
+          "อ่านก่อนแล้วค่อยเลือก ถ้ากด อยากรู้จักเขา รอบจับคู่ถัดไปจะให้คนนี้มาก่อน และอีกฝ่ายจะไม่รู้",
+          "Read first, then choose. I'm curious to know them puts this person first in the next round. They never see it.",
         )}
       </p>
       {!st.self ? (
         <Notice kind="info">{t("ทำแบบทดสอบไทป์กรุงเทพฯ ก่อน แล้วค่อยกลับมาดู", "Take the Bangkok Type quiz first, then come back.")}</Notice>
       ) : card ? (
         <>
-          <div class="deck">
-            {card}
-            {st.deck[1] ? <div class="deck-under" aria-hidden="true" /> : null}
-          </div>
+          {card}
           <div class="deck-acts">
-            <form method="post" action="/buddy/deck" data-choice="pass">
-              <input type="hidden" name="target" value={next} />
-              <input type="hidden" name="choice" value="pass" />
-              <button class="deck-btn pass" aria-label={t("ไว้ก่อน", "Not now")}>
-                <span class="deck-ico" aria-hidden="true">✕</span>
-                <span class="deck-lbl" aria-hidden="true">{t("ไว้ก่อน", "Not now")}</span>
-              </button>
-            </form>
-            <form method="post" action="/buddy/deck" data-choice="keen">
+            <form method="post" action="/buddy/deck">
               <input type="hidden" name="target" value={next} />
               <input type="hidden" name="choice" value="keen" />
-              <button class="deck-btn keen" aria-label={t("อยากลองเจอ", "I'd meet them")}>
-                <span class="deck-ico" aria-hidden="true">👋</span>
-                <span class="deck-lbl" aria-hidden="true">{t("อยากลองเจอ", "I'd meet them")}</span>
-              </button>
+              <Button>{t("อยากรู้จักเขา", "I'm curious to know them")}</Button>
+            </form>
+            <form method="post" action="/buddy/deck">
+              <input type="hidden" name="target" value={next} />
+              <input type="hidden" name="choice" value="pass" />
+              <Button kind="ghost">{t("ไว้ก่อน", "Not now")}</Button>
             </form>
           </div>
-          <script dangerouslySetInnerHTML={{ __html: DECK_JS }} />
         </>
       ) : (
         <Card>
@@ -1120,37 +1153,6 @@ buddyRoutes.post("/buddy/deck", requireMember, async (c) => {
   await st.db.insert(buddySwipes).values({ id: newId(), accountId: st.me, targetId: target, choice }).onConflictDoNothing();
   return c.redirect("/buddy/deck");
 });
-
-/**
- * Drag the top card left (pass) or right (keen); the buttons do the same
- * without a pointer. Fluid, after Apple's "Designing Fluid Interfaces"
- * (src/ui/spring.ts): the card tracks the finger 1:1 from where it was
- * grabbed, after ~8px of slop so vertical scrolling still works; stamps fade
- * in with the distance; the card underneath rises as the top one leaves.
- * On release the flick is projected forward: past the line it flies off at
- * the finger's speed, otherwise it springs home with a little bounce. A card
- * in motion can be grabbed again. Reduced motion: a short cross-fade.
- */
-const DECK_JS = `(function(){var c=document.querySelector("[data-deck]");if(!c)return;var M=window.jgMotion,under=document.querySelector(".deck-under");
-var x=0,anim=null,drag=null,tr=M.tracker(),gone=false,LINE=110;
-var sK=c.querySelector(".deck-stamp.keen"),sP=c.querySelector(".deck-stamp.pass");
-function paint(){c.style.transform="translate3d("+x+"px,0,0) rotate("+(x/20)+"deg)";var p=Math.min(1,Math.abs(x)/LINE);
-if(sK)sK.style.opacity=x>0?p:0;if(sP)sP.style.opacity=x<0?p:0;
-if(under)under.style.transform="scale("+(0.95+0.05*p)+") translateY("+(10*(1-p))+"px)"}
-function fly(k,v){if(gone)return;gone=true;var f=document.querySelector('form[data-choice="'+k+'"]');M.tick();
-if(M.still()){c.style.transition="opacity .18s ease";c.style.opacity="0";setTimeout(function(){f.submit()},180);return}
-var to=(k==="keen"?1:-1)*(innerWidth+c.offsetWidth);if(anim)anim.stop();setTimeout(function(){if(!f.dataset.go){f.dataset.go="1";f.submit()}},700);
-anim=M.spring({from:x,to:to,velocity:v||(k==="keen"?1800:-1800),damping:1,response:0.35,onUpdate:function(n){x=n;paint();if(Math.abs(x)>innerWidth*0.7&&!f.dataset.go){f.dataset.go="1";f.submit()}}})}
-function home(v){if(anim)anim.stop();anim=M.spring({from:x,to:0,velocity:v,damping:0.8,response:0.35,onUpdate:function(n){x=n;paint()}})}
-c.addEventListener("pointerdown",function(e){if(gone)return;if(anim){x=anim.stop().x}drag={id:e.pointerId,sx:e.clientX,sy:e.clientY,x0:x,on:false};tr.reset();tr.add(x)});
-c.addEventListener("pointermove",function(e){if(!drag||e.pointerId!==drag.id)return;var dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
-if(!drag.on){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dy)>Math.abs(dx)){drag=null;return}drag.on=true;try{c.setPointerCapture(e.pointerId)}catch(_){};c.classList.add("dragging")}
-x=drag.x0+dx;tr.add(x);paint()});
-function up(e){if(!drag)return;var was=drag.on;drag=null;c.classList.remove("dragging");if(!was)return;
-var v=tr.velocity(),end=x+M.project(v,0.99);if(end>LINE)fly("keen",v);else if(end<-LINE)fly("pass",v);else home(v)}
-c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
-document.querySelectorAll("form[data-choice]").forEach(function(f){f.addEventListener("submit",function(e){e.preventDefault();e.stopImmediatePropagation();fly(f.dataset.choice,0)},true)});
-addEventListener("pageshow",function(ev){if(ev.persisted){gone=false;x=0;paint();c.style.opacity="";document.querySelectorAll("form[data-go]").forEach(function(f){delete f.dataset.go})}})})()`;
 
 // ------------------------------------------------------ meet feedback --
 //

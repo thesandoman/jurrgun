@@ -1025,4 +1025,20 @@ html:lang(th) :is(.pc-chip,.place-card strong,.type-pick small,.me-stat small){l
 .big-l,.fact small{text-transform:none;letter-spacing:0}
 /* Legends lose the browser's 2px side padding, so "วันเกิด" lines up with the other field labels. */
 fieldset legend{padding-inline:0}
+/* Buddy deck (owner, 2026-10-17: no swiping): an open section you read top to bottom, a small initial beside
+   the name, their own words first, then what you share, then two real 44px buttons below. Flat, no drag. */
+.deck-card{margin:16px 0 0;padding:0 0 16px;border-bottom:1px solid var(--line)}
+.deck-head{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.deck-init{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--brand-soft);color:var(--ink);font-family:var(--display);font-size:1.25rem;line-height:1}
+.deck-head h2{margin:0;font-size:1.4rem;line-height:1.2}
+.deck-quote{margin:0 0 16px}
+.deck-quote figcaption{color:var(--ink-2);font-size:.95rem}
+.deck-quote blockquote{margin:4px 0 0;padding:0 0 0 12px;border-left:3px solid var(--brand);font-size:1.15rem;line-height:1.45;color:var(--ink)}
+.deck-h{margin:0 0 4px;font-size:.95rem;font-weight:700;color:var(--ink-2)}
+.deck-card .chips2{margin:0 0 12px}
+.deck-type{margin:0;color:var(--ink-2)}
+.deck-acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 8px}
+.deck-acts form{margin:0}
+.deck-acts .btn{width:100%;min-height:44px;white-space:normal}
+@media (max-width:359px){.deck-acts{grid-template-columns:1fr}}
 `);
