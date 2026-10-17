@@ -975,4 +975,7 @@ main .open-sec>details.how:last-child{border-bottom:0}
 main details.how.past-older{margin:16px 0 0;padding:0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;background:none;box-shadow:none}
 main details.how.past-older>summary{font-weight:700;color:var(--brand);cursor:pointer}
 main details.how.past-older[open]{padding-bottom:16px}
+/* Chats list: a person's photo or coloured initial in the same 40px slot as the emoji; no ring, it sits on a plain row. */
+.chat-list .chat-av{flex:none;width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center}
+.chat-list .chat-av .av{border:0;box-shadow:none}
 `);

@@ -38,6 +38,8 @@ import { blockedAmong, getTable, memberIds, myTables, standing } from "../servic
 import { Sheet } from "../ui/sheet";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
 import { NewBadge, UnreadCount } from "../ui/unread";
+import { AvatarStack } from "../ui/visual";
+import { coverEmoji } from "./events";
 
 export const chatRoutes = new Hono<AppEnv>();
 chatRoutes.use("/chat", requireMember);
@@ -60,7 +62,7 @@ export type Thread = {
   /** Every thread key whose messages belong here: one chat per person (owner), so for someone met at several events, all those meetings' threads. */
   keys?: string[];
   /** A hangout's group chat: its event, for the curated icebreakers. */
-  event?: { id: string; startsAt: Date; endsAt: Date; dayStatus: string | null; dayStatusNote: string | null; dayStatusAt: Date | null };
+  event?: { id: string; startsAt: Date; endsAt: Date; dayStatus: string | null; dayStatusNote: string | null; dayStatusAt: Date | null; tags?: string[] };
 };
 export const keysOf = (th: Thread) => th.keys ?? [th.key];
 
@@ -180,7 +182,7 @@ export async function resolveThread(db: Db, key: string, me: string, now = new D
     title: { th: `${e.title} · ${fmtDay(e.startsAt, "th")}`, en: `${e.titleEn ?? e.title} · ${fmtDay(e.startsAt, "en")}` },
     back: `/events/${e.id}`,
     host: e.hostAccountId ?? e.createdBy,
-    event: { id: e.id, startsAt: e.startsAt, endsAt: e.endsAt, dayStatus: e.dayStatus, dayStatusNote: e.dayStatusNote, dayStatusAt: e.dayStatusAt },
+    event: { id: e.id, startsAt: e.startsAt, endsAt: e.endsAt, dayStatus: e.dayStatus, dayStatusNote: e.dayStatusNote, dayStatusAt: e.dayStatusAt, tags: e.tags },
   };
 }
 
@@ -231,14 +233,22 @@ chatRoutes.get("/chat", async (c) => {
   const allKeys = threads.flatMap(keysOf);
   const leadOf = new Map(threads.flatMap((th) => keysOf(th).map((k) => [k, th.key] as const)));
   const others = [...new Set(threads.flatMap((th) => th.members).filter((x) => x !== me))];
-  const [names, lasts, reads] = await Promise.all([
-    others.length ? db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, others)).limit(others.length) : [],
+  const tableIds = threads.filter((th) => th.key.startsWith("table:")).map((th) => th.key.slice(6));
+  const [names, lasts, reads, hangouts] = await Promise.all([
+    others.length ? db.select({ id: profiles.accountId, nickname: profiles.nickname, photoKey: profiles.photoKey }).from(profiles).where(inArray(profiles.accountId, others)).limit(others.length) : [],
     allKeys.length
       ? db.select({ thread: chatMessages.thread, body: chatMessages.body, kind: chatMessages.kind, createdAt: chatMessages.createdAt, sender: chatMessages.sender }).from(chatMessages).where(and(inArray(chatMessages.thread, allKeys), isNull(chatMessages.hiddenAt))).orderBy(desc(chatMessages.createdAt)).limit(500)
       : [],
     db.select().from(chatReads).where(eq(chatReads.accountId, me)).limit(200),
+    // A regular table's chat shows the category of its latest hangout.
+    tableIds.length
+      ? db.select({ tableId: events.regularTableId, tags: events.tags }).from(events).where(and(inArray(events.regularTableId, tableIds), ne(events.status, "draft"))).orderBy(desc(events.startsAt)).limit(200)
+      : [],
   ]);
   const nameOf = new Map(names.map((n) => [n.id, n.nickname]));
+  const photoOf = new Set(names.filter((n) => n.photoKey).map((n) => n.id));
+  const tableTags = new Map<string, string[]>();
+  for (const h of hangouts) if (h.tableId && !tableTags.has(h.tableId)) tableTags.set(h.tableId, h.tags);
   const lastOf = new Map<string, (typeof lasts)[number]>();
   for (const m of lasts) {
     const lead = leadOf.get(m.thread) ?? m.thread;
@@ -268,11 +278,12 @@ chatRoutes.get("/chat", async (c) => {
       ) : (
         <ul class="glist chat-list">
           {rows.map(({ th, last, unread }) => {
-            const who = th.members.filter((x) => x !== me).map((x) => nameOf.get(x) ?? "?");
+            const ids = th.members.filter((x) => x !== me);
+            const who = ids.map((x) => nameOf.get(x) ?? "?");
             return (
               <li>
                 <a href={`/chat/${th.key}`} class={unread ? "unread" : undefined}>
-                  <b aria-hidden="true">{th.key.startsWith("buddy") ? "🤝" : isGroup(th.key) ? "👥" : "💬"}</b>
+                  <ChatAvatar th={th} other={ids.length === 1 ? { id: ids[0], name: who[0], photo: photoOf.has(ids[0]) } : null} tableTags={tableTags} />
                   <span>
                     <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
                     <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
@@ -287,6 +298,28 @@ chatRoutes.get("/chat", async (c) => {
     </>,
   );
 });
+
+/**
+ * Who a chat is with, at a glance (owner card, 2026-10-17): a one-to-one chat
+ * shows the other person's photo or My people's coloured initial; a hangout or
+ * regular table chat shows its category emoji; Bangkok Buddy keeps 🤝.
+ */
+export function ChatAvatar(props: { th: Pick<Thread, "key" | "event">; other: { id: string; name: string; photo: boolean } | null; tableTags?: Map<string, string[]> }) {
+  const { th, other } = props;
+  if (th.key.startsWith("buddy")) return <b aria-hidden="true">🤝</b>;
+  if (isGroup(th.key)) {
+    const tags = th.event?.tags ?? (th.key.startsWith("table:") ? props.tableTags?.get(th.key.slice(6)) : undefined);
+    return <b aria-hidden="true">{tags?.length ? coverEmoji({ tags }) : "👥"}</b>;
+  }
+  if (!other) return <b aria-hidden="true">💬</b>;
+  return other.photo ? (
+    <img class="chat-av" src={`/people/${other.id}/photo/main`} alt="" width={40} height={40} loading="lazy" />
+  ) : (
+    <span class="chat-av" aria-hidden="true">
+      <AvatarStack items={[{ label: other.name, seed: other.id }]} size={40} />
+    </span>
+  );
+}
 
 type Msg = typeof chatMessages.$inferSelect;
 

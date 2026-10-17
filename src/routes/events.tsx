@@ -173,7 +173,7 @@ function questLabel(e: Event, lang: Lang): string | null {
   return r ? (lang === "en" ? r.en : r.th) : e.visitBangkokRoute;
 }
 
-function coverEmoji(e: Event): string {
+export function coverEmoji(e: Pick<Event, "tags">): string {
   const tags = e.tags;
   if (tags.includes("food")) return "🍜";
   if (tags.includes("run")) return "🏃";
