@@ -185,7 +185,7 @@ const ME_CSS = `
 .me-blob{position:absolute;z-index:-1;filter:blur(2px);opacity:.55}
 .me-blob-a{width:210px;height:190px;left:50%;top:0;transform:translateX(-62%);background:color-mix(in srgb,var(--t-green) 45%,var(--bg));border-radius:58% 42% 63% 37%/45% 55% 45% 55%;animation:me-morph 14s ease-in-out infinite}
 .me-blob-b{width:150px;height:140px;left:50%;top:30px;transform:translateX(8%);background:color-mix(in srgb,var(--t-sun) 35%,var(--bg));border-radius:40% 60% 45% 55%/60% 40% 60% 40%;animation:me-morph 18s ease-in-out infinite reverse}
-.me-blob-c{width:90px;height:84px;left:50%;top:118px;transform:translateX(-150%);background:color-mix(in srgb,var(--t-teal) 40%,var(--bg));border-radius:50% 50% 38% 62%/55% 45% 55% 45%;animation:me-morph 11s ease-in-out infinite}
+.me-blob-c{width:90px;height:84px;left:50%;top:118px;transform:translateX(-150%);background:color-mix(in srgb,var(--t-sky) 40%,var(--bg));border-radius:50% 50% 38% 62%/55% 45% 55% 45%;animation:me-morph 11s ease-in-out infinite}
 @keyframes me-morph{50%{border-radius:42% 58% 37% 63%/58% 38% 62% 42%}}
 .me-avatar{position:relative;display:inline-grid;place-items:center;width:116px;height:116px;border-radius:61% 39% 52% 48%/48% 56% 44% 52%;overflow:hidden;background:var(--hero);color:#fff;font-size:2.8rem;font-weight:800;text-decoration:none;box-shadow:0 0 0 5px var(--bg),0 12px 30px rgba(12,138,69,.25);animation:me-morph 16s ease-in-out infinite}
 .me-avatar img{width:100%;height:100%;object-fit:cover}
