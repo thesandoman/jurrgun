@@ -1025,4 +1025,40 @@ fieldset legend{padding-inline:0}
 .tabbar .unread-dot.tab-badge{position:absolute;top:6px;left:calc(50% + 8px)}
 .top-nav .unread-dot.tab-badge{display:inline-block;position:static;margin-left:6px;vertical-align:middle}
 @media (forced-colors:active){.unread-dot{background:CanvasText;box-shadow:none}}
+/* Host announcements (owner, 2026-10-17): an open section between hairlines at the top of the event page and on the pass; each one says its kind in words with a drawn icon, never colour alone. */
+.ann{margin:8px 0 16px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.ann-h{font-size:1rem;margin:4px 0 4px}
+.ann-list{list-style:none;margin:0;padding:0}
+.ann-item{padding:10px 0;border-top:1px solid var(--line)}
+.ann-list>.ann-item:first-child{border-top:0}
+.ann-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0;color:var(--ink-2);font-size:.9rem}
+.ann-meta b{color:var(--ink)}
+.ann-meta .fact-ico{width:18px;height:18px;color:var(--ink-2)}
+.ann-fact{margin:4px 0 0;font-weight:700;color:var(--ink)}
+.ann-addr{font-weight:400;color:var(--ink-2)}
+.ann-fact a{display:inline-flex;align-items:center;min-height:44px}
+.ann-body{margin:4px 0 0;color:var(--ink);overflow-wrap:anywhere;white-space:pre-line}
+main .ann details.ann-older,main details.ann-host{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+main details.ann-host{margin-top:8px;border-top:1px solid var(--line)}
+.ann-older>summary{display:flex;align-items:center;min-height:44px;font-weight:700;color:var(--brand);cursor:pointer}
+.ann-pass{margin-top:0}
+/* Right under the status strip, its hairline is the strip's: no second line. */
+.ev-strip+.ann{margin-top:-12px;border-top:0}
+/* The composer: kinds as full-width 44px rows; the time and venue fields show only for their kind, the cancel tick only for Cancelled. */
+.ann-compose{margin:16px 0}
+.ann-kinds{display:grid;gap:0;margin:0 0 12px;padding:0;border:0}
+.ann-kind{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+.ann-kind:last-of-type{border-bottom:1px solid var(--line)}
+.ann-kind input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:var(--brand)}
+.ann-kind span{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;font-weight:700}
+.ann-kind small{flex-basis:100%;font-weight:400;color:var(--ink-2)}
+.ann-form .ann-time,.ann-form .ann-venue,.ann-form .ann-confirm{display:none}
+.ann-form:has(input[name=kind][value=time]:checked) .ann-time,.ann-form:has(input[name=kind][value=venue]:checked) .ann-venue{display:block}
+.ann-form:has(input[name=kind][value=cancelled]:checked) .ann-confirm{display:flex}
+.ann-confirm{align-items:center;gap:10px;min-height:44px;margin:0 0 12px;font-weight:700}
+.ann-confirm input{width:20px;height:20px;flex:none}
+.ann-form{max-width:640px}
+.ann-form textarea{width:100%}
+details.ann-host>summary{display:flex;align-items:center;gap:6px;min-height:44px;font-weight:700;color:var(--brand);cursor:pointer}
+details.ann-host .ann-form{padding-top:4px}
 `);

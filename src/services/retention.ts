@@ -18,6 +18,7 @@
  *                             pairs are cleared; the registration row and its
  *                             status stay, so attendance totals still add up
  *   chat messages, "home safe?" 180 days
+ *   host announcements        180 days after the event ends
  *   read notifications        90 days after they were read (R6)
  *   unread notifications      1 year after they were sent
  *   exit reason notes         blanked after 1 year; the picked reasons stay
@@ -52,7 +53,8 @@
  *       buddy matches (ended, quests stay for the other buddy's passport),
  *       meet feedback about them (the link to them cut), invites they used
  *       (the link cut), regular tables they hosted (archived, description
- *       blanked), events they hosted (kept as listings).
+ *       blanked), events they hosted (kept as listings), announcements
+ *       they wrote (kept for the people going, the author link cut).
  *     kept until their own period: reports, moderation actions and audit rows.
  *
  * Every run writes one "retention.run" audit row with the counts.
@@ -65,6 +67,7 @@ import { audit } from "../lib/records";
 import { deleteObject, type StorageEnv } from "../storage";
 import {
   accounts,
+  announcements,
   auditLog,
   blocks,
   buddyMatches,
@@ -123,6 +126,8 @@ export const CHECKIN_RETENTION_DAYS = 365;
 export const RESEARCH_RETENTION_DAYS = 730;
 /** Chat messages are kept this long, then deleted (reported ones stay in the report's details). */
 export const CHAT_RETENTION_DAYS = 180;
+/** Host announcements are deleted this long after their event ends (owner, 17 Oct 2026). */
+export const ANNOUNCEMENT_RETENTION_DAYS = 180;
 /** Read notifications are deleted this long after they were read (R6). */
 export const READ_NOTIFICATION_RETENTION_DAYS = 90;
 /** Unread notifications are deleted this long after they were sent (owner, 16 Oct 2026). */
@@ -162,6 +167,8 @@ export type RetentionCounts = {
   exitNotesCleared: number;
   /** Contact shares on a removed connection or between a blocked pair. */
   contactSharesDeleted: number;
+  /** Host announcements past ANNOUNCEMENT_RETENTION_DAYS after their event. */
+  announcementsDeleted: number;
   reportsDeleted: number;
   moderationActionsDeleted: number;
   strikesDeleted: number;
@@ -191,7 +198,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   await dropFiles(env, oldPhotos.map((p) => p.key!));
 
   const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
-  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone] = await batch(env, [
+  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone, annsOld] = await batch(env, [
     db
       .update(registrations)
       .set({ socialSignal: null, signalTopics: null, helloLine: null })
@@ -253,6 +260,10 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       .delete(contactShares)
       .where(inArray(contactShares.connectionId, endedConnections(db)))
       .returning({ id: contactShares.id }),
+    db
+      .delete(announcements)
+      .where(inArray(announcements.eventId, endedBefore(new Date(now.getTime() - ANNOUNCEMENT_RETENTION_DAYS * DAY))))
+      .returning({ id: announcements.id }),
   ]);
 
   // 1b. A research_id only with research consent (privacy R7): an account holding one whose newest
@@ -308,6 +319,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     unreadNotificationsDeleted: unreadOld.length,
     exitNotesCleared: exitNotes.length,
     contactSharesDeleted: sharesGone.length,
+    announcementsDeleted: annsOld.length,
     reportsDeleted: reportsOld.length,
     moderationActionsDeleted: actionsOld.length,
     strikesDeleted: strikesOld.length,
@@ -382,6 +394,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(regularTableConflicts).where(or(inArray(regularTableConflicts.aAccount, ids), inArray(regularTableConflicts.bAccount, ids))),
       db.update(regularTables).set({ archivedAt: now }).where(and(inArray(regularTables.hostAccountId, ids), isNull(regularTables.archivedAt))),
       db.update(regularTables).set({ description: "" }).where(inArray(regularTables.hostAccountId, ids)),
+      // Announcements they wrote stay for the people going, without the link to them.
+      db.update(announcements).set({ authorAccountId: null }).where(inArray(announcements.authorAccountId, ids)),
       // Registrations stay for attendance totals, without anything personal.
       db
         .update(registrations)

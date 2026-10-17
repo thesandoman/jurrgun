@@ -88,6 +88,7 @@ import { audit } from "../lib/records";
 import { requireMember, SESSION_COOKIE } from "../lib/session";
 import {
   accounts,
+  announcements,
   buddyMatches,
   buddyOptins,
   buddySwipes,
@@ -1625,7 +1626,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
   const shareIds = [...sharesISent.map((x) => x.to), ...sharesIGot.map((x) => x.from)];
   const thanksIds = [...thanksSent.map((x) => x.to), ...thanksGot.map((x) => x.from)];
 
-  const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked, [emails]] = await Promise.all([
+  const [vibe, myStrikes, myBlocks, myFeedback, invitesMade, inviteUsed, linked, [emails], myAnnouncements] = await Promise.all([
     db
       .select({ type: vibes.archetype, modifier: vibes.modifier, scores: vibes.vector, visibleToGroupmates: vibes.visible, takenAt: vibes.takenAt })
       .from(vibes)
@@ -1667,6 +1668,14 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     db.select({ provider: oauthLinks.provider, linkedAt: oauthLinks.createdAt }).from(oauthLinks).where(eq(oauthLinks.accountId, id)).limit(10),
     // Only a hash of the address is stored, so the export can say how many, not which.
     db.select({ n: count() }).from(emailLinks).where(eq(emailLinks.accountId, id)),
+    // Announcements I sent as a host: the event's title, the kind, my message and what it changed.
+    db
+      .select({ event: events.title, kind: announcements.kind, body: announcements.body, detail: announcements.detail, createdAt: announcements.createdAt })
+      .from(announcements)
+      .leftJoin(events, eq(events.id, announcements.eventId))
+      .where(eq(announcements.authorAccountId, id))
+      .orderBy(desc(announcements.createdAt))
+      .limit(2000),
   ]);
 
   // Other people in my connections and blocks: nickname only.
@@ -1735,6 +1744,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     hangoutSharesIReceived: sharesIGot.map((x) => ({ from: nick.get(x.from) ?? null, event: x.event, createdAt: x.createdAt })),
     // My votes on chat polls: the thread kind and the option number I picked, not the poll's text.
     chatPollVotes: myVotes.map(({ thread, ...rest }) => ({ thread: thread ? thread.split(":")[0] : null, ...rest })),
+    announcementsISent: myAnnouncements,
     homeSafeChecks: mySafe.map(({ context, ...rest }) => ({ about: context.split(":")[0], ...rest })),
   };
   return new Response(JSON.stringify(data, null, 2), {

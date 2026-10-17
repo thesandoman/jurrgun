@@ -41,6 +41,10 @@ import {
   type Event,
 } from "../../schema";
 import { loadAttendees, refreshWaitlist, runBuddyRound } from "../../services/events";
+import { announceOpen, cancelWrites, eventAnnouncements, postAnnouncement, type AnnounceInput } from "../../services/announcements";
+import { ANNOUNCE_MAX, ANNOUNCE_PER_DAY, canAnnounce, cleanBody, isAnnouncementKind } from "../../domain/announcements";
+import { fromBangkok } from "../../domain/hosting";
+import { AnnounceForm, AnnouncementList } from "../../ui/announcements";
 import { checkVenueExtras } from "../../domain/hosting";
 import { STATIONS } from "../../content/stations";
 import { VenueFields, DayStatusForm, EtaSummary } from "../../ui/day-of";
@@ -1104,8 +1108,9 @@ adminEvents.post(
     const regs = await reachableRegistrations(db, e.id);
     const th = `ขออภัย กิจกรรมถูกยกเลิก: ${e.title}`;
     const en = `Sorry, this event was cancelled: ${e.titleEn ?? e.title}`;
+    // Every seat and waitlist place is given back too (src/services/announcements.ts cancelWrites).
     await batchAll(c.env, [
-      db.update(events).set({ status: "cancelled" }).where(eq(events.id, e.id)),
+      ...cancelWrites(db, e.id, new Date()),
       audit(db, me(c).id, "event.cancel", { type: "event", id: e.id }, { notified: regs.length }),
       ...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_cancelled", `/events/${e.id}`),
     ]);
@@ -1176,6 +1181,8 @@ adminEvents.get(
     // (an event can hold 100,000). The attendee table is paged.
     const { page: ap, offset } = pageOf(c.req.query("ap"), ATTENDEE_PAGE);
     const notWaitlisted = and(eq(registrations.eventId, e.id), ne(registrations.status, "waitlisted"));
+    const anns = await eventAnnouncements(db, e.id);
+    const announcer = canAnnounce(e, a);
     const [totals, pageRows, waitRows, checked, pairs, hostRow] = await Promise.all([
       db
         .select({
@@ -1528,6 +1535,14 @@ adminEvents.get(
             {dayOpen ? <EtaSummary t={t} late={etaNames("running_late")} onWay={etaNames("on_my_way")} /> : null}
           </>
         ) : null}
+
+        {announcer && announceOpen(e, now) ? (
+          <section class="ann-compose" aria-labelledby="announce">
+            <h2 id="announce">{t("ประกาศถึงคนที่มา", "Announce to people going")}</h2>
+            <AnnounceForm t={t} e={e} action={`${BASE}/${e.id}/announce`} back={`${BASE}/${e.id}`} />
+          </section>
+        ) : null}
+        <AnnouncementList t={t} lang={lang} items={anns} />
 
         <h2>{t("คำถามละลายพฤติกรรม", "Icebreaker prompt")}</h2>
         {e.activePrompt ? (
@@ -2131,6 +2146,79 @@ adminEvents.post(
     return c.redirect(`${BASE}/${e.id}?notice=notice_sent`);
   }),
 );
+
+/**
+ * Host announcements (owner, 2026-10-17): Update, Time changed, Venue moved,
+ * Cancelled. Its own access check, not withEvent: the host is hostAccountId,
+ * or createdBy when there is no host, plus the organiser and bma_admin
+ * (src/domain/announcements.ts canAnnounce). Posted from this page and from
+ * /host; `back` returns to whichever it came from.
+ */
+adminEvents.post("/:id/announce", async (c) => {
+  const { t } = view(c);
+  const id = c.req.param("id") ?? "";
+  const db = getDb(c.env);
+  const a = me(c);
+  const [e] = await db.select().from(events).where(eq(events.id, id)).limit(1);
+  if (!e || !canAnnounce(e, a)) return notFound(c);
+  const body = await c.req.parseBody();
+  const back = str(body.back) === "/host" ? "/host" : `${BASE}/${e.id}`;
+  const fail = (msg: string, status: 400 | 409 = 400) =>
+    page(c, { title: t("ส่งประกาศไม่ได้", "Couldn't send that"), admin: back !== "/host", status }, (
+      <>
+        <Notice kind="error">{msg}</Notice>
+        <p>
+          <a href={`${back}#announce`}>{t("← กลับไปแก้", "← Go back and change it")}</a>
+        </p>
+      </>
+    ));
+  const kind = str(body.kind);
+  if (!isAnnouncementKind(kind)) return fail(t("เลือกว่าประกาศเรื่องอะไร", "Choose what the announcement is about"));
+  const raw = str(body.body);
+  if (raw.length > ANNOUNCE_MAX) return fail(t(`ข้อความไม่เกิน ${ANNOUNCE_MAX} ตัวอักษร`, `A message is at most ${ANNOUNCE_MAX} characters`));
+  const text = cleanBody(raw);
+  const now = new Date();
+  if (!announceOpen(e, now)) return fail(t("ประกาศได้เฉพาะกิจกรรมที่เผยแพร่และยังไม่จบ", "Announcements are for live events that haven't ended"), 409);
+  const input: AnnounceInput = { kind, body: text };
+  if (kind === "update" && !text) return fail(t("พิมพ์ข้อความที่จะบอกทุกคน", "Write the message for everyone"));
+  if (kind === "time") {
+    const s = fromBangkok(str(body.startsAt));
+    const en = fromBangkok(str(body.endsAt));
+    if (!s || !en) return fail(t("ใส่เวลาเริ่มและเวลาจบใหม่", "Give the new start and end"));
+    if (s.getTime() <= now.getTime()) return fail(t("เวลาเริ่มใหม่ต้องยังไม่ถึง", "The new start must be in the future"));
+    if (en.getTime() <= s.getTime()) return fail(t("เวลาจบต้องหลังเวลาเริ่ม", "The end must be after the start"));
+    if (en.getTime() - s.getTime() > 24 * 3_600_000) return fail(t("กิจกรรมยาวได้ไม่เกิน 24 ชั่วโมง", "An event can be at most 24 hours long"));
+    if (s.getTime() === e.startsAt.getTime() && en.getTime() === e.endsAt.getTime()) return fail(t("เวลายังเหมือนเดิม", "That's the same time as now"));
+    input.startsAt = s;
+    input.endsAt = en;
+  }
+  if (kind === "venue") {
+    const name = str(body.venueName).trim().slice(0, 200);
+    const addr = str(body.venueAddress).trim().slice(0, 400);
+    const map = str(body.mapUrl).trim();
+    if (!name) return fail(t("ใส่ชื่อสถานที่ใหม่", "Give the new venue"));
+    if (map && (map.length > 500 || !/^https:\/\/\S+$/.test(map))) return fail(t("ลิงก์แผนที่ต้องขึ้นต้นด้วย https://", "The map link must start with https://"));
+    if (name === e.venueName && addr === e.venueAddress && (map || null) === e.mapUrl) return fail(t("สถานที่ยังเหมือนเดิม", "That's the same place as now"));
+    input.venueName = name;
+    input.venueAddress = addr;
+    input.mapUrl = map || null;
+  }
+  if (kind === "cancelled" && str(body.confirm) !== "1") return fail(t("ติ๊กยืนยันก่อนยกเลิกกิจกรรม", "Tick the box to confirm the cancellation"));
+  let defer: ((p: Promise<unknown>) => void) | undefined;
+  try {
+    const ctx = c.executionCtx;
+    defer = (p) => ctx.waitUntil(p);
+  } catch {
+    defer = undefined; // tests and some local runs have no execution context
+  }
+  const r = await postAnnouncement(c.env, db, e, a.id, input, now, defer);
+  if (!r.ok) {
+    if (r.reason === "too_many") return fail(t(`ประกาศได้ไม่เกิน ${ANNOUNCE_PER_DAY} ครั้งใน 24 ชั่วโมง`, `At most ${ANNOUNCE_PER_DAY} announcements in 24 hours`), 409);
+    if (r.reason === "duplicate") return fail(t(`ส่งข้อความนี้ไปแล้วเมื่อไม่กี่นาทีก่อน`, `You sent this same message a few minutes ago`), 409);
+    return fail(t("ประกาศได้เฉพาะกิจกรรมที่เผยแพร่และยังไม่จบ", "Announcements are for live events that haven't ended"), 409);
+  }
+  return c.redirect(`${back}?notice=announced#announce`);
+});
 
 // ------------------------------------------------- waitlist, buddies, +1 --
 

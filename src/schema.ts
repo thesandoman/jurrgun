@@ -562,6 +562,35 @@ export const notifications = pgTable(
 );
 
 /**
+ * Host announcements (owner, 2026-10-17): the host's short "blast" to the
+ * people going. Shown at the top of the event page and on the pass. The
+ * author link is cut when the author's account is deleted; the row stays
+ * for the people going, and goes ANNOUNCEMENT_RETENTION_DAYS after the event.
+ */
+export const announcements = pgTable(
+  "social_event_announcements",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").notNull(),
+    /** Null once the author's account is deleted. */
+    authorAccountId: text("author_account_id"),
+    /** update | time | venue | cancelled (src/domain/announcements.ts) */
+    kind: text("kind").notNull(),
+    /** The host's message, at most 280 characters; "" when a structured kind has none. */
+    body: text("body").notNull().default(""),
+    /** What a structured kind changed, as it was then: new times (ISO) or the new venue. */
+    detail: jsonb("detail").$type<AnnouncementDetail>(),
+    createdAt: created(),
+  },
+  (t) => [
+    index("social_event_announcements_event_idx").on(t.eventId, t.createdAt),
+    index("social_event_announcements_author_idx").on(t.authorAccountId),
+  ],
+);
+export type AnnouncementDetail = { startsAt?: string; endsAt?: string; venueName?: string; venueAddress?: string; mapUrl?: string | null };
+export type Announcement = typeof announcements.$inferSelect;
+
+/**
  * Web Push: one row per phone or browser that said yes to notifications
  * (src/lib/webpush.ts). Deleted when the push service says it is gone, when
  * the member turns it off, and with the account.

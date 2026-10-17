@@ -106,6 +106,8 @@ import {
 import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
 import { canView, ownsEvent } from "../domain/hosting";
 import { notifyHostRunningLate } from "../services/eta-notice";
+import { eventAnnouncements } from "../services/announcements";
+import { AnnouncementList } from "../ui/announcements";
 import { dayOfOpen, shownDayStatus, shownEta, isEtaStatus } from "../domain/day-of";
 import { DayStatusLine, EtaBox, EtaSummary, FindTheTable } from "../ui/day-of";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
@@ -1207,7 +1209,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const db = getDb(c.env);
   const now = new Date();
 
-  const [reg, state, host, buddies, standingRows, cover, partner, tableBox] = await Promise.all([
+  const [reg, state, host, buddies, standingRows, cover, partner, tableBox, anns] = await Promise.all([
     myRegistration(db, event.id, user.account.id),
     seatState(db, event),
     event.hostAccountId
@@ -1220,6 +1222,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       ? db.select({ name: partnerOrgs.name }).from(partnerOrgs).where(eq(partnerOrgs.id, event.partnerOrgId)).limit(1)
       : Promise.resolve([] as { name: string }[]),
     tablePrompt(db, event, user, now),
+    // Host announcements: everyone who can open this page can read them (visibleEvent decided that).
+    eventAnnouncements(db, event.id),
   ]);
 
   // Bring-a-friend (PRD §8.2): my open invite link, if I have one.
@@ -1305,6 +1309,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <p class="eyebrow">{eyebrow(event, t, lang)}</p>
         <h1>{title(event, lang)}</h1>
         <StatusStrip {...stripProps} class="ev-phone" />
+        <AnnouncementList t={t} lang={lang} items={anns} />
         {quest ? (
           <p>
             <Tag tone="accent">🧭 {t("ซิตี้เควสต์", "City Quest")}</Tag> {quest}
@@ -2494,6 +2499,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
     ? await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, event.hostAccountId)).limit(1)
     : [];
   const dayOf = dayOfOpen(event, now);
+  const anns = await eventAnnouncements(db, event.id);
   return page(
     c,
     { title: t("บัตรเข้างาน", "Event pass"), tab: "mine" },
@@ -2501,6 +2507,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
       <OfflineSavedNote t={t} lang={lang} />
       <DayStatusLine t={t} lang={lang} shown={shownDayStatus(event, now)} />
       {dayOf && !reg.checkedInAt ? <EtaBox t={t} eventId={event.id} current={shownEta(event, reg, now)} next={`/me/events/${event.id}/pass`} /> : null}
+      <AnnouncementList t={t} lang={lang} items={anns} class="ann-pass" shown={1} />
       <section class={live ? "ticket is-live" : "ticket"} aria-label={t("บัตรเข้างาน", "Event pass")}>
         <div class="ticket-top">
           <p class="eyebrow">{t("บัตรเข้างาน", "Event pass")} · {user.profile.nickname}</p>

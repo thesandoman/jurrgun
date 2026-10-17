@@ -34,8 +34,11 @@ import { audit, notify } from "../lib/records";
 import { requireUser } from "../lib/session";
 import { accounts, blocks, circleShares, connections, events, type Event, type RegularTable } from "../schema";
 import { hostTable, sendToTable } from "../services/regular-tables";
-import { Button, Card, Choices, Empty, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
+import { Button, Card, Choices, Empty, FactIcon, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 import { VenueFields } from "../ui/day-of";
+import { AnnounceForm } from "../ui/announcements";
+import { announceOpen } from "../services/announcements";
+import { canAnnounce } from "../domain/announcements";
 import { STATIONS } from "../content/stations";
 
 export const hostRoutes = new Hono<AppEnv>();
@@ -200,6 +203,7 @@ hostRoutes.get("/host", async (c) => {
     ? await getDb(c.env).select({ eventId: circleShares.eventId }).from(circleShares).where(inArray(circleShares.eventId, privateIds)).limit(5000)
     : [];
   const sharedCount = (id: string) => shared.filter((x) => x.eventId === id).length;
+  const now = new Date();
   return page(
     c,
     { title: t("จัดกิจกรรม", "Host an event"), tab: "me" },
@@ -294,6 +298,14 @@ hostRoutes.get("/host", async (c) => {
                 </form>
               ) : null}
             </div>
+            {announceOpen(e, now) && canAnnounce(e, me) ? (
+              <details class="ann-host">
+                <summary>
+                  <FactIcon name="note" /> {t("ประกาศถึงคนที่มา", "Announce to people going")}
+                </summary>
+                <AnnounceForm t={t} e={e} action={`/admin/events/${e.id}/announce`} back="/host" />
+              </details>
+            ) : null}
           </Card>
         ))
       )}

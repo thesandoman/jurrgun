@@ -86,6 +86,7 @@ const NOTICES: Record<string, [string, string]> = {
   groups_suggested: ["จัดโต๊ะแนะนำแล้ว ตรวจดูแล้วกดเผยแพร่", "Groups suggested, review, then publish"],
   groups_published: ["เผยแพร่โต๊ะแล้ว", "Groups published"],
   notice_sent: ["ส่งประกาศแล้ว", "Notice sent"],
+  announced: ["ส่งประกาศแล้ว", "Announcement sent"],
   strikes_recorded: ["บันทึกคนที่ไม่มาตามนัดแล้ว", "No-shows recorded"],
   answered: ["ขอบคุณนะ คำตอบของคุณช่วยให้กรุงเทพฯ ดีขึ้นได้จริง ๆ", "Thanks! Your answer helps the city"],
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
@@ -244,7 +245,7 @@ function Icon(props: { d: string }) {
   );
 }
 /** Small drawn icons for facts on cards (time, place, language), in the nav's stroke style (Phase 3: emoji stay for warmth, controls and facts get drawn icons). */
-export function FactIcon(props: { name: "time" | "place" | "lang" | "train" | "check" | "pause" | "walk" }) {
+export function FactIcon(props: { name: "time" | "place" | "lang" | "train" | "check" | "pause" | "walk" | "note" }) {
   const d = {
     time: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5l3 2",
     place: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Zm0-9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
@@ -253,6 +254,8 @@ export function FactIcon(props: { name: "time" | "place" | "lang" | "train" | "c
     train: "M8 3h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm-3 7h14M9 14h.01M15 14h.01M9 17l-2 4m8-4 2 4",
     check: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-4-9 3 3 5-6",
     pause: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2-12v6m4-6v6",
+    // A megaphone: a host announcement.
+    note: "M4 10v4h3l7 4V6l-7 4H4Zm13-1.5a4.5 4.5 0 0 1 0 7M7 14l1 5h2.5l-1-4.2",
     walk: "M13 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 21l2-6 3 3v3m-6-11 3-3 3 3 3 1M12 15l-1-5",
   }[props.name];
   return (
