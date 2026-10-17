@@ -220,12 +220,19 @@ async function myThreads(db: Db, me: string, now: Date): Promise<string[]> {
   ];
 }
 
-chatRoutes.get("/chat", async (c) => {
-  const v = view(c);
-  const { t, lang } = v;
-  const db = getDb(c.env);
-  const me = c.var.user!.account.id;
-  const now = new Date();
+export type ChatRowData = {
+  th: Thread;
+  last: { thread: string; body: string; kind: string; createdAt: Date; sender: string } | undefined;
+  unread: boolean;
+  /** Messages from others since I last read it (counted from the latest 500). */
+  unreadN: number;
+  other: { id: string; name: string; photo: boolean } | null;
+  who: string[];
+  tableTags: Map<string, string[]>;
+};
+
+/** My chats, newest activity first, with what a row needs: shared by Chats and My people's New messages. */
+export async function chatRows(db: Db, me: string, now = new Date()): Promise<ChatRowData[]> {
   const keys = await myThreads(db, me, now);
   // Someone met at several events resolves to one thread (the newest meeting's): list it once.
   const seen = new Set<string>();
@@ -249,18 +256,64 @@ chatRoutes.get("/chat", async (c) => {
   const photoOf = new Set(names.filter((n) => n.photoKey).map((n) => n.id));
   const tableTags = new Map<string, string[]>();
   for (const h of hangouts) if (h.tableId && !tableTags.has(h.tableId)) tableTags.set(h.tableId, h.tags);
+  const readOf = new Map(reads.map((r) => [r.thread, r.lastReadAt.getTime()]));
   const lastOf = new Map<string, (typeof lasts)[number]>();
+  const newOf = new Map<string, number>();
   for (const m of lasts) {
     const lead = leadOf.get(m.thread) ?? m.thread;
     if (!lastOf.has(lead)) lastOf.set(lead, m);
+    if (m.sender !== me && m.createdAt.getTime() > (readOf.get(lead) ?? 0)) newOf.set(lead, (newOf.get(lead) ?? 0) + 1);
   }
-  const readOf = new Map(reads.map((r) => [r.thread, r.lastReadAt.getTime()]));
-  const rows = threads
+  return threads
     .map((th) => {
       const last = lastOf.get(th.key);
-      return { th, last, unread: !!last && last.sender !== me && last.createdAt.getTime() > (readOf.get(th.key) ?? 0) };
+      const ids = th.members.filter((x) => x !== me);
+      const who = ids.map((x) => nameOf.get(x) ?? "?");
+      const unread = !!last && last.sender !== me && last.createdAt.getTime() > (readOf.get(th.key) ?? 0);
+      return {
+        th,
+        last,
+        unread,
+        unreadN: unread ? Math.max(1, newOf.get(th.key) ?? 0) : 0,
+        other: ids.length === 1 ? { id: ids[0], name: who[0], photo: photoOf.has(ids[0]) } : null,
+        who,
+        tableTags,
+      };
     })
     .sort((a, b) => (b.last?.createdAt.getTime() ?? 0) - (a.last?.createdAt.getTime() ?? 0));
+}
+
+/** One chat row: avatar, name, a one-line preview, then New (or, with `count`, how many new). */
+export function ChatRow(props: { v: View; r: ChatRowData; count?: boolean }) {
+  const { t, lang } = props.v;
+  const { th, last, unread, unreadN, other, who, tableTags } = props.r;
+  return (
+    <li>
+      <a href={`/chat/${th.key}`} class={unread ? "unread" : undefined}>
+        <ChatAvatar th={th} other={other} tableTags={tableTags} />
+        <span>
+          <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
+          <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
+        </span>
+        {unread && props.count ? (
+          <b class="unread-badge">
+            {unreadN > 9 ? "9+" : unreadN}
+            <span class="sr-only"> {t("ข้อความใหม่", "new messages")}</span>
+          </b>
+        ) : unread ? (
+          <NewBadge t={t} />
+        ) : !th.open ? (
+          <small class="muted">{t("ปิดแล้ว", "Closed")}</small>
+        ) : null}
+      </a>
+    </li>
+  );
+}
+
+chatRoutes.get("/chat", async (c) => {
+  const v = view(c);
+  const { t } = v;
+  const rows = await chatRows(getDb(c.env), c.var.user!.account.id);
   const unreadCount = rows.filter((r) => r.unread).length;
   return page(
     c,
@@ -277,22 +330,9 @@ chatRoutes.get("/chat", async (c) => {
         <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a Regular Table or a private hangout.")}</Empty>
       ) : (
         <ul class="glist chat-list">
-          {rows.map(({ th, last, unread }) => {
-            const ids = th.members.filter((x) => x !== me);
-            const who = ids.map((x) => nameOf.get(x) ?? "?");
-            return (
-              <li>
-                <a href={`/chat/${th.key}`} class={unread ? "unread" : undefined}>
-                  <ChatAvatar th={th} other={ids.length === 1 ? { id: ids[0], name: who[0], photo: photoOf.has(ids[0]) } : null} tableTags={tableTags} />
-                  <span>
-                    <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
-                    <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
-                  </span>
-                  {unread ? <NewBadge t={t} /> : !th.open ? <small class="muted">{t("ปิดแล้ว", "Closed")}</small> : null}
-                </a>
-              </li>
-            );
-          })}
+          {rows.map((r) => (
+            <ChatRow v={v} r={r} />
+          ))}
         </ul>
       )}
     </>,

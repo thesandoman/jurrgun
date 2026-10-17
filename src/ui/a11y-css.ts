@@ -995,4 +995,10 @@ main details.how.past-older[open]{padding-bottom:16px}
   #sticky-rsvp{display:none}
   body:has(#sticky-rsvp) main.wrap{padding-bottom:56px}
 }
+/* My people, owner card 5: new messages first, at most three rows of the Chats list, then one 44px link to Chats. */
+.people-new{margin:8px 0 24px}
+.people-new>h2{margin:0 0 8px}
+.people-new .chat-list{margin:0}
+.people-new .chat-list a>b.unread-badge{min-width:24px;height:24px}
+.people-new-all{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-weight:700}
 `);

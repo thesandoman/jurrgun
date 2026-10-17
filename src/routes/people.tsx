@@ -65,6 +65,7 @@ import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normaliz
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
 import { NotifItems } from "../ui/notif-menu";
 import { ChatsLink, NewBadge } from "../ui/unread";
+import { ChatRow, chatRows, type ChatRowData } from "./chat";
 import { CHAT_KIND } from "../domain/chat";
 import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
@@ -961,7 +962,31 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
   );
 }
 
-function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras; again?: SeeAgain | null }) {
+/**
+ * Unread chats first (owner card 5, 2026-10-17): only when there are some, up
+ * to 3 rows of the Chats list's own row, then All chats. A finite list, nothing
+ * animated, so the page doesn't pull for attention.
+ */
+export function NewMessages(props: { v: View; rows: ChatRowData[] }) {
+  const { t } = props.v;
+  const rows = props.rows.filter((r) => r.unread).slice(0, 3);
+  if (!rows.length) return null;
+  return (
+    <section class="people-new" aria-labelledby="people-new-h">
+      <h2 id="people-new-h" class="h3">{t("ข้อความใหม่", "New messages")}</h2>
+      <ul class="glist chat-list">
+        {rows.map((r) => (
+          <ChatRow v={props.v} r={r} count />
+        ))}
+      </ul>
+      <a class="people-new-all" href="/chat">
+        {t("แชตทั้งหมด", "All chats")} <span aria-hidden="true">›</span>
+      </a>
+    </section>
+  );
+}
+
+function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: { id: string; text: string }; extras?: CircleExtras; again?: SeeAgain | null; chats?: ChatRowData[] }) {
   const { t } = props.v;
   return (
     <>
@@ -972,6 +997,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
         </p>
       )}
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My people in Bangkok")}</h1>
+      {props.chats ? <NewMessages v={props.v} rows={props.chats} /> : null}
       <script
         dangerouslySetInnerHTML={{
           __html: `document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-thanks]");if(!b)return;var i=b.closest("form").querySelector("input[name=body]");if(i){i.value=b.dataset.thanks;i.focus()}})`,
@@ -1021,11 +1047,13 @@ peopleRoutes.get("/connections", requireMember, async (c) => {
   const v = view(c);
   const { rows, myVibe } = await loadCircle(c);
   const user = c.var.user!;
-  const [extras, again] = await Promise.all([
+  const [extras, again, chats] = await Promise.all([
     loadCircleExtras(c, rows, myVibe),
     rows.length ? seeAgain(getDb(c.env), { id: user.account.id, birthDate: user.profile!.birthDate }) : Promise.resolve(null),
+    // The same unread rule as the Chats list (read up to the last message seen), so the two always agree.
+    chatRows(getDb(c.env), user.account.id),
   ]);
-  return page(c, { title: v.t("คนรู้จัก", "My people"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} again={again} />);
+  return page(c, { title: v.t("คนรู้จัก", "My people"), tab: "connections" }, <Circle v={v} rows={rows} myVibe={myVibe} extras={extras} again={again} chats={chats} />);
 });
 
 /** The connection, if I'm one of its two people and it's still active. */
