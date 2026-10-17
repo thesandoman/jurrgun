@@ -1,6 +1,6 @@
 # Jurrgun brand kit (SV Edits)
 
-Built 16 Oct 2026 with the SV Edits skill (photo 0.5.0, vector 0.5.0) and SV Blender on Blender 5.2.2, from the app's own brand (`src/ui/brand.tsx`, `src/ui/warm.ts`) with the natural-thumb mark (e570540). `brand.json` lists every colour and font with its source.
+Built 16 Oct 2026 with the SV Edits skill (photo 0.5.0, vector 0.5.0) and SV Blender on Blender 5.2.2, from the app's own brand (`src/ui/brand.tsx`, `src/ui/warm.ts`) with the natural-thumb mark (e570540). `brand.json` lists every colour and font with its source. Colours follow the app palette of 17 Oct 2026 (`src/ui/palette.ts`): green acts, cream is only the page, mango only for My events and warnings, Chao Phraya sky for info and the river, canal teal for food and nights, love red only for dating mode. Coral is retired.
 
 | Folder | What |
 | --- | --- |
@@ -11,6 +11,6 @@ Built 16 Oct 2026 with the SV Edits skill (photo 0.5.0, vector 0.5.0) and SV Ble
 | `billboards/` | One layered PSD and PNG per scene: the design is a smart object placed by its four corners, with Blender's light on top |
 | `scenes-collage-morning.png` | One morning image per scene: the reference for a future brand video |
 
-Scripts: `jurrgun-scenes.py` builds the MRT, highway and bus shelter scenes; `relight.py` makes morning and night copies of an SV Blender scene; `place.py` places designs onto a rendered scene as a layered PSD; `render-relit.sh` and `render-queue4.sh` are the render runs used.
+Scripts: `guide.py` builds the brand guide; `jurrgun-scenes.py` builds the MRT, highway and bus shelter scenes; `relight.py` makes morning and night copies of an SV Blender scene; `place.py` places designs onto a rendered scene as a layered PSD; `render-relit.sh` and `render-queue4.sh` are the render runs used.
 
 Not committed: the Blender scene files and render passes (`scenes*/`), the BMA font files (`fonts/`, ask the owner), and the zip. Fonts: Sao Chingcha (headings) and Anuphan (body), from the BMA.

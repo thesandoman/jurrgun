@@ -13,43 +13,57 @@
    "role": "accent",
    "name": "Jurrgun green",
    "hex": "#137f45",
+   "use": "actions, the mark",
    "source": "src/ui/brand.tsx:26"
   },
   {
    "role": "background",
    "name": "Cream",
    "hex": "#fff9f0",
-   "source": "src/ui/warm.ts:13"
+   "use": "the page only",
+   "source": "src/ui/palette.ts PRIMITIVES.cream[50]"
   },
   {
    "role": "ink",
    "name": "Ink",
    "hex": "#1e2b22",
-   "source": "src/ui/warm.ts:14"
-  },
-  {
-   "role": "soft",
-   "name": "Mango",
-   "hex": "#ffb443",
-   "source": "src/ui/warm.ts:16"
-  },
-  {
-   "role": "soft",
-   "name": "Coral",
-   "hex": "#ff7a5c",
-   "source": "src/ui/warm.ts:16"
+   "use": "text",
+   "source": "src/ui/palette.ts PRIMITIVES.ink[900]"
   },
   {
    "role": "soft",
    "name": "Fresh green",
    "hex": "#2fb866",
-   "source": "src/ui/warm.ts:15"
+   "use": "outdoors, active",
+   "source": "src/ui/palette.ts PRIMITIVES.green[500]"
+  },
+  {
+   "role": "soft",
+   "name": "Mango",
+   "hex": "#ffa53a",
+   "use": "My events tab and warnings only",
+   "source": "src/ui/palette.ts PRIMITIVES.mango[400]"
+  },
+  {
+   "role": "soft",
+   "name": "Chao Phraya sky",
+   "hex": "#5cb8e6",
+   "use": "info, new things, the river, culture, language",
+   "source": "src/ui/palette.ts PRIMITIVES.sky[400]"
+  },
+  {
+   "role": "soft",
+   "name": "Canal teal",
+   "hex": "#22a99f",
+   "use": "food and nights",
+   "source": "src/ui/palette.ts PRIMITIVES.teal[500]"
   },
   {
    "role": "accent",
-   "name": "Love red (💘 opt-in only)",
+   "name": "Love red",
    "hex": "#e23744",
-   "source": "src/ui/styles.ts:20"
+   "use": "dating mode only",
+   "source": "src/ui/palette.ts PRIMITIVES.love[500]"
   }
  ],
  "fonts": [
@@ -70,5 +84,6 @@
   "kind": "component",
   "file": "sv-edits/logo-source.svg",
   "source": "src/ui/brand.tsx:26"
- }
+ },
+ "palette_note": "Follows the app palette of 2026-10-17 (src/ui/palette.ts). Coral is retired."
 }
