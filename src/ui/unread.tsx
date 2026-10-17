@@ -1,8 +1,9 @@
 /**
  * One unread style everywhere (owner: clearer unread): a lime pill with dark
- * text, a count where there is one and "ใหม่ / New" on a row. It is the same
- * on the bell, the My people tab, the Chats chip, chat rows and notification
- * rows, and it always carries words or a number, never colour alone (1.4.1).
+ * text, a count where there is one and "ใหม่ / New" on a row (the bell and the
+ * My people tab show a plain dot instead, UnreadDot). It is the same on the
+ * Chats chip, chat rows and notification rows, and it always carries words or
+ * a number, never colour alone (1.4.1).
  *
  * The pill itself is hidden from screen readers where a count is involved:
  * the link's accessible name says it in full instead ("แชต ยังไม่ได้อ่าน 2 /
@@ -23,6 +24,17 @@ export function UnreadCount(props: { n: number; class?: string }) {
       {props.n > 9 ? "9+" : props.n}
     </span>
   );
+}
+
+/**
+ * A small dot instead of a number, for the bell and the My people tab (owner,
+ * 2026-10-17: less pull to clear counters). Decorative: the link or button
+ * keeps the full count in its accessible name (unreadLabel), and the dot is a
+ * shape, so it never relies on colour alone.
+ */
+export function UnreadDot(props: { n: number; class?: string }) {
+  if (props.n <= 0) return null;
+  return <span class={props.class ? `unread-dot ${props.class}` : "unread-dot"} aria-hidden="true" />;
 }
 
 /** The "💬 แชต / Chats" shortcut with its unread count. */

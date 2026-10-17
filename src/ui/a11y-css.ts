@@ -1058,4 +1058,11 @@ fieldset legend{padding-inline:0}
 .top-week a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 @media (min-width:900px){.top-week{columns:2;column-gap:32px;border-top:0}.top-week li{break-inside:avoid}}
 .disc-more-h{margin-top:8px}
+/* Unread on the bell and the My people tab is a small dot, not a number (owner, 2026-10-17). The count stays
+   in the accessible name. A filled 10px circle with a ring: a shape, not colour alone. */
+.unread-dot,.unread-dot.notif-dot,.unread-dot.tab-badge{display:block;width:10px;height:10px;min-width:0;padding:0;border-radius:50%;background:var(--brand);font-size:0;line-height:0;box-shadow:0 0 0 2px var(--surface)}
+.notif .unread-dot.notif-dot{position:absolute;top:9px;right:9px}
+.tabbar .unread-dot.tab-badge{position:absolute;top:6px;left:calc(50% + 8px)}
+.top-nav .unread-dot.tab-badge{display:inline-block;position:static;margin-left:6px;vertical-align:middle}
+@media (forced-colors:active){.unread-dot{background:CanvasText;box-shadow:none}}
 `);

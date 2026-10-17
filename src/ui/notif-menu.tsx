@@ -3,14 +3,14 @@
  *
  * The list is fetched only when the menu opens (GET /notifications/panel,
  * which also marks those notifications read), so ordinary page views make no
- * extra query; the unread badge comes from the signed-in-user lookup. Without
+ * extra query; the unread dot comes from the signed-in-user lookup (the count is in its label). Without
  * JS the menu still opens and offers the full /notifications page.
  */
 import type { notifications } from "../schema";
 import type { Lang } from "../lib/i18n";
 import { fmtDate } from "../lib/i18n";
 import { safeNext } from "./kit";
-import { NewBadge, UnreadCount, unreadLabel } from "./unread";
+import { NewBadge, UnreadDot, unreadLabel } from "./unread";
 
 type T = (th: string, en: string) => string;
 type Notification = typeof notifications.$inferSelect;
@@ -22,7 +22,7 @@ export function NotifMenu(props: { t: T; unread: number }) {
     <details class="notif" id="notif">
       <summary aria-label={label} title={label}>
         <span aria-hidden="true">🔔</span>
-        <UnreadCount n={unread} class="notif-dot" />
+        <UnreadDot n={unread} class="notif-dot" />
       </summary>
       <div class="notif-panel" role="region" aria-label={t("การแจ้งเตือน", "Notifications")} data-src="/notifications/panel">
         <p class="notif-h">{t("การแจ้งเตือน", "Notifications")}</p>

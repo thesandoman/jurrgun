@@ -20,7 +20,9 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
 
     let html = await (await req("/events?view=list", { cookie })).text();
     expect(html).toContain('id="notif"');
-    expect(html).toContain('<span class="unread-badge notif-dot" aria-hidden="true">2</span>');
+    // A small dot, not a number (owner, 2026-10-17); the count stays in the accessible name.
+    expect(html).toContain('<span class="unread-dot notif-dot" aria-hidden="true"></span>');
+    expect(html).not.toMatch(/notif-dot"[^>]*>\d/);
     expect(html).toContain('aria-label="Notifications, 2 unread"');
     expect(html).toContain('href="/notifications"');
 

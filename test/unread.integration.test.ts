@@ -28,7 +28,9 @@ describe.skipIf(!HAS_DB)("clearer unread", () => {
     await db().insert(notifications).values({ id: newId(), accountId: a.id, kind: "rsvp", titleTh: "ยืนยันแล้ว", titleEn: "You're in", link: "/me/events" });
     const en = await (await req("/events?view=list", { cookie: `${a.cookie}; lang=en` })).text();
     expect(en).toContain('aria-label="My people, 1 unread chat"');
-    expect(en).toContain('<span class="unread-badge tab-badge" aria-hidden="true">1</span>');
+    // A small dot, not a number (owner, 2026-10-17); the count stays in the accessible name.
+    expect(en).toContain('<span class="unread-dot tab-badge" aria-hidden="true"></span>');
+    expect(en).not.toMatch(/tab-badge"[^>]*>\d/);
     // The bell counts the RSVP only: the message is counted once, under Chats.
     expect(en).toContain('aria-label="Notifications, 1 unread"');
     const th = await (await req("/events?view=list", { cookie: `${a.cookie}; lang=th` })).text();
@@ -59,7 +61,7 @@ describe.skipIf(!HAS_DB)("clearer unread", () => {
     const { a, key } = await chatWithMessage();
     const open = await (await req(`/chat/${key}`, { cookie: `${a.cookie}; lang=en` })).text();
     expect(open).toContain("See you Sunday?");
-    expect(open).not.toContain('class="unread-badge tab-badge"');
+    expect(open).not.toContain('tab-badge"');
     const waiting = await db().select().from(notifications).where(and(eq(notifications.accountId, a.id), eq(notifications.kind, "chat"), isNull(notifications.readAt)));
     expect(waiting).toHaveLength(0);
     const list = await (await req("/chat", { cookie: `${a.cookie}; lang=en` })).text();
