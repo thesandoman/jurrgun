@@ -227,10 +227,12 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         compact={self}
         actions={
           self ? (
-            <>
-              <a class="btn primary" href="/settings/profile" aria-label={t("แก้ไขโปรไฟล์", "Edit profile")}>✏️ {t("แก้ไข", "Edit")}</a>
-              {answered < 3 ? <LinkButton href="/settings/profile#prompts" kind="ghost">💬 {t("ตอบคำถามเพิ่ม", "Answer a few prompts")}</LinkButton> : null}
-            </>
+            <a class="btn primary" href="/settings/profile" aria-label={t("แก้ไขโปรไฟล์", "Edit profile")}>✏️ {t("แก้ไข", "Edit")}</a>
+          ) : undefined
+        }
+        invite={
+          self && answered < 3 ? (
+            <LinkButton href="/settings/profile#prompts" kind="ghost">💬 {t("ตอบคำถามเพิ่ม", "Answer a few prompts")}</LinkButton>
           ) : undefined
         }
       />

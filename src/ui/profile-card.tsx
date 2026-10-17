@@ -133,8 +133,14 @@ export function ProfileCard(props: {
   viewerInterests?: string[] | null;
   /** The viewer's university key, to say "same university". */
   viewerUniversity?: string | null;
-  /** Extra actions under the header (Edit button on my own card). */
+  /** Extra actions under the header (Edit button on my own card). On the compact card only one fits beside the name. */
   actions?: Child;
+  /**
+   * My own card: a nudge to fill in more (the Answer-prompts button). It gets
+   * its own full-width row under the header, or, on a nearly empty card, sits
+   * in the empty state at the bottom with one quiet line.
+   */
+  invite?: Child;
   /** Names of the regular tables they sit at, already filtered for this viewer (src/services/regular-tables.ts regularAt). */
   regularAt?: string[];
   /** My own card: a small avatar with the actions beside the name, and chips that jump to each section. */
@@ -223,6 +229,15 @@ export function ProfileCard(props: {
     { th: "ภาษา", en: "Languages", items: factsLang },
   ].filter((g) => g.items.length);
   const facts = factGroups.flatMap((g) => g.items);
+  const hasAbout = !!(intents.length || facts.length || tableCount > 1);
+  // The jump chips only help with two or more sections to jump between.
+  const jumps = [
+    hasAbout ? <a href="#pc-about">{t("เกี่ยวกับฉัน", "About me")}</a> : null,
+    comm.length ? <a href="#pc-style">{t("สไตล์", "Style")}</a> : null,
+    interests.length ? <a href="#pc-interests">{t("ความสนใจ", "Interests")}</a> : null,
+  ].filter((x) => x !== null);
+  // Nearly empty: no prompt answers and at most one section. The invite becomes the empty state.
+  const sparse = !cards.length && !datingAnswered.length && jumps.length < 2;
 
   return (
     <article class="pc">
@@ -248,11 +263,10 @@ export function ProfileCard(props: {
         </div>
         {props.compact && props.actions ? <div class="pc-actions">{props.actions}</div> : null}
       </header>
-      {props.compact ? (
+      {props.invite && !sparse ? <div class="pc-invite">{props.invite}</div> : null}
+      {props.compact && jumps.length >= 2 ? (
         <nav class="pc-jump" aria-label={t("ไปที่ส่วนต่าง ๆ", "Jump to")}>
-          {intents.length || facts.length || tableCount > 1 ? <a href="#pc-about">{t("เกี่ยวกับฉัน", "About me")}</a> : null}
-          {comm.length ? <a href="#pc-style">{t("สไตล์", "Style")}</a> : null}
-          {interests.length ? <a href="#pc-interests">{t("ความสนใจ", "Interests")}</a> : null}
+          {jumps}
         </nav>
       ) : null}
 
@@ -260,7 +274,7 @@ export function ProfileCard(props: {
 
       {slot()}
 
-      {intents.length || facts.length || tableCount > 1 ? (
+      {hasAbout ? (
         <section class="pc-sec" id="pc-about">
           {intents.length ? (
             <>
@@ -364,6 +378,13 @@ export function ProfileCard(props: {
       ) : null}
 
       {cards.slice(next)}
+
+      {props.invite && sparse ? (
+        <section class="pc-sec pc-empty">
+          <p class="muted">{t("โปรไฟล์ยังโล่งอยู่ ตอบคำถามสั้น ๆ สักสองสามข้อ ให้คนที่เจอได้รู้จักคุณมากขึ้น", "Your profile is still quiet. A few short prompts help the people you meet get to know you.")}</p>
+          {props.invite}
+        </section>
+      ) : null}
     </article>
   );
 }
@@ -499,7 +520,7 @@ export function PromptCard(props: { v: View; q: Prompt; a: Answer; photo: string
 
 export const PROFILE_CSS = `
 .pc{display:flex;flex-direction:column;gap:24px;margin:8px 0 40px}
-.pc h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:0 0 12px;font-weight:600}
+.pc h2{font-size:.82rem;text-transform:none;letter-spacing:0;color:var(--ink-2);margin:0 0 12px;font-weight:700}
 .pc-hero{display:flex;flex-direction:column;gap:18px}
 .pc-photo{width:100%;aspect-ratio:4/5;max-height:440px;object-fit:cover;border-radius:28px;display:block}
 .pc-initial{display:grid;place-items:center;background:var(--hero);aspect-ratio:16/11}

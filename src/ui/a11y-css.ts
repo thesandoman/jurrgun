@@ -1001,4 +1001,14 @@ main details.how.past-older[open]{padding-bottom:16px}
 .people-new .chat-list{margin:0}
 .people-new .chat-list a>b.unread-badge{min-width:24px;height:24px}
 .people-new-all{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-weight:700}
+/* My profile: the Answer-prompts nudge gets its own full-width row under the header (it used to overlap the district line). */
+.pc-invite{display:grid}
+/* The nudge button may wrap rather than run off a narrow phone. */
+.pc-invite .btn,.pc-empty .btn{white-space:normal;min-height:44px;margin:0}
+/* The jump bar already draws a line under itself: the section right after it doesn't draw a second one. */
+.pc-jump+.pc-sec,.pc-jump+.pc-card{border-top:0;padding-top:0}
+/* A nearly empty profile: one quiet line, then the button, 12px apart. */
+.pc-empty{display:grid;gap:12px;justify-items:start}
+/* The empty-state line keeps the page's reading measure. */
+.pc-empty p{margin:0;max-width:40ch}
 `);
