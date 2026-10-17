@@ -1143,6 +1143,24 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const dayStatus = going || hosting ? shownDayStatus(event, now) : null;
   const eta = dayOf && hosting ? await etaNames(db, event, now) : null;
   const hello = going && helloOpen(event, now) ? await helloLines(db, event, reg!, user.account.id) : null;
+  // "Running late" / "on my way" and the host's who's-coming list: no ids, so they can sit in both layouts.
+  const dayOfControls = (where: "ev-phone" | "ev-lap") => (
+    <>
+      {going && dayOf && !reg!.checkedInAt ? (
+        <div class={where}>
+          <EtaBox t={t} eventId={event.id} current={shownEta(event, reg!, now)} next={`/events/${event.id}`} />
+        </div>
+      ) : null}
+      {eta ? (
+        <Card class={`eta-host ${where}`}>
+          <h2 class="h3">{t("ใครกำลังมา", "Who's on the way")}</h2>
+          <EtaSummary t={t} late={eta.late} onWay={eta.onWay} />
+          <a href={`/admin/events/${event.id}#day-of`}>{t("ตั้งสถานะวันงาน", "Set the day-of status")}</a>
+        </Card>
+      ) : null}
+    </>
+  );
+  const stripProps = { event, reg, v, left, waitPos, started, ended, standing };
 
   return page(
     c,
@@ -1161,21 +1179,19 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       ) : event.visibility === "private" ? (
         <Notice kind="info" icon="🔒">{t("กิจกรรมส่วนตัว เห็นได้เฉพาะคนที่มีลิงก์ อย่าโพสต์ลิงก์นี้ในที่สาธารณะ", "Private event: only people with the link can see it. Please don't post the link publicly.")}</Notice>
       ) : null}
-      <DayStatusLine t={t} lang={lang} shown={dayStatus} />
+      {/* Laptops (owner card, 2026-10-17): details on the left, a sticky rail on the right with the next action,
+          My registration and the day-of controls. Phones read one column in the same order as before; the
+          day-of controls show once per screen size (ev-phone / ev-lap). */}
+      <div class="ev-layout">
+      <div class="ev-main">
+      <DayStatusLine t={t} lang={lang} shown={dayStatus} class="ev-phone" />
       {hello ? <HelloBox t={t} lang={lang} event={event} mine={reg!.helloLine} lines={hello} /> : null}
-      {going && dayOf && !reg!.checkedInAt ? <EtaBox t={t} eventId={event.id} current={shownEta(event, reg!, now)} next={`/events/${event.id}`} /> : null}
-      {eta ? (
-        <Card class="eta-host">
-          <h2 class="h3">{t("ใครกำลังมา", "Who's on the way")}</h2>
-          <EtaSummary t={t} late={eta.late} onWay={eta.onWay} />
-          <a href={`/admin/events/${event.id}#day-of`}>{t("ตั้งสถานะวันงาน", "Set the day-of status")}</a>
-        </Card>
-      ) : null}
+      {dayOfControls("ev-phone")}
       <Cover e={event} src={cover} class="ev-scene" />
       <Card class="ev-sheet">
         <p class="eyebrow">{eyebrow(event, t, lang)}</p>
         <h1>{title(event, lang)}</h1>
-        <StatusStrip event={event} reg={reg} v={v} left={left} waitPos={waitPos} started={started} ended={ended} standing={standing} />
+        <StatusStrip {...stripProps} class="ev-phone" />
         {quest ? (
           <p>
             <Tag tone="accent">🧭 City Quest</Tag> {quest}
@@ -1309,9 +1325,14 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
 
       <BuddyBox names={buddies} event={event} t={t} />
       <TableBox box={tableBox} t={t} />
+      </div>
 
+      <div class="ev-rail">
+      <DayStatusLine t={t} lang={lang} shown={dayStatus} class="ev-lap" />
+      {dayOfControls("ev-lap")}
+      <StatusStrip {...stripProps} class="ev-lap" />
       {event.status === "cancelled" ? null : (
-        <Card>
+        <Card class="ev-reg">
           <h2>{t("การลงทะเบียนของฉัน", "My registration")}</h2>
           <p class="safe-line">
             <ShieldIcon />
@@ -1326,6 +1347,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           {canInvite(event, reg, now) ? <InviteBox event={event} url={inviteUrl} v={v} /> : null}
         </Card>
       )}
+      </div>
+      </div>
       {again ? <SeeAgainCard v={v} data={again} here /> : null}
       {event.status === "published" && !started && (!reg || reg.status === "cancelled" || reg.status === "late_cancelled") ? (
         <StickyRsvp t={t} left={left} />
@@ -1522,7 +1545,7 @@ function RegistrationBox(props: {
         ) : null}
         {!started ? (
           <>
-            <div class="row">
+            <div class="row reg-pass">
               <LinkButton href={`/me/events/${event.id}/pass`}>{t("🎟️ บัตรเข้างานของฉัน", "🎟️ My event pass")}</LinkButton>
             </div>
             <form method="post" action={`${base}/cancel`}>

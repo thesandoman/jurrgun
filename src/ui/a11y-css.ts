@@ -978,4 +978,21 @@ main details.how.past-older[open]{padding-bottom:16px}
 /* Chats list: a person's photo or coloured initial in the same 40px slot as the emoji; no ring, it sits on a plain row. */
 .chat-list .chat-av{flex:none;width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center}
 .chat-list .chat-av .av{border:0;box-shadow:none}
+/* Laptop event page (owner card, 2026-10-17): details left, a sticky rail right on an 8/4-like split with a 48px gutter.
+   The strip and the day-of controls show once per screen size; in the rail the strip carries the one action, so the
+   card below drops the same button (pass, the plain RSVP button, accept). */
+@media (max-width:1023.98px){.ev-lap{display:none}}
+@media (min-width:1024px){
+  main.wrap:has(.ev-layout){max-width:1180px}
+  .ev-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:48px;align-items:start}
+  .ev-main{min-width:0}
+  .ev-phone{display:none}
+  .ev-rail{position:sticky;top:96px;display:grid;gap:16px;max-height:calc(100vh - 112px);overflow-y:auto;padding:4px;margin:-4px}
+  .ev-rail>*{margin:0}
+  .ev-rail .ev-strip{margin:0}
+  .ev-rail .ev-strip:not(:has(.btn)){display:none}
+  .ev-rail .ev-strip~.ev-reg .reg-pass,.ev-rail .ev-strip:has(button[form=rsvp])~.ev-reg #rsvp .btn-ticket,.ev-rail .ev-strip:has(button[form=offer])~.ev-reg #offer button[value=accept]{display:none}
+  #sticky-rsvp{display:none}
+  body:has(#sticky-rsvp) main.wrap{padding-bottom:56px}
+}
 `);

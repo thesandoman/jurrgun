@@ -114,7 +114,9 @@ describe.skipIf(!HAS_DB)("day-of status", () => {
     expect(row.dayStatusNote).toBe("Upstairs, 3rd floor");
 
     const page = await (await req(`/events/${id}`, { cookie: `${going.cookie}; lang=en` })).text();
-    expect(page).toContain('class="day-status ds-moved"');
+    // Once for phones (at the top) and once for the laptop rail.
+    expect(page).toContain('class="day-status ds-moved ev-phone"');
+    expect(page).toContain('class="day-status ds-moved ev-lap"');
     expect(page).toContain("The meeting point has moved");
     expect(page).toContain("Upstairs, 3rd floor");
     const th = await (await req(`/events/${id}`, { cookie: `${going.cookie}; lang=th` })).text();
