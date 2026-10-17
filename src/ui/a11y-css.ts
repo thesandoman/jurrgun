@@ -1011,4 +1011,16 @@ main details.how.past-older[open]{padding-bottom:16px}
 .pc-empty{display:grid;gap:12px;justify-items:start}
 /* The empty-state line keeps the page's reading measure. */
 .pc-empty p{margin:0;max-width:40ch}
+/* Thai type: no letter-spacing on Thai text. The tracking set for Latin on buttons, headings, labels, day names and profile answers is dropped in Thai mode (the a11y spacing modes keep theirs). */
+html:lang(th):not(.a11y-readable):not(.a11y-spacing) :is(.btn,h1,h2,h3,.me-hi,.me-stat b,.sub-label,.me-group,.ev-date small,.past-day small,.pc-a,.pc-id h1,.tile2.hero .hero-title,.stamps li){letter-spacing:0}
+/* Thai type: headings get a taller line so stacked vowels and tone marks on a second line don't touch the line above. */
+html:lang(th) :is(h1,h2,.me-hi,.tile2.hero .hero-title,.tile2-body h1){line-height:1.3}
+/* Thai type: small labels and pills had a line-height near 1, too tight for marks above and below the line. */
+html:lang(th) :is(.seg a,.ev-date small,.past-day,.past-day small,.unread-badge){line-height:1.3}
+/* Thai type: chips, place-card titles, type names and stat labels get the same 1.4 as other short Thai text. */
+html:lang(th) :is(.pc-chip,.place-card strong,.type-pick small,.me-stat small){line-height:1.4}
+/* Day names on date badges ("Sat") stay in sentence case with no tracking: no all-caps labels. */
+.ev-date small,.ev-card .ev-date small{text-transform:none;letter-spacing:0}
+/* Big-number labels and fact labels: sentence case, no tracking, like every other label. */
+.big-l,.fact small{text-transform:none;letter-spacing:0}
 `);
