@@ -2056,6 +2056,10 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
         .limit(200)
     : [];
   const gaveFeedback = new Set(given.map((g) => g.eventId));
+  const cutoff = pastCutoff(now).getTime();
+  const recent = past.filter((r) => r.event.startsAt.getTime() >= cutoff);
+  const older = past.filter((r) => r.event.startsAt.getTime() < cutoff);
+  const pastMonths = (rows: typeof past) => (rows.length ? <PastMonths rows={rows} v={v} now={now} gaveFeedback={gaveFeedback} /> : null);
   const standing = strikeStanding(strikeRows, now);
   const activeStrikes = strikeRows.filter((s) => !s.waivedBy && s.expiresAt.getTime() > now.getTime());
 
@@ -2147,8 +2151,36 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
       {past.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรมที่ผ่านมา", "No past events yet.")}</Empty>
       ) : (
+        <>
+          {pastMonths(recent)}
+          {/* Older months open in place, no script needed (owner card, 2026-10-17). */}
+          {older.length ? (
+            <details class="how past-older">
+              <summary>{t(`ดูกิจกรรมที่ผ่านมาทั้งหมด (${older.length})`, `Show all past events (${older.length})`)}</summary>
+              {pastMonths(older)}
+            </details>
+          ) : null}
+        </>
+      )}
+    </>,
+  );
+});
+
+/** Past events from this month and the two before it (Bangkok time) show on My events; older ones fold away. */
+export function pastCutoff(now: Date): Date {
+  const BKK = 7 * 3_600_000;
+  const b = new Date(now.getTime() + BKK);
+  return new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth() - 2, 1) - BKK);
+}
+
+function PastMonths(props: { rows: { event: Event; reg: Registration }[]; v: View; now: Date; gaveFeedback: Set<string> }) {
+  const { rows, now, gaveFeedback } = props;
+  const { t, lang } = props.v;
+  return (
+    <>
+      {
         // Compact rows grouped by month (owner, C3). Buttons only while the 72-hour window after the event is open.
-        byMonth(past, (r) => fmtMonth(r.event.startsAt, lang)).map(([month, items]) => (
+        byMonth(rows, (r) => fmtMonth(r.event.startsAt, lang)).map(([month, items]) => (
           <section class="past-month">
             <SubLabel>{month}</SubLabel>
             <ul class="glist past-rows">
@@ -2184,10 +2216,10 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
             </ul>
           </section>
         ))
-      )}
-    </>,
+      }
+    </>
   );
-});
+}
 
 // ---------------------------------------------------------------- pass --
 

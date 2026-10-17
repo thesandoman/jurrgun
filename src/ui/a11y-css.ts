@@ -971,4 +971,8 @@ main .open-sec>details.how:last-child{border-bottom:0}
 .ev-strip-text small{color:var(--ink-2);font-size:.85rem}
 .ev-strip.is-ok .ev-strip-text b{color:var(--brand)}
 .ev-strip .btn{flex:none;min-height:44px;margin:0}
+/* My events: past events older than three months fold into one row between hairlines that opens in place. */
+main details.how.past-older{margin:16px 0 0;padding:0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;background:none;box-shadow:none}
+main details.how.past-older>summary{font-weight:700;color:var(--brand);cursor:pointer}
+main details.how.past-older[open]{padding-bottom:16px}
 `);
