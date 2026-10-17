@@ -371,7 +371,7 @@ settingsRoutes.get("/settings", async (c) => {
       }
       // No tiles until a first check-in or a first person in My people (owner card).
       stats={Number(been?.n ?? 0) + Number(circle?.n ?? 0) === 0 ? [] : [
-        { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไป", "Events been"), href: "/me/events#past", tint: "green" },
+        { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไป", "Events attended"), href: "/me/events#past", tint: "green" },
         {
           emoji: "🤝",
           n: Number(circle?.n ?? 0),
@@ -405,7 +405,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ใช้รหัสแทนชื่อ", "Quick questions, under a code, not your name"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
         { href: "/settings/consents", emoji: "✅", title: t("ความยินยอมของฉัน", "My consents"), hint: t("เปิดหรือปิดแต่ละเรื่อง พร้อมวันที่", "Each one on or off, with dates"), tint: "mint", group: gAcct },
-        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), hint: t("ดาวน์โหลดข้อมูล ปิดบัญชี", "Download my data, deactivate"), tint: "mint", group: gAcct },
+        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy centre"), hint: t("ดาวน์โหลดข้อมูล ปิดบัญชี", "Download my data, deactivate"), tint: "mint", group: gAcct },
         ...(emailEnabled(c.env)
           ? [{ href: "/settings/email", emoji: "✉️", title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), hint: t("เข้าสู่ระบบด้วยรหัสทางอีเมล", "Sign in with a code by email"), tint: "sky" as const, group: gAcct }]
           : []),
@@ -1384,7 +1384,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
       <p>
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
-      <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</h1>
+      <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy centre")}</h1>
       <p class="muted">{t("ข้อมูลของคุณ: ดูว่าเก็บที่ไหน ดาวน์โหลด หรือปิดบัญชี", "Your data: where it lives, download it, or close your account.")}</p>
       <p class="row">
         <a class="btn ghost" href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")} <span aria-hidden="true">→</span></a>
@@ -1444,7 +1444,7 @@ function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
 
 settingsRoutes.get("/settings/privacy", async (c) => {
   const current = await currentConsents(c, me(c).account.id);
-  return page(c, { title: view(c).t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), tab: "me" }, <PrivacyCenter v={view(c)} current={current} />);
+  return page(c, { title: view(c).t("ศูนย์ความเป็นส่วนตัว", "Privacy centre"), tab: "me" }, <PrivacyCenter v={view(c)} current={current} />);
 });
 
 /** Saves consents from the Privacy Center or the consent centre: append-only rows, latest wins. */
@@ -1756,7 +1756,7 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     const current = await currentConsents(c, user.account.id);
     return page(
       c,
-      { title: v.t("ศูนย์ความเป็นส่วนตัว", "Privacy Center"), tab: "me", status: 400 },
+      { title: v.t("ศูนย์ความเป็นส่วนตัว", "Privacy centre"), tab: "me", status: 400 },
       <>
         <Notice kind="error">{v.t("ติ๊กยืนยันก่อนปิดบัญชี", "Please tick the box to confirm deactivation.")}</Notice>
         <PrivacyCenter v={v} current={current} />

@@ -185,7 +185,7 @@ export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
           <a target={tgt} href="/settings/profile">{t("แก้ไขโปรไฟล์", "Edit profile")}</a>: {t("แก้ข้อมูลให้ถูก", "correct your details")}
         </li>
         <li>
-          <a target={tgt} href="/settings/privacy">{t("ศูนย์ความเป็นส่วนตัว", "Privacy Center")}</a>: {t("ปิดบัญชี", "close your account")}
+          <a target={tgt} href="/settings/privacy">{t("ศูนย์ความเป็นส่วนตัว", "Privacy centre")}</a>: {t("ปิดบัญชี", "close your account")}
         </li>
       </ul>
       <p>{t("คุณร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.) ได้เสมอ", "You can always complain to Thailand's Personal Data Protection Committee (PDPC).")}</p>
@@ -327,7 +327,7 @@ export function TermsOfService(props: { v: View; inSheet?: boolean }) {
       <S
         h={["ปิดบัญชี", "Closing an account"]}
         rows={[
-          [`ปิดบัญชีได้ทุกเมื่อที่ศูนย์ความเป็นส่วนตัว โปรไฟล์ถูกซ่อนทันที และข้อมูลถูกลบหลัง ${DEACTIVATED_RETENTION_DAYS} วัน`, `Close your account at any time in the Privacy Center. Your profile is hidden at once, and your data is deleted after ${DEACTIVATED_RETENTION_DAYS} days.`],
+          [`ปิดบัญชีได้ทุกเมื่อที่ศูนย์ความเป็นส่วนตัว โปรไฟล์ถูกซ่อนทันที และข้อมูลถูกลบหลัง ${DEACTIVATED_RETENTION_DAYS} วัน`, `Close your account at any time in the Privacy centre. Your profile is hidden at once, and your data is deleted after ${DEACTIVATED_RETENTION_DAYS} days.`],
           ["เราอาจระงับหรือปิดบัญชีที่ทำผิดข้อกำหนดนี้ ตามขั้นตอนด้านบน", "We may suspend or close an account that breaks these Terms, as described above."],
         ]}
       />

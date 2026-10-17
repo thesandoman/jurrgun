@@ -383,7 +383,7 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
 function statusLabel(status: string, t: T): string {
   switch (status) {
     case "confirmed":
-      return t("ยืนยันแล้ว", "Going");
+      return t("ยืนยันแล้ว", "Confirmed");
     case "waitlisted":
       return t("อยู่ในคิวสำรอง", "Waitlisted");
     case "offered":
@@ -1538,7 +1538,7 @@ function RegistrationBox(props: {
       <>
         <p>
           <Tag tone="ok">{statusLabel("confirmed", t)}</Tag>{" "}
-          {reg!.plusOneWith ? t("มากับเพื่อน", "Bringing a friend") : t("มาคนเดียว", "Going alone")}
+          {reg!.plusOneWith ? t("มากับเพื่อน", "Bringing a friend") : t("มาคนเดียว", "Coming alone")}
         </p>
         {reg!.checkedInAt && !ended ? (
           <LinkButton href={`${base}/live`}>{t("เข้าหน้าในงาน", "Open the live page")}</LinkButton>
@@ -2414,7 +2414,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
             </span>
           </button>
           <p class="code">{code}</p>
-          <p class="muted">{t("สแกนไม่ได้ ให้โฮสต์พิมพ์รหัสนี้ · อย่าแชร์บัตร", "Scan fails? The host types this code · don't share it")}</p>
+          <p class="muted">{t("สแกนไม่ได้ ให้โฮสต์พิมพ์รหัสนี้ · อย่าแชร์บัตร", "Scan fails? The host types this code · Don't share your pass")}</p>
           {reg.checkedInAt ? <Tag tone="ok">{t("เช็กอินแล้ว", "Checked in")}</Tag> : null}
         </div>
       </section>

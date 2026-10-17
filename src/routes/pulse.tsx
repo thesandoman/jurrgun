@@ -204,7 +204,7 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
             )}
           </p>
           <p>{t("คุณยังไม่ได้ให้ความยินยอมด้านการวิจัย", "You haven't switched on research consent.")}</p>
-          <LinkButton href="/settings/privacy">{t("ไปที่ศูนย์ความเป็นส่วนตัว", "Go to the Privacy Center")}</LinkButton>
+          <LinkButton href="/settings/privacy">{t("ไปที่ศูนย์ความเป็นส่วนตัว", "Go to the Privacy centre")}</LinkButton>
         </Card>
       </>,
     );

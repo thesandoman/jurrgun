@@ -118,7 +118,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
     await attendedOnce(m.id);
     html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain(`class="me-stats"`);
-    expect(html).toMatch(/🎉<\/span><b>1<\/b><small>Events been<\/small>/);
+    expect(html).toMatch(/🎉<\/span><b>1<\/b><small>Events attended<\/small>/);
   });
 
   it("edits the profile and validates input", async () => {
