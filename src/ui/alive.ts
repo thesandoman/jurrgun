@@ -38,7 +38,7 @@ export const ALIVE_CSS = `
 .card.ev-card.feat{--notch:178px}
 .ev-card .ev-body{position:relative}
 .ev-card .ev-body::before{content:"";position:absolute;left:18px;right:18px;top:0;border-top:2px dashed color-mix(in srgb,var(--ink-3) 35%,transparent)}
-.ev-card .ev-date{transform:rotate(-4deg);border:2px solid var(--mango-1);box-shadow:0 6px 16px rgba(0,0,0,.16)}
+.ev-card .ev-date{transform:rotate(-4deg);border:2px solid var(--fresh);box-shadow:0 6px 16px rgba(0,0,0,.16)}
 .ev-card::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.22),transparent 60%);opacity:0;transition:opacity .3s ease}
 @media (hover:hover) and (pointer:fine){
   .ev-card:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-4px)}
@@ -99,7 +99,7 @@ document.querySelectorAll(".notice.toast").forEach(function(n){document.body.app
 // Confetti for the friendship milestone only, in the brand's colours.
 var t=document.querySelector(".toast.party,[data-celebrate]");
 if(t&&!still){var box=document.createElement("div");box.className="confetti";box.setAttribute("aria-hidden","true");
-var cs=["#2fb866","#11763f","#ffc766","#ffa53a","#5cb8e6","#cdeed6"];
+var cs=["#2fb866","#11763f","#22a99f","#8ff2ea","#5cb8e6","#acecb4"];
 for(var i=0;i<34;i++){var p=document.createElement("i");var a=Math.random()*Math.PI*2,d=120+Math.random()*220;
 p.style.setProperty("--c",cs[i%cs.length]);p.style.setProperty("--x",Math.cos(a)*d+"px");p.style.setProperty("--y",(Math.sin(a)*d*.6+180+Math.random()*160)+"px");p.style.setProperty("--r",(Math.random()*720-360)+"deg");p.style.animationDelay=(Math.random()*.12)+"s";box.appendChild(p)}
 document.body.appendChild(box);setTimeout(function(){box.remove()},1900)}

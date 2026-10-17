@@ -4,24 +4,28 @@
  * of sky blue). Three layers:
  *
  *   1. PRIMITIVES: the raw Bangkok colours. BTS green, mango sticky rice,
- *      Chao Phraya sky, cream, and love red (only for 💘).
+ *      Chao Phraya sky, canal teal, cream, and love red (only for 💘).
  *   2. Semantic roles (LIGHT and DARK): text levels, action, selected,
  *      success, warning, danger, info, mine, and the four category tints.
  *   3. Component tokens: the tab bar, the deep green tiles, the hero, fields.
  *
  * Components use the semantic and component names, never primitives or hex.
- * Meaning: green acts and marks outdoors and active; mango is "mine" and
- * "attention" (waitlist, almost full) and food and nights; sky is info, new
- * things, the river, culture and language exchange; cream is the city.
+ * Meaning: green acts and marks outdoors and active; sky is info, new things,
+ * the river, culture and language exchange; teal is food and nights; light
+ * mint is the city. Mango is only the My events tab and warnings (waitlist,
+ * almost full). Tints carry no yellow or cream (owner, 2026-10-17); cream is
+ * only the page itself.
  * test/palette.test.ts checks every text pair against WCAG AA and the
  * category tints against each other (CIEDE2000 of 15 or more).
  */
 
 export const PRIMITIVES = {
-  green: { 50: "#f1f9f3", 100: "#e3f5ea", 200: "#cdeed6", 500: "#2fb866", 600: "#11763f", 700: "#0b5a30", 800: "#06492a", 900: "#06301c" },
+  green: { 50: "#f1f9f3", 100: "#e3f5ea", 200: "#acecb4", 500: "#2fb866", 600: "#11763f", 700: "#0b5a30", 800: "#06492a", 900: "#06301c" },
   mango: { 50: "#fff8ea", 100: "#fff0d2", 200: "#ffdc94", 300: "#ffc766", 400: "#ffa53a", 800: "#9a5100", 900: "#3b2400" },
-  sky: { 50: "#f0f8fe", 100: "#e3f2fc", 200: "#d2e9fa", 400: "#5cb8e6", 700: "#0a6390" },
-  cream: { 50: "#fff9f0", 100: "#f6efe4", 200: "#f0e2cc", 400: "#e3cfae" },
+  sky: { 100: "#e3f2fc", 200: "#c6dcfa", 400: "#5cb8e6", 700: "#0a6390" },
+  teal: { 100: "#dff7f4", 200: "#8ff2ea", 500: "#22a99f", 700: "#0b6b66" },
+  mint: { 50: "#effcf6", 300: "#a8dcc0" },
+  cream: { 50: "#fff9f0", 200: "#f0e2cc" },
   love: { 500: "#e23744", 700: "#c0222f", 100: "#fde3e5" },
   ink: { 900: "#1e2b22", 700: "#46564b", 600: "#56635a" },
   danger: { 700: "#c2261d", 100: "#fde8e6" },
@@ -63,11 +67,13 @@ export const LIGHT: Palette = {
   "err-soft": P.danger[100],
   info: P.sky[700],
   "info-soft": P.sky[100],
-  // mine and attention
+  "on-info": P.white,
+  teal: P.teal[700],
+  "teal-soft": P.teal[100],
+  // mango: only the My events tab and warnings
   mango: P.mango[400],
   "mango-1": P.mango[300],
   "mango-2": P.mango[400],
-  "mango-soft": P.mango[100],
   "mango-ink": P.mango[800],
   "on-mango": P.mango[900],
   // love red: only for 💘
@@ -76,19 +82,19 @@ export const LIGHT: Palette = {
   "love-soft": P.love[100],
   // category tints (ticket stubs) and their scene grounds (cover landscapes)
   "cat-green": P.green[200],
-  "cat-mango": P.mango[200],
+  "cat-teal": P.teal[200],
   "cat-sky": P.sky[200],
-  "cat-cream": P.cream[100],
+  "cat-mint": P.mint[50],
   "cat-green-2": P.green[500],
-  "cat-mango-2": P.mango[400],
+  "cat-teal-2": P.teal[500],
   "cat-sky-2": P.sky[400],
-  "cat-cream-2": P.cream[400],
+  "cat-mint-2": P.mint[300],
   // component: deep green tiles, pass header, QR back
   deep: P.green[800],
   "deep-2": P.green[700],
   "on-deep": P.white,
   "on-deep-2": P.green[100],
-  "on-deep-accent": P.mango[300],
+  "on-deep-accent": P.teal[200],
 };
 
 /** Dark theme: designed, not inverted. A night-green ground, surfaces clearly above it, brighter accents. */
@@ -117,33 +123,35 @@ export const DARK: Palette = {
   "err-soft": "#401c1a",
   info: "#7cc8f0",
   "info-soft": "#13324a",
+  "on-info": "#062112",
+  teal: "#6fe0d6",
+  "teal-soft": "#0f3a38",
   mango: "#ffb347",
   "mango-1": P.mango[300],
   "mango-2": P.mango[400],
-  "mango-soft": "#3d2e12",
   "mango-ink": "#ffc766",
   "on-mango": P.mango[900],
   love: "#f0505c",
   "love-ink": "#ff9aa3",
   "love-soft": "#3a1a1e",
-  "cat-green": "#1a3d29",
-  "cat-mango": "#4a3712",
-  "cat-sky": "#163650",
-  "cat-cream": "#2b2a27",
+  "cat-green": "#19431d",
+  "cat-teal": "#0b4c50",
+  "cat-sky": "#0b3250",
+  "cat-mint": "#1a231f",
   "cat-green-2": "#14683f",
-  "cat-mango-2": "#8a6418",
+  "cat-teal-2": "#0f6e6a",
   "cat-sky-2": "#1d5a80",
-  "cat-cream-2": "#4a4438",
+  "cat-mint-2": "#2d4a3b",
   deep: "#0b3520",
   "deep-2": "#0e4429",
   "on-deep": P.white,
   "on-deep-2": "#a7e9bf",
-  "on-deep-accent": P.mango[300],
+  "on-deep-accent": P.teal[200],
 };
 
 /** Gradients and shadows built from the tokens above. */
-const LIGHT_EXTRA = `--hero:linear-gradient(135deg,${P.green[500]} 0%,${P.green[200]} 60%,${P.mango[200]} 120%);--shadow:0 1px 2px rgba(120,80,30,.06),0 10px 28px rgba(160,110,40,.10);--focus:color-mix(in srgb,var(--brand) 55%,transparent)`;
-const DARK_EXTRA = `--hero:linear-gradient(135deg,${P.green[700]} 0%,#13703f 60%,#7a5a14 130%);--shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.25);--focus:color-mix(in srgb,var(--brand) 60%,transparent)`;
+const LIGHT_EXTRA = `--hero:linear-gradient(135deg,${P.green[500]} 0%,${P.green[200]} 60%,${P.sky[200]} 120%);--shadow:0 1px 2px rgba(120,80,30,.06),0 10px 28px rgba(160,110,40,.10);--focus:color-mix(in srgb,var(--brand) 55%,transparent)`;
+const DARK_EXTRA = `--hero:linear-gradient(135deg,${P.green[700]} 0%,#13703f 60%,#0f6e6a 130%);--shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.25);--focus:color-mix(in srgb,var(--brand) 60%,transparent)`;
 
 const decls = (p: Palette) =>
   Object.entries(p)
@@ -166,12 +174,13 @@ export const TEXT_PAIRS: [string, string, number][] = [
   ["brand-ink", "brand", 4.5], ["brand-strong", "brand-soft", 4.5], ["brand", "brand-soft", 4.5], ["ink", "brand-soft", 4.5],
   ["sel-ink", "sel", 4.5],
   ["ok", "ok-soft", 4.5], ["warn", "warn-soft", 4.5], ["warn", "surface", 4.5], ["err", "err-soft", 4.5], ["err", "surface", 4.5],
-  ["info", "info-soft", 4.5], ["info", "surface", 4.5], ["ink", "info-soft", 4.5],
-  ["mango-ink", "mango-soft", 4.5], ["mango-ink", "bg", 4.5], ["mango-ink", "surface", 4.5], ["ink", "mango-soft", 4.5],
+  ["info", "info-soft", 4.5], ["info", "surface", 4.5], ["ink", "info-soft", 4.5], ["on-info", "info", 4.5],
+  ["teal", "teal-soft", 4.5], ["teal", "surface", 4.5], ["ink", "teal-soft", 4.5],
+  ["mango-ink", "warn-soft", 4.5], ["mango-ink", "bg", 4.5], ["mango-ink", "surface", 4.5], ["ink", "warn-soft", 4.5],
   ["on-mango", "mango-1", 4.5], ["on-mango", "mango-2", 4.5],
   ["love-ink", "love-soft", 4.5], ["love-ink", "surface", 4.5],
-  ["ink", "cat-green", 4.5], ["ink", "cat-mango", 4.5], ["ink", "cat-sky", 4.5], ["ink", "cat-cream", 4.5],
-  ["ink-3", "cat-green", 4.5], ["ink-3", "cat-mango", 4.5], ["ink-3", "cat-sky", 4.5], ["ink-3", "cat-cream", 4.5],
+  ["ink", "cat-green", 4.5], ["ink", "cat-teal", 4.5], ["ink", "cat-sky", 4.5], ["ink", "cat-mint", 4.5],
+  ["ink-3", "cat-green", 4.5], ["ink-3", "cat-teal", 4.5], ["ink-3", "cat-sky", 4.5], ["ink-3", "cat-mint", 4.5],
   ["on-deep", "deep", 4.5], ["on-deep-2", "deep", 4.5], ["on-deep-accent", "deep", 4.5], ["on-deep", "deep-2", 4.5],
   ["field-line", "surface", 3], ["switch-off", "surface", 3], ["sel", "surface", 3], ["sel", "bg", 3],
 ];

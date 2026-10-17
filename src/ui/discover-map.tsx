@@ -440,7 +440,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-skip{position:absolute;left:-9999px}
 .fd-skip:focus{left:8px;top:8px;z-index:20;background:var(--surface);padding:8px 12px;border-radius:10px;border:2px solid var(--brand)}
 /* map behind everything */
-.fullmap .dmap{position:fixed;inset:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--mango-1);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--mango);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
+.fullmap .dmap{position:fixed;inset:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--info);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--mango);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
 .fullmap .svm-map{position:absolute;inset:0;height:100%;min-height:0;border:0;border-radius:0}
 .fullmap .dmap-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--ink-3);background:var(--surface-2)}
 .fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right{display:none}
@@ -475,7 +475,7 @@ html.a11y-contrast .fd-bar::before{background:var(--surface);-webkit-backdrop-fi
 .fd-filters-word{display:none}
 @media (min-width:430px){.fd-filters-word{display:inline}}
 .fd-filters>summary::-webkit-details-marker{display:none}
-.fd-dot{position:absolute;top:4px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--mango)}
+.fd-dot{position:absolute;top:4px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--info)}
 .fd-filters[open]>summary{background:var(--sel);color:var(--sel-ink)}
 .fd-filters-body{position:fixed;z-index:9;left:10px;right:10px;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2);max-height:calc(100dvh - var(--tk-h) - var(--top-h) - var(--gap) * 4 - var(--tab-h) - var(--sheet-h));overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 14px 12px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
 /* right rail */

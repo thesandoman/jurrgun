@@ -31,8 +31,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .intro-track:focus-visible{outline:3px solid var(--brand);outline-offset:-3px}
 
 /* Text that was below 4.5:1 (1.4.3). */
-.notif-dot{color:var(--on-mango);font-size:.75rem;min-width:20px;height:20px;line-height:20px}
-.fullmap .svm-k.highlight{color:var(--on-mango)}
+.notif-dot{color:var(--on-info);font-size:.75rem;min-width:20px;height:20px;line-height:20px}
+.fullmap .svm-k.highlight{color:var(--on-info)}
 
 
 
@@ -99,7 +99,7 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 .pronoun-picks{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 14px}
 .pronoun-picks [aria-pressed="true"]{background:var(--sel);border-color:var(--sel);color:var(--sel-ink)}
 .pronoun-picks [aria-pressed="true"]::before{content:"✓ "}
-.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:2px 10px;border-radius:999px;background:var(--mango-soft);color:var(--mango-ink);font-size:.75rem;font-weight:700;white-space:nowrap}
+.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:2px 10px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.75rem;font-weight:700;white-space:nowrap}
 .proto-chip>summary::-webkit-details-marker{display:none}
 .proto-chip>p{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:min(260px,70vw);margin:0;padding:10px 12px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:.86rem;box-shadow:0 10px 26px rgba(0,0,0,.18);border:1px solid var(--line)}
 /* Readability: 17px body text, and taller lines for Thai so stacked marks never touch. */
@@ -148,7 +148,7 @@ main details>summary{min-height:44px;display:flex;align-items:center}
 .passport-card>a,details.how li>a{display:inline-flex;align-items:center;min-height:44px}
 
 /* My people: a friendship milestone with one next step. */
-div.grad{display:grid;gap:8px;justify-items:start;margin:10px 0;padding:12px 14px;border-radius:16px;background:var(--mango-soft)}
+div.grad{display:grid;gap:8px;justify-items:start;margin:10px 0;padding:12px 14px;border-radius:16px;background:var(--brand-soft)}
 div.grad p{margin:0;font-weight:700}
 
 /* Me: a one-time question under the numbers. */
@@ -421,7 +421,7 @@ body:has(.disc) .discover-list{padding-bottom:0}
 /* Ticket cards read as one piece (owner: "card view is a bit disjoined"): one calm tint per category
    on the stub instead of two colour blocks, the date and the emoji as one block inside it, and facts
    that wrap without a dangling dot. */
-.ev-card .event-cover{background:var(--cat,var(--cat-cream))}
+.ev-card .event-cover{background:var(--cat,var(--cat-mint))}
 .ev-card .event-cover{flex-direction:column-reverse;justify-content:flex-start;gap:6px;padding:14px 6px}
 .ev-card .ev-date{background:none;border:0;box-shadow:none;padding:0;min-width:0;color:var(--ink);display:grid;justify-items:center;line-height:1.05}
 .ev-card .ev-date b{font-size:1.5rem}
@@ -501,7 +501,7 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
    E1 tickets drop the seat-dot row; the "N spots left" tag already says it. */
 .ev-card .seats{display:none}
 /* E2 the event page hero is one calm tint per category, like the ticket stubs, and shorter. */
-.event-cover.ev-scene{background:var(--cat,var(--cat-cream));height:120px}
+.event-cover.ev-scene{background:var(--cat,var(--cat-mint));height:120px}
 .event-cover.ev-scene::before,.event-cover.ev-scene::after{content:none}
 /* E3 fact tiles: labels and sub-lines in sentence case, not small capitals (place names were shouting). */
 .fact small{text-transform:none;letter-spacing:0;font-weight:600}

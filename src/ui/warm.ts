@@ -6,7 +6,7 @@
  * default) or says Auto on a light device. Dark mode is untouched.
  */
 const RULES = `
-  & body{background:radial-gradient(900px 460px at 100% -80px,color-mix(in srgb,var(--mango) 20%,transparent),transparent 70%),radial-gradient(900px 520px at 0% -100px,color-mix(in srgb,var(--fresh) 14%,transparent),transparent 70%),var(--bg);background-attachment:fixed}
+  & body{background:radial-gradient(900px 460px at 100% -80px,color-mix(in srgb,var(--cat-sky-2) 16%,transparent),transparent 70%),radial-gradient(900px 520px at 0% -100px,color-mix(in srgb,var(--fresh) 14%,transparent),transparent 70%),var(--bg);background-attachment:fixed}
 
   /* header: light frosted glass, dark ink */
   & .topbar{background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);color:var(--ink);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
@@ -15,7 +15,7 @@ const RULES = `
   & .topbar .brand-mark svg>rect:first-child{fill:var(--brand)}
   & .topbar .chip{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
   & .topbar .icon-link,& .topbar summary{color:var(--ink)}
-  & .proto-banner{background:var(--mango-soft);color:var(--mango-ink)}
+  & .proto-banner{background:var(--info-soft);color:var(--info)}
 
   /* tab bar: floating white glass, green for where you are, mango for My events */
   & .tabbar{background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);border:1px solid var(--line);box-shadow:0 12px 30px rgba(160,110,40,.16)}
@@ -30,7 +30,7 @@ const RULES = `
   & .top-nav a.center:not(.on){color:var(--mango-ink)}
 
   /* hero cards and teasers: warm gradients with dark text instead of dark green blocks */
-  & .card.hero,& .teaser{background:linear-gradient(135deg,var(--mango-soft) 0%,var(--info-soft) 60%,var(--brand-soft) 100%);color:var(--ink);border:1px solid var(--line)}
+  & .card.hero,& .teaser{background:linear-gradient(135deg,var(--info-soft) 0%,var(--teal-soft) 55%,var(--brand-soft) 100%);color:var(--ink);border:1px solid var(--line)}
   & .card.hero *,& .teaser *{color:inherit}
   & .teaser small,& .teaser .muted,& .card.hero .muted{color:var(--ink-2)}
   & .teaser::after{color:var(--brand)}

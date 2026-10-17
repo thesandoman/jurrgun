@@ -4,6 +4,12 @@ import { DARK, LIGHT, PALETTE_CSS, PRIMITIVES, TEXT_PAIRS } from "../src/ui/pale
 
 const themes = { light: LIGHT, dark: DARK };
 
+/** Yellow, orange or cream: red channel above blue by a margin, and green not dominating. */
+function isWarm(hex: string): boolean {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return r - b > 12 && r >= g - 8;
+}
+
 describe("palette", () => {
   it("has the same roles in light and dark", () => {
     expect(Object.keys(DARK).sort()).toEqual(Object.keys(LIGHT).sort());
@@ -16,7 +22,7 @@ describe("palette", () => {
     });
 
     it(`${name}: the four category tints are told apart (CIEDE2000 >= 15)`, () => {
-      const cats = ["cat-green", "cat-mango", "cat-sky", "cat-cream"];
+      const cats = ["cat-green", "cat-teal", "cat-sky", "cat-mint"];
       for (let i = 0; i < cats.length; i++)
         for (let j = i + 1; j < cats.length; j++) expect(deltaE(p[cats[i]], p[cats[j]]), `${cats[i]} vs ${cats[j]}`).toBeGreaterThanOrEqual(15);
     });
@@ -34,6 +40,15 @@ describe("palette", () => {
     expect(PRIMITIVES.mango[400]).toBe("#ffa53a");
     expect(LIGHT["mango-ink"]).toBe("#9a5100");
     expect([LIGHT.love, LIGHT["love-ink"], LIGHT["love-soft"]]).toEqual(["#e23744", "#c0222f", "#fde3e5"]);
+  });
+
+  it("tints carry no yellow or cream: mango is only the My events tab and warnings", () => {
+    for (const p of Object.values(themes)) {
+      const tints = Object.entries(p).filter(([k]) => k.startsWith("cat-") || k.endsWith("-soft") || k === "surface-2");
+      const yellow = tints.filter(([k, v]) => k !== "warn-soft" && k !== "love-soft" && k !== "err-soft" && isWarm(v));
+      expect(yellow).toEqual([]);
+    }
+    expect(Object.keys(LIGHT).filter((k) => k.startsWith("mango"))).toEqual(["mango", "mango-1", "mango-2", "mango-ink"]);
   });
 
   it("selected is one look: the same token in both themes, and it is not the soft tint", () => {
