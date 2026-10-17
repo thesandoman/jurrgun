@@ -1577,16 +1577,6 @@ adminEvents.get(
           </div>
         </form>
 
-        <h2>{t("ส่งประกาศ", "Send a notice")}</h2>
-        <form method="post" action={`${BASE}/${e.id}/notice`}>
-          <Field label={t("ข้อความ (ไทย)", "Message (Thai)")} name="th" required maxlength={200} />
-          <Field label={t("ข้อความ (อังกฤษ)", "Message (English)")} name="en" required maxlength={200} />
-          <small>{t("ส่งถึงคนที่ยืนยันแล้ว คนที่ได้รับข้อเสนอที่นั่ง และคนในคิวสำรอง", "Goes to confirmed, offered and waitlisted registrants")}</small>
-          <div class="row">
-            <Button>{t("ส่ง", "Send")}</Button>
-          </div>
-        </form>
-
         {e.buddyEnabled ? (
           <>
             <h2>{t("Event Buddy", "Event Buddy")}</h2>
@@ -2125,25 +2115,6 @@ adminEvents.post(
       await batchAll(c.env, [...writes, ...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_notice", `/events/${e.id}`)]);
     } else await batch(c.env, writes);
     return c.redirect(`${BASE}/${e.id}?notice=saved#day-of`);
-  }),
-);
-
-adminEvents.post(
-  "/:id/notice",
-  withEvent(async (c, e, db) => {
-    const { t } = view(c);
-    const body = await c.req.parseBody();
-    const th = str(body.th);
-    const en = str(body.en);
-    if (!th || !en || th.length > 200 || en.length > 200) {
-      return refuse(c, e, t("ใส่ข้อความทั้งไทยและอังกฤษ ไม่เกิน 200 ตัวอักษร", "Write the notice in Thai and English, up to 200 characters each"));
-    }
-    const regs = await reachableRegistrations(db, e.id);
-    await batchAll(c.env, [
-      audit(db, me(c).id, "event.notice", { type: "event", id: e.id }, { th, en, recipients: regs.length }),
-      ...notifyMany(db, regs.map((r) => ({ accountId: r.accountId, th, en })), "event_notice", `/events/${e.id}`),
-    ]);
-    return c.redirect(`${BASE}/${e.id}?notice=notice_sent`);
   }),
 );
 

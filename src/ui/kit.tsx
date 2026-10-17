@@ -85,7 +85,6 @@ const NOTICES: Record<string, [string, string]> = {
   offered: ["ส่งข้อเสนอที่นั่งให้คิวถัดไปแล้ว", "Offered the spot to the next person"],
   groups_suggested: ["จัดโต๊ะแนะนำแล้ว ตรวจดูแล้วกดเผยแพร่", "Groups suggested, review, then publish"],
   groups_published: ["เผยแพร่โต๊ะแล้ว", "Groups published"],
-  notice_sent: ["ส่งประกาศแล้ว", "Notice sent"],
   announced: ["ส่งประกาศแล้ว", "Announcement sent"],
   strikes_recorded: ["บันทึกคนที่ไม่มาตามนัดแล้ว", "No-shows recorded"],
   answered: ["ขอบคุณนะ คำตอบของคุณช่วยให้กรุงเทพฯ ดีขึ้นได้จริง ๆ", "Thanks! Your answer helps the city"],

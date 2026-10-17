@@ -155,10 +155,6 @@ describe.skipIf(!HAS_DB)("events with more than 2,000 registrations", () => {
     expect(past.status).toBe(302);
     expect(past.headers.get("location")).toBe(`/admin/events/${id}?ap=11#attendees`);
 
-    const sent = await req(`/admin/events/${id}/notice`, { cookie, form: { th: "ประกาศทดสอบ", en: "Test notice" } });
-    expect(sent.status).toBe(302);
-    expect(await notesFor("event_notice", `/events/${id}`)).toBe(BIG);
-
     const cancelled = await req(`/admin/events/${id}/cancel`, { cookie, method: "POST", form: {} });
     expect(cancelled.status).toBe(302);
     expect(await notesFor("event_cancelled", `/events/${id}`)).toBe(BIG);
