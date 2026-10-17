@@ -57,8 +57,8 @@ export const MOMENTS_CSS = themed(`
 /* Mutual connection spark */
 .spark-pop{position:fixed;z-index:45;left:50%;top:40%;display:flex;align-items:center;transform:translate(-50%,-50%);pointer-events:none;animation:sp-out .45s 2.3s ease forwards}
 .spark-pop i{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 10px 28px rgba(0,0,0,.2);font-style:normal;font-weight:800;font-size:1.5rem;color:#fff}
-.spark-pop .sp-a{background:linear-gradient(135deg,#2fb866,var(--brand));animation:sp-l .7s cubic-bezier(.2,.8,.2,1) both}
-.spark-pop .sp-b{background:linear-gradient(135deg,#ffc766,#ffa53a);margin-left:-14px;animation:sp-r .7s cubic-bezier(.2,.8,.2,1) both}
+.spark-pop .sp-a{background:linear-gradient(135deg,var(--fresh),var(--brand));animation:sp-l .7s cubic-bezier(.2,.8,.2,1) both}
+.spark-pop .sp-b{background:linear-gradient(135deg,var(--mango-1),var(--mango-2));margin-left:-14px;animation:sp-r .7s cubic-bezier(.2,.8,.2,1) both}
 .spark-pop b{position:absolute;left:50%;top:-26px;font-size:1.9rem;transform:translateX(-50%) scale(0);animation:sp-burst .5s .55s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes sp-l{from{transform:translateX(-90px);opacity:0}}
 @keyframes sp-r{from{transform:translateX(90px);opacity:0}}

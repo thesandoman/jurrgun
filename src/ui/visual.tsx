@@ -129,8 +129,8 @@ a.tile2:active{transform:scale(.98)}
 .tile2.wide{grid-column:span 2}
 .tile2.tall{grid-row:span 2}
 .tile2.t-brand{background:var(--hero);color:#fff;border:0}
-.tile2.t-deep{background:linear-gradient(160deg,var(--deep,#06492a),#0b1610);color:#fff;border:0}
-.tile2.t-gold{background:linear-gradient(135deg,var(--gold-soft),var(--surface));}
+.tile2.t-deep{background:linear-gradient(160deg,var(--deep),var(--deep-2));color:#fff;border:0}
+.tile2.t-gold{background:linear-gradient(135deg,var(--mango-soft),var(--surface));}
 .tile2-art{position:absolute;inset:0;z-index:-1}
 .tile2-art .q-art{height:100%;margin:0;border-radius:0;box-shadow:none}
 .tile2-art::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.05) 70%)}
@@ -145,7 +145,7 @@ a.tile2:active{transform:scale(.98)}
 .big-n{font-size:2.3rem;font-weight:900;line-height:1;letter-spacing:-.03em}
 .big-l{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;opacity:.8}
 .pill2{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.2);backdrop-filter:blur(6px);font-size:.78rem;font-weight:700}
-.pill2-dot{width:8px;height:8px;border-radius:50%;background:var(--lime)}
+.pill2-dot{width:8px;height:8px;border-radius:50%;background:var(--mango-1)}
 .avstack{display:inline-flex;align-items:center}
 .av{width:var(--av);height:var(--av);margin-left:calc(var(--av) * -.3);border-radius:50%;display:grid;place-items:center;font-size:calc(var(--av) * .5);font-weight:800;color:#fff;background:linear-gradient(135deg,hsl(var(--h) 50% 30%),hsl(calc(var(--h) + 30) 50% 30%));border:3px solid var(--surface);box-shadow:var(--shadow)}
 .av:first-child{margin-left:0}
@@ -181,7 +181,7 @@ a.tile2:active{transform:scale(.98)}
 .passport-card>h2{margin:0 0 6px}
 .passport-count{display:block;margin:2px 0 8px}
 .quest-title{font-size:1.15rem;line-height:1.3;margin:4px 0}
-.card.quest.season{background:linear-gradient(160deg,var(--gold-soft),var(--surface) 55%)}
+.card.quest.season{background:linear-gradient(160deg,var(--mango-soft),var(--surface) 55%)}
 .stack-card .avstack{margin:6px 0 4px}
 .fan{overflow:visible;contain:layout}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -213,14 +213,14 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .guide-tips li b{flex:none;font-size:1.5rem;width:36px;text-align:center}
 .guide-promise{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:var(--brand-soft);font-weight:600;line-height:1.4}
 .guide-promise input{width:22px;height:22px;flex:none;margin-top:2px}
-.chips2 span.on{background:var(--brand);color:var(--brand-ink)}
+.chips2 span.on{background:var(--sel);color:var(--sel-ink)}
 .chat-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
 .chat-list a{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--surface);color:var(--ink);text-decoration:none;border:1px solid var(--line)}
 .chat-list a>b{font-size:1.4rem;width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:var(--brand-soft);flex:none}
 .chat-list a>span{flex:1;min-width:0;display:flex;flex-direction:column}
 .chat-list small{color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-list a.unread strong{color:var(--brand)}
-.chat-list .dot{width:10px;height:10px;border-radius:50%;background:var(--lime);flex:none}
+.chat-list .dot{width:10px;height:10px;border-radius:50%;background:var(--info);flex:none}
 .chat-msgs{list-style:none;padding:0;margin:12px 0;display:flex;flex-direction:column;gap:10px}
 .chat-msgs li{display:flex;flex-direction:column;align-items:flex-start;max-width:86%}
 .chat-msgs li.mine{align-self:flex-end;align-items:flex-end}
@@ -230,11 +230,11 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chat-msgs .when{color:var(--ink-3);font-size:.72rem;margin:2px 6px;display:flex;gap:8px;align-items:center}
 .chat-msgs .inline{display:inline}
 .linkish{background:none;border:0;padding:0;color:var(--ink-3);text-decoration:underline;font:inherit;cursor:pointer}
-.chat-warn{margin:0 0 4px;padding:8px 12px;border-radius:12px;background:var(--sun-soft,#fff4dc);color:var(--warn,#8a5a00);font-size:.85rem;font-weight:600}
+.chat-warn{margin:0 0 4px;padding:8px 12px;border-radius:12px;background:var(--warn-soft);color:var(--warn);font-size:.85rem;font-weight:600}
 .chat-photo{margin:0;border-radius:18px;overflow:hidden;background:var(--surface-2);max-width:280px;box-shadow:var(--shadow)}
 .chat-photo img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover}
 .chat-photo figcaption{padding:8px 12px;font-size:.9rem}
-.host-badge{margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--gold-soft);color:#7a4a00;font-size:.72rem;font-weight:700}
+.host-badge{margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--mango-soft);color:var(--mango-ink);font-size:.72rem;font-weight:700}
 .chat-poll{min-width:260px;max-width:320px;padding:12px;border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
 .chat-poll .q{margin:0 0 2px;font-weight:700}
 .chat-poll form{margin:0}
@@ -256,7 +256,7 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chat-starters button{flex:none;white-space:nowrap}
 .chat-starters button{border:0;border-radius:999px;padding:6px 12px;background:var(--surface-2);color:var(--ink-2);font:inherit;font-size:.85rem;cursor:pointer;text-align:left}
 @media (min-width:1024px){.chat-send{bottom:0}}
-.grad{margin:8px 0;padding:10px 14px;border-radius:14px;background:var(--sun-soft,#fff4dc);color:var(--ink);font-weight:700}
+.grad{margin:8px 0;padding:10px 14px;border-radius:14px;background:var(--mango-soft);color:var(--ink);font-weight:700}
 .thanks-starters button{border:0;border-radius:999px;padding:6px 12px;background:var(--surface-2);color:var(--ink-2);font:inherit;font-size:.85rem;cursor:pointer}
 .phone-down{text-align:center;padding:24px 4px}
 .phone-down .pd-emoji{font-size:4rem;margin:8px 0}

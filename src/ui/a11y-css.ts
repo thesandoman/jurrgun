@@ -6,11 +6,7 @@
 import { themed } from "./styles";
 
 export const A11Y_CSS = themed(`
-:root{
-  /* Field and switch edges: 3:1 or more against the card and the page (1.4.11). */
-  --field-line:#8c7a66;--switch-off:#5f6d63;
-}
-@media (prefers-color-scheme:dark){:root{--field-line:#6b8a77;--switch-off:#8aa896}}
+/* Field and switch edges (--field-line, --switch-off) are 3:1 or more: ui/palette.ts. */
 
 /* Skip to content (2.4.1): hidden until it gets keyboard focus. */
 .skip-link{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:12px;background:var(--surface);color:var(--ink);font-weight:700;text-decoration:none;box-shadow:0 8px 24px rgba(0,0,0,.2);outline:3px solid var(--brand)}
@@ -35,12 +31,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .intro-track:focus-visible{outline:3px solid var(--brand);outline-offset:-3px}
 
 /* Text that was below 4.5:1 (1.4.3). */
-.notif-dot{color:#1e2b22;font-size:.75rem;min-width:20px;height:20px;line-height:20px}
-.fullmap .svm-k.highlight{color:#1e2b22}
+.notif-dot{color:var(--on-mango);font-size:.75rem;min-width:20px;height:20px;line-height:20px}
+.fullmap .svm-k.highlight{color:var(--on-mango)}
 
-/* Grey notes on the pale love-red panel: 5.2:1 in light (dark already passes). */
-#dating-prompts{--ink-3:#56635a}
-@media (prefers-color-scheme:dark){#dating-prompts{--ink-3:#8aa896}}
+
 
 /* Nothing under 12px (readability). */
 .proto-banner{font-size:.78rem}
@@ -103,9 +97,9 @@ main :is(.flow-bar,.pf-save){background:var(--bg);border-top:1px solid var(--lin
 .topbar details.proto-chip{position:relative;flex:none;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
 /* Pronoun quick picks. */
 .pronoun-picks{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 14px}
-.pronoun-picks [aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.pronoun-picks [aria-pressed="true"]{background:var(--sel);border-color:var(--sel);color:var(--sel-ink)}
 .pronoun-picks [aria-pressed="true"]::before{content:"✓ "}
-.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:2px 10px;border-radius:999px;background:var(--gold-soft);color:var(--warn);font-size:.75rem;font-weight:700;white-space:nowrap}
+.proto-chip>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:2px 10px;border-radius:999px;background:var(--mango-soft);color:var(--mango-ink);font-size:.75rem;font-weight:700;white-space:nowrap}
 .proto-chip>summary::-webkit-details-marker{display:none}
 .proto-chip>p{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:min(260px,70vw);margin:0;padding:10px 12px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:.86rem;box-shadow:0 10px 26px rgba(0,0,0,.18);border:1px solid var(--line)}
 /* Readability: 17px body text, and taller lines for Thai so stacked marks never touch. */
@@ -154,7 +148,7 @@ main details>summary{min-height:44px;display:flex;align-items:center}
 .passport-card>a,details.how li>a{display:inline-flex;align-items:center;min-height:44px}
 
 /* My people: a friendship milestone with one next step. */
-div.grad{display:grid;gap:8px;justify-items:start;margin:10px 0;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--lime) 22%,var(--surface))}
+div.grad{display:grid;gap:8px;justify-items:start;margin:10px 0;padding:12px 14px;border-radius:16px;background:var(--mango-soft)}
 div.grad p{margin:0;font-weight:700}
 
 /* Me: a one-time question under the numbers. */
@@ -180,14 +174,10 @@ body:has(.view-switch) .discover-list{padding-bottom:0}
 }
 /* Contrast (1.4.3): the brand tile is a solid deep green, so white text passes everywhere on it;
    small white text on the type card's art gets a scrim. */
-.tile2.t-brand{background:linear-gradient(160deg,#0b5a30,#137f45)}
+.tile2.t-brand{background:linear-gradient(160deg,var(--deep-2),var(--brand))}
 .type-hero2 .tile2-art::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(8,20,14,.78) 0%,rgba(8,20,14,.5) 55%,rgba(8,20,14,.25) 100%)}
 .type-hero2 .tile2-body,.type-hero2 small{text-shadow:0 1px 2px rgba(0,0,0,.45)}
-/* Dark mode stays on the palette: a true red for 💘 (never coral) and a mango centre tab. */
-@media (prefers-color-scheme:dark){
-  :root{--love:#f0505c;--love-ink:#ff9aa3}
-  .tabbar a.center,.tabbar a.center.on{background:linear-gradient(160deg,#ffc766,#ffa53a);color:#3b2400}
-}
+
 /* Chats: rows never run past the screen (the grid item could not shrink), titles take one or two
    lines, and unread is bold plus a "New" label, not colour alone (1.4.1). */
 .chat-list>li{min-width:0}
@@ -229,13 +219,7 @@ main details.qs-sheet{margin:0;padding:0;border:0;background:none;box-shadow:non
 .me-next:hover .me-next-go,.me-next:focus-visible .me-next-go{text-decoration:underline;text-underline-offset:3px}
 .me-next+.me-grow{margin-top:0}
 
-/* Event scene colours stay in the palette (Phase 3): "play" was violet, "art" coral. */
-.scene-play{--scene:linear-gradient(180deg,#dff5c8 0 55%,#4f9d2f 55% 100%)}
-.scene-art{--scene:linear-gradient(180deg,#ffe7b8 0 55%,#d18a1c 55% 100%)}
-@media (prefers-color-scheme:dark){
-  .scene-play{--scene:linear-gradient(180deg,#24401d 0 55%,#2f6b1f 55% 100%)}
-  .scene-art{--scene:linear-gradient(180deg,#4a3a17 0 55%,#7a5512 55% 100%)}
-}
+
 
 /* Notifications: day headings, a count for repeats, a chevron on rows that open something. */
 .notif-day h2{margin:18px 0 6px}
@@ -304,7 +288,7 @@ body:has(.sticky-cta) main.wrap{padding-bottom:110px}
 .intro-tools{position:absolute;z-index:3;top:calc(10px + env(safe-area-inset-top,0px));left:12px;display:flex;align-items:center;gap:6px}
 .intro-tools .intro-lang{position:static;display:flex;gap:2px;margin:0;font-size:.9rem}
 .intro-tools .intro-lang a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;border-radius:999px;color:var(--ink-2);font-weight:600;text-decoration:none}
-.intro-tools .intro-lang a[aria-current]{background:var(--surface);color:var(--brand);box-shadow:0 0 0 1px var(--line)}
+.intro-tools .intro-lang a[aria-current]{background:var(--sel);color:var(--sel-ink);box-shadow:none}
 .intro-a11y>summary{width:44px;height:44px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 .intro .a11y-panel{position:fixed;left:12px;right:12px;width:auto;max-width:360px;top:calc(64px + env(safe-area-inset-top,0px))}
 .intro-skip{min-height:44px;display:inline-flex;align-items:center}
@@ -437,19 +421,7 @@ body:has(.disc) .discover-list{padding-bottom:0}
 /* Ticket cards read as one piece (owner: "card view is a bit disjoined"): one calm tint per category
    on the stub instead of two colour blocks, the date and the emoji as one block inside it, and facts
    that wrap without a dangling dot. */
-.ev-card .event-cover{background:var(--stub-bg,#eef4ef)}
-.ev-card .event-cover.scene-food{--stub-bg:#fff0d4}
-.ev-card .event-cover.scene-park{--stub-bg:#e2f3e7}
-.ev-card .event-cover.scene-river{--stub-bg:#def0f4}
-.ev-card .event-cover.scene-art{--stub-bg:#fbeacb}
-.ev-card .event-cover.scene-play{--stub-bg:#e8f5dc}
-.ev-card .event-cover.scene-city{--stub-bg:#e6efe9}
-@media (prefers-color-scheme:dark){
-  .ev-card .event-cover{--stub-bg:#1d2a22}
-  .ev-card .event-cover.scene-food,.ev-card .event-cover.scene-art{--stub-bg:#33291a}
-  .ev-card .event-cover.scene-park,.ev-card .event-cover.scene-play{--stub-bg:#1c3324}
-  .ev-card .event-cover.scene-river{--stub-bg:#17303a}
-}
+.ev-card .event-cover{background:var(--cat,var(--cat-cream))}
 .ev-card .event-cover{flex-direction:column-reverse;justify-content:flex-start;gap:6px;padding:14px 6px}
 .ev-card .ev-date{background:none;border:0;box-shadow:none;padding:0;min-width:0;color:var(--ink);display:grid;justify-items:center;line-height:1.05}
 .ev-card .ev-date b{font-size:1.5rem}
@@ -529,20 +501,8 @@ html.a11y-motion .type-emoji,html.a11y-motion .btn-ticket.is-busy::before{animat
    E1 tickets drop the seat-dot row; the "N spots left" tag already says it. */
 .ev-card .seats{display:none}
 /* E2 the event page hero is one calm tint per category, like the ticket stubs, and shorter. */
-.event-cover.ev-scene{background:var(--stub-bg,#eef4ef);height:120px}
-.event-cover.ev-scene.scene-food{--stub-bg:#fff0d4}
-.event-cover.ev-scene.scene-park{--stub-bg:#e2f3e7}
-.event-cover.ev-scene.scene-river{--stub-bg:#def0f4}
-.event-cover.ev-scene.scene-art{--stub-bg:#fbeacb}
-.event-cover.ev-scene.scene-play{--stub-bg:#e8f5dc}
-.event-cover.ev-scene.scene-city{--stub-bg:#e6efe9}
+.event-cover.ev-scene{background:var(--cat,var(--cat-cream));height:120px}
 .event-cover.ev-scene::before,.event-cover.ev-scene::after{content:none}
-@media (prefers-color-scheme:dark){
-  .event-cover.ev-scene{--stub-bg:#1d2a22}
-  .event-cover.ev-scene.scene-food,.event-cover.ev-scene.scene-art{--stub-bg:#33291a}
-  .event-cover.ev-scene.scene-park,.event-cover.ev-scene.scene-play{--stub-bg:#1c3324}
-  .event-cover.ev-scene.scene-river{--stub-bg:#17303a}
-}
 /* E3 fact tiles: labels and sub-lines in sentence case, not small capitals (place names were shouting). */
 .fact small{text-transform:none;letter-spacing:0;font-weight:600}
 /* One short helper line, the rest behind a small info button (owner, 2026-10-16) */
@@ -563,7 +523,7 @@ main details.host-text-more{margin:0;padding:0;border:0;background:none;box-shad
 .host-text-more[open]>p{margin-top:0}
 /* Finalize review plain fixes: the chat host badge is 12px and readable in dark mode (was about 1.8:1). */
 .host-badge{font-size:.75rem}
-@media (prefers-color-scheme:dark){.host-badge{background:#3a2f12;color:#ffd27a}}
+
 /* Two heading levels (finalize A4): one section title with an optional link, one small label for groups inside it. */
 .sec-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:32px 0 8px}
 .sec-head h2{font-family:var(--display);font-size:1.25rem;line-height:1.3;margin:0;min-width:0}
@@ -626,8 +586,8 @@ main .me-type>a.teaser{display:flex;width:100%;transform:none}
 /* Pick chips and calendar or directions links take the tonal kind's look and height. */
 .chip-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 18px;border-radius:16px;border-width:1.5px;border-style:solid;font:inherit;font-family:var(--sub);font-weight:700;text-decoration:none;cursor:pointer}
 /* On a green or photo tile: primary turns white with deep green text (7.8:1), tonal a dark glass with white text (4.7:1 or more). */
-:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.primary{background:#fff;color:#0e5f33;border-color:#fff;text-shadow:none;box-shadow:0 6px 18px rgba(0,0,0,.18)}
-:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.primary:hover{background:#f2fbf5}
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.primary{background:#fff;color:var(--deep-2);border-color:#fff;text-shadow:none;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.primary:hover{background:color-mix(in srgb,var(--brand) 8%,#fff)}
 :is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.ghost{background:rgba(0,0,0,.28);color:#fff;border-color:rgba(255,255,255,.5);text-shadow:none}
 :is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .btn.ghost:hover{background:rgba(0,0,0,.38)}
 /* A3 One fact tile: icon and bold answer, an optional quiet line, then the small sentence-case label.
@@ -912,8 +872,7 @@ main .me-stat-sub{padding:0;background:none;font-weight:600}
 /* The live pass keeps its ring (status), without the shadow under it. */
 .ticket.is-live{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent)}
 @keyframes live-glow{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--brand) 16%,transparent)}}
-/* Dark mode: a slightly lighter line, so card edges and hairlines show but stay quiet on the dark green. */
-@media (prefers-color-scheme:dark){:root{--line:#2c4536}}
+
 /* A card's first heading starts at the card's padding (My registration had about 50px of empty space above it). */
 .card>:is(h2,h3):first-child{margin-top:0}
 /* "All details" closing an open section needs no line of its own: the next section's line follows. */
@@ -963,7 +922,7 @@ main .open-sec>details.how:last-child{border-bottom:0}
 /* Me: the updated Terms card, one button that may wrap on a phone. */
 .me-terms .btn{white-space:normal;min-height:44px}
 /* 💘 row in the settings list (owner card): no box around it; the love-red switch plus a small "On" tag mark it. */
-.qs-on{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--love-soft,#fde8ea);color:var(--love-ink);font-size:.78rem;font-weight:700;vertical-align:middle;white-space:nowrap}
+.qs-on{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--love-soft);color:var(--love-ink);font-size:.78rem;font-weight:700;vertical-align:middle;white-space:nowrap}
 /* Event page status strip (owner card, 2026-10-17): one line under the title, my status and the one next action, between hairlines. */
 .ev-strip{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:8px 0 12px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .ev-strip-text{display:flex;flex-direction:column;justify-content:center;min-height:44px;margin:0;min-width:0;flex:1 1 auto}

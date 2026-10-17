@@ -440,7 +440,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-skip{position:absolute;left:-9999px}
 .fd-skip:focus{left:8px;top:8px;z-index:20;background:var(--surface);padding:8px 12px;border-radius:10px;border:2px solid var(--brand)}
 /* map behind everything */
-.fullmap .dmap{position:fixed;inset:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--gold);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--gold);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
+.fullmap .dmap{position:fixed;inset:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--mango-1);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--mango);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
 .fullmap .svm-map{position:absolute;inset:0;height:100%;min-height:0;border:0;border-radius:0}
 .fullmap .dmap-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--ink-3);background:var(--surface-2)}
 .fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right{display:none}
@@ -460,7 +460,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fd-top{position:fixed;z-index:8;top:calc(var(--tk-h) + var(--gap));left:10px;right:10px;height:var(--top-h);display:flex;gap:8px;align-items:center}
 .fd-logo,.fd-round{flex:none;display:grid;place-items:center;width:var(--top-h);height:var(--top-h);border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);text-decoration:none;color:var(--ink);font-weight:700;cursor:pointer;font-size:1rem}
 .fd-logo{line-height:1;color:var(--brand);gap:2px;padding-top:4px}.fd-logo svg{width:24px;height:24px}.fd-logo small{font-size:.75rem;color:var(--ink-2);font-weight:700}
-.fd-round[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+.fd-round[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink)}
 /* One translucent pill: the search box, then the filter button. The blur sits on a pseudo-element so the fixed filter sheet inside is not trapped by it. */
 .fd-bar{position:relative;isolation:isolate;flex:1;min-width:0;display:flex;align-items:center;height:var(--top-h);border-radius:999px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:0 4px 18px rgba(0,0,0,.12)}
 .fd-bar::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%)}
@@ -475,8 +475,8 @@ html.a11y-contrast .fd-bar::before{background:var(--surface);-webkit-backdrop-fi
 .fd-filters-word{display:none}
 @media (min-width:430px){.fd-filters-word{display:inline}}
 .fd-filters>summary::-webkit-details-marker{display:none}
-.fd-dot{position:absolute;top:4px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold)}
-.fd-filters[open]>summary{background:var(--fresh);color:#04210f}
+.fd-dot{position:absolute;top:4px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--mango)}
+.fd-filters[open]>summary{background:var(--sel);color:var(--sel-ink)}
 .fd-filters-body{position:fixed;z-index:9;left:10px;right:10px;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2);max-height:calc(100dvh - var(--tk-h) - var(--top-h) - var(--gap) * 4 - var(--tab-h) - var(--sheet-h));overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 14px 12px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
 /* right rail */
 .fd-rail{position:fixed;z-index:6;right:10px;bottom:calc(var(--tab-h) + var(--sheet-h) + 14px);display:flex;flex-direction:column;gap:8px}
@@ -484,11 +484,11 @@ html.a11y-contrast .fd-bar::before{background:var(--surface);-webkit-backdrop-fi
 .fd-rail-btn b{font-size:1.2rem;line-height:1.1}
 .fd-map-tools{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
 .fd-map-tools .chip-btn{min-height:44px}
-.fd-map-tools .chip-btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.fd-map-tools .chip-btn[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
 @media (max-width:520px){.fd-rail{gap:6px}.fd-rail-btn{width:54px;min-height:52px}}
 /* Very narrow phones: the search pill gets the logo's room (Discover is the current tab anyway). */
 @media (max-width:359px){.fd-logo{display:none}}
-.fd-rail-btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.fd-rail-btn[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
 /* events sheet */
 .fd-sheet{margin:0;padding:0;position:fixed;z-index:10;left:0;right:0;bottom:var(--tab-h);background:color-mix(in srgb,var(--surface) 84%,transparent);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);border-top:1px solid color-mix(in srgb,#fff 18%,var(--line));border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);will-change:transform}
 .fd-sheet>summary{touch-action:none}

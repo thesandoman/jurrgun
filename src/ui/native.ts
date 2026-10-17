@@ -12,7 +12,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 main.wrap{animation-fill-mode:backwards}
 .filters{background:var(--surface);border-radius:18px;padding:4px 16px;margin:12px 0}
 /* labels: sentence case, calm */
-.eyebrow{text-transform:none;letter-spacing:0;font-size:.82rem;font-weight:600;margin:0 0 4px;color:var(--leaf,var(--brand))}
+.eyebrow{text-transform:none;letter-spacing:0;font-size:.82rem;font-weight:600;margin:0 0 4px;color:var(--brand)}
 h1{font-size:1.7rem;margin:.25rem 0 .9rem}
 h2{font-size:1.18rem;letter-spacing:-.015em}
 /* thinner prototype strip and app bar */
@@ -48,9 +48,9 @@ body:has(.tabbar) .foot{display:none}
 /* cards: lighter edges, softer shadow */
 .card{box-shadow:0 1px 2px rgba(6,40,22,.05),0 8px 24px rgba(6,40,22,.06)}
 /* floating Map ⇄ Cards switch on Discover */
-.view-switch{position:fixed;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(118px + env(safe-area-inset-bottom));display:flex;padding:4px;border-radius:999px;background:var(--deep,#06492a);border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 26px rgba(4,40,22,.35)}
-.view-switch a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 16px;border-radius:999px;color:var(--on-deep,#fff);text-decoration:none;font-weight:700;font-size:.92rem;white-space:nowrap}
-.view-switch a.on{background:var(--lime);color:var(--deep,#06492a)}
+.view-switch{position:fixed;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(118px + env(safe-area-inset-bottom));display:flex;padding:4px;border-radius:999px;background:var(--deep);border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 26px rgba(4,40,22,.35)}
+.view-switch a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 16px;border-radius:999px;color:var(--on-deep);text-decoration:none;font-weight:700;font-size:.92rem;white-space:nowrap}
+.view-switch a.on{background:var(--sel);color:var(--sel-ink)}
 .fullmap .view-switch{bottom:calc(var(--tab-h) + var(--sheet-h) + 14px)}
 .fullmap .svm-key{bottom:calc(var(--tab-h) + var(--sheet-h) + 70px)}
 @media (min-width:1024px){body:not(.fullmap-body) .view-switch{bottom:28px}}

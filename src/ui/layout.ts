@@ -25,8 +25,8 @@ html.a11y-touch input[type=checkbox],html.a11y-touch input[type=radio]{width:26p
   .top-nav a:hover{background:rgba(255,255,255,.1);color:var(--on-deep)}
   .top-nav a span{display:inline-grid;place-items:center}
   .top-nav a span svg{width:18px;height:18px}
-  .top-nav a.on{background:var(--lime);color:var(--deep)}
-  .top-nav a.center:not(.on){color:var(--lime)}
+  .top-nav a.on{background:var(--sel);color:var(--sel-ink)}
+  .top-nav a.center:not(.on){color:var(--on-deep-accent)}
   body:has(.top-nav) .flow-bar,body:has(.top-nav) .chat-send{bottom:0}
   .wrap{max-width:880px;padding:32px 40px 56px}
   .foot{max-width:880px}

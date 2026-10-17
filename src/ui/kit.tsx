@@ -17,10 +17,11 @@ import { ALIVE_CSS, ALIVE_JS } from "./alive";
 import { SPRING_JS } from "./spring";
 import { SHEET_JS } from "./sheet";
 import { WARM_CSS } from "./warm";
+import { PALETTE_CSS } from "./palette";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = FONT_CSS + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS;
+const ALL_CSS = FONT_CSS + themed(PALETTE_CSS) + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS;
 import { BRAND, BrandMark } from "./brand";
 import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
 import { A11Y_CSS } from "./a11y-css";
@@ -146,7 +147,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
         <title>{`${opts.title} · Jurrgun`}</title>
         <meta name="description" content={`Jurrgun (เจอกัน): ${BRAND.tagline.th} · ${BRAND.tagline.en} Make friends in Bangkok, no endless swiping.`} />
         <meta name="theme-color" content="#fff9f0" media="(prefers-color-scheme: light)" data-media="(prefers-color-scheme: light)" data-scheme="light" />
-        <meta name="theme-color" content="#06301c" media="(prefers-color-scheme: dark)" data-media="(prefers-color-scheme: dark)" data-scheme="dark" />
+        <meta name="theme-color" content="#0b3520" media="(prefers-color-scheme: dark)" data-media="(prefers-color-scheme: dark)" data-scheme="dark" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Jurrgun" />
         <meta property="og:title" content={shareTitle} />

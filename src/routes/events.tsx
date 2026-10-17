@@ -217,14 +217,14 @@ export async function coverSrc(env: Ctx["env"], e: Pick<Event, "id" | "coverKey"
   return env.BUCKET ? `/events/${e.id}/cover` : null;
 }
 
-/** The colours of an event's scene cover, from its category. */
+/** The colours of an event's scene cover, from its category: park is green, food and play (nights) mango, river and art (culture, language) sky, city cream. */
 function sceneOf(e: Event): string {
   const tags = e.tags;
   if (tags.includes("food")) return "food";
   if (tags.includes("run") || tags.includes("walk") || tags.includes("pets") || tags.includes("volunteer")) return "park";
-  if (tags.includes("city_quest")) return "river";
+  if (tags.includes("city_quest") || tags.includes("language_exchange")) return "river";
   if (tags.includes("art")) return "art";
-  if (tags.includes("board_game") || tags.includes("language_exchange")) return "play";
+  if (tags.includes("board_game")) return "play";
   return "city";
 }
 

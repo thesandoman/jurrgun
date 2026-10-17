@@ -4,14 +4,15 @@ import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
 import { profiles } from "../src/schema";
 import { A11Y_CSS } from "../src/ui/a11y-css";
+import { PALETTE_CSS } from "../src/ui/palette";
 import { joinBirthDate } from "../src/routes/onboarding";
 
 describe("phase 1 rules", () => {
   it("one bottom layer per screen, dark mode on palette", () => {
     expect(A11Y_CSS).toContain("body:not(.fullmap-body) .view-switch{position:static");
     expect(A11Y_CSS).toContain("body:has(main .flow-bar) .tabbar,body:has(main .pf-save) .tabbar{display:none}");
-    expect(A11Y_CSS).toContain("--love:#f0505c");
-    expect(A11Y_CSS).not.toMatch(/--love:#ff6b78/);
+    expect(PALETTE_CSS).toContain("--love:#f0505c");
+    expect(PALETTE_CSS).not.toMatch(/--love:#ff6b78/);
   });
   it("birthday pickers join into a date", () => {
     expect(joinBirthDate("5", "3", "1996")).toBe("1996-03-05");

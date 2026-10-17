@@ -19,8 +19,8 @@
  */
 export const ALIVE_CSS = `
 /* toast: the ok notice floats under the header, then tucks itself away */
-.notice.ok.toast{position:fixed;z-index:40;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);width:max-content;max-width:min(92vw,460px);margin:0;display:flex;align-items:center;gap:10px;padding:12px 18px 12px 12px;border-radius:999px;background:var(--lime);color:#06301c;font-weight:650;box-shadow:0 14px 34px rgba(4,40,22,.35),0 0 0 1px rgba(6,48,28,.12) inset;animation:toast-in .5s cubic-bezier(.2,.8,.2,1) both,toast-out .45s ease 4.2s forwards}
-.notice.ok.toast::before{content:"✓";flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#06301c;color:var(--lime);font-weight:800;animation:toast-tick .5s .18s cubic-bezier(.2,.8,.2,1) both}
+.notice.ok.toast{position:fixed;z-index:40;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);width:max-content;max-width:min(92vw,460px);margin:0;display:flex;align-items:center;gap:10px;padding:12px 18px 12px 12px;border-radius:999px;background:var(--brand-soft);color:var(--ink);font-weight:650;box-shadow:0 14px 34px rgba(4,40,22,.35),0 0 0 1px rgba(6,48,28,.12) inset;animation:toast-in .5s cubic-bezier(.2,.8,.2,1) both,toast-out .45s ease 4.2s forwards}
+.notice.ok.toast::before{content:"✓";flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800;animation:toast-tick .5s .18s cubic-bezier(.2,.8,.2,1) both}
 .notice.ok.toast.party::before{content:"🎉";background:transparent;font-size:1.25rem}
 @keyframes toast-in{from{opacity:0;transform:translate(-50%,-16px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes toast-out{to{opacity:0;transform:translate(-50%,-12px) scale(.96);visibility:hidden}}
@@ -38,7 +38,7 @@ export const ALIVE_CSS = `
 .card.ev-card.feat{--notch:178px}
 .ev-card .ev-body{position:relative}
 .ev-card .ev-body::before{content:"";position:absolute;left:18px;right:18px;top:0;border-top:2px dashed color-mix(in srgb,var(--ink-3) 35%,transparent)}
-.ev-card .ev-date{transform:rotate(-4deg);border:2px solid var(--lime);box-shadow:0 6px 16px rgba(0,0,0,.16)}
+.ev-card .ev-date{transform:rotate(-4deg);border:2px solid var(--mango-1);box-shadow:0 6px 16px rgba(0,0,0,.16)}
 .ev-card::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.22),transparent 60%);opacity:0;transition:opacity .3s ease}
 @media (hover:hover) and (pointer:fine){
   .ev-card:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-4px)}
@@ -99,7 +99,7 @@ document.querySelectorAll(".notice.toast").forEach(function(n){document.body.app
 // Confetti for the friendship milestone only, in the brand's colours.
 var t=document.querySelector(".toast.party,[data-celebrate]");
 if(t&&!still){var box=document.createElement("div");box.className="confetti";box.setAttribute("aria-hidden","true");
-var cs=["#b4f03a","#22c55e","#137f45","#fbbf24","#f472b6","#38bdf8"];
+var cs=["#2fb866","#11763f","#ffc766","#ffa53a","#5cb8e6","#cdeed6"];
 for(var i=0;i<34;i++){var p=document.createElement("i");var a=Math.random()*Math.PI*2,d=120+Math.random()*220;
 p.style.setProperty("--c",cs[i%cs.length]);p.style.setProperty("--x",Math.cos(a)*d+"px");p.style.setProperty("--y",(Math.sin(a)*d*.6+180+Math.random()*160)+"px");p.style.setProperty("--r",(Math.random()*720-360)+"deg");p.style.animationDelay=(Math.random()*.12)+"s";box.appendChild(p)}
 document.body.appendChild(box);setTimeout(function(){box.remove()},1900)}
