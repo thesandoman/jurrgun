@@ -962,4 +962,6 @@ main .open-sec>details.how:last-child{border-bottom:0}
 .consent-centre .consent-then{color:var(--ink)}
 /* Me: the updated Terms card, one button that may wrap on a phone. */
 .me-terms .btn{white-space:normal;min-height:44px}
+/* 💘 row in the settings list (owner card): no box around it; the love-red switch plus a small "On" tag mark it. */
+.qs-on{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--love-soft,#fde8ea);color:var(--love-ink);font-size:.78rem;font-weight:700;vertical-align:middle;white-space:nowrap}
 `);

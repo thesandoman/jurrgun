@@ -284,6 +284,7 @@ settingsRoutes.get("/settings", async (c) => {
         <QuickSwitch
           k="romance"
           love
+          onLabel={t("เปิดอยู่", "On")}
           on={romanceEligible(p)}
           emoji="💘"
           title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")}
@@ -470,7 +471,7 @@ settingsRoutes.post("/settings/push/off", async (c) => {
 });
 
 /** A one-tap switch on Me: posts to /settings/quick and comes back. */
-function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean; consent?: { t: T; lead: string; tick: string; go: string } }) {
+function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: string; hint: string; love?: boolean; onLabel?: string; consent?: { t: T; lead: string; tick: string; go: string } }) {
   // Switching on needs a clear yes (PDPA, owner Phase 2): the switch opens a short sheet with an explicit tick. Off stays one tap.
   if (props.consent && !props.on)
     return (
@@ -512,7 +513,10 @@ function QuickSwitch(props: { k: string; on: boolean; emoji: string; title: stri
       <button type="submit" class={props.love ? "qs love" : "qs"} aria-pressed={props.on ? "true" : "false"}>
         <span aria-hidden="true">{props.emoji}</span>
         <span>
-          <b>{props.title}</b>
+          <b>
+            {props.title}
+            {props.love && props.on && props.onLabel ? <span class="qs-on">💘 {props.onLabel}</span> : null}
+          </b>
           <small>{props.hint}</small>
         </span>
         <span class="sw" aria-hidden="true" />
