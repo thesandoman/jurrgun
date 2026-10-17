@@ -443,17 +443,16 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     expect((await req(`/admin/events/${id}/cancel`, { cookie: admin.cookie, method: "POST" })).status).toBe(409);
   });
 
-  it("sends notices, sets prompts and links +1 pairs", async () => {
+  it("has no old notice form, sets prompts and links +1 pairs", async () => {
     await setup();
     const id = await mkEvent(admin.id, { hostAccountId: host.id, plusOneAllowed: true });
     const a = await createMember();
     const b = await createMember();
     const ra = await register(id, a.id);
     const rb = await register(id, b.id);
-    expect((await req(`/admin/events/${id}/notice`, { cookie: host.cookie, form: { th: "สวัสดี", en: "" } })).status).toBe(400);
-    const n = await req(`/admin/events/${id}/notice`, { cookie: host.cookie, form: { th: "จุดนัดย้ายไปประตู 2", en: "Meet at gate 2" } });
-    expect(n.headers.get("location")).toContain("notice=notice_sent");
-    expect((await kinds(a.id, "event_notice")).length).toBe(1);
+    // The old free-text notice is gone (owner, 2026-10-17): hosts use announcements, which never send chit-chat to the waitlist.
+    expect((await req(`/admin/events/${id}/notice`, { cookie: host.cookie, form: { th: "จุดนัดย้ายไปประตู 2", en: "Meet at gate 2" } })).status).toBe(404);
+    expect(await (await req(`/admin/events/${id}`, { cookie: `${host.cookie}; lang=en` })).text()).not.toContain("Send a notice");
 
     await req(`/admin/events/${id}/prompt`, { cookie: host.cookie, form: { preset: "river" } });
     let [e] = await db().select().from(events).where(eq(events.id, id)).limit(1);
