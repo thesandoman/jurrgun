@@ -1023,4 +1023,6 @@ html:lang(th) :is(.pc-chip,.place-card strong,.type-pick small,.me-stat small){l
 .ev-date small,.ev-card .ev-date small{text-transform:none;letter-spacing:0}
 /* Big-number labels and fact labels: sentence case, no tracking, like every other label. */
 .big-l,.fact small{text-transform:none;letter-spacing:0}
+/* Legends lose the browser's 2px side padding, so "วันเกิด" lines up with the other field labels. */
+fieldset legend{padding-inline:0}
 `);
