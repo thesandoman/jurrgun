@@ -391,7 +391,7 @@ const SOCIAL: Record<ArchetypeKey, Social> = {
       c("BDMH", "They find the hidden part of the fair.", "เขาเจอมุมลับของงาน"),
     ],
     hangouts: [
-      h("🎆", "pathum_wan", "The CentralWorld countdown square", "ลานเคาท์ดาวน์เซ็นทรัลเวิลด์", "New Year's Eve with the whole city.", "ส่งท้ายปีเก่ากับคนทั้งเมือง"),
+      h("🎆", "pathum_wan", "The CentralWorld countdown square", "ลานเคานต์ดาวน์เซ็นทรัลเวิลด์", "New Year's Eve with the whole city.", "ส่งท้ายปีเก่ากับคนทั้งเมือง"),
       h("🌽", "chatuchak", "Kasetsart Fair", "งานเกษตรแฟร์", "The yearly fair of food, plants and family fun.", "งานประจำปีที่มีทั้งของกิน ต้นไม้ และความสนุกทั้งครอบครัว"),
       h("🎡", "bang_kho_laem", "Asiatique", "เอเชียทีค", "Riverside fairground nights and the Ferris wheel.", "คืนริมน้ำกับชิงช้าสวรรค์"),
     ],

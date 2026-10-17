@@ -146,7 +146,7 @@ export const LANDMARKS: Landmark[] = [
   v("pathum_wan", "Siam Square and Lido Connect", "สยามสแควร์และลิโด้ คอนเน็คท์"),
   v("pathum_wan", "Samyan Mitrtown", "สามย่านมิตรทาวน์"),
   v("pathum_wan", "House Samyan cinema", "โรงหนังเฮาส์ สามย่าน"),
-  v("pathum_wan", "the CentralWorld countdown square", "ลานเคาท์ดาวน์เซ็นทรัลเวิลด์"),
+  v("pathum_wan", "the CentralWorld countdown square", "ลานเคานต์ดาวน์เซ็นทรัลเวิลด์"),
   v("pathum_wan", "One Bangkok", "วัน แบงค็อก"),
   v("bang_kapi", "Rajamangala Stadium", "ราชมังคลากีฬาสถาน"),
   v("pom_prap", "Rajadamnern Boxing Stadium", "เวทีมวยราชดำเนิน"),

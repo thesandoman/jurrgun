@@ -379,9 +379,10 @@ export function TermsAgree(props: { v: View; checked?: boolean }) {
   const { t } = v;
   return (
     <div class="terms-agree">
+      {/* \u2060 (word joiner) keeps "รับทราบ" on one line: the browser's Thai dictionary split it as รับ|ทราบ. */}
       <label class="toggle">
         <input type="checkbox" name="terms" value="1" required checked={props.checked} />
-        <span>{t("ฉันยอมรับข้อกำหนดการใช้งานและรับทราบนโยบายความเป็นส่วนตัว", "I agree to the Terms of service and have read the privacy notice")}</span>
+        <span>{t("ฉันยอมรับข้อกำหนดการใช้งานและรับ\u2060ทราบนโยบายความเป็นส่วนตัว", "I agree to the Terms of service and have read the privacy notice")}</span>
       </label>
       <div class="terms-read">
         <Sheet t={t} class="terms-sheet" align="start" title={t("ข้อกำหนดการใช้งาน", "Terms of service")} triggerClass="terms-open" trigger={t("อ่านข้อกำหนดการใช้งาน", "Read the Terms of service")}>

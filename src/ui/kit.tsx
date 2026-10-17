@@ -65,7 +65,7 @@ const PARTY = new Set(["friendship"]);
 const NOTICES: Record<string, [string, string]> = {
   saved: ["บันทึกแล้ว", "Saved"],
   welcome: ["ยินดีต้อนรับสู่ Jurrgun!", "Welcome to Jurrgun!"],
-  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ในกิจกรรมของฉัน", "You're in, your pass is in My events"],
+  rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ในนัดของฉัน", "You're in, your pass is in My events"],
   rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่ เราจะบอกทันทีนะ", "You're on the waitlist, we'll tell you if a spot opens"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
   late_cancel: ["ยกเลิกแล้ว แต่ยกเลิกไม่ถึง 24 ชั่วโมงก่อนงาน เลยนับเป็นใบเตือน 1 ใบ", "Cancelled, cancelling within 24h counts as 1 strike"],

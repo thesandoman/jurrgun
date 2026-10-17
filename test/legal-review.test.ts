@@ -29,6 +29,7 @@ const words = (html: string) =>
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/\u2060/g, "")
     .replace(/\s+/g, " ");
 
 describe("the Terms box at sign-up", () => {

@@ -111,7 +111,7 @@ export function FullDiscover(props: {
     legend: [
       { kind: "exact", label: t("สถานที่จริง", "Exact place") },
       { kind: "area", label: t("ระดับเขต", "District area") },
-      { kind: "highlight", label: t("กิจกรรมของฉัน", "My events") },
+      { kind: "highlight", label: t("นัดของฉัน", "My events") },
     ],
     messages:
       lang === "en"

@@ -371,7 +371,7 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
         <div class="tags">
           {props.pick ? <Tag tone="ok">⭐ {t("เลือกให้คุณ", "Your pick")}</Tag> : null}
           <SpotsTag e={e} taken={props.taken} t={t} />
-          {quest ? <Tag tone="accent">🧭 City Quest</Tag> : null}
+          {quest ? <Tag tone="accent">🧭 {t("ซิตี้เควสต์", "City Quest")}</Tag> : null}
           {e.plusOneAllowed ? <Tag>{t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</Tag> : null}
           {e.residentPriority || e.residentQuota > 0 ? <Tag tone="muted">{t("🏙️ สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "🏙️ Resident priority")}</Tag> : null}
         </div>
@@ -1194,7 +1194,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <StatusStrip {...stripProps} class="ev-phone" />
         {quest ? (
           <p>
-            <Tag tone="accent">🧭 City Quest</Tag> {quest}
+            <Tag tone="accent">🧭 {t("ซิตี้เควสต์", "City Quest")}</Tag> {quest}
           </p>
         ) : null}
         <FactTiles
@@ -2088,9 +2088,9 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
 
   return page(
     c,
-    { title: t("กิจกรรมของฉัน", "My events"), tab: "mine" },
+    { title: t("นัดของฉัน", "My events"), tab: "mine" },
     <>
-      <h1>{t("กิจกรรมของฉัน", "My events")}</h1>
+      <h1>{t("นัดของฉัน", "My events")}</h1>
       {standing.active > 0 ? (
         <Card class="strikes">
           <h2>{t("ใบเตือนของคุณ (เห็นเฉพาะคุณ)", "Your strikes (only you can see this)")}</h2>
