@@ -393,7 +393,12 @@ export function Field(props: {
   autocomplete?: string;
   maxlength?: number;
   pattern?: string;
-  inputmode?: "numeric" | "email" | "text";
+  inputmode?: "numeric" | "email" | "text" | "url";
+  /** Phone keyboard ergonomics: handles and links turn off capitals, autocorrect and spellcheck; the Return key says what it does. */
+  autocapitalize?: "none" | "off" | "words" | "sentences";
+  autocorrect?: "on" | "off";
+  spellcheck?: boolean;
+  enterkeyhint?: "next" | "done" | "go" | "search" | "send";
   /** Password fields: labels for a Show / Hide toggle (needs JS; without it the field stays hidden-text). */
   reveal?: { show: string; hide: string; caps?: string };
   /** What's wrong with the value, shown under the field and read with it. */
@@ -417,6 +422,10 @@ export function Field(props: {
         maxlength={props.maxlength}
         pattern={props.pattern}
         inputmode={props.inputmode}
+        autocapitalize={props.autocapitalize}
+        autocorrect={props.autocorrect}
+        spellcheck={props.spellcheck}
+        enterkeyhint={props.enterkeyhint}
       />
   );
   return (
@@ -494,12 +503,12 @@ export function TextArea(props: { label: string; name: string; value?: string | 
 
 type Opt = { value: string; th: string; en: string };
 
-export function Select(props: { label: string; name: string; options: Opt[]; value?: string | null; lang: Lang; required?: boolean; blank?: string; hint?: string }) {
+export function Select(props: { label: string; name: string; options: Opt[]; value?: string | null; lang: Lang; required?: boolean; blank?: string; hint?: string; error?: string }) {
   const id = `f-${props.name}`;
   return (
     <div class="field">
       <label for={id}>{props.label}</label>
-      <select id={id} name={props.name} required={props.required} aria-describedby={describedBy(id, props.hint)}>
+      <select id={id} name={props.name} required={props.required} aria-describedby={describedBy(id, props.hint, props.error)} aria-invalid={props.error ? "true" : undefined}>
         {props.blank !== undefined ? <option value="">{props.blank}</option> : null}
         {props.options.map((o) => (
           <option value={o.value} selected={o.value === props.value}>
@@ -507,7 +516,7 @@ export function Select(props: { label: string; name: string; options: Opt[]; val
           </option>
         ))}
       </select>
-      <FieldNotes id={id} hint={props.hint} />
+      <FieldNotes id={id} hint={props.hint} error={props.error} />
     </div>
   );
 }
@@ -522,14 +531,23 @@ export function Choices(props: {
   type?: "checkbox" | "radio";
   required?: boolean;
   hint?: string;
+  /** What's wrong, shown under the legend and read with the group; the group takes focus so the page can bring you to it. */
+  error?: string;
 }) {
   const type = props.type ?? "checkbox";
   const selected = new Set(props.values ?? []);
   const hintId = props.hint ? `c-${props.name}-hint` : undefined;
+  const errId = props.error ? `c-${props.name}-err` : undefined;
   return (
-    <fieldset class="choices" aria-describedby={hintId}>
+    <fieldset class="choices" aria-describedby={[hintId, errId].filter(Boolean).join(" ") || undefined} aria-invalid={props.error ? "true" : undefined} tabindex={props.error ? -1 : undefined}>
       <legend>{props.legend}</legend>
       {props.hint ? <small id={hintId}>{props.hint}</small> : null}
+      {props.error ? (
+        <small id={errId} class="field-err">
+          <span aria-hidden="true">⚠ </span>
+          {props.error}
+        </small>
+      ) : null}
       <div class="pills">
         {props.options.map((o) => (
           <label class="pill">

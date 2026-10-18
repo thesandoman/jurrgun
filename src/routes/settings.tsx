@@ -76,7 +76,7 @@ import {
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
 import { SubLabel } from "../ui/section-head";
-import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript, PromptInput } from "../ui/profile-form";
+import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, PhotoUndo, photoPickData, ProfileFormScript, PromptInput } from "../ui/profile-form";
 import type { Child } from "hono/jsx";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import { allowedEndpoint } from "../lib/webpush";
@@ -621,13 +621,20 @@ function LinksSection(props: { v: View; links: Record<string, string>; on: boole
       <input type="hidden" name="links_present" value="1" />
       <Toggle name="linksOn" label={t("ให้คนรู้จักของฉันเห็นลิงก์", "Show my links to my people")} checked={props.on} />
       <div class="pf-links">
-        {NETWORKS.map((n) => (
+        {NETWORKS.map((n, i) => (
           <Field
             label={`${n.icon} ${t(n.th, n.en)}`}
             name={`link_${n.key}`}
             value={props.links[n.key] ?? ""}
             maxlength={200}
             autocomplete="off"
+            // Handles and links: no capitals, autocorrect or spellcheck. Links get the URL keyboard; type=url
+            // would make the browser refuse a bare "example.com", which the server accepts.
+            inputmode={n.kind === "url" ? "url" : undefined}
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck={false}
+            enterkeyhint={i === NETWORKS.length - 1 ? "done" : "next"}
             placeholder={n.kind === "url" ? "https://" : n.at ? t("@ชื่อผู้ใช้ หรือวางลิงก์", "@name or profile link") : t("ชื่อในลิงก์ หรือวางลิงก์", "Name or profile link")}
             error={props.errorField === n.key ? props.error : undefined}
           />
@@ -637,10 +644,24 @@ function LinksSection(props: { v: View; links: Record<string, string>; on: boole
   );
 }
 
-function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; datingDeck: string[]; photo: string | null; hasPhoto: boolean; promptPhoto: (id: string) => string | null; error?: string; errorField?: string }) {
+function ProfileForm(props: {
+  v: View;
+  vals: ProfileVals;
+  deck: string[];
+  datingDeck: string[];
+  photo: string | null;
+  hasPhoto: boolean;
+  promptPhoto: (id: string) => string | null;
+  error?: string;
+  errorField?: string;
+  /** The refused post carried a photo; browsers never refill a file field, so say so. */
+  filesLost?: boolean;
+}) {
   const { t, lang } = props.v;
   const vals = props.vals;
   const bio = vals.bio;
+  /** The error, when it belongs to this field. */
+  const errFor = (field: string) => (props.errorField === field ? props.error : undefined);
   return (
     <>
       <p class="spread">
@@ -649,7 +670,12 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
       </p>
       <h1>{t("แก้ไขโปรไฟล์", "Edit profile")}</h1>
       <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
-      {props.error ? <Notice kind="error">{props.error}</Notice> : null}
+      {props.error ? (
+        <Notice kind="error">
+          {props.error}
+          {props.filesLost ? <span class="pf-files-lost">{t(" รูปที่เลือกไว้ยังไม่ได้บันทึก เลือกอีกครั้งได้เลย", " The photo you picked wasn't saved yet. Please choose it again.")}</span> : null}
+        </Notice>
+      ) : null}
       {/* A long page: shortcuts to each part, kept in view while scrolling. */}
       <nav class="pf-jump" aria-label={t("ไปยังส่วนต่าง ๆ", "Jump to")}>
         <a href="#basics">{t("พื้นฐาน", "Basics")}</a>
@@ -660,7 +686,8 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
         <a href="#prompts">{t("คำถาม", "Prompts")}</a>
         <a href="#links">{t("ลิงก์", "Links")}</a>
       </nav>
-      <form method="post" action="/settings/profile" enctype="multipart/form-data" data-guard="">
+      {/* data-guard="dirty": a refused save is shown back unsaved, so leaving warns from the start. */}
+      <form method="post" action="/settings/profile" enctype="multipart/form-data" data-guard={props.error ? "dirty" : ""}>
         {/* Enter / "Go" submits with the FIRST submit button. Without this one that
             would be a prompt's "↻ Different question", which swaps the prompt and
             deletes its answer. Off-screen rather than display:none so Safari uses it. */}
@@ -668,27 +695,40 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           {t("บันทึก", "Save")}
         </button>
         <Section id="photo" emoji="📸" title={t("รูปโปรไฟล์", "Profile photo")} hint={t("ไม่บังคับ รูปที่เห็นหน้าชัด ๆ ช่วยให้จำกันได้ในงาน", "Optional. A clear, friendly photo helps people find you at events.")}>
-          <div class="pf-photo-main">
-            {props.photo ? (
-              <img src={props.photo} alt={t("รูปโปรไฟล์ปัจจุบัน", "Current profile photo")} />
-            ) : (
-              <div class="pf-initial" aria-hidden="true">
-                {[...(vals.nickname || "?")][0].toUpperCase()}
-              </div>
-            )}
+          {/* data-photo-pick: the picked photo shows in place at once, with one tap to undo (PHOTO_PICK_JS). */}
+          <div class="pf-photo-main" {...photoPickData(props.v, !!props.photo)}>
+            <div class="pf-preview" data-preview="">
+              {props.photo ? (
+                <img src={props.photo} alt={t("รูปโปรไฟล์ปัจจุบัน", "Current profile photo")} />
+              ) : (
+                <div class="pf-initial" aria-hidden="true">
+                  {[...(vals.nickname || "?")][0].toUpperCase()}
+                </div>
+              )}
+            </div>
             <div class="field" style="margin:0;flex:1;min-width:200px">
               {/* The browser's own picker speaks the browser's language; this button speaks the page's. */}
               <span class="field-label" id="f-photo-h">{t("อัปโหลดรูปใหม่", "Upload a new photo")}</span>
               <label class="btn ghost file-btn" for="f-photo">
                 📷 {t("เลือกรูป", "Choose a photo")}
               </label>
-              <input id="f-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" aria-labelledby="f-photo-h" />
-              <span class="file-name muted" aria-live="polite">{t("ยังไม่ได้เลือกรูป", "No photo chosen")}</span>
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `(function(){var i=document.getElementById("f-photo"),n=i&&i.parentNode.querySelector(".file-name");if(!i||!n)return;i.addEventListener("change",function(){if(i.files&&i.files[0])n.textContent=i.files[0].name})})();`,
-                }}
+              <input
+                id="f-photo"
+                name="photo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="sr-only"
+                aria-labelledby="f-photo-h"
+                aria-describedby={errFor("photo") ? "f-photo-name f-photo-err" : "f-photo-name"}
+                aria-invalid={errFor("photo") ? "true" : undefined}
               />
+              <span class="file-name muted" id="f-photo-name" aria-live="polite">
+                {t("ยังไม่ได้เลือกรูป", "No photo chosen")}
+              </span>
+              <PhotoUndo v={props.v} had={!!props.photo} />
+              <small id="f-photo-err" class="field-err pf-photo-err" hidden={!errFor("photo")}>
+                {errFor("photo") ? `⚠ ${errFor("photo")}` : ""}
+              </small>
               <small>{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB ช่วงทดลองไม่ต้องใช้รูปจริง", "JPG, PNG or WebP, up to 5 MB. No real photos needed in the prototype.")}</small>
             </div>
           </div>
@@ -696,9 +736,9 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
         </Section>
 
         <Section id="basics" emoji="👋" title={t("ข้อมูลพื้นฐาน", "The basics")}>
-          <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} />
-          <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={districtsAZ(lang)} value={vals.district} lang={lang} required />
-          <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} />
+          <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} autocomplete="nickname" enterkeyhint="next" error={errFor("nickname")} />
+          <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={districtsAZ(lang)} value={vals.district} lang={lang} required error={errFor("district")} />
+          <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} error={errFor("languages")} />
           <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมากรุงเทพฯ", "I'm new to Bangkok")} checked={vals.newcomer} />
           <Select
             label={t("ภาษาที่ใช้ในแอป", "App language")}
@@ -719,11 +759,11 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
         </Section>
 
         <Section id="interests" emoji="🍜" title={t("ความสนใจ", "Interests")} hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ใช้จัดโต๊ะให้เจอคนที่ชอบคล้ายกัน`, `Pick 1 to ${MAX_INTERESTS}. We use them to seat you with people who share them.`)}>
-          <InterestPicker v={props.v} values={vals.interests} folded />
+          <InterestPicker v={props.v} values={vals.interests} folded error={errFor("interests")} />
         </Section>
 
         <Section id="comm" emoji="💬" title={t("สไตล์การติดต่อ", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
-          <CommPicker v={props.v} values={bio.comm} />
+          <CommPicker v={props.v} values={bio.comm} error={errFor("comm")} />
         </Section>
 
         <Section id="bangkok" emoji="🛺" title={t("กรุงเทพฯ ของฉัน", "My Bangkok")} hint={t("ไม่บังคับทั้งหมด ช่วยให้คนในโต๊ะรู้จักคุณมากขึ้น", "All optional. Helps your table get to know you.")}>
@@ -738,6 +778,8 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
             label={t("กำลังเรียนรู้", "Currently learning")}
             name="learning"
             value={bio.learning ?? ""}
+            error={errFor("learning")}
+            enterkeyhint="next"
             maxlength={LEARNING_MAX}
             placeholder={t("เช่น ทำขนมปัง ว่ายน้ำท่าผีเสื้อ", "e.g. Sourdough, butterfly stroke")}
             hint={t(`ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `Up to ${LEARNING_MAX} characters`)}
@@ -822,7 +864,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
         >
           {props.deck.map((id) => {
             const p = promptById(id);
-            return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={props.promptPhoto(id)} /> : null;
+            return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={props.promptPhoto(id)} error={errFor(`prompt-${id}`)} /> : null;
           })}
         </Section>
 
@@ -838,7 +880,7 @@ function ProfileForm(props: { v: View; vals: ProfileVals; deck: string[]; dating
           >
             {props.datingDeck.map((id) => {
               const p = promptById(id);
-              return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={null} /> : null;
+              return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={null} error={errFor(`prompt-${id}`)} /> : null;
             })}
           </Section>
         ) : null}
@@ -869,7 +911,7 @@ function profileVals(p: Profile): ProfileVals {
   };
 }
 
-async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string; errorField?: string; status?: 400 } = {}) {
+async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string; errorField?: string; status?: 400; filesLost?: boolean } = {}) {
   const user = me(c);
   const p = user.profile!;
   if (!vals.links) {
@@ -886,7 +928,7 @@ async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string
   return page(
     c,
     { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: opts.status },
-    <ProfileForm v={view(c)} vals={vals} deck={deck} datingDeck={datingDeck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} errorField={opts.errorField} />,
+    <ProfileForm v={view(c)} vals={vals} deck={deck} datingDeck={datingDeck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} errorField={opts.errorField} filesLost={opts.filesLost} />,
   );
 }
 
@@ -911,6 +953,9 @@ const fileOf = (raw: unknown): File | null => {
   const f = Array.isArray(raw) ? raw[0] : raw;
   return f instanceof File && f.size > 0 ? f : null;
 };
+
+/** The post carried a photo (main or a prompt's): a refused save can't give it back, so the page says so. */
+const postedFiles = (body: Body) => Object.entries(body).some(([k, v]) => (k === "photo" || k.startsWith("f_")) && fileOf(v) !== null);
 
 const oneOf = (v: string, list: { value: string }[]) => (list.some((x) => x.value === v) ? v : undefined);
 
@@ -979,22 +1024,14 @@ function parseProfileForm(c: C, body: Body): Parsed {
     vals.links = Object.fromEntries(NETWORKS.map((n) => [n.key, str(body[`link_${n.key}`]).slice(0, 400)]));
     vals.linksOn = str(body.linksOn) === "1";
   }
-  const fail = (th: string, en: string): Parsed => ({ ok: false, vals, error: t(th, en) });
-
-  if (!vals.nickname) return fail("ใส่ชื่อเล่นก่อน", "Please add a nickname.");
-  if (vals.nickname.length > 30) return fail("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters.");
-  if (!values(DISTRICTS).includes(vals.district)) return fail("เลือกเขต", "Please choose a district.");
-  if (vals.languages.length === 0 || vals.interests.length === 0) return fail("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.");
-  if (vals.interests.length > MAX_INTERESTS) return fail(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`);
-  if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`);
-  if ((bio.learning ?? "").length > LEARNING_MAX) return fail(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`);
-  if (!bio.learning) delete bio.learning;
-
-  const mainFile = fileOf(body.photo);
-  if (mainFile) {
-    if (!PHOTO_TYPES.includes(mainFile.type)) return fail("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP.");
-    if (mainFile.size > PHOTO_MAX_BYTES) return fail("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller.");
-  }
+  // errorField names the field the message belongs to, so the form shows it there and takes the member to it.
+  const fail = (th: string, en: string, errorField?: string): Parsed => ({ ok: false, vals, error: t(th, en), errorField });
+  // Prompts are read first, so whatever error comes back, every answer typed is still in the form.
+  // The first problem with a prompt is kept and returned after the basics are checked.
+  let promptErr: Parsed | null = null;
+  const promptFail = (id: string, th: string, en: string) => {
+    promptErr ??= fail(th, en, `prompt-${id}`);
+  };
 
   // Prompt answers: only for prompts in my deck. Answers to prompts no longer
   // in the deck are dropped (with their photos).
@@ -1017,11 +1054,21 @@ function parseProfileForm(c: C, body: Body): Parsed {
     const title = t(q.th, q.en);
     if (q.kind === "photo") {
       const caption = validateAnswer(q, str(body[`a_${id}`]));
-      if (!caption.ok) return fail(`${title}: ${caption.error.th}`, `${title}: ${caption.error.en}`);
+      if (!caption.ok) {
+        promptFail(id, `${title}: ${caption.error.th}`, `${title}: ${caption.error.en}`);
+        if (old) answers[id] = { ...old, value: str(body[`a_${id}`]) };
+        continue;
+      }
       const file = fileOf(body[`f_${id}`]);
       if (file) {
-        if (!PHOTO_TYPES.includes(file.type)) return fail(`${title}: รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP`, `${title}: photos must be JPG, PNG or WebP.`);
-        if (file.size > PHOTO_MAX_BYTES) return fail(`${title}: รูปต้องมีขนาดไม่เกิน 5 MB`, `${title}: photos must be 5 MB or smaller.`);
+        if (!PHOTO_TYPES.includes(file.type)) {
+          promptFail(id, `${title}: รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP`, `${title}: photos must be JPG, PNG or WebP.`);
+          continue;
+        }
+        if (file.size > PHOTO_MAX_BYTES) {
+          promptFail(id, `${title}: รูปต้องมีขนาดไม่เกิน 5 MB`, `${title}: photos must be 5 MB or smaller.`);
+          continue;
+        }
         pending.push({ id, file });
         if (old?.photoKey) dropKeys.push(old.photoKey);
         answers[id] = { kind: "photo", value: (caption.value as string | null) ?? "" };
@@ -1035,13 +1082,22 @@ function parseProfileForm(c: C, body: Body): Parsed {
       const positions: Record<string, string> = {};
       for (const o of q.options ?? []) positions[o.value] = str(body[`r_${id}_${o.value}`]);
       const order = rankFromPositions(q, positions);
-      if (order === "partial") return fail(`${title}: เรียงอันดับให้ครบทุกข้อ และไม่ซ้ำกัน`, `${title}: give every item a different place.`);
+      if (order === "partial") {
+        promptFail(id, `${title}: เรียงอันดับให้ครบทุกข้อ และไม่ซ้ำกัน`, `${title}: give every item a different place.`);
+        continue;
+      }
       raw = order;
     } else {
       raw = list(body[`a_${id}`]);
     }
     const r = validateAnswer(q, raw);
-    if (!r.ok) return fail(`${title}: ${r.error.th}`, `${title}: ${r.error.en}`);
+    if (!r.ok) {
+      promptFail(id, `${title}: ${r.error.th}`, `${title}: ${r.error.en}`);
+      // Shown back as typed (text) or as picked, so fixing it is one change, not a retype.
+      const typed = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      answers[id] = { kind: q.kind, value: q.kind === "text" ? (typed[0] ?? "") : typed };
+      continue;
+    }
     if (r.value === null) {
       // Not answered. Only an explicit empty field (or a rendered prompt) clears it.
       if (inForm || (q.kind === "text" && `a_${id}` in body)) delete answers[id];
@@ -1050,6 +1106,23 @@ function parseProfileForm(c: C, body: Body): Parsed {
     }
   }
   bio.answers = answers;
+
+  if (!vals.nickname) return fail("ใส่ชื่อเล่นก่อน", "Please add a nickname.", "nickname");
+  if (vals.nickname.length > 30) return fail("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters.", "nickname");
+  if (!values(DISTRICTS).includes(vals.district)) return fail("เลือกเขต", "Please choose a district.", "district");
+  if (vals.languages.length === 0) return fail("เลือกภาษาที่พูดได้อย่างน้อย 1 ภาษา", "Pick at least one language.", "languages");
+  if (vals.interests.length === 0) return fail("เลือกความสนใจอย่างน้อย 1 อย่าง", "Pick at least one interest.", "interests");
+  if (vals.interests.length > MAX_INTERESTS) return fail(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`, "interests");
+  if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`, "comm");
+  if ((bio.learning ?? "").length > LEARNING_MAX) return fail(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`, "learning");
+  if (!bio.learning) delete bio.learning;
+
+  const mainFile = fileOf(body.photo);
+  if (mainFile) {
+    if (!PHOTO_TYPES.includes(mainFile.type)) return fail("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP.", "photo");
+    if (mainFile.size > PHOTO_MAX_BYTES) return fail("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller.", "photo");
+  }
+  if (promptErr) return promptErr;
 
   let links: { values: Record<string, string | null>; on: boolean } | undefined;
   if (linksSent) {
@@ -1161,9 +1234,9 @@ async function saveLinks(c: C, links: { values: Record<string, string | null>; o
 settingsRoutes.post("/settings/profile", async (c) => {
   const body = (await c.req.parseBody({ all: true })) as Body;
   const parsed = parseProfileForm(c, body);
-  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400 });
+  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400, filesLost: postedFiles(body) });
   const err = await saveProfile(c, parsed);
-  if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400 });
+  if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400, filesLost: postedFiles(body) });
   return c.redirect("/settings?notice=saved");
 });
 
@@ -1177,9 +1250,9 @@ settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   const user = me(c);
   if ("nickname" in body) {
     const parsed = parseProfileForm(c, body);
-    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400 });
+    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400, filesLost: postedFiles(body) });
     const err = await saveProfile(c, parsed);
-    if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400 });
+    if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400, filesLost: postedFiles(body) });
   }
   const p = user.profile!;
   const bio = cleanBio(p.bio);

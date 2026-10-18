@@ -34,6 +34,42 @@ import { universityById, universityName } from "../content/universities";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
 
+/**
+ * A save error that belongs to a group of pills or a prompt, shown where it happened. It can take
+ * focus (data-err-focus), so the page brings the member straight to it after a refused save.
+ */
+function FieldError(props: { id: string; error?: string }) {
+  return props.error ? (
+    <p id={props.id} class="field-err pf-err" tabindex={-1} data-err-focus="">
+      <span aria-hidden="true">⚠ </span>
+      {props.error}
+    </p>
+  ) : null;
+}
+
+/** Attributes for a photo picker (PHOTO_PICK_JS): what to say once a photo is picked, and when it's refused. */
+export function photoPickData(v: View, had: boolean) {
+  const { t } = v;
+  return {
+    "data-photo-pick": "",
+    "data-had": had ? "1" : "",
+    "data-picked": t("{name} · ยังไม่ได้บันทึก", "{name} · not saved yet"),
+    "data-alt": t("รูปใหม่ที่เลือก", "The new photo you picked"),
+    "data-type-err": t("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP."),
+    "data-size-err": t("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller."),
+  };
+}
+
+/** One tap back to the photo that was there before (or to none), shown only once a new photo is picked. */
+export function PhotoUndo(props: { v: View; had: boolean }) {
+  const { t } = props.v;
+  return (
+    <button type="button" class="btn quiet pf-undo" hidden>
+      ↩ {props.had ? t("ใช้รูปเดิม", "Keep my current photo") : t("ไม่ใช้รูปนี้", "Don't use this photo")}
+    </button>
+  );
+}
+
 /** Pill checkbox/radio with an emoji. */
 function EmojiPill(props: { name: string; o: Opt; lang: "th" | "en"; checked?: boolean; type?: "checkbox" | "radio"; big?: boolean; q?: string }) {
   const { o } = props;
@@ -50,14 +86,24 @@ function EmojiPill(props: { name: string; o: Opt; lang: "th" | "en"; checked?: b
 }
 
 /** Interests by group, with search and a cap of MAX_INTERESTS. */
-export function InterestPicker(props: { v: View; values?: string[]; name?: string; folded?: boolean }) {
+export function InterestPicker(props: { v: View; values?: string[]; name?: string; folded?: boolean; error?: string }) {
   const { t, lang } = props.v;
   const selected = new Set(props.values ?? []);
   const name = props.name ?? "interests";
   return (
     <div class="ip" data-limit={String(MAX_INTERESTS)}>
+      <FieldError id={`err-${name}`} error={props.error} />
       <div class="ip-tools">
-        <input type="search" class="ip-search" placeholder={t("ค้นหา เช่น กาแฟ วิ่ง แมว", "Search, e.g. coffee, running, cats")} aria-label={t("ค้นหาความสนใจ", "Search interests")} autocomplete="off" />
+        <input
+          type="search"
+          class="ip-search"
+          placeholder={t("ค้นหา เช่น กาแฟ วิ่ง แมว", "Search, e.g. coffee, running, cats")}
+          aria-label={t("ค้นหาความสนใจ", "Search interests")}
+          autocomplete="off"
+          autocapitalize="none"
+          enterkeyhint="search"
+          aria-describedby={props.error ? `err-${name}` : undefined}
+        />
         <span class="ip-count" aria-live="polite">
           <b>{selected.size}</b>/{MAX_INTERESTS}
         </span>
@@ -98,11 +144,12 @@ export function InterestPicker(props: { v: View; values?: string[]; name?: strin
 }
 
 /** Communication styles, up to MAX_COMM. */
-export function CommPicker(props: { v: View; values?: string[] }) {
+export function CommPicker(props: { v: View; values?: string[]; error?: string }) {
   const { lang } = props.v;
   const selected = new Set(props.values ?? []);
   return (
     <div class="pf-comm" data-limit={String(MAX_COMM)}>
+      <FieldError id="err-comm" error={props.error} />
       {COMM_STYLES.map((c) => (
         <label class="pf-card-opt">
           <input type="checkbox" name="comm" value={c.value} checked={selected.has(c.value)} />
@@ -297,10 +344,13 @@ export function BangkokStory(props: { v: View; story?: string; time?: string; ho
 }
 
 /** One prompt from the member's deck, with the input its kind needs. */
-export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoSrc?: string | null; shuffle?: boolean }) {
+export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoSrc?: string | null; shuffle?: boolean; error?: string }) {
   const { t, lang } = props.v;
   const { p, answer } = props;
   const name = `a_${p.id}`;
+  const errId = `err-prompt-${p.id}`;
+  // Text and photo prompts point their field at the error; the other kinds focus the error itself.
+  const invalid = props.error ? { "aria-invalid": "true" as const } : {};
   const val = answer?.value;
   const has = (x: string) => (Array.isArray(val) ? val.includes(x) : val === x);
   let body: Child = null;
@@ -308,10 +358,20 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
     case "text":
       body = (
         <div class="pf-text">
-          <textarea name={name} rows={3} maxlength={TEXT_MAX} data-count={String(TEXT_MAX)} aria-label={L(lang, p)} placeholder={t("ตอบสั้น ๆ แบบจริงใจ", "A short, honest answer")}>
+          <textarea
+            name={name}
+            rows={3}
+            maxlength={TEXT_MAX}
+            data-count={String(TEXT_MAX)}
+            aria-label={L(lang, p)}
+            aria-describedby={props.error ? `${errId} cnt-${p.id}` : `cnt-${p.id}`}
+            {...invalid}
+            placeholder={t("ตอบสั้น ๆ แบบจริงใจ", "A short, honest answer")}
+          >
             {typeof val === "string" ? val : ""}
           </textarea>
-          <small class="pf-counter" aria-live="polite">
+          {/* Read with the field, not announced on every key press. */}
+          <small class="pf-counter" id={`cnt-${p.id}`}>
             {typeof val === "string" ? val.length : 0}/{TEXT_MAX}
           </small>
         </div>
@@ -428,10 +488,25 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
     }
     case "photo":
       body = (
-        <div class="pf-photo">
-          {props.photoSrc ? <img src={props.photoSrc} alt={L(lang, p)} loading="lazy" /> : null}
-          <input type="file" name={`f_${p.id}`} accept="image/jpeg,image/png,image/webp" aria-label={L(lang, p)} />
-          <input type="text" name={name} value={typeof val === "string" ? val : ""} maxlength={CAPTION_MAX} placeholder={t("คำบรรยายสั้น ๆ (ไม่บังคับ)", "Short caption (optional)")} aria-label={t("คำบรรยายรูป", "Caption")} />
+        <div class="pf-photo" {...photoPickData(props.v, !!props.photoSrc)}>
+          <div class="pf-preview" data-preview="">
+            {props.photoSrc ? <img src={props.photoSrc} alt={L(lang, p)} loading="lazy" /> : null}
+          </div>
+          <input type="file" name={`f_${p.id}`} accept="image/jpeg,image/png,image/webp" aria-label={L(lang, p)} aria-describedby={`pn-${p.id}`} />
+          <span class="file-name muted" id={`pn-${p.id}`} aria-live="polite" hidden />
+          <PhotoUndo v={props.v} had={!!props.photoSrc} />
+          <small class="field-err pf-photo-err" hidden />
+          <input
+            type="text"
+            name={name}
+            value={typeof val === "string" ? val : ""}
+            maxlength={CAPTION_MAX}
+            placeholder={t("คำบรรยายสั้น ๆ (ไม่บังคับ)", "Short caption (optional)")}
+            aria-label={t("คำบรรยายรูป", "Caption")}
+            aria-describedby={props.error ? errId : undefined}
+            {...invalid}
+            enterkeyhint="next"
+          />
           <small class="muted">{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB", "JPG, PNG or WebP, up to 5 MB")}</small>
         </div>
       );
@@ -446,6 +521,7 @@ export function PromptInput(props: { v: View; p: Prompt; answer?: Answer; photoS
         <strong>{L(lang, p)}</strong>
       </div>
       <input type="hidden" name={`m_${p.id}`} value="1" />
+      <FieldError id={errId} error={props.error} />
       {body}
       <div class="pf-prompt-foot">
         {props.shuffle !== false ? (
@@ -470,6 +546,7 @@ export function ProfileFormScript() {
       <style dangerouslySetInnerHTML={{ __html: PROFILE_FORM_CSS }} />
       <script dangerouslySetInnerHTML={{ __html: PROFILE_FORM_JS }} />
       <script dangerouslySetInnerHTML={{ __html: UNI_PICKER_JS }} />
+      <script dangerouslySetInnerHTML={{ __html: PROFILE_EDIT_JS }} />
     </>
   );
 }
@@ -503,6 +580,54 @@ const UNI_PICKER_JS = `(function(){
   });
   input.addEventListener("blur",function(){setTimeout(close,120)});
 });
+})();`;
+
+/**
+ * Edit-profile ergonomics (forms marked data-guard). Each part is a no-op without its markup.
+ * 1. Photo pickers ([data-photo-pick]): the picked photo shows in place at once with an undo; a wrong
+ *    type or a file over 5 MB is refused on the spot, next to the picker, instead of after a save.
+ * 2. Return moves to the next field (enterkeyhint "next") instead of sending the whole long form;
+ *    the last field's Return ("done") closes the keyboard. Never while an IME is composing (Thai).
+ * 3. After a refused save, focus goes to the field the error is about.
+ */
+export const PROFILE_EDIT_JS = `(function(){
+if(window.__pfe)return;window.__pfe=1;
+var MAX=5*1024*1024,OK=["image/jpeg","image/png","image/webp"];
+[].forEach.call(document.querySelectorAll("form[data-guard] [data-photo-pick]"),function(box){
+  var input=box.querySelector("input[type=file]"),slot=box.querySelector("[data-preview]"),name=box.querySelector(".file-name"),undo=box.querySelector(".pf-undo"),err=box.querySelector(".pf-photo-err");
+  if(!input||!slot)return;
+  var before=slot.innerHTML,url=null,nameText=name&&name.textContent,nameHidden=name&&name.hidden;
+  function reset(){if(url){URL.revokeObjectURL(url);url=null}slot.innerHTML=before;if(name){name.textContent=nameText;name.hidden=nameHidden}if(undo)undo.hidden=true}
+  function fail(msg){input.value="";reset();if(err){err.textContent="\\u26a0 "+msg;err.hidden=false;input.setAttribute("aria-invalid","true");var d=(input.getAttribute("aria-describedby")||"").split(" ");if(!err.id)err.id=input.name+"-perr";if(d.indexOf(err.id)<0)input.setAttribute("aria-describedby",d.concat(err.id).join(" ").trim())}}
+  input.addEventListener("change",function(){
+    var f=input.files&&input.files[0];
+    if(err){err.hidden=true;input.removeAttribute("aria-invalid")}
+    if(!f){reset();return}
+    if(OK.indexOf(f.type)<0)return fail(box.dataset.typeErr);
+    if(f.size>MAX)return fail(box.dataset.sizeErr);
+    if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(f);
+    var img=document.createElement("img");img.src=url;img.alt=box.dataset.alt||"";slot.innerHTML="";slot.appendChild(img);
+    if(name){name.textContent=(box.dataset.picked||"{name}").replace("{name}",f.name);name.hidden=false}
+    if(undo)undo.hidden=false;
+  });
+  if(undo)undo.addEventListener("click",function(){input.value="";reset();input.dispatchEvent(new Event("change",{bubbles:true}));var b=box.querySelector(".file-btn");(b||input).focus()});
+});
+document.addEventListener("keydown",function(e){
+  var t=e.target;if(e.key!=="Enter"||e.defaultPrevented||e.isComposing||e.keyCode===229||!t||!t.form||!t.form.hasAttribute("data-guard"))return;
+  if(t.tagName!=="INPUT"||!/^(text|url|email|tel|number)$/.test(t.type))return;
+  e.preventDefault();
+  var all=[].filter.call(t.form.querySelectorAll("input,select,textarea"),function(x){
+    if(x.disabled||x.offsetParent===null||x.classList.contains("ip-search"))return false;
+    return x.tagName!=="INPUT"||/^(text|url|email|tel|number)$/.test(x.type)});
+  var i=all.indexOf(t),next=all[i+1];if(next)next.focus();else t.blur();
+});
+[].forEach.call(document.querySelectorAll("form[data-guard] input:not([enterkeyhint])"),function(x){if(/^(text|url|email|tel|number)$/.test(x.type))x.setAttribute("enterkeyhint","next")});
+var f=document.querySelector('form[data-guard="dirty"]');
+if(f){var e=f.querySelector("[aria-invalid=true],[data-err-focus]");if(e){
+  if(e.hasAttribute("data-err-focus")){var own=e.parentNode.querySelector("textarea[aria-invalid=true],input[aria-invalid=true]");if(own)e=own}
+  var d=e.closest("details");if(d)d.open=true;
+  e.focus();
+}}
 })();`;
 
 export const PROFILE_FORM_CSS = `

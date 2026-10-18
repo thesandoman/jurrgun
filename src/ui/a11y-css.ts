@@ -1096,4 +1096,22 @@ details.pc-more-chips{margin:8px 0 0;padding:0;border:0;background:none;border-r
 main .pc-more-chips>summary{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font-weight:700;cursor:pointer;list-style:none}
 .pc-more-chips>summary::-webkit-details-marker{display:none}
 .pc-more-chips[open]>summary{margin-bottom:8px}
+/* ---- Edit profile ergonomics (2026-10-18) ---- */
+/* Jump links, #prompt anchors and focused fields land below the sticky header and jump bar, and clear of the save bar. */
+html:has(main .pf-jump){scroll-padding-top:calc(129px + env(safe-area-inset-top,0px));scroll-padding-bottom:96px}
+html:has(main .pf-jump) .pf-section{scroll-margin-top:0}
+@media (min-width:1024px){html:has(main .pf-jump){scroll-padding-top:148px;scroll-padding-bottom:88px}}
+/* Phones: while typing, the save bar goes back to the end of the form so it never floats over the field or rides the keyboard. */
+@media (max-width:1023.98px) and (hover:none){main form[data-guard]:has(:is(input:not([type=checkbox],[type=radio],[type=range],[type=file],[type=hidden]),textarea):focus) .pf-save{position:static}}
+/* Switch rows are full 44px targets. */
+main form[data-guard] .toggle{min-height:44px;align-items:center;margin:4px 0}
+/* Errors that belong to a group sit at its top; the red ring is for single fields only. */
+.pf-err{margin:0 0 8px}
+.pf-comm .pf-err{grid-column:1/-1}
+fieldset[aria-invalid="true"]{box-shadow:none}
+/* Photo pickers: the picked photo shows in place; undo is a full-size target. */
+.pf-undo{min-height:44px;align-self:flex-start;padding-inline:0}
+.pf-photo .pf-preview:empty{display:none}
+.pf-preview{flex:none}
+.pf-files-lost{display:block;font-weight:400}
 `);
