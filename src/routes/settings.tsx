@@ -18,7 +18,6 @@
  */
 import { endPinkies } from "../services/pinky";
 import { canBeWomenOnly, canSwitchToSingle, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS, romanceEligible } from "../domain/rules";
-import { ReflectionFields } from "../ui/reflections";
 import { reflectionsFromForm } from "../content/reflections";
 import { syncQuizChange } from "./pulse";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
@@ -30,7 +29,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, asc, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { isPasswordless, passwordProblem } from "../domain/rules";
-import { DISTRICTS, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values, districtsAZ } from "../lib/constants";
+import { DISTRICTS, INTENTS, LANGUAGES, SOCIAL_STYLES, label, values } from "../lib/constants";
 import {
   cleanBio,
   COMM_STYLES,
@@ -69,15 +68,12 @@ import {
   parseBangkok,
   parseEducation,
   parseOccupation,
-  SIZE_STYLES,
   withGroupStyle,
-  groupSizeOrLegacy,
-  timesOrLegacy,
 } from "../content/profile";
 import { MeHub, type MeStep } from "../ui/me-hub";
 import { SubLabel } from "../ui/section-head";
-import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, PhotoUndo, photoPickData, ProfileFormScript, PromptInput } from "../ui/profile-form";
-import type { Child } from "hono/jsx";
+import { ProfileFormScript } from "../ui/profile-form";
+import { hostSection, isSectionName, promptOf, sectionAnchor, SectionForm, SectionHead, SECTIONS, type ProfileVals, type SectionData, type SectionName } from "../ui/profile-sections";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import { allowedEndpoint } from "../lib/webpush";
 import { vapidKeys } from "../services/push";
@@ -132,7 +128,7 @@ import {
   type Profile,
 } from "../schema";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../storage";
-import { Button, Card, Choices, Field, LinkButton, list, Notice, page, Select, str, TextArea, Toggle, view, type View } from "../ui/kit";
+import { Button, Card, Field, LinkButton, list, Notice, page, str, TextArea, Toggle, view, type View } from "../ui/kit";
 import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
@@ -581,87 +577,25 @@ settingsRoutes.post("/settings/badge", async (c) => {
 // The richer profile: photo, basics, "here for", interests by group,
 // communication style, quick facts and the member's own prompt deck
 // (src/content/profile.ts). Every field is validated server-side by kind.
+//
+// Edited one section at a time (owner, 2026-10-18): each section is its own form
+// (src/ui/profile-sections.tsx) posting to POST /settings/profile/section/:name,
+// which reads, validates and writes only that section's fields. The old
+// all-in-one POST /settings/profile still works and runs every section.
 
-type ProfileVals = {
-  nickname: string;
-  district: string;
-  languages: string[];
-  interests: string[];
-  socialStyles: string[];
-  eventStyle: string | null;
-  intents: string[];
-  newcomer: boolean;
-  locale: string;
-  bio: Bio;
-  /** Social links as typed (network key to text) and the "show my links to my people" switch. Loaded when missing. */
-  links?: Record<string, string>;
-  linksOn?: boolean;
-};
-
-function Section(props: { id?: string; emoji: string; title: string; hint?: string; children: Child }) {
-  return (
-    <section class="pf-section" id={props.id}>
-      <h2>
-        <span aria-hidden="true">{props.emoji}</span> {props.title}
-      </h2>
-      {props.hint ? <p class="muted">{props.hint}</p> : null}
-      {props.children}
-    </section>
-  );
-}
-
-/**
- * Social links (owner, 2026-10-16): one optional field per network and the switch, which is off
- * until the member turns it on. Only mutual connections ever see them (services/profile-links.ts).
- */
-function LinksSection(props: { v: View; links: Record<string, string>; on: boolean; errorField?: string; error?: string }) {
-  const { t } = props.v;
-  return (
-    <Section id="links" emoji="🔗" title={t("ลิงก์โซเชียล", "Social links")} hint={t("เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย", "Only people you both chose can see these")}>
-      <input type="hidden" name="links_present" value="1" />
-      <Toggle name="linksOn" label={t("ให้คนรู้จักของฉันเห็นลิงก์", "Show my links to my people")} checked={props.on} />
-      <div class="pf-links">
-        {NETWORKS.map((n, i) => (
-          <Field
-            label={`${n.icon} ${t(n.th, n.en)}`}
-            name={`link_${n.key}`}
-            value={props.links[n.key] ?? ""}
-            maxlength={200}
-            autocomplete="off"
-            // Handles and links: no capitals, autocorrect or spellcheck. Links get the URL keyboard; type=url
-            // would make the browser refuse a bare "example.com", which the server accepts.
-            inputmode={n.kind === "url" ? "url" : undefined}
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck={false}
-            enterkeyhint={i === NETWORKS.length - 1 ? "done" : "next"}
-            placeholder={n.kind === "url" ? "https://" : n.at ? t("@ชื่อผู้ใช้ หรือวางลิงก์", "@name or profile link") : t("ชื่อในลิงก์ หรือวางลิงก์", "Name or profile link")}
-            error={props.errorField === n.key ? props.error : undefined}
-          />
-        ))}
-      </div>
-    </Section>
-  );
-}
-
+/** The long form: every section, each with its own Save. */
 function ProfileForm(props: {
-  v: View;
-  vals: ProfileVals;
-  deck: string[];
-  datingDeck: string[];
-  photo: string | null;
-  hasPhoto: boolean;
-  promptPhoto: (id: string) => string | null;
+  d: SectionData;
+  back: "card" | "edit";
   error?: string;
-  errorField?: string;
-  /** The refused post carried a photo; browsers never refill a file field, so say so. */
+  /** The section the refused save belongs to; "all" for the old all-in-one post. */
+  errorSection?: SectionName | "all";
   filesLost?: boolean;
+  saved?: SectionName | null;
 }) {
-  const { t, lang } = props.v;
-  const vals = props.vals;
-  const bio = vals.bio;
-  /** The error, when it belongs to this field. */
-  const errFor = (field: string) => (props.errorField === field ? props.error : undefined);
+  const { t } = props.d.v;
+  const shown = SECTIONS.filter((n) => n !== "dating-prompts" || props.d.datingDeck.length);
+  const errorIn = (n: SectionName) => props.errorSection === "all" || props.errorSection === n;
   return (
     <>
       <p class="spread">
@@ -681,216 +615,17 @@ function ProfileForm(props: {
         <a href="#basics">{t("พื้นฐาน", "Basics")}</a>
         <a href="#interests">{t("ความสนใจ", "Interests")}</a>
         <a href="#bangkok">{t("กรุงเทพฯ", "Bangkok")}</a>
-        <a href="#facts">{t("ข้อมูลสั้น ๆ", "Facts")}</a>
-        <a href="#prefs">{t("การนัดเจอ", "Meetups")}</a>
+        <a href="#work">{t("ข้อมูลสั้น ๆ", "Facts")}</a>
+        <a href="#meet">{t("การนัดเจอ", "Meetups")}</a>
         <a href="#prompts">{t("คำถาม", "Prompts")}</a>
         <a href="#links">{t("ลิงก์", "Links")}</a>
       </nav>
-      {/* data-guard="dirty": a refused save is shown back unsaved, so leaving warns from the start. */}
-      <form method="post" action="/settings/profile" enctype="multipart/form-data" data-guard={props.error ? "dirty" : ""}>
-        {/* Enter / "Go" submits with the FIRST submit button. Without this one that
-            would be a prompt's "↻ Different question", which swaps the prompt and
-            deletes its answer. Off-screen rather than display:none so Safari uses it. */}
-        <button type="submit" class="sr-only" tabindex={-1} aria-hidden="true">
-          {t("บันทึก", "Save")}
-        </button>
-        <Section id="photo" emoji="📸" title={t("รูปโปรไฟล์", "Profile photo")} hint={t("ไม่บังคับ รูปที่เห็นหน้าชัด ๆ ช่วยให้จำกันได้ในงาน", "Optional. A clear, friendly photo helps people find you at events.")}>
-          {/* data-photo-pick: the picked photo shows in place at once, with one tap to undo (PHOTO_PICK_JS). */}
-          <div class="pf-photo-main" {...photoPickData(props.v, !!props.photo)}>
-            <div class="pf-preview" data-preview="">
-              {props.photo ? (
-                <img src={props.photo} alt={t("รูปโปรไฟล์ปัจจุบัน", "Current profile photo")} />
-              ) : (
-                <div class="pf-initial" aria-hidden="true">
-                  {[...(vals.nickname || "?")][0].toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div class="field" style="margin:0;flex:1;min-width:200px">
-              {/* The browser's own picker speaks the browser's language; this button speaks the page's. */}
-              <span class="field-label" id="f-photo-h">{t("อัปโหลดรูปใหม่", "Upload a new photo")}</span>
-              <label class="btn ghost file-btn" for="f-photo">
-                📷 {t("เลือกรูป", "Choose a photo")}
-              </label>
-              <input
-                id="f-photo"
-                name="photo"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                class="sr-only"
-                aria-labelledby="f-photo-h"
-                aria-describedby={errFor("photo") ? "f-photo-name f-photo-err" : "f-photo-name"}
-                aria-invalid={errFor("photo") ? "true" : undefined}
-              />
-              <span class="file-name muted" id="f-photo-name" aria-live="polite">
-                {t("ยังไม่ได้เลือกรูป", "No photo chosen")}
-              </span>
-              <PhotoUndo v={props.v} had={!!props.photo} />
-              <small id="f-photo-err" class="field-err pf-photo-err" hidden={!errFor("photo")}>
-                {errFor("photo") ? `⚠ ${errFor("photo")}` : ""}
-              </small>
-              <small>{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB ช่วงทดลองไม่ต้องใช้รูปจริง", "JPG, PNG or WebP, up to 5 MB. No real photos needed in the prototype.")}</small>
-            </div>
-          </div>
-          {props.hasPhoto ? <Toggle name="removePhoto" label={t("ลบรูปโปรไฟล์", "Remove my photo")} /> : null}
-        </Section>
-
-        <Section id="basics" emoji="👋" title={t("ข้อมูลพื้นฐาน", "The basics")}>
-          <Field label={t("ชื่อเล่น", "Nickname")} name="nickname" value={vals.nickname} required maxlength={30} autocomplete="nickname" enterkeyhint="next" error={errFor("nickname")} />
-          <Select label={t("เขตที่ใช้ชีวิตเป็นหลัก", "Main district")} name="district" options={districtsAZ(lang)} value={vals.district} lang={lang} required error={errFor("district")} />
-          <Choices legend={t("ภาษาที่พูดได้", "Languages you're comfortable in")} name="languages" options={LANGUAGES} values={vals.languages} lang={lang} hint={t("เลือกอย่างน้อย 1", "Pick at least one")} error={errFor("languages")} />
-          <Toggle name="newcomer" label={t("ฉันเพิ่งย้ายมากรุงเทพฯ", "I'm new to Bangkok")} checked={vals.newcomer} />
-          <Select
-            label={t("ภาษาที่ใช้ในแอป", "App language")}
-            name="locale"
-            options={[
-              { value: "th", th: "ไทย", en: "Thai" },
-              { value: "en", th: "อังกฤษ", en: "English" },
-            ]}
-            value={vals.locale}
-            lang={lang}
-          />
-        </Section>
-
-        <Section emoji="🎯" title={t("มาที่นี่เพื่อ", "Here for")}>
-          <Choices legend={t("มาที่นี่เพื่อ…", "I'm here for…")} name="intents" options={INTENTS} values={vals.intents} lang={lang} />
-          {/* Group size and free times are asked once, under Meetup preferences. */}
-          <Choices legend={t("ชอบเจอคนแบบไหน", "How do you like to meet people?")} name="socialStyles" options={SOCIAL_STYLES.filter((o) => !SIZE_STYLES.includes(o.value))} values={vals.socialStyles} lang={lang} />
-        </Section>
-
-        <Section id="interests" emoji="🍜" title={t("ความสนใจ", "Interests")} hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ใช้จัดโต๊ะให้เจอคนที่ชอบคล้ายกัน`, `Pick 1 to ${MAX_INTERESTS}. We use them to seat you with people who share them.`)}>
-          <InterestPicker v={props.v} values={vals.interests} folded error={errFor("interests")} />
-        </Section>
-
-        <Section id="comm" emoji="💬" title={t("สไตล์การติดต่อ", "How you keep in touch")} hint={t(`เลือกได้สูงสุด ${MAX_COMM} แบบ`, `Pick up to ${MAX_COMM}`)}>
-          <CommPicker v={props.v} values={bio.comm} error={errFor("comm")} />
-        </Section>
-
-        <Section id="bangkok" emoji="🛺" title={t("กรุงเทพฯ ของฉัน", "My Bangkok")} hint={t("ไม่บังคับทั้งหมด ช่วยให้คนในโต๊ะรู้จักคุณมากขึ้น", "All optional. Helps your table get to know you.")}>
-          <BangkokStory v={props.v} story={bio.story} time={bio.bkkTime} hometown={bio.hometown} guide={bio.guide} residency={bio.residency} />
-          <ReflectionFields v={props.v} value={bio.reflections} />
-        </Section>
-
-        <Section id="facts" emoji="✨" title={t("ข้อมูลสั้น ๆ", "Quick facts")}>
-          <OccupationPicker v={props.v} value={bio.occupation} other={bio.occupationOther} />
-          <EducationPicker v={props.v} bio={bio} />
-          <Field
-            label={t("กำลังเรียนรู้", "Currently learning")}
-            name="learning"
-            value={bio.learning ?? ""}
-            error={errFor("learning")}
-            enterkeyhint="next"
-            maxlength={LEARNING_MAX}
-            placeholder={t("เช่น ทำขนมปัง ว่ายน้ำท่าผีเสื้อ", "e.g. Sourdough, butterfly stroke")}
-            hint={t(`ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `Up to ${LEARNING_MAX} characters`)}
-          />
-          <Choices legend={t("ภาษาที่กำลังหัด", "Languages I'm learning")} name="learningLangs" options={LANGUAGES} values={bio.learningLangs ?? []} lang={lang} />
-          <fieldset class="choices">
-            <legend>{t("ตอนเจอกันครั้งแรก ฉันมักจะ…", "My first-meet energy")}</legend>
-            <OptRadios v={props.v} name="energy" options={ENERGY} value={bio.energy} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("วันหยุดสไตล์ฉัน", "My weekend rhythm")}</legend>
-            <OptRadios v={props.v} name="weekendRhythm" options={WEEKEND_RHYTHM} value={bio.weekend} />
-          </fieldset>
-        </Section>
-
-        <Section id="prefs" emoji="🎯" title={t("ชอบเจอกันแบบไหน", "Meetup preferences")} hint={t("ใช้เลือกแผนประจำสัปดาห์ให้คุณ ไม่บังคับ", "Used to pick your weekly plan. All optional.")}>
-          <fieldset class="choices">
-            <legend>{t("งบต่อหนึ่งนัด", "Budget per meetup")}</legend>
-            <OptRadios v={props.v} name="budget" options={BUDGETS} value={bio.budget} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("ชอบทำอะไร", "Favourite kinds of meetup")}</legend>
-            <OptChecks v={props.v} name="activities" options={ACTIVITIES} values={bio.activities} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("มื้อที่ชอบนัด", "Meals I like to meet over")}</legend>
-            <OptChecks v={props.v} name="meals" options={MEALS} values={bio.meals} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("ขนาดกลุ่มที่สบายใจ", "Group size I'm comfortable with")}</legend>
-            <OptRadios v={props.v} name="groupSize" options={GROUP_SIZES} value={groupSizeOrLegacy(bio.groupSize, vals.socialStyles)} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("ช่วงเวลาที่มักว่าง", "When I'm usually free")}</legend>
-            <OptChecks v={props.v} name="times" options={TIME_WINDOWS} values={timesOrLegacy(bio.times, vals.eventStyle)} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("ความต้องการด้านการเข้าถึง", "Access needs")}</legend>
-            <OptChecks v={props.v} name="access" options={ACCESS_NEEDS} values={bio.access} />
-          </fieldset>
-        </Section>
-
-        <Section id="out" emoji="🧾" title={t("เวลาออกไปเจอกัน", "Out and about")} hint={t("ไม่บังคับ ช่วยให้นัดแรกง่ายขึ้น", "All optional. Makes a first meet smoother.")}>
-          <fieldset class="choices">
-            <legend>{t(`จ่ายเงินแบบไหนสะดวก (ไม่เกิน ${MAX_PAY} แบบ)`, `How I like to pay (up to ${MAX_PAY})`)}</legend>
-            <OptChecks v={props.v} name="pay" options={PAY_METHODS} values={bio.pay} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("เวลาเช็กบิล", "When the bill comes")}</legend>
-            <OptRadios v={props.v} name="bill" options={BILL_STYLE} value={bio.bill} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t(`เดินทางยังไง (ไม่เกิน ${MAX_TRAVEL} แบบ)`, `How I get around (up to ${MAX_TRAVEL})`)}</legend>
-            <OptChecks v={props.v} name="travel" options={GETTING_AROUND} values={bio.travel} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("เรื่องอาหารที่ควรรู้", "Food needs")}</legend>
-            <OptChecks v={props.v} name="diet" options={DIET} values={bio.diet} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("กินเผ็ดได้แค่ไหน", "Spice level")}</legend>
-            <OptRadios v={props.v} name="spice" options={SPICE} value={bio.spice} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("สัตว์เลี้ยง", "Pets")}</legend>
-            <OptRadios v={props.v} name="pets" options={PETS} value={bio.pets} />
-          </fieldset>
-          <fieldset class="choices">
-            <legend>{t("เรื่องเวลานัด", "Punctuality")}</legend>
-            <OptRadios v={props.v} name="punctual" options={PUNCTUAL} value={bio.punctual} />
-          </fieldset>
-        </Section>
-
-        <Section
-          id="prompts"
-          emoji="🃏"
-          title={t("คำถามของฉัน", "My prompts")}
-          hint={t(
-            "ชุดคำถามนี้สุ่มมาให้คุณโดยเฉพาะ ตอบข้อไหนก็ได้ ถ้าไม่ชอบข้อไหน กด ↻ เพื่อเปลี่ยน",
-            "This set was picked just for you. Answer any you like, and tap ↻ to swap one you don't.",
-          )}
-        >
-          {props.deck.map((id) => {
-            const p = promptById(id);
-            return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={props.promptPhoto(id)} error={errFor(`prompt-${id}`)} /> : null;
-          })}
-        </Section>
-
-        {props.datingDeck.length ? (
-          <Section
-            id="dating-prompts"
-            emoji="💘"
-            title={t("คำถามเรื่องเดต", "Dating prompts")}
-            hint={t(
-              "เห็นได้เฉพาะสมาชิกที่เปิดใจมากกว่าเพื่อนเหมือนกันและเข้ากับคุณ คนในโหมดเพื่อนจะไม่เห็นเลย และคำตอบจะถูกลบเมื่อคุณกลับไปโหมดเพื่อน กด ↻ เพื่อเปลี่ยนข้อที่ไม่ชอบ",
-              "Only members who are also open to something more, and a fit for you, can see these. Friends-only members never do, and they're deleted if you switch it off. Tap ↻ to swap one.",
-            )}
-          >
-            {props.datingDeck.map((id) => {
-              const p = promptById(id);
-              return p ? <PromptInput v={props.v} p={p} answer={bio.answers?.[id]} photoSrc={null} error={errFor(`prompt-${id}`)} /> : null;
-            })}
-          </Section>
-        ) : null}
-
-        <LinksSection v={props.v} links={vals.links ?? {}} on={!!vals.linksOn} errorField={props.errorField} error={props.error} />
-
-        <div class="pf-save">
-          <Button>{t("บันทึกโปรไฟล์", "Save profile")}</Button>
-        </div>
-      </form>
+      {shown.map((n) => (
+        <section class="pf-section" id={n}>
+          <SectionHead t={t} name={n} />
+          <SectionForm d={props.d} name={n} back={props.back} saved={props.saved === n} dirty={errorIn(n)} />
+        </section>
+      ))}
       <ProfileFormScript />
     </>
   );
@@ -900,6 +635,8 @@ function profileVals(p: Profile): ProfileVals {
   return {
     nickname: p.nickname,
     district: p.district,
+    pronouns: p.pronouns,
+    showPronouns: p.showPronouns,
     languages: p.languages,
     interests: p.interests,
     socialStyles: p.socialStyles,
@@ -911,7 +648,8 @@ function profileVals(p: Profile): ProfileVals {
   };
 }
 
-async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string; errorField?: string; status?: 400; filesLost?: boolean } = {}) {
+/** Everything a section renderer needs, for the stored profile or for what was typed. */
+async function sectionData(c: C, vals: ProfileVals, opts: { error?: string; errorField?: string } = {}): Promise<SectionData> {
   const user = me(c);
   const p = user.profile!;
   if (!vals.links) {
@@ -920,34 +658,57 @@ async function renderProfileForm(c: C, vals: ProfileVals, opts: { error?: string
     vals = { ...vals, links: Object.fromEntries(rows.map((r) => [r.network, linkInputValue(r.network, r.value)])), linksOn: !!on.get(user.account.id) };
   }
   const stored = cleanBio(p.bio);
-  const deck = currentDeck(user.account.id, stored);
-  const datingDeck = romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [];
-  const photo = await photoSrc(c, p.photoKey);
   // Prompt photos come from the stored bio (the form never holds unsaved files).
   const promptPhoto = (id: string) => (stored.answers?.[id]?.photoKey ? `/people/${user.account.id}/photo/${id}` : null);
+  return {
+    v: view(c),
+    vals,
+    deck: currentDeck(user.account.id, stored),
+    datingDeck: romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [],
+    photo: await photoSrc(c, p.photoKey),
+    hasPhoto: !!p.photoKey,
+    promptPhoto,
+    // errorField names the field the message belongs to, so the form shows it there and takes the member to it.
+    errFor: (field: string) => (opts.errorField === field ? opts.error : undefined),
+  };
+}
+
+async function renderProfileForm(
+  c: C,
+  vals: ProfileVals,
+  opts: { error?: string; errorField?: string; errorSection?: SectionName | "all"; status?: 400; filesLost?: boolean; back?: "card" | "edit" } = {},
+) {
+  const d = await sectionData(c, vals, opts);
+  // Reached from an ✏️ on my card (no JS): a plain save goes back to the card.
+  const back = opts.back ?? (c.req.query("from") === "card" ? "card" : "edit");
+  const saved = c.req.query("saved");
   return page(
     c,
     { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: opts.status },
-    <ProfileForm v={view(c)} vals={vals} deck={deck} datingDeck={datingDeck} photo={photo} hasPhoto={!!p.photoKey} promptPhoto={promptPhoto} error={opts.error} errorField={opts.errorField} filesLost={opts.filesLost} />,
+    <ProfileForm d={d} back={back} error={opts.error} errorSection={opts.errorSection} filesLost={opts.filesLost} saved={saved && isSectionName(saved) ? saved : null} />,
   );
 }
 
 settingsRoutes.get("/settings/profile", (c) => renderProfileForm(c, profileVals(me(c).profile!)));
 
 type Body = Record<string, string | File | (string | File)[]>;
-type Parsed =
-  | { ok: false; vals: ProfileVals; error: string; errorField?: string }
-  | {
-      ok: true;
-      vals: ProfileVals;
-      deck: string[];
-      mainFile: File | null;
-      removePhoto: boolean;
-      pending: { id: string; file: File }[];
-      dropKeys: string[];
-      /** Normalised social links (null clears one) and the switch, when the form sent its links section. */
-      links?: { values: Record<string, string | null>; on: boolean };
-    };
+
+/** The profile as the form has it so far, with the files and side effects a save will carry out. */
+type Draft = {
+  vals: ProfileVals;
+  mainFile: File | null;
+  removePhoto: boolean;
+  pending: { id: string; file: File }[];
+  dropKeys: string[];
+  /** Normalised social links (null clears one) and the switch, when the post carried the links section. */
+  links?: { values: Record<string, string | null>; on: boolean };
+  /** The post carried the pronoun field (the all-in-one post from before pronouns lived here may not). */
+  pronounsSent?: boolean;
+};
+type Fail = { error: string; errorField?: string };
+/** What every section reads: the stored profile and my prompt decks. */
+type EditCtx = { t: T; p: Profile; stored: Bio; deck: string[]; datingDeck: string[] };
+type Applier = (body: Body, d: Draft, x: EditCtx) => Fail | null;
 
 const fileOf = (raw: unknown): File | null => {
   const f = Array.isArray(raw) ? raw[0] : raw;
@@ -958,96 +719,39 @@ const fileOf = (raw: unknown): File | null => {
 const postedFiles = (body: Body) => Object.entries(body).some(([k, v]) => (k === "photo" || k.startsWith("f_")) && fileOf(v) !== null);
 
 const oneOf = (v: string, list: { value: string }[]) => (list.some((x) => x.value === v) ? v : undefined);
+const pickAll = (body: Body, key: string, allowed: string[]) => [...new Set(list(body[key]).filter((x) => allowed.includes(x)))];
 
-/** Read and validate the whole profile form. Touches nothing. */
-function parseProfileForm(c: C, body: Body): Parsed {
-  const { t } = view(c);
+function editCtx(c: C): EditCtx {
   const user = me(c);
   const p = user.profile!;
   const stored = cleanBio(p.bio);
-  const deck = currentDeck(user.account.id, stored);
-  // Dating prompts exist only while romance mode is on.
-  const datingDeck = romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [];
-  const allPrompts = [...deck, ...datingDeck];
-  const pickAll = (key: string, allowed: string[]) => [...new Set(list(body[key]).filter((x) => allowed.includes(x)))];
-  const comm = pickAll("comm", COMM_STYLES.map((x) => x.value));
-  const energy = str(body.energy);
-  const weekend = str(body.weekendRhythm);
-  const bio: Bio = {
-    ...stored,
-    deck,
-    datingDeck: datingDeck.length ? datingDeck : undefined,
-    comm,
-    ...parseOccupation(str(body.occupation), str(body.occupationOther)),
-    ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }),
-    ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)),
-    // Sign-up's answer stays unless they pick another one.
-    residency: isResidency(str(body.residency)) ? str(body.residency) : stored.residency,
-    learning: str(body.learning),
-    learningLangs: pickAll("learningLangs", values(LANGUAGES)),
-    energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,
-    weekend: WEEKEND_RHYTHM.some((x) => x.value === weekend) ? weekend : undefined,
-    pay: pickAll("pay", PAY_METHODS.map((x) => x.value)).slice(0, MAX_PAY),
-    bill: oneOf(str(body.bill), BILL_STYLE),
-    travel: pickAll("travel", GETTING_AROUND.map((x) => x.value)).slice(0, MAX_TRAVEL),
-    diet: pickAll("diet", DIET.map((x) => x.value)),
-    spice: oneOf(str(body.spice), SPICE),
-    pets: oneOf(str(body.pets), PETS),
-    punctual: oneOf(str(body.punctual), PUNCTUAL),
-    budget: oneOf(str(body.budget), BUDGETS),
-    activities: pickAll("activities", ACTIVITIES.map((x) => x.value)),
-    meals: pickAll("meals", MEALS.map((x) => x.value)),
-    groupSize: oneOf(str(body.groupSize), GROUP_SIZES),
-    times: pickAll("times", TIME_WINDOWS.map((x) => x.value)),
-    access: pickAll("access", ACCESS_NEEDS.map((x) => x.value)),
-    // "My Bangkok" reflections: the edit form sends them all, so they replace the stored ones (all blank clears them).
-    reflections: str(body.r_present) === "1" ? reflectionsFromForm(body) : stored.reflections,
+  return {
+    t: view(c).t,
+    p,
+    stored,
+    deck: currentDeck(user.account.id, stored),
+    // Dating prompts exist only while romance mode is on.
+    datingDeck: romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [],
   };
-  if (!bio.reflections) delete bio.reflections;
-  const vals: ProfileVals = {
-    nickname: str(body.nickname),
-    district: str(body.district),
-    languages: pickAll("languages", values(LANGUAGES)),
-    interests: pickAll("interests", INTEREST_VALUES),
-    // Small / big group follow the group size answer (seating reads them).
-    socialStyles: withGroupStyle(pickAll("socialStyles", values(SOCIAL_STYLES)), bio.groupSize),
-    // No longer asked (it duplicated "When I'm usually free"); kept as it was.
-    eventStyle: p.eventStyle,
-    intents: pickAll("intents", values(INTENTS)),
-    newcomer: str(body.newcomer) === "1",
-    locale: str(body.locale) === "en" ? "en" : "th",
-    bio,
-  };
-  // Social links: only when the form sent its section, so other posts never clear them.
-  const linksSent = str(body.links_present) === "1";
-  if (linksSent) {
-    vals.links = Object.fromEntries(NETWORKS.map((n) => [n.key, str(body[`link_${n.key}`]).slice(0, 400)]));
-    vals.linksOn = str(body.linksOn) === "1";
-  }
-  // errorField names the field the message belongs to, so the form shows it there and takes the member to it.
-  const fail = (th: string, en: string, errorField?: string): Parsed => ({ ok: false, vals, error: t(th, en), errorField });
-  // Prompts are read first, so whatever error comes back, every answer typed is still in the form.
-  // The first problem with a prompt is kept and returned after the basics are checked.
-  let promptErr: Parsed | null = null;
-  const promptFail = (id: string, th: string, en: string) => {
-    promptErr ??= fail(th, en, `prompt-${id}`);
-  };
+}
 
-  // Prompt answers: only for prompts in my deck. Answers to prompts no longer
-  // in the deck are dropped (with their photos).
-  const answers: Record<string, Answer> = {};
-  const dropKeys: string[] = [];
-  for (const [id, a] of Object.entries(stored.answers ?? {})) {
-    if (allPrompts.includes(id)) answers[id] = a;
-    else if (a.photoKey) dropKeys.push(a.photoKey);
-  }
-  const pending: { id: string; file: File }[] = [];
-  for (const id of allPrompts) {
-    const q = promptById(id)!;
-    const old = answers[id];
+const newDraft = (x: EditCtx): Draft => ({ vals: profileVals(x.p), mainFile: null, removePhoto: false, pending: [], dropKeys: [] });
+
+/** Prompt answers for these prompts only; every other answer stays as it is. Returns the first problem. */
+function applyPrompts(body: Body, d: Draft, x: EditCtx, ids: string[]): Fail | null {
+  const { t } = x;
+  const answers: Record<string, Answer> = { ...(d.vals.bio.answers ?? {}) };
+  let first: Fail | null = null;
+  const fail = (id: string, th: string, en: string) => {
+    first ??= { error: t(th, en), errorField: `prompt-${id}` };
+  };
+  for (const id of ids) {
+    const q = promptById(id);
+    if (!q) continue;
+    const old = x.stored.answers?.[id];
     const inForm = str(body[`m_${id}`]) === "1";
     if (str(body[`clear_${id}`]) === "1") {
-      if (old?.photoKey) dropKeys.push(old.photoKey);
+      if (old?.photoKey) d.dropKeys.push(old.photoKey);
       delete answers[id];
       continue;
     }
@@ -1055,22 +759,22 @@ function parseProfileForm(c: C, body: Body): Parsed {
     if (q.kind === "photo") {
       const caption = validateAnswer(q, str(body[`a_${id}`]));
       if (!caption.ok) {
-        promptFail(id, `${title}: ${caption.error.th}`, `${title}: ${caption.error.en}`);
+        fail(id, `${title}: ${caption.error.th}`, `${title}: ${caption.error.en}`);
         if (old) answers[id] = { ...old, value: str(body[`a_${id}`]) };
         continue;
       }
       const file = fileOf(body[`f_${id}`]);
       if (file) {
         if (!PHOTO_TYPES.includes(file.type)) {
-          promptFail(id, `${title}: รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP`, `${title}: photos must be JPG, PNG or WebP.`);
+          fail(id, `${title}: รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP`, `${title}: photos must be JPG, PNG or WebP.`);
           continue;
         }
         if (file.size > PHOTO_MAX_BYTES) {
-          promptFail(id, `${title}: รูปต้องมีขนาดไม่เกิน 5 MB`, `${title}: photos must be 5 MB or smaller.`);
+          fail(id, `${title}: รูปต้องมีขนาดไม่เกิน 5 MB`, `${title}: photos must be 5 MB or smaller.`);
           continue;
         }
-        pending.push({ id, file });
-        if (old?.photoKey) dropKeys.push(old.photoKey);
+        d.pending.push({ id, file });
+        if (old?.photoKey) d.dropKeys.push(old.photoKey);
         answers[id] = { kind: "photo", value: (caption.value as string | null) ?? "" };
       } else if (old?.photoKey) {
         answers[id] = { ...old, value: inForm ? ((caption.value as string | null) ?? "") : old.value };
@@ -1083,7 +787,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
       for (const o of q.options ?? []) positions[o.value] = str(body[`r_${id}_${o.value}`]);
       const order = rankFromPositions(q, positions);
       if (order === "partial") {
-        promptFail(id, `${title}: เรียงอันดับให้ครบทุกข้อ และไม่ซ้ำกัน`, `${title}: give every item a different place.`);
+        fail(id, `${title}: เรียงอันดับให้ครบทุกข้อ และไม่ซ้ำกัน`, `${title}: give every item a different place.`);
         continue;
       }
       raw = order;
@@ -1092,7 +796,7 @@ function parseProfileForm(c: C, body: Body): Parsed {
     }
     const r = validateAnswer(q, raw);
     if (!r.ok) {
-      promptFail(id, `${title}: ${r.error.th}`, `${title}: ${r.error.en}`);
+      fail(id, `${title}: ${r.error.th}`, `${title}: ${r.error.en}`);
       // Shown back as typed (text) or as picked, so fixing it is one change, not a retype.
       const typed = Array.isArray(raw) ? raw : raw ? [raw] : [];
       answers[id] = { kind: q.kind, value: q.kind === "text" ? (typed[0] ?? "") : typed };
@@ -1105,47 +809,235 @@ function parseProfileForm(c: C, body: Body): Parsed {
       answers[id] = { kind: q.kind, value: r.value };
     }
   }
-  bio.answers = answers;
+  d.vals.bio.answers = answers;
+  return first;
+}
 
-  if (!vals.nickname) return fail("ใส่ชื่อเล่นก่อน", "Please add a nickname.", "nickname");
-  if (vals.nickname.length > 30) return fail("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters.", "nickname");
-  if (!values(DISTRICTS).includes(vals.district)) return fail("เลือกเขต", "Please choose a district.", "district");
-  if (vals.languages.length === 0) return fail("เลือกภาษาที่พูดได้อย่างน้อย 1 ภาษา", "Pick at least one language.", "languages");
-  if (vals.interests.length === 0) return fail("เลือกความสนใจอย่างน้อย 1 อย่าง", "Pick at least one interest.", "interests");
-  if (vals.interests.length > MAX_INTERESTS) return fail(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`, "interests");
-  if (comm.length > MAX_COMM) return fail(`เลือกสไตล์การติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`, "comm");
-  if ((bio.learning ?? "").length > LEARNING_MAX) return fail(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`, "learning");
-  if (!bio.learning) delete bio.learning;
-
-  const mainFile = fileOf(body.photo);
-  if (mainFile) {
-    if (!PHOTO_TYPES.includes(mainFile.type)) return fail("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP.", "photo");
-    if (mainFile.size > PHOTO_MAX_BYTES) return fail("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller.", "photo");
-  }
-  if (promptErr) return promptErr;
-
-  let links: { values: Record<string, string | null>; on: boolean } | undefined;
-  if (linksSent) {
+/** Each section reads its own fields off the post into the draft and says what's wrong, if anything. */
+const APPLY: Record<(typeof SECTIONS)[number], Applier> = {
+  photo(body, d, x) {
+    d.mainFile = fileOf(body.photo);
+    d.removePhoto = str(body.removePhoto) === "1";
+    const f = d.mainFile;
+    if (f && !PHOTO_TYPES.includes(f.type)) return { error: x.t("รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP", "Photos must be JPG, PNG or WebP."), errorField: "photo" };
+    if (f && f.size > PHOTO_MAX_BYTES) return { error: x.t("รูปต้องมีขนาดไม่เกิน 5 MB", "Photos must be 5 MB or smaller."), errorField: "photo" };
+    return null;
+  },
+  basics(body, d, x) {
+    const v = d.vals;
+    v.nickname = str(body.nickname);
+    v.district = str(body.district);
+    v.newcomer = str(body.newcomer) === "1";
+    v.locale = str(body.locale) === "en" ? "en" : "th";
+    if ("pronouns" in body) {
+      d.pronounsSent = true;
+      v.pronouns = str(body.pronouns).slice(0, 30) || null;
+      v.showPronouns = !!v.pronouns && str(body.showPronouns) === "1";
+    }
+    if (!v.nickname) return { error: x.t("ใส่ชื่อเล่นก่อน", "Please add a nickname."), errorField: "nickname" };
+    if (v.nickname.length > 30) return { error: x.t("ชื่อเล่นยาวได้ไม่เกิน 30 ตัวอักษร", "Nickname can be at most 30 characters."), errorField: "nickname" };
+    if (!values(DISTRICTS).includes(v.district)) return { error: x.t("เลือกเขต", "Please choose a district."), errorField: "district" };
+    return null;
+  },
+  languages(body, d, x) {
+    d.vals.languages = pickAll(body, "languages", values(LANGUAGES));
+    d.vals.bio.learningLangs = pickAll(body, "learningLangs", values(LANGUAGES));
+    if (d.vals.languages.length === 0) return { error: x.t("เลือกภาษาที่พูดได้อย่างน้อย 1 ภาษา", "Pick at least one language."), errorField: "languages" };
+    return null;
+  },
+  interests(body, d, x) {
+    const v = d.vals;
+    v.interests = pickAll(body, "interests", INTEREST_VALUES);
+    if (v.interests.length === 0) return { error: x.t("เลือกความสนใจอย่างน้อย 1 อย่าง", "Pick at least one interest."), errorField: "interests" };
+    if (v.interests.length > MAX_INTERESTS) return { error: x.t(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`), errorField: "interests" };
+    return null;
+  },
+  here(body, d) {
+    d.vals.intents = pickAll(body, "intents", values(INTENTS));
+    // Small / big group follow the group size answer (seating reads them).
+    d.vals.socialStyles = withGroupStyle(pickAll(body, "socialStyles", values(SOCIAL_STYLES)), d.vals.bio.groupSize);
+    return null;
+  },
+  comm(body, d, x) {
+    const comm = pickAll(body, "comm", COMM_STYLES.map((s) => s.value));
+    d.vals.bio.comm = comm;
+    if (comm.length > MAX_COMM) return { error: x.t(`เลือกสไตล์การติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_COMM} communication styles.`), errorField: "comm" };
+    return null;
+  },
+  bangkok(body, d, x) {
+    const bio = d.vals.bio;
+    Object.assign(bio, parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)));
+    // Sign-up's answer stays unless they pick another one.
+    bio.residency = isResidency(str(body.residency)) ? str(body.residency) : x.stored.residency;
+    // "My Bangkok" reflections: the form sends them all, so they replace the stored ones (all blank clears them).
+    bio.reflections = str(body.r_present) === "1" ? reflectionsFromForm(body) : x.stored.reflections;
+    if (!bio.reflections) delete bio.reflections;
+    return null;
+  },
+  work(body, d, x) {
+    const bio = d.vals.bio;
+    Object.assign(
+      bio,
+      parseOccupation(str(body.occupation), str(body.occupationOther)),
+      parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }),
+    );
+    bio.learning = str(body.learning);
+    if (bio.learning.length > LEARNING_MAX) return { error: x.t(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`), errorField: "learning" };
+    if (!bio.learning) delete bio.learning;
+    return null;
+  },
+  meet(body, d) {
+    const bio = d.vals.bio;
+    const energy = str(body.energy);
+    const weekend = str(body.weekendRhythm);
+    Object.assign(bio, {
+      energy: ENERGY.some((x) => x.value === energy) ? energy : undefined,
+      weekend: WEEKEND_RHYTHM.some((x) => x.value === weekend) ? weekend : undefined,
+      pay: pickAll(body, "pay", PAY_METHODS.map((x) => x.value)).slice(0, MAX_PAY),
+      bill: oneOf(str(body.bill), BILL_STYLE),
+      travel: pickAll(body, "travel", GETTING_AROUND.map((x) => x.value)).slice(0, MAX_TRAVEL),
+      diet: pickAll(body, "diet", DIET.map((x) => x.value)),
+      spice: oneOf(str(body.spice), SPICE),
+      pets: oneOf(str(body.pets), PETS),
+      punctual: oneOf(str(body.punctual), PUNCTUAL),
+      budget: oneOf(str(body.budget), BUDGETS),
+      activities: pickAll(body, "activities", ACTIVITIES.map((x) => x.value)),
+      meals: pickAll(body, "meals", MEALS.map((x) => x.value)),
+      groupSize: oneOf(str(body.groupSize), GROUP_SIZES),
+      times: pickAll(body, "times", TIME_WINDOWS.map((x) => x.value)),
+      access: pickAll(body, "access", ACCESS_NEEDS.map((x) => x.value)),
+    } satisfies Partial<Bio>);
+    // The small / big group style follows the group size; the other styles are Here for's.
+    d.vals.socialStyles = withGroupStyle(d.vals.socialStyles, bio.groupSize);
+    return null;
+  },
+  prompts(body, d, x) {
+    d.vals.bio.deck = x.deck;
+    return applyPrompts(body, d, x, x.deck);
+  },
+  "dating-prompts"(body, d, x) {
+    d.vals.bio.datingDeck = x.datingDeck;
+    return applyPrompts(body, d, x, x.datingDeck);
+  },
+  links(body, d, x) {
+    // Only when the post carried its section, so other posts never clear them.
+    if (str(body.links_present) !== "1") return null;
+    const typed = Object.fromEntries(NETWORKS.map((n) => [n.key, str(body[`link_${n.key}`]).slice(0, 400)]));
+    d.vals.links = typed;
+    d.vals.linksOn = str(body.linksOn) === "1";
     const out: Record<string, string | null> = {};
     for (const n of NETWORKS) {
-      const r = normaliseLink(n.key, vals.links![n.key] ?? "");
+      const r = normaliseLink(n.key, typed[n.key] ?? "");
       if (!r.ok) {
-        const name = t(n.th, n.en);
-        return { ok: false, vals, error: t(`${name}: ${r.error.th}`, `${name}: ${r.error.en}`), errorField: n.key };
+        const name = x.t(n.th, n.en);
+        return { error: x.t(`${name}: ${r.error.th}`, `${name}: ${r.error.en}`), errorField: n.key };
       }
       out[n.key] = r.value;
     }
-    links = { values: out, on: !!vals.linksOn };
+    d.links = { values: out, on: d.vals.linksOn };
+    return null;
+  },
+};
+
+/** Run in this order (Meeting up sets the group size Here for's styles follow); errors are reported in ERROR_ORDER. */
+const APPLY_ORDER: (typeof SECTIONS)[number][] = ["photo", "basics", "languages", "interests", "meet", "here", "comm", "bangkok", "work", "prompts", "dating-prompts", "links"];
+const ERROR_ORDER: (typeof SECTIONS)[number][] = ["basics", "languages", "interests", "comm", "work", "photo", "prompts", "dating-prompts", "links"];
+
+/** Which columns and bio keys a section may write. Nothing outside these is ever changed by its save. */
+type ProfileCol = "nickname" | "district" | "pronouns" | "showPronouns" | "languages" | "interests" | "socialStyles" | "intents" | "newcomer" | "locale" | "photoKey";
+type Scope = { cols: ProfileCol[]; bio: (keyof Bio)[]; answers: string[] };
+function sectionScope(name: SectionName, x: Pick<EditCtx, "deck" | "datingDeck">): Scope {
+  const one = promptOf(name);
+  if (one) return { cols: [], bio: [x.datingDeck.includes(one) ? "datingDeck" : "deck"], answers: [one] };
+  const s = (cols: ProfileCol[], bio: (keyof Bio)[] = [], answers: string[] = []): Scope => ({ cols, bio, answers });
+  switch (name as (typeof SECTIONS)[number]) {
+    case "photo":
+      return s(["photoKey"]);
+    case "basics":
+      return s(["nickname", "district", "pronouns", "showPronouns", "newcomer", "locale"]);
+    case "languages":
+      return s(["languages"], ["learningLangs"]);
+    case "interests":
+      return s(["interests"]);
+    case "here":
+      return s(["intents", "socialStyles"]);
+    case "comm":
+      return s([], ["comm"]);
+    case "bangkok":
+      return s([], ["story", "bkkTime", "hometown", "guide", "residency", "reflections"]);
+    case "work":
+      return s([], ["occupation", "occupationOther", "education", "educationDetail", "university", "universityName", "gradYear", "learning"]);
+    case "meet":
+      return s(["socialStyles"], ["energy", "weekend", "pay", "bill", "travel", "diet", "spice", "pets", "punctual", "budget", "activities", "meals", "groupSize", "times", "access"]);
+    case "prompts":
+      return s([], ["deck"], x.deck);
+    case "dating-prompts":
+      return s([], ["datingDeck"], x.datingDeck);
+    case "links":
+      return s([]);
   }
-  return { ok: true, vals, deck, mainFile, removePhoto: str(body.removePhoto) === "1", pending, dropKeys, links };
+  return s([]);
 }
 
-/** Upload files, then write the profile. Returns an error message or null. */
+type Parsed = { ok: false; vals: ProfileVals; error: string; errorField?: string; section: SectionName | "all" } | { ok: true; draft: Draft; scope: Scope | "all" };
+
+/** Read and validate the whole profile form (the all-in-one post). Touches nothing. */
+function parseProfileForm(c: C, body: Body): Parsed {
+  const x = editCtx(c);
+  const d = newDraft(x);
+  const errs = new Map<string, Fail>();
+  // Every section is read first, so whatever error comes back, everything typed is still in the form.
+  for (const n of APPLY_ORDER) {
+    if (n === "dating-prompts" && !x.datingDeck.length) continue;
+    const e = APPLY[n](body, d, x);
+    if (e) errs.set(n, e);
+  }
+  // The whole form: answers to prompts no longer in either deck are dropped (with their photos).
+  const bio = d.vals.bio;
+  const all = [...x.deck, ...x.datingDeck];
+  for (const [id, a] of Object.entries(bio.answers ?? {})) {
+    if (all.includes(id)) continue;
+    if (a.photoKey) d.dropKeys.push(a.photoKey);
+    delete bio.answers![id];
+  }
+  bio.deck = x.deck;
+  bio.datingDeck = x.datingDeck.length ? x.datingDeck : undefined;
+  const first = ERROR_ORDER.find((n) => errs.has(n));
+  if (first) return { ok: false, vals: d.vals, ...errs.get(first)!, section: "all" };
+  return { ok: true, draft: d, scope: "all" };
+}
+
+/** Read and validate one section. Null when there is no such section for me (a prompt not in my decks, or dating prompts without 💘). */
+function parseSection(c: C, name: SectionName, body: Body): Parsed | null {
+  const x = editCtx(c);
+  const d = newDraft(x);
+  const one = promptOf(name);
+  let e: Fail | null;
+  if (one) {
+    if (!x.deck.includes(one) && !x.datingDeck.includes(one)) return null;
+    if (x.deck.includes(one)) d.vals.bio.deck = x.deck;
+    else d.vals.bio.datingDeck = x.datingDeck;
+    e = applyPrompts(body, d, x, [one]);
+  } else {
+    if (name === "dating-prompts" && !x.datingDeck.length) return null;
+    e = APPLY[name as (typeof SECTIONS)[number]](body, d, x);
+  }
+  if (e) return { ok: false, vals: d.vals, ...e, section: name };
+  return { ok: true, draft: d, scope: sectionScope(name, x) };
+}
+
+/** Upload files, then write the profile (only what the scope allows). Returns an error message or null. */
 async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise<string | null> {
   const { t } = view(c);
   const user = me(c);
   const p = user.profile!;
-  const { vals } = parsed;
+  const { draft, scope } = parsed;
+  const vals = draft.vals;
+  const may = (col: ProfileCol) => {
+    if (scope !== "all") return scope.cols.includes(col);
+    // The all-in-one post writes everything it carries; pronouns only when it carried them.
+    return col === "pronouns" || col === "showPronouns" ? !!draft.pronounsSent : true;
+  };
   // Server-generated keys only; bytes go straight to the file store.
   const uploaded: string[] = [];
   const put = async (key: string, file: File) => {
@@ -1154,13 +1046,15 @@ async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise
   };
   let photoKey = p.photoKey;
   try {
-    if (parsed.mainFile) {
-      photoKey = `uploads/${user.account.id}/${crypto.randomUUID()}`;
-      await put(photoKey, parsed.mainFile);
-    } else if (parsed.removePhoto) {
-      photoKey = null;
+    if (may("photoKey")) {
+      if (draft.mainFile) {
+        photoKey = `uploads/${user.account.id}/${crypto.randomUUID()}`;
+        await put(photoKey, draft.mainFile);
+      } else if (draft.removePhoto) {
+        photoKey = null;
+      }
     }
-    for (const { id, file } of parsed.pending) {
+    for (const { id, file } of draft.pending) {
       const key = `uploads/${user.account.id}/prompts/${crypto.randomUUID()}`;
       await put(key, file);
       vals.bio.answers![id] = { ...vals.bio.answers![id], photoKey: key };
@@ -1170,35 +1064,62 @@ async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise
     return t("อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง", "The photo couldn't be uploaded. Please try again.");
   }
 
+  // The bio: the whole draft, or the stored bio with only this section's keys (and answers) replaced.
+  const stored = cleanBio(p.bio);
+  let bio: Bio;
+  if (scope === "all") bio = vals.bio;
+  else {
+    bio = { ...stored };
+    const out = bio as Record<string, unknown>;
+    for (const k of scope.bio) {
+      const val = vals.bio[k];
+      if (val === undefined) delete out[k];
+      else out[k] = val;
+    }
+    if (scope.answers.length) {
+      const answers = { ...(stored.answers ?? {}) };
+      for (const id of scope.answers) {
+        const a = vals.bio.answers?.[id];
+        if (a) answers[id] = a;
+        else delete answers[id];
+      }
+      bio.answers = answers;
+    }
+  }
+  const bioChanged = scope === "all" || scope.bio.length > 0 || scope.answers.length > 0;
+
   // This form only edits the non-romance intents; romance follows romance mode.
   const intents = [...(vals.intents.length ? vals.intents : ["friends"]), ...(p.romanceOn ? ["romance"] : [])];
-  await getDb(c.env)
-    .update(profiles)
-    .set({
-      nickname: vals.nickname,
-      district: vals.district,
-      languages: vals.languages,
-      interests: vals.interests,
-      socialStyles: vals.socialStyles,
-      eventStyle: vals.eventStyle,
-      intents,
-      newcomer: vals.newcomer,
-      locale: vals.locale,
-      bio: vals.bio,
-      photoKey,
-      updatedAt: new Date(),
-    })
-    .where(eq(profiles.accountId, user.account.id));
-  const drop = [...parsed.dropKeys, ...(p.photoKey && p.photoKey !== photoKey ? [p.photoKey] : [])];
+  const all: Record<ProfileCol, unknown> = {
+    nickname: vals.nickname,
+    district: vals.district,
+    pronouns: vals.pronouns,
+    showPronouns: vals.showPronouns,
+    languages: vals.languages,
+    interests: vals.interests,
+    socialStyles: vals.socialStyles,
+    intents,
+    newcomer: vals.newcomer,
+    locale: vals.locale,
+    photoKey,
+  };
+  const set: Partial<typeof profiles.$inferInsert> = {};
+  for (const col of Object.keys(all) as ProfileCol[]) if (may(col)) (set as Record<string, unknown>)[col] = all[col];
+  if (scope === "all") set.eventStyle = p.eventStyle;
+  if (bioChanged) set.bio = bio;
+  if (Object.keys(set).length) {
+    set.updatedAt = new Date();
+    await getDb(c.env).update(profiles).set(set).where(eq(profiles.accountId, user.account.id));
+  }
+  const drop = [...draft.dropKeys, ...(may("photoKey") && p.photoKey && p.photoKey !== photoKey ? [p.photoKey] : [])];
   for (const k of drop) await deleteObject(c.env, k).catch(() => {});
-  if (vals.locale !== p.locale) setCookie(c, "lang", vals.locale, { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
+  if (may("locale") && vals.locale !== p.locale) setCookie(c, "lang", vals.locale, { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
   // City Pulse follows the change reflection: replaced when edited, withdrawn when cleared (consent rules in syncQuizChange).
-  const before = cleanBio(p.bio).reflections?.change;
-  const after = vals.bio.reflections?.change;
-  if (parsed.links) await saveLinks(c, parsed.links);
+  const before = stored.reflections?.change;
+  const after = bio.reflections?.change;
+  if (draft.links) await saveLinks(c, draft.links);
   // Keep the in-request copy current for anything rendered after this.
-  const { links: _links, linksOn: _linksOn, ...profileOnly } = vals;
-  Object.assign(p, { ...profileOnly, intents, photoKey, bio: vals.bio });
+  Object.assign(p, set);
   if (before !== after) await syncQuizChange(c, after);
   return null;
 }
@@ -1234,30 +1155,102 @@ async function saveLinks(c: C, links: { values: Record<string, string | null>; o
 settingsRoutes.post("/settings/profile", async (c) => {
   const body = (await c.req.parseBody({ all: true })) as Body;
   const parsed = parseProfileForm(c, body);
-  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400, filesLost: postedFiles(body) });
+  if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, errorSection: "all", status: 400, filesLost: postedFiles(body) });
   const err = await saveProfile(c, parsed);
-  if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400, filesLost: postedFiles(body) });
+  if (err) return renderProfileForm(c, parsed.draft.vals, { error: err, errorSection: "all", status: 400, filesLost: postedFiles(body) });
   return c.redirect("/settings?notice=saved");
 });
 
+/** A section save sent by the page's script (PE_JS): it gets the section's form back instead of a whole page. */
+const inPlace = (c: C) => c.req.header("x-pe") === "1";
+
+/** One section's form on its own, for an edit sheet or an in-place save. */
+async function sectionFragment(
+  c: C,
+  name: SectionName,
+  vals: ProfileVals,
+  opts: { back: "card" | "edit"; saved?: boolean; error?: string; errorField?: string; filesLost?: boolean; status?: 200 | 400 },
+) {
+  const d = await sectionData(c, vals, opts);
+  c.header("cache-control", "no-store");
+  return c.html(
+    <SectionForm
+      d={d}
+      name={name}
+      back={opts.back}
+      saved={opts.saved}
+      sheet={opts.back === "card"}
+      dirty={!!opts.error}
+      formError={opts.error && !opts.errorField ? opts.error : undefined}
+      filesLost={opts.filesLost}
+    />,
+    opts.status ?? 200,
+  );
+}
+
+/** Where a plain (no JS) section save goes back to, with the tick flag. */
+function savedUrl(name: SectionName, back: "card" | "edit") {
+  return back === "card" ? `/me/profile?saved=${encodeURIComponent(name)}#pe-${name}` : `/settings/profile?saved=${encodeURIComponent(name)}#${sectionAnchor(name)}`;
+}
+
+/** One section's form (for an edit sheet). A plain visit goes to that section of the long form. */
+settingsRoutes.get("/settings/profile/section/:name", async (c) => {
+  const name = c.req.param("name");
+  if (!isSectionName(name)) return c.notFound();
+  const x = editCtx(c);
+  const one = promptOf(name);
+  if ((one && !x.deck.includes(one) && !x.datingDeck.includes(one)) || (name === "dating-prompts" && !x.datingDeck.length)) return c.notFound();
+  if (!inPlace(c)) return c.redirect(`/settings/profile#${sectionAnchor(name)}`);
+  return sectionFragment(c, name, profileVals(me(c).profile!), { back: c.req.query("back") === "card" ? "card" : "edit" });
+});
+
 /**
- * Swap one prompt in my deck for an unused one. When posted from the full
- * edit form (the ↻ button), the rest of the form is saved first so nothing
- * typed is lost.
+ * Save one section. Only that section's fields are read and only its columns and bio keys are
+ * written, so whatever else the post carries, nothing outside the section changes.
+ */
+settingsRoutes.post("/settings/profile/section/:name", async (c) => {
+  const name = c.req.param("name");
+  if (!isSectionName(name)) return c.notFound();
+  const body = (await c.req.parseBody({ all: true })) as Body;
+  const back = str(body.back) === "card" ? "card" : "edit";
+  const parsed = parseSection(c, name, body);
+  if (!parsed) return c.notFound();
+  const lost = postedFiles(body);
+  const refuse = (vals: ProfileVals, error: string, errorField?: string) =>
+    inPlace(c)
+      ? sectionFragment(c, name, vals, { back, error, errorField, filesLost: lost, status: 400 })
+      : renderProfileForm(c, vals, { error, errorField, errorSection: hostSection(name, editCtx(c).datingDeck), status: 400, filesLost: lost, back });
+  if (!parsed.ok) return refuse(parsed.vals, parsed.error, parsed.errorField);
+  const err = await saveProfile(c, parsed);
+  if (err) return refuse(parsed.draft.vals, err);
+  if (inPlace(c)) return sectionFragment(c, name, profileVals(me(c).profile!), { back, saved: true });
+  return c.redirect(savedUrl(name, back), 303);
+});
+
+/**
+ * Swap one prompt in my deck for an unused one. When posted from a prompts form (the ↻ button),
+ * that form is saved first so nothing typed is lost; the old all-in-one form saved everything.
  */
 settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   const body = (await c.req.parseBody({ all: true })) as Body;
   const user = me(c);
+  const id = str(body.promptId);
+  const dating = isDatingPrompt(id);
   if ("nickname" in body) {
     const parsed = parseProfileForm(c, body);
-    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, status: 400, filesLost: postedFiles(body) });
+    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, errorSection: "all", status: 400, filesLost: postedFiles(body) });
     const err = await saveProfile(c, parsed);
-    if (err) return renderProfileForm(c, parsed.vals, { error: err, status: 400, filesLost: postedFiles(body) });
+    if (err) return renderProfileForm(c, parsed.draft.vals, { error: err, errorSection: "all", status: 400, filesLost: postedFiles(body) });
+  } else if ("back" in body) {
+    const section: SectionName = dating ? "dating-prompts" : "prompts";
+    const parsed = parseSection(c, section, body);
+    if (!parsed) return c.text("Unknown prompt", 400);
+    if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, errorSection: section, status: 400, filesLost: postedFiles(body) });
+    const err = await saveProfile(c, parsed);
+    if (err) return renderProfileForm(c, parsed.draft.vals, { error: err, errorSection: section, status: 400, filesLost: postedFiles(body) });
   }
   const p = user.profile!;
   const bio = cleanBio(p.bio);
-  const id = str(body.promptId);
-  const dating = isDatingPrompt(id);
   if (dating && !romanceEligible(p)) return c.text("Unknown prompt", 400);
   const deck = dating ? currentDatingDeck(user.account.id, bio) : currentDeck(user.account.id, bio);
   if (!deck.includes(id)) return c.text("Unknown prompt", 400);

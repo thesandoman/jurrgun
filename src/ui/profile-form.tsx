@@ -623,7 +623,7 @@ document.addEventListener("keydown",function(e){
 });
 [].forEach.call(document.querySelectorAll("form[data-guard] input:not([enterkeyhint])"),function(x){if(/^(text|url|email|tel|number)$/.test(x.type))x.setAttribute("enterkeyhint","next")});
 var f=document.querySelector('form[data-guard="dirty"]');
-if(f){var e=f.querySelector("[aria-invalid=true],[data-err-focus]");if(e){
+if(f){var e=document.querySelector('form[data-guard="dirty"] [aria-invalid=true],form[data-guard="dirty"] [data-err-focus]');if(e){
   if(e.hasAttribute("data-err-focus")){var own=e.parentNode.querySelector("textarea[aria-invalid=true],input[aria-invalid=true]");if(own)e=own}
   var d=e.closest("details");if(d)d.open=true;
   e.focus({preventScroll:true});e.scrollIntoView({block:"center"});
