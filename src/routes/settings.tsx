@@ -73,7 +73,7 @@ import {
 import { MeHub, type MeStep } from "../ui/me-hub";
 import { SubLabel } from "../ui/section-head";
 import { ProfileFormScript } from "../ui/profile-form";
-import { hostSection, isSectionName, MoreRow, OPEN_SECTIONS, promptOf, sectionAnchor, SectionForm, SectionHead, SECTIONS, type ProfileVals, type SectionData, type SectionName } from "../ui/profile-sections";
+import { hostSection, isSectionName, MoreRow, progressText, OPEN_SECTIONS, promptOf, sectionAnchor, SectionForm, SectionHead, SECTIONS, type ProfileVals, type SectionData, type SectionName } from "../ui/profile-sections";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import { allowedEndpoint } from "../lib/webpush";
 import { vapidKeys } from "../services/push";
@@ -1183,6 +1183,8 @@ async function sectionFragment(
 ) {
   const d = await sectionData(c, vals, opts);
   c.header("cache-control", "no-store");
+  // The long form's row shows how much is filled in; a save updates it from this.
+  if (opts.saved) c.header("x-pe-progress", encodeURIComponent(progressText(d.v.t, hostSection(name, d.datingDeck), d)));
   return c.html(
     <SectionForm
       d={d}

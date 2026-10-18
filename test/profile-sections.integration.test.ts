@@ -9,7 +9,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req, type Member } from "./helpers";
 import app from "../src/index";
 import { ENV } from "./helpers";
-import { consents, profileLinks, profiles } from "../src/schema";
+import { connections, consents, profileLinks, profiles } from "../src/schema";
+import { newId } from "../src/lib/crypto";
+import { PE_JS } from "../src/ui/profile-edit-js";
+import { PROFILE_EDIT_JS } from "../src/ui/profile-form";
+import { SHEET_JS } from "../src/ui/sheet";
+import { A11Y_FORM_JS } from "../src/ui/a11y";
 import { DISTRICTS, INTENTS, LANGUAGES } from "../src/lib/constants";
 import {
   ACCESS_NEEDS,
@@ -317,5 +322,68 @@ describe.skipIf(!HAS_DB)("profile: basics first, the rest behind More", () => {
     html = await r.text();
     expect(html).toContain('<details class="pe-row" id="comm" open="">');
     expect(html).not.toContain('<details class="pe-row" id="meet" open');
+  });
+});
+
+describe.skipIf(!HAS_DB)("profile: edit in place on my card", () => {
+  /** The ✏️ spot for a section: its link (no JS) and its sheet trigger (JS). */
+  const spot = (html: string, name: string) => html.match(new RegExp(`<div class="pe-edit[^"]*" id="pe-${name}" data-pe-spot="${name}">[\\s\\S]*?</details>`))?.[0] ?? "";
+
+  it("puts a 44px ✏️ by each section of my own card: a link to the long form without JS, a sheet of just that section with it", async () => {
+    const m = await seeded("card");
+    const html = await (await req("/me/profile", { cookie: en(m) })).text();
+    for (const [name, label] of [
+      ["photo", "Edit profile photo"],
+      ["basics", "Edit the basics"],
+      ["interests", "Edit interests"],
+      ["here", "Edit here for"],
+      ["languages", "Edit languages"],
+      ["bangkok", "Edit my Bangkok"],
+      ["work", "Edit work and study"],
+      ["meet", "Edit meeting up"],
+      ["comm", "Edit how you keep in touch"],
+      ["links", "Edit social links"],
+      [`prompt-${TEXT.id}`, `Edit answer: ${TEXT.en}`],
+    ]) {
+      const s = spot(html, name);
+      expect(s, name).not.toBe("");
+      // A prompt opens My prompts and lands on its own card there.
+      const open = name.startsWith("prompt-") ? "prompts" : name;
+      expect(s).toContain(`<a class="pe-btn pe-link" href="/settings/profile?open=${open}&amp;from=card#${name}" aria-label="${label.replace("'", "&#39;")}">`);
+      expect(s).toContain(`<details class="sheet pe-sheet" data-sheet="" data-sheet-trap="">`);
+      expect(s).toContain(`<summary class="pe-btn" aria-label="${label.replace("'", "&#39;")}" aria-haspopup="dialog">`);
+      expect(s).toContain(`data-src="/settings/profile/section/${name}?back=card"`);
+    }
+    // The fields and the in-place script ship with my card; "Edit all" still opens the long form.
+    expect(html).toContain('href="/settings/profile">Edit all</a>');
+    expect(html).toContain("window.__pe");
+    // A plain save comes back here with the tick by that section's ✏️, and only there.
+    const back = await (await req("/me/profile?saved=interests", { cookie: en(m) })).text();
+    expect(spot(back, "interests")).toBe(spot(html, "interests"));
+    expect(back).toMatch(/id="pe-interests"[\s\S]*?<span class="pe-tick" role="status"[^>]*>✓ Saved<\/span>/);
+    expect(back.match(/>✓ Saved</g)?.length).toBe(1);
+  });
+
+  it("never puts an edit spot or the edit script on someone else's card", async () => {
+    const me = await seeded("mine");
+    const them = await seeded("theirs");
+    const [a, b] = me.id < them.id ? [me.id, them.id] : [them.id, me.id];
+    await db().insert(connections).values({ id: newId(), aAccount: a, bAccount: b, level: "friend", eventId: newId() });
+    const r = await req(`/people/${them.id}`, { cookie: en(me) });
+    expect(r.status).toBe(200);
+    const html = await r.text();
+    expect(html).not.toContain("data-pe-spot");
+    expect(html).not.toContain("window.__pe");
+    expect(html).not.toContain("/settings/profile/section/");
+  });
+
+  it("ships scripts that parse: sheets trap Tab on laptops too for a form, and saves go in place", () => {
+    for (const js of [PE_JS, PROFILE_EDIT_JS, SHEET_JS, A11Y_FORM_JS]) expect(() => new Function(js)).not.toThrow();
+    expect(SHEET_JS).toContain('cur.hasAttribute("data-sheet-trap")');
+    expect(PE_JS).toContain('"x-pe":"1"');
+    // A failed fetch falls back to a plain post; a refused one focuses its field.
+    expect(PE_JS).toContain("HTMLFormElement.prototype.submit.call(f)");
+    expect(PE_JS).toContain("jgPf.focusErr(f)");
+    expect(A11Y_FORM_JS).toContain("window.jgGuard=");
   });
 });

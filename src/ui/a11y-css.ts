@@ -1142,4 +1142,36 @@ main .pe-row>summary{display:flex;align-items:center;gap:10px;min-height:52px;pa
 .pe-row-body{padding:0 0 24px}
 .pe-row-body>p.muted{margin:0 0 12px}
 .pe-love>summary .pe-row-t{color:var(--love-ink)}
+/* My card: a 44px ✏️ beside each section, a link without JS and an edit sheet with it. */
+html.sheet-js .pe-link{display:none}
+html:not(.sheet-js) .pe-edit>details.pe-sheet{display:none}
+.pe-edit{display:inline-flex;align-items:center;gap:8px;flex:none}
+main details.pe-sheet{margin:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0}
+.pe-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:.95rem;line-height:1.2;text-decoration:none;cursor:pointer;list-style:none}
+details.pe-sheet>summary.pe-btn::-webkit-details-marker{display:none}
+.pe-btn:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.pe-btn:active{transform:scale(.97);transition:transform .1s ease-out}}
+.pe-edit .pe-tick{font-size:.9rem}
+/* Rows on the card that carry a ✏️: the heading or question first, the ✏️ at the end. */
+.pc-name-row,.pc-h-row,.pc-q-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pc-name-row h1{min-width:0}
+.pc .pc-h-row{margin:0 0 12px}
+.pc .pc-h-row h2,.pc .pc-q-row .pc-q{margin:0}
+.pc .pc-q-row{margin:0 0 12px}
+/* The photo's ✏️ sits on the avatar's corner. */
+.pc-photo-wrap{position:relative;flex:none}
+.pc-photo-wrap>.pe-edit{position:absolute;right:-10px;bottom:-10px}
+.pc-photo-wrap .pe-btn{box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.pc-photo-wrap .pe-tick{position:absolute;left:0;top:calc(100% + 4px);white-space:nowrap}
+/* The sections without a spot of their own: quiet chips under the glance line. */
+.pe-chips{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 0}
+.pe-chip .pe-btn{padding:0 14px 0 12px;font-weight:500;color:var(--ink-2)}
+/* Edit sheets: wider on laptops; the Save stays in reach at the bottom of the panel. */
+@media (min-width:1024px){details.pe-sheet[open]>.sheet-panel{width:min(460px,calc(100vw - 32px));max-width:none}}
+.pe-sheet .sheet-body{display:block}
+.pe-sheet .pe-save{position:sticky;bottom:-16px;z-index:2;margin:16px -16px -16px;padding:12px 16px 16px;background:var(--surface);border-top:1px solid var(--line)}
+.pe-sheet .pf-prompt{margin:0;padding:0;border:0;background:none}
+.pe-load{min-height:88px}
+/* A long edit sheet keeps its title and ✕ in view while it scrolls. */
+.pe-sheet .sheet-head{position:sticky;top:-8px;z-index:2;margin:-8px -16px 4px;padding:8px 16px 0;background:var(--surface)}
 `);

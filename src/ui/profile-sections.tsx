@@ -46,6 +46,7 @@ import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPi
 import { ReflectionFields } from "./reflections";
 import { SubLabel } from "./section-head";
 import { PronounField } from "../routes/onboarding";
+import { Sheet } from "./sheet";
 
 /** Everything the edit form shows: the stored profile, or what was typed when a save is refused. */
 export type ProfileVals = {
@@ -456,6 +457,15 @@ export function sectionProgress(name: SectionName, d: Pick<SectionData, "vals" |
   return [0, 0];
 }
 
+/** "3 of 6" / "3 จาก 6"; links say how many and whether they're shown. */
+export function progressText(t: View["t"], name: SectionName, d: Pick<SectionData, "vals" | "deck" | "datingDeck">): string {
+  const [done, of] = sectionProgress(name, d);
+  if (name !== "links") return t(`${done} จาก ${of}`, `${done} of ${of}`);
+  return d.vals.linksOn
+    ? t(`${done} ลิงก์ · เปิดให้เห็น`, `${done} ${done === 1 ? "link" : "links"} · shown`)
+    : t(`${done} ลิงก์ · ปิดอยู่`, `${done} ${done === 1 ? "link" : "links"} · hidden`);
+}
+
 /**
  * One optional section on the long form, as a row: its name and how much is filled in. A tap opens
  * it in place (details and summary, no script); a refused or just-saved section opens by itself.
@@ -463,13 +473,7 @@ export function sectionProgress(name: SectionName, d: Pick<SectionData, "vals" |
 export function MoreRow(props: { d: SectionData; name: (typeof SECTIONS)[number]; open: boolean; children: Child }) {
   const { t } = props.d.v;
   const m = SECTION_META[props.name];
-  const [done, of] = sectionProgress(props.name, props.d);
-  const progress =
-    props.name === "links"
-      ? props.d.vals.linksOn
-        ? t(`${done} ลิงก์ · เปิดให้เห็น`, `${done} ${done === 1 ? "link" : "links"} · shown`)
-        : t(`${done} ลิงก์ · ปิดอยู่`, `${done} ${done === 1 ? "link" : "links"} · hidden`)
-      : t(`${done} จาก ${of}`, `${done} of ${of}`);
+  const progress = progressText(t, props.name, props.d);
   return (
     <details class={`pe-row${props.name === "dating-prompts" ? " pe-love" : ""}`} id={props.name} open={props.open}>
       <summary>
@@ -484,5 +488,48 @@ export function MoreRow(props: { d: SectionData; name: (typeof SECTIONS)[number]
         {props.children}
       </div>
     </details>
+  );
+}
+
+/** "Edit interests": the ✏️'s accessible name. */
+export function editLabel(t: View["t"], name: SectionName): string {
+  const title = sectionTitle(t, name);
+  // A prompt is a whole question (and may start with a name, "Bangkok in one emoji"), so it keeps its case.
+  if (promptOf(name)) return t(`แก้ไขคำตอบ ${title}`, `Edit answer: ${title}`);
+  return t(`แก้ไข${title}`, `Edit ${title.charAt(0).toLowerCase()}${title.slice(1)}`);
+}
+
+/** Where a section's ✏️ goes without JS: that section of the long form, which then saves back to the card. */
+export function editHref(name: SectionName, datingDeck: string[]): string {
+  return `/settings/profile?open=${hostSection(name, datingDeck)}&from=card#${sectionAnchor(name)}`;
+}
+
+/**
+ * The ✏️ on my own card for one section (owner card 1). With JS it opens a sheet anchored to it
+ * (src/ui/sheet.tsx) holding only that section's fields and its own Save, loaded when first opened;
+ * without JS it is a link to that section of the long form. `chip` shows the section's name too.
+ */
+export function EditSpot(props: { t: View["t"]; name: SectionName; datingDeck: string[]; saved?: boolean; chip?: boolean }) {
+  const { t, name } = props;
+  const title = sectionTitle(t, name);
+  const label = editLabel(t, name);
+  const face = (
+    <>
+      <span aria-hidden="true">✏️</span>
+      {props.chip ? <span class="pe-chip-t">{title}</span> : null}
+    </>
+  );
+  return (
+    <div class={props.chip ? "pe-edit pe-chip" : "pe-edit"} id={`pe-${name}`} data-pe-spot={name}>
+      <a class="pe-btn pe-link" href={editHref(name, props.datingDeck)} aria-label={label}>
+        {face}
+      </a>
+      <Sheet t={t} title={title} trigger={face} triggerClass="pe-btn" triggerLabel={label} class="pe-sheet" trap>
+        <div class="pe-load" data-src={`/settings/profile/section/${name}?back=card`} data-err={t("โหลดไม่สำเร็จ แก้ในหน้าแก้ไขโปรไฟล์แทน", "Couldn't load this. Edit it on the profile page instead.")}>
+          <p class="muted">{t("กำลังโหลด…", "Loading…")}</p>
+        </div>
+      </Sheet>
+      <SavedTick t={t} on={!!props.saved} />
+    </div>
   );
 }

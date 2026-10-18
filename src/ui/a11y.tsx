@@ -125,7 +125,8 @@ export function A11yMenu(props: { t: T; class?: string }) {
 
 /**
  * Form safety nets: a Caps Lock note under password fields; "you have
- * unsaved changes" before leaving a form marked data-guard (Edit profile);
+ * unsaved changes" before leaving a form marked data-guard (Edit profile;
+ * window.jgGuard adds forms that arrive later and resets one after an in-place save);
  * and when the browser refuses a form (required, pattern, min/max), each
  * failing field is marked aria-invalid so screen readers say so, cleared as
  * soon as the value is fixed (WCAG 3.3.1).
@@ -134,8 +135,10 @@ export const A11Y_FORM_JS = `(function(){
 function caps(e){var f=e.target;if(!f||!f.closest)return;var w=f.closest(".field");w=w&&w.querySelector(".caps-warn");if(!w)return;w.hidden=e.type==="blur"||!(e.getModifierState&&e.getModifierState("CapsLock"))}
 ["keydown","keyup"].forEach(function(t){document.addEventListener(t,function(e){if(e.target&&e.target.closest&&e.target.closest(".pw,.field")&&e.target.matches("input"))caps(e)},true)});
 document.addEventListener("blur",function(e){if(e.target&&e.target.matches&&e.target.matches("input"))caps(e)},true);
-var guarded=[];document.querySelectorAll("form[data-guard]").forEach(function(f){var g={f:f,start:snap(f),sent:false,always:f.getAttribute("data-guard")==="dirty"};guarded.push(g);f.addEventListener("submit",function(){g.sent=true})});
+var guarded=[];function guard(f){if(f._g)return f._g;var g={f:f,start:snap(f),sent:false,always:f.getAttribute("data-guard")==="dirty"};f._g=g;guarded.push(g);f.addEventListener("submit",function(){g.sent=true});return g}
+document.querySelectorAll("form[data-guard]").forEach(guard);
 function snap(f){var a=[];new FormData(f).forEach(function(v,k){a.push(k+"="+(typeof v==="string"?v:v.name+":"+v.size))});return a.join("&")}
+window.jgGuard={add:guard,reset:function(f){var g=guard(f);g.start=snap(f);g.sent=false;g.always=f.getAttribute("data-guard")==="dirty"},drop:function(f){guarded=guarded.filter(function(g){return g.f!==f});f._g=null},dirty:function(f){var g=f._g;return !!g&&!g.sent&&(g.always||snap(f)!==g.start)}};
 addEventListener("pageshow",function(){guarded.forEach(function(g){g.sent=false})});
 addEventListener("beforeunload",function(e){if(guarded.some(function(g){return !g.sent&&(g.always||snap(g.f)!==g.start)})){e.preventDefault();e.returnValue=""}});
 document.addEventListener("invalid",function(e){var f=e.target;if(f&&f.setAttribute)f.setAttribute("aria-invalid","true")},true);document.addEventListener("input",function(e){var f=e.target;if(f&&f.getAttribute&&f.getAttribute("aria-invalid")==="true"&&f.checkValidity&&f.checkValidity())f.removeAttribute("aria-invalid")},true)})()`;

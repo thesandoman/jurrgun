@@ -34,6 +34,8 @@ import { PinkyRow } from "../ui/pinky";
 import { visibleLinks } from "../services/profile-links";
 import { ProfileLinksCard } from "../ui/profile-links";
 import { str } from "../ui/kit";
+import { EditSpot, isSectionName } from "../ui/profile-sections";
+import { ProfileFormScript } from "../ui/profile-form";
 
 export const profileRoutes = new Hono<AppEnv>();
 
@@ -222,6 +224,8 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
       </>
     ) : null;
   const answered = Object.keys(person.bio.answers ?? {}).filter((id) => person.deck.includes(id)).length;
+  // A section just saved without JS (?saved=interests) shows its tick beside its ✏️.
+  const saved = self ? c.req.query("saved") : undefined;
   return page(
     c,
     { title: self ? t("โปรไฟล์ของฉัน", "My profile") : person.nickname, tab: self ? "me" : "connections" },
@@ -242,9 +246,12 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         viewerUniversity={self ? null : universityKey(cleanBio(me.profile?.bio))}
         regularAt={tables}
         compact={self}
+        edit={self ? (name, chip) => (isSectionName(name) ? <EditSpot t={t} name={name} datingDeck={person.datingDeck ?? []} saved={saved === name} chip={chip} /> : null) : undefined}
         actions={
           self ? (
-            <a class="btn primary" href="/settings/profile" aria-label={t("แก้ไขโปรไฟล์", "Edit profile")}>✏️ {t("แก้ไข", "Edit")}</a>
+            <a class="btn ghost" href="/settings/profile">
+              {t("แก้ไขทั้งหมด", "Edit all")}
+            </a>
           ) : undefined
         }
         invite={
@@ -268,6 +275,8 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         </section>
       ) : null}
       {self ? null : <ProfileLinksCard t={t} name={person.nickname} links={links.get(target.account.id) ?? []} />}
+      {/* The edit sheets' fields and their script (field styles, photo preview, in-place saves). */}
+      {self ? <ProfileFormScript /> : null}
       {pinky ? <PinkyRow t={t} otherId={target.account.id} name={person.nickname} state={pinky} /> : null}
       {self ? null : (
         <p class="row muted">

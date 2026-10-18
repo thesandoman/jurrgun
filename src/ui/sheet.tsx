@@ -10,7 +10,8 @@
  *  - the panel is lifted into the top layer (popover="manual"), so no card,
  *    tile or overflow can clip it or tuck it under the tab bar;
  *  - focus moves into the panel, Tab is trapped while it is modal (phones),
- *    Escape or ✕ or the scrim closes it and focus goes back to the trigger;
+ *    Escape or ✕ or the scrim closes it and focus goes back to the trigger
+ *    (data-sheet-trap keeps Tab inside on laptops too, for a sheet holding a form);
  *  - on laptops a click outside closes it, it flips above its trigger when
  *    there is more room there, and it is never taller than the room on its
  *    side of the trigger (it scrolls inside instead);
@@ -38,12 +39,16 @@ export function Sheet(props: {
   open?: boolean;
   /** Laptop popover: line up with the trigger's right edge (default) or left edge. */
   align?: "end" | "start";
+  /** Keep Tab inside the panel on laptops too (a form being edited), not only while it is modal on phones. */
+  trap?: boolean;
+  /** An id for the details, so a script can find this sheet. */
+  id?: string;
   children: Child;
 }) {
   const { t } = props;
   const cls = ["sheet", props.align === "start" ? "sheet-start" : "", props.class ?? ""].filter(Boolean).join(" ");
   return (
-    <details class={cls} data-sheet="" open={props.open}>
+    <details class={cls} id={props.id} data-sheet="" data-sheet-trap={props.trap ? "" : undefined} open={props.open}>
       <summary class={props.triggerClass} aria-label={props.triggerLabel} aria-haspopup="dialog">
         {props.trigger}
       </summary>
@@ -101,7 +106,7 @@ if(cur){var p=panelOf(cur);if(t===p&&cur.classList.contains("modal")){var r=p.ge
 if(!cur.contains(t))shut(cur,true)}});
 D.addEventListener("keydown",function(e){if(!cur)return;var p=panelOf(cur);
 if(e.key==="Escape"){e.preventDefault();shut(cur,false,true);return}
-if(e.key==="Tab"&&cur.classList.contains("modal")&&p){var f=focusables(p);if(!f.length){e.preventDefault();return}var a=f[0],z=f[f.length-1];
+if(e.key==="Tab"&&(cur.classList.contains("modal")||cur.hasAttribute("data-sheet-trap"))&&p){var f=focusables(p);if(!f.length){e.preventDefault();return}var a=f[0],z=f[f.length-1];
 if(!p.contains(D.activeElement)){e.preventDefault();a.focus()}else if(e.shiftKey&&D.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&D.activeElement===z){e.preventDefault();a.focus()}}});
 addEventListener("scroll",function(){if(cur)place(cur)},{passive:true});addEventListener("resize",function(){if(cur)place(cur)});
 var hold=null;D.addEventListener("pointerdown",function(e){held=false;var h=e.target.closest&&e.target.closest("[data-sheet-hold]");if(!h||e.pointerType==="mouse"||e.target.closest("details.sheet"))return;

@@ -31,6 +31,7 @@ import {
 } from "../content/profile";
 import type { View } from "./kit";
 import { universityById, universityName } from "../content/universities";
+import { PE_JS } from "./profile-edit-js";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
 
@@ -547,12 +548,13 @@ export function ProfileFormScript() {
       <script dangerouslySetInnerHTML={{ __html: PROFILE_FORM_JS }} />
       <script dangerouslySetInnerHTML={{ __html: UNI_PICKER_JS }} />
       <script dangerouslySetInnerHTML={{ __html: PROFILE_EDIT_JS }} />
+      <script dangerouslySetInnerHTML={{ __html: PE_JS }} />
     </>
   );
 }
 
 /** University search box: asks the server for matches as you type (debounced), keyboard and screen-reader friendly. */
-const UNI_PICKER_JS = `(function(){
+const UNI_PICKER_JS = `(window.jgUni=function(){
 [].forEach.call(document.querySelectorAll("[data-uni]"),function(box){
   if(box.dataset.ready)return;box.dataset.ready="1";
   var input=box.querySelector("input[role=combobox]"),hidden=box.querySelector("input[name=university]"),list=box.querySelector("[role=listbox]");
@@ -591,9 +593,9 @@ const UNI_PICKER_JS = `(function(){
  * 3. After a refused save, focus goes to the field the error is about.
  */
 export const PROFILE_EDIT_JS = `(function(){
-if(window.__pfe)return;window.__pfe=1;
 var MAX=5*1024*1024,OK=["image/jpeg","image/png","image/webp"];
-[].forEach.call(document.querySelectorAll("form[data-guard] [data-photo-pick]"),function(box){
+function photo(box){
+  if(box.dataset.pfReady)return;box.dataset.pfReady="1";
   var input=box.querySelector("input[type=file]"),slot=box.querySelector("[data-preview]"),name=box.querySelector(".file-name"),undo=box.querySelector(".pf-undo"),err=box.querySelector(".pf-photo-err");
   if(!input||!slot)return;
   var before=slot.innerHTML,url=null,nameText=name&&name.textContent,nameHidden=name&&name.hidden;
@@ -611,7 +613,20 @@ var MAX=5*1024*1024,OK=["image/jpeg","image/png","image/webp"];
     if(undo)undo.hidden=false;
   });
   if(undo)undo.addEventListener("click",function(){input.value="";reset();input.dispatchEvent(new Event("change",{bubbles:true}));var b=box.querySelector(".file-btn");(b||input).focus()});
-});
+}
+/* Photo pickers and Return-to-next for the forms in root (the page, or a form that arrived later). */
+function init(root){
+  [].forEach.call(root.querySelectorAll("form[data-guard] [data-photo-pick]"),photo);
+  [].forEach.call(root.querySelectorAll("form[data-guard] input:not([enterkeyhint])"),function(x){if(/^(text|url|email|tel|number)$/.test(x.type))x.setAttribute("enterkeyhint","next")});
+}
+function focusErr(e){
+  if(!e)return false;
+  if(e.hasAttribute("data-err-focus")){var own=e.parentNode.querySelector("textarea[aria-invalid=true],input[aria-invalid=true]");if(own)e=own}
+  var d=e.closest("details");if(d)d.open=true;
+  e.focus({preventScroll:true});e.scrollIntoView({block:"center"});return true;
+}
+window.jgPf={init:init,focusErr:function(root){return focusErr(root.querySelector("[aria-invalid=true],[data-err-focus]"))}};
+if(window.__pfe)return;window.__pfe=1;
 document.addEventListener("keydown",function(e){
   var t=e.target;if(e.key!=="Enter"||e.defaultPrevented||e.isComposing||e.keyCode===229||!t||!t.form||!t.form.hasAttribute("data-guard"))return;
   if(t.tagName!=="INPUT"||!/^(text|url|email|tel|number)$/.test(t.type))return;
@@ -621,13 +636,9 @@ document.addEventListener("keydown",function(e){
     return x.tagName!=="INPUT"||/^(text|url|email|tel|number)$/.test(x.type)});
   var i=all.indexOf(t),next=all[i+1];if(next)next.focus();else t.blur();
 });
-[].forEach.call(document.querySelectorAll("form[data-guard] input:not([enterkeyhint])"),function(x){if(/^(text|url|email|tel|number)$/.test(x.type))x.setAttribute("enterkeyhint","next")});
-var f=document.querySelector('form[data-guard="dirty"]');
-if(f){var e=document.querySelector('form[data-guard="dirty"] [aria-invalid=true],form[data-guard="dirty"] [data-err-focus]');if(e){
-  if(e.hasAttribute("data-err-focus")){var own=e.parentNode.querySelector("textarea[aria-invalid=true],input[aria-invalid=true]");if(own)e=own}
-  var d=e.closest("details");if(d)d.open=true;
-  e.focus({preventScroll:true});e.scrollIntoView({block:"center"});
-}}
+init(document);
+/* After a refused save (no JS round trip), focus goes to the field the error is about. */
+if(document.querySelector('form[data-guard="dirty"]'))focusErr(document.querySelector('form[data-guard="dirty"] [aria-invalid=true],form[data-guard="dirty"] [data-err-focus]'));
 })();`;
 
 export const PROFILE_FORM_CSS = `

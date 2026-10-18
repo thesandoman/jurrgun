@@ -146,6 +146,11 @@ export function ProfileCard(props: {
   regularAt?: string[];
   /** My own card: a small avatar with the actions beside the name. */
   compact?: boolean;
+  /**
+   * My own card: the ✏️ for a section (photo, basics, here, interests, prompt-<id>, and the rest as
+   * chips under the glance line), each opening that section to edit in place (src/ui/profile-sections.tsx).
+   */
+  edit?: (section: string, chip?: boolean) => Child;
 }) {
   const { t, lang } = props.v;
   const p = props.person;
@@ -169,8 +174,9 @@ export function ProfileCard(props: {
   // "How you date" from the quiz. bio only carries it when the viewer may see dating (cardPerson strips it otherwise).
   const dateStyle = (p.datingDeck ?? []).length ? styleLines("open-to-more", bio.dateStyle, lang) : [];
   const legacy = Object.entries(p.legacy ?? {}).filter(([k, val]) => LEGACY[k] && val);
+  const edit = props.edit;
   const cards: Child[] = [
-    ...answered.map(({ q, a }) => <PromptCard v={props.v} q={q} a={a} photo={q.kind === "photo" && a.photoKey ? props.promptPhoto(q.id) : null} />),
+    ...answered.map(({ q, a }) => <PromptCard v={props.v} q={q} a={a} photo={q.kind === "photo" && a.photoKey ? props.promptPhoto(q.id) : null} edit={edit?.(`prompt-${q.id}`)} />),
     ...legacy.map(([k, val]) => <LegacyCard v={props.v} k={k} text={val} />),
   ];
   // The top 2 answers are the centrepiece, open; the rest fold under "More about".
@@ -255,23 +261,54 @@ export function ProfileCard(props: {
   // Nearly empty: no prompt answers and at most one section. The invite becomes the empty state.
   const sparse = !cards.length && !datingAnswered.length && sections < 2;
   const datingChipList = p.dating ? datingChips(p.dating, lang) : [];
+  const photo = props.photo ? (
+    <img class="pc-photo" src={props.photo} alt={t(`รูปของ ${p.nickname}`, `${p.nickname}'s photo`)} />
+  ) : (
+    <div class="pc-photo pc-initial" aria-hidden="true">
+      <span>{[...p.nickname][0]?.toUpperCase() ?? "?"}</span>
+    </div>
+  );
+  const name = (
+    <h1>
+      {p.nickname}
+      {p.pronouns ? <small class="pc-pronouns"> {p.pronouns}</small> : null}
+    </h1>
+  );
+  // The sections with no spot of their own on the card (folded, or not filled in yet) get a chip under the glance line.
+  const chips = edit
+    ? ["languages", "bangkok", "work", "meet", "comm", ...(intents.length ? [] : ["here"]), ...(interests.length ? [] : ["interests"]), "links"]
+    : [];
+  const head = (title: string, section: string) =>
+    edit ? (
+      <div class="pc-h-row">
+        <h2>{title}</h2>
+        {edit(section)}
+      </div>
+    ) : (
+      <h2>{title}</h2>
+    );
 
   return (
     <article class="pc">
       <style dangerouslySetInnerHTML={{ __html: PROFILE_CSS }} />
       <header class={props.compact ? "pc-hero pc-compact" : "pc-hero"}>
-        {props.photo ? (
-          <img class="pc-photo" src={props.photo} alt={t(`รูปของ ${p.nickname}`, `${p.nickname}'s photo`)} />
-        ) : (
-          <div class="pc-photo pc-initial" aria-hidden="true">
-            <span>{[...p.nickname][0]?.toUpperCase() ?? "?"}</span>
+        {edit ? (
+          <div class="pc-photo-wrap">
+            {photo}
+            {edit("photo")}
           </div>
+        ) : (
+          photo
         )}
         <div class="pc-id">
-          <h1>
-            {p.nickname}
-            {p.pronouns ? <small class="pc-pronouns"> {p.pronouns}</small> : null}
-          </h1>
+          {edit ? (
+            <div class="pc-name-row">
+              {name}
+              {edit("basics")}
+            </div>
+          ) : (
+            name
+          )}
           <p class="pc-where">
             <span class="pc-place">📍 {label(DISTRICTS, p.district, lang)}</span>
             {p.newcomer ? <span class="pc-chip pc-new">🌱 {t("มาใหม่ในกรุงเทพฯ", "New to Bangkok")}</span> : null}
@@ -292,6 +329,12 @@ export function ProfileCard(props: {
         </ul>
       ) : null}
 
+      {chips.length ? (
+        <div class="pe-chips" role="group" aria-label={t("แก้ไขส่วนอื่น", "Edit the rest")}>
+          {chips.map((n) => edit!(n, true))}
+        </div>
+      ) : null}
+
       {props.invite && !sparse ? <div class="pc-invite">{props.invite}</div> : null}
       {props.actions && !props.compact ? <div class="pc-actions">{props.actions}</div> : null}
 
@@ -299,7 +342,7 @@ export function ProfileCard(props: {
 
       {intents.length ? (
         <section class="pc-sec" id="pc-about">
-          <h2>{t("มาที่นี่เพื่อ", "Here for")}</h2>
+          {head(t("มาที่นี่เพื่อ", "Here for"), "here")}
           <div class="pc-chips">
             {intents.map((i) => (
               <span class="pc-chip pc-brand">{label(INTENTS, i, lang)}</span>
@@ -342,7 +385,7 @@ export function ProfileCard(props: {
             </div>
           ) : null}
           {datingAnswered.map(({ q, a }) => (
-            <PromptCard v={props.v} q={q} a={a} photo={null} />
+            <PromptCard v={props.v} q={q} a={a} photo={null} edit={edit?.(`prompt-${q.id}`)} />
           ))}
         </Fold>
       ) : null}
@@ -363,7 +406,7 @@ export function ProfileCard(props: {
 
       {interests.length ? (
         <section class="pc-sec" id="pc-interests">
-          <h2>{t("ความสนใจ", "Interests")}</h2>
+          {head(t("ความสนใจ", "Interests"), "interests")}
           {props.viewerInterests && sharedCount ? <p class="muted pc-shared-note">✨ {t(`ชอบเหมือนกัน ${sharedCount} อย่าง`, `${sharedCount} in common`)}</p> : null}
           {props.viewerUniversity && universityKey(bio) === props.viewerUniversity ? <p class="muted pc-shared-note">🎓 {t("มหาวิทยาลัยเดียวกับคุณ", "Same university as you")}</p> : null}
           <div class="pc-chips">{sharedFirst.slice(0, chipsShown).map((x) => <InterestChip x={x} shared={shared.has(x.value)} lang={lang} />)}</div>
@@ -467,7 +510,7 @@ function LegacyCard(props: { v: View; k: string; text: string }) {
   );
 }
 
-export function PromptCard(props: { v: View; q: Prompt; a: Answer; photo: string | null }) {
+export function PromptCard(props: { v: View; q: Prompt; a: Answer; photo: string | null; edit?: Child }) {
   const { lang } = props.v;
   const { q, a } = props;
   const opt = (value: string) => q.options?.find((o) => o.value === value);
@@ -570,9 +613,18 @@ export function PromptCard(props: { v: View; q: Prompt; a: Answer; photo: string
   }
   return (
     <section class={`pc-card pc-${q.kind}`}>
-      <p class="pc-q">
-        <span aria-hidden="true">{q.emoji}</span> {L(lang, q)}
-      </p>
+      {props.edit ? (
+        <div class="pc-q-row">
+          <p class="pc-q">
+            <span aria-hidden="true">{q.emoji}</span> {L(lang, q)}
+          </p>
+          {props.edit}
+        </div>
+      ) : (
+        <p class="pc-q">
+          <span aria-hidden="true">{q.emoji}</span> {L(lang, q)}
+        </p>
+      )}
       {body}
     </section>
   );
