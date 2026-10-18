@@ -22,11 +22,11 @@ import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, connections, events, profiles, registrations, type Account, type Profile } from "../schema";
 import { clickReason } from "../domain/buddy";
-import { ARCHETYPES } from "../vibe/archetypes";
+import { ARCHETYPES, matchLabel, MATCH_LABELS } from "../vibe/archetypes";
 import { fmtDay, L } from "../lib/i18n";
 import { getObject, getObjectUrl } from "../storage";
 import { LinkButton, page, view } from "../ui/kit";
-import { datingPromptsShown, datingShown, ProfileCard, type CardPerson } from "../ui/profile-card";
+import { datingPromptsShown, datingShown, Fold, ProfileCard, type CardPerson } from "../ui/profile-card";
 import { regularAt } from "../services/regular-tables";
 import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 import { pinkyState, stepBack, tapPinky } from "../services/pinky";
@@ -139,18 +139,27 @@ export async function visibleProfile(db: Db, viewerId: string, targetId: string)
 
 const photoUrl = (accountId: string, slot: string) => `/people/${encodeURIComponent(accountId)}/photo/${encodeURIComponent(slot)}`;
 
-/** "You're a Food Hunter, they're a Story Collector": why you click and a place to try together. */
+/**
+ * "You're a Food Hunter, they're a Story Collector": why you click, the
+ * conversation spark and a place to try together. Folded (owner, 2026-10-18):
+ * only their type and the match name show, in the header.
+ */
 function Together(props: { v: ReturnType<typeof view>; mine: keyof typeof ARCHETYPES; theirs: keyof typeof ARCHETYPES }) {
   const { t, lang } = props.v;
   const mine = ARCHETYPES[props.mine];
   const theirs = ARCHETYPES[props.theirs];
   const why = clickReason(props.mine, props.theirs);
+  const ml = matchLabel(props.mine, props.theirs);
+  const m = ml ? MATCH_LABELS[ml] : null;
   const place = theirs.hangouts[0];
   return (
-    <section class="open-sec together">
-      <span class="eyebrow">{t("ด้วยกัน", "Together")}</span>
+    <Fold cls="together" title={t("ด้วยกัน", "Together")}>
       <p>
-        {t(`คุณเป็น${L(lang, mine.name)} เขาเป็น${L(lang, theirs.name)}`, `You're ${L(lang, mine.name)}, they're ${L(lang, theirs.name)}.`)} {why ? L(lang, why) : null}
+        {t(`คุณเป็น${L(lang, mine.name)} เขาเป็น${L(lang, theirs.name)}`, `You're ${L(lang, mine.name)}, they're ${L(lang, theirs.name)}.`)} {m ? m.copy[lang] : null} {why ? L(lang, why) : null}
+      </p>
+      <p>
+        💬 {t("ชวนคุย: ", "Conversation spark: ")}
+        {theirs.starter[lang]}
       </p>
       {place ? (
         <p class="muted">
@@ -158,7 +167,7 @@ function Together(props: { v: ReturnType<typeof view>; mine: keyof typeof ARCHET
           <strong>{L(lang, place.name)}</strong> · {L(lang, place.why)}
         </p>
       ) : null}
-    </section>
+    </Fold>
   );
 }
 
@@ -197,11 +206,19 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   ]);
   const theirVibe = vibes.get(target.account.id);
   const resident = showsResidentBadge(target.account, target.profile);
+  const myVibe = self ? undefined : vibes.get(me.account.id);
+  const match = myVibe && theirVibe?.visible ? matchLabel(myVibe.archetype, theirVibe.archetype) : null;
   const badges =
     resident || theirVibe?.visible ? (
       <>
         {resident ? <ResidentTag v={v} /> : null}
-        <TypeSpark v={v} theirs={theirVibe} mine={self ? undefined : vibes.get(me.account.id)} />
+        {/* One line: their type and, on someone else's card, the match name. The rest folds under Together. */}
+        <TypeSpark v={v} theirs={theirVibe} mine={undefined} />
+        {match ? (
+          <small class="muted">
+            {MATCH_LABELS[match].emoji} {MATCH_LABELS[match].name[v.lang]}
+          </small>
+        ) : null}
       </>
     ) : null;
   const answered = Object.keys(person.bio.answers ?? {}).filter((id) => person.deck.includes(id)).length;

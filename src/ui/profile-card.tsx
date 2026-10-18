@@ -1,8 +1,9 @@
 /**
  * The profile card ("bio"): what another member sees at /people/:id and what
- * I preview at /me/profile. Big photo, name, district, badges, quick facts,
- * chips, and prompt answers interleaved between the sections, each styled by
- * its kind.
+ * I preview at /me/profile. Big photo, name, district and badges, then one
+ * glance strip of up to 6 emoji facts. Open below that: the top 2 prompt
+ * answers, Here for and interests. Everything else folds into a native
+ * details dropdown, in the order the sections always had (owner, 2026-10-18).
  *
  * Privacy: this component only ever receives display-safe fields. It never
  * gets age, birth date, username, relationship status, romance settings,
@@ -36,7 +37,7 @@ import {
 } from "../content/profile";
 import { DISTRICTS, GENDER_IDENTITIES, INTENTS, LANGUAGES, ORIENTATIONS, label } from "../lib/constants";
 import { romanceCompatible, romanceEligible, type RomanceSide } from "../domain/rules";
-import { FactTiles, type View } from "./kit";
+import type { View } from "./kit";
 import { styleLines } from "../vibe/styles";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
@@ -143,18 +144,21 @@ export function ProfileCard(props: {
   invite?: Child;
   /** Names of the regular tables they sit at, already filtered for this viewer (src/services/regular-tables.ts regularAt). */
   regularAt?: string[];
-  /** My own card: a small avatar with the actions beside the name, and chips that jump to each section. */
+  /** My own card: a small avatar with the actions beside the name. */
   compact?: boolean;
 }) {
   const { t, lang } = props.v;
   const p = props.person;
   const bio = p.bio;
   const shared = new Set(props.viewerInterests ?? []);
+  // The quick-facts form asks spice, timing and years in Bangkok too. When both are answered they can disagree
+  // (a spice slider at 0 beside a "Medium" pick), so the fact wins and the matching prompt is left out.
+  const supersededBy: Record<string, unknown> = { spice: bio.spice, punctual: bio.punctual, bkk_years: bio.bkkTime };
   const answered: { q: Prompt; a: Answer }[] = [];
   for (const id of p.deck) {
     const q = promptById(id);
     const a = bio.answers?.[id];
-    if (q && a && hasValue(a)) answered.push({ q, a });
+    if (q && a && hasValue(a) && !supersededBy[id]) answered.push({ q, a });
   }
   const datingAnswered: { q: Prompt; a: Answer }[] = [];
   for (const id of p.datingDeck ?? []) {
@@ -169,75 +173,88 @@ export function ProfileCard(props: {
     ...answered.map(({ q, a }) => <PromptCard v={props.v} q={q} a={a} photo={q.kind === "photo" && a.photoKey ? props.promptPhoto(q.id) : null} />),
     ...legacy.map(([k, val]) => <LegacyCard v={props.v} k={k} text={val} />),
   ];
-  let next = 0;
-  const slot = () => (next < cards.length ? cards[next++] : null);
+  // The top 2 answers are the centrepiece, open; the rest fold under "More about".
+  const [first, second] = cards;
+  const restCards = cards.slice(2);
 
   const intents = p.intents.filter((i) => i !== "romance");
   const comm = (bio.comm ?? []).map((c) => COMM_STYLES.find((x) => x.value === c)).filter((x) => !!x);
   const interests = p.interests.map((i) => ({ value: i, o: interestOpt(i) }));
   const sharedFirst = [...interests.filter((x) => shared.has(x.value)), ...interests.filter((x) => !shared.has(x.value))];
   const sharedCount = interests.filter((x) => shared.has(x.value)).length;
-  const energy = ENERGY.find((x) => x.value === bio.energy);
-  const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
-  // Facts in 3 or 4 headed groups instead of one long list (Phase 3).
-  const factsBkk: [string, string, string][] = [];
-  const factsWork: [string, string, string][] = [];
-  const factsMeet: [string, string, string][] = [];
-  const factsLang: [string, string, string][] = [];
-  const story = BKK_STORY.find((x) => x.value === bio.story);
+  // Shared ones always show; the rest fill up to 6, and a "+N" opens the others (never a lone "+1").
+  const chipsShown = sharedFirst.length <= INTERESTS_SHOWN + 1 ? sharedFirst.length : Math.max(INTERESTS_SHOWN, sharedCount);
+
+  // The glance strip: one line of up to 6 emoji facts, labels for screen readers only.
+  const learningPrompt = answered.some(({ q }) => q.id === "learning_now");
+  const occupation = occupationLabel(bio, lang);
+  const education = educationLabel(bio, lang);
   const time = BKK_TIME.find((x) => x.value === bio.bkkTime);
-  if (story || time) {
-    const parts = [story ? L(lang, story) : "", time && time.value !== "always" ? t(`อยู่มา ${L(lang, time)}`, `here ${L(lang, time).toLowerCase()}`) : time ? L(lang, time) : ""].filter(Boolean);
-    factsBkk.push([story?.emoji ?? time!.emoji, t("กรุงเทพฯ ของฉัน", "My Bangkok"), parts.join(" · ")]);
-  }
+  const story = BKK_STORY.find((x) => x.value === bio.story);
   // "Lives in Bangkok" is the default; the others are worth knowing at a table.
   const res = RESIDENCY.find((x) => x.value === bio.residency && x.value !== "lives");
-  if (res) factsBkk.push([res.emoji, t("ตอนนี้", "Right now"), L(lang, res)]);
-  // Several tables read better as a count and one chip each than as a long comma line.
-  const tableCount = props.regularAt?.length ?? 0;
-  if (tableCount === 1) factsBkk.push(["🪑", t("ขาประจำที่", "Regular at"), props.regularAt![0]]);
-  if (bio.hometown) factsBkk.push(["📍", t("บ้านเกิด", "Originally from"), bio.hometown]);
-  factsBkk.push(...reflectionFacts(bio.reflections, lang, t));
-  if (bio.guide) factsBkk.push(["🧭", t("คนมาใหม่", "Newcomers"), t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!")]);
-  const occupation = occupationLabel(bio, lang);
-  if (occupation) factsWork.push([occupation.emoji, t("อาชีพ", "Work"), occupation.text]);
-  const education = educationLabel(bio, lang);
-  if (education) factsWork.push([education.emoji, t("การศึกษา", "Education"), education.text]);
-  if (energy) factsMeet.push([energy.emoji, t("ตอนเจอกันครั้งแรก", "First-meet energy"), L(lang, energy)]);
-  if (weekend) factsMeet.push([weekend.emoji, t("สไตล์วันหยุด", "Weekend rhythm"), L(lang, weekend)]);
+  const energy = ENERGY.find((x) => x.value === bio.energy);
+  const weekend = WEEKEND_RHYTHM.find((x) => x.value === bio.weekend);
+  const learnLangs = (bio.learningLangs ?? []).map((l) => label(LANGUAGES, l, lang));
+  // Learning shows once: the prompt if answered, else one glance item (languages, or the short answer).
+  const learning: Row | null = learningPrompt
+    ? null
+    : learnLangs.length
+      ? { e: "🔤", k: t("กำลังหัดภาษา", "Learning"), v: t(`หัดภาษา${learnLangs.join(" ")}`, `Learning ${learnLangs.join(", ")}`) }
+      : bio.learning
+        ? { e: "📚", k: t("กำลังเรียนรู้", "Currently learning"), v: bio.learning }
+        : null;
+  const work: Row | null = occupation
+    ? { e: occupation.emoji, k: t("อาชีพ", "Work"), v: occupation.text }
+    : education
+      ? { e: education.emoji, k: t("การศึกษา", "Education"), v: education.text }
+      : null;
+  const priority: (Row | null)[] = [
+    work,
+    bio.hometown ? { e: "🏡", k: t("บ้านเกิด", "Originally from"), v: bio.hometown } : null,
+    time ? { e: "⏳", k: t("อยู่กรุงเทพฯ มา", "Time in Bangkok"), v: time.value === "always" ? t("อยู่กรุงเทพฯ ทั้งชีวิต", "Bangkok all my life") : t(`อยู่กรุงเทพฯ ${time.th}`, `${time.en} in Bangkok`) } : null,
+    p.languages.length ? { e: "🗣️", k: t("พูดภาษา", "Speaks"), v: p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ") } : null,
+    learning,
+    energy ? { e: energy.emoji, k: t("ตอนเจอกันครั้งแรก", "First-meet energy"), v: L(lang, energy) } : null,
+  ];
+  // Fewer than 6? Fill from the next most telling facts; what doesn't fit folds under "More about".
+  const spare: (Row | null)[] = [
+    story ? { e: story.emoji, k: t("กรุงเทพฯ ของฉัน", "My Bangkok"), v: L(lang, story) } : null,
+    res ? { e: res.emoji, k: t("ตอนนี้", "Right now"), v: L(lang, res) } : null,
+    occupation && education ? { e: education.emoji, k: t("การศึกษา", "Education"), v: education.text } : null,
+  ];
+  const glance = priority.filter((x): x is Row => !!x);
+  const spareRows = spare.filter((x): x is Row => !!x);
+  while (glance.length < GLANCE_MAX && spareRows.length) glance.push(spareRows.shift()!);
+  // Leftover Bangkok facts, with a short label where the value can't stand alone.
+  const moreRows: Row[] = [
+    ...spareRows.map((r) => ({ ...r, show: true })),
+    ...reflectionFacts(bio.reflections, lang, t).map(([e, k, val]) => ({ e, k, v: val, show: true })),
+    ...(bio.guide ? [{ e: "🧭", k: t("คนมาใหม่", "Newcomers"), v: t("ยินดีช่วยคนที่เพิ่งมากรุงเทพฯ ถามได้เลย", "Happy to help people new to Bangkok. Ask away!") }] : []),
+  ];
+
+  // Meeting up: compact emoji rows; a short label shows only where the value is unclear on its own.
   const many = (list: typeof PAY_METHODS, vals?: string[]) => (vals ?? []).map((v) => list.find((x) => x.value === v)).filter((x) => !!x).map((x) => L(lang, x!)).join(", ");
   const one = (list: typeof PAY_METHODS, v?: string) => list.find((x) => x.value === v);
-  if (bio.pay?.length) factsMeet.push(["💳", t("จ่ายด้วย", "Pays with"), many(PAY_METHODS, bio.pay)]);
+  const meet: Row[] = [];
+  if (weekend) meet.push({ e: weekend.emoji, k: t("สไตล์วันหยุด", "Weekend rhythm"), v: L(lang, weekend) });
+  if (bio.pay?.length) meet.push({ e: "💳", k: t("จ่ายด้วย", "Pays with"), v: many(PAY_METHODS, bio.pay) });
   const bill = one(BILL_STYLE, bio.bill);
-  if (bill) factsMeet.push([bill.emoji, t("เวลาเช็กบิล", "Bill style"), L(lang, bill)]);
-  if (bio.travel?.length) factsMeet.push(["🚇", t("เดินทางด้วย", "Gets around by"), many(GETTING_AROUND, bio.travel)]);
-  if (bio.diet?.length) factsMeet.push(["🍽️", t("เรื่องอาหาร", "Food needs"), many(DIET, bio.diet)]);
+  if (bill) meet.push({ e: bill.emoji, k: t("เวลาเช็กบิล", "Bill style"), v: L(lang, bill) });
+  if (bio.travel?.length) meet.push({ e: "🚇", k: t("เดินทางด้วย", "Gets around by"), v: many(GETTING_AROUND, bio.travel) });
+  if (bio.diet?.length) meet.push({ e: "🍽️", k: t("เรื่องอาหาร", "Food needs"), v: many(DIET, bio.diet) });
   const spice = one(SPICE, bio.spice);
-  if (spice) factsMeet.push([spice.emoji, t("ความเผ็ด", "Spice"), L(lang, spice)]);
+  if (spice) meet.push({ e: spice.emoji, k: t("ความเผ็ด", "Spice"), v: L(lang, spice), show: true });
   const pets = one(PETS, bio.pets);
-  if (pets) factsMeet.push([pets.emoji, t("สัตว์เลี้ยง", "Pets"), L(lang, pets)]);
+  if (pets) meet.push({ e: pets.emoji, k: t("สัตว์เลี้ยง", "Pets"), v: L(lang, pets), show: true });
   const punctual = one(PUNCTUAL, bio.punctual);
-  if (punctual) factsMeet.push([punctual.emoji, t("เวลานัด", "Timing"), L(lang, punctual)]);
-  if (p.languages.length) factsLang.push(["🗣️", t("พูดภาษา", "Speaks"), p.languages.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
-  if (bio.learningLangs?.length) factsLang.push(["🔤", t("กำลังหัดภาษา", "Learning"), bio.learningLangs.map((l) => label(LANGUAGES, l, lang)).join(", ")]);
-  // The short "Currently learning" answer is a tile with the languages (owner: one learning line, not two).
-  if (bio.learning) factsLang.push(["📚", t("กำลังเรียนรู้", "Currently learning"), bio.learning]);
-  const factGroups = [
-    { th: "ชีวิตในกรุงเทพฯ", en: "Life in Bangkok", items: factsBkk },
-    { th: "งานและการเรียน", en: "Work and study", items: factsWork },
-    { th: "เวลาเจอกัน", en: "Meeting up", items: factsMeet },
-    { th: "ภาษา", en: "Languages", items: factsLang },
-  ].filter((g) => g.items.length);
-  const facts = factGroups.flatMap((g) => g.items);
-  const hasAbout = !!(intents.length || facts.length || tableCount > 1);
-  // The jump chips only help with two or more sections to jump between.
-  const jumps = [
-    hasAbout ? <a href="#pc-about">{t("เกี่ยวกับฉัน", "About me")}</a> : null,
-    comm.length ? <a href="#pc-style">{t("สไตล์", "Style")}</a> : null,
-    interests.length ? <a href="#pc-interests">{t("ความสนใจ", "Interests")}</a> : null,
-  ].filter((x) => x !== null);
+  if (punctual) meet.push({ e: punctual.emoji, k: t("เวลานัด", "Timing"), v: L(lang, punctual) });
+
+  const tables = props.regularAt ?? [];
+  const sections = [intents.length || meet.length || tables.length, comm.length, interests.length].filter(Boolean).length;
   // Nearly empty: no prompt answers and at most one section. The invite becomes the empty state.
-  const sparse = !cards.length && !datingAnswered.length && jumps.length < 2;
+  const sparse = !cards.length && !datingAnswered.length && sections < 2;
+  const datingChipList = p.dating ? datingChips(p.dating, lang) : [];
 
   return (
     <article class="pc">
@@ -263,121 +280,111 @@ export function ProfileCard(props: {
         </div>
         {props.compact && props.actions ? <div class="pc-actions">{props.actions}</div> : null}
       </header>
-      {props.invite && !sparse ? <div class="pc-invite">{props.invite}</div> : null}
-      {props.compact && jumps.length >= 2 ? (
-        <nav class="pc-jump" aria-label={t("ไปที่ส่วนต่าง ๆ", "Jump to")}>
-          {jumps}
-        </nav>
+
+      {glance.length ? (
+        <ul class="pc-glance" aria-label={t("ข้อมูลโดยย่อ", "At a glance")}>
+          {glance.slice(0, GLANCE_MAX).map((r) => (
+            <li>
+              <span aria-hidden="true">{r.e}</span> <span class="sr-only">{r.k}: </span>
+              {r.v}
+            </li>
+          ))}
+        </ul>
       ) : null}
 
+      {props.invite && !sparse ? <div class="pc-invite">{props.invite}</div> : null}
       {props.actions && !props.compact ? <div class="pc-actions">{props.actions}</div> : null}
 
-      {slot()}
+      {first ?? null}
 
-      {hasAbout ? (
+      {intents.length ? (
         <section class="pc-sec" id="pc-about">
-          {intents.length ? (
-            <>
-              <h2>{t("มาที่นี่เพื่อ", "Here for")}</h2>
-              <div class="pc-chips">
-                {intents.map((i) => (
-                  <span class="pc-chip pc-brand">{label(INTENTS, i, lang)}</span>
-                ))}
-              </div>
-            </>
-          ) : null}
-          {factGroups.map((g) => (
-            <>
-              <h3 class="pc-group-h">{t(g.th, g.en)}</h3>
-              <FactTiles class="pc-tiles" facts={g.items.map(([e, k, val]) => ({ icon: e, label: k, answer: val, wide: [...val].length > 22 }))} />
-            </>
-          ))}
-          {tableCount > 1 ? (
-            <>
-              <h2 class="pc-tables-h">
-                <span aria-hidden="true">🪑</span> {t(`ขาประจำ ${tableCount} โต๊ะ`, `Regular at ${tableCount} tables`)}
-              </h2>
-              <div class="pc-chips">
-                {props.regularAt!.map((name) => (
-                  <span class="pc-chip">{name}</span>
-                ))}
-              </div>
-            </>
-          ) : null}
+          <h2>{t("มาที่นี่เพื่อ", "Here for")}</h2>
+          <div class="pc-chips">
+            {intents.map((i) => (
+              <span class="pc-chip pc-brand">{label(INTENTS, i, lang)}</span>
+            ))}
+          </div>
         </section>
       ) : null}
 
-      {/* 💘 below the friendship facts, saying who can see it (owner card). */}
-      {(p.dating && datingChips(p.dating, lang).length) || datingAnswered.length || dateStyle.length ? (
-        <section class="pc-dating" aria-label={t("เรื่องเดต", "Dating")}>
-          <p class="eyebrow">💘 {t("เปิดใจมากกว่าเพื่อน", "Open to something more")}</p>
+      {meet.length ? (
+        <Fold title={t("เวลาเจอกัน", "Meeting up")}>
+          <Rows rows={meet} />
+        </Fold>
+      ) : null}
+
+      {tables.length ? (
+        <Fold title={tables.length > 1 ? t(`ขาประจำ ${tables.length} โต๊ะ`, `Regular at ${tables.length} tables`) : t("โต๊ะประจำ", "Regular table")} emoji="🪑">
+          <div class="pc-chips">
+            {tables.map((name) => (
+              <span class="pc-chip">{name}</span>
+            ))}
+          </div>
+        </Fold>
+      ) : null}
+
+      {/* 💘 below the friendship facts, saying who can see it (owner card). Folded, with a love-red line. */}
+      {datingChipList.length || datingAnswered.length || dateStyle.length ? (
+        <Fold cls="pc-dating" title={t("เปิดใจมากกว่าเพื่อน", "Open to something more")} emoji="💘">
           <p class="pc-lock">🔒 {t("เห็นได้เฉพาะคนที่เปิดใจเรื่องเดตเหมือนกัน", "Only people who also opted in to dating see this")}</p>
-          {p.dating && datingChips(p.dating, lang).length ? (
+          {datingChipList.length ? (
             <div class="pc-chips">
-              {datingChips(p.dating, lang).map((x) => (
+              {datingChipList.map((x) => (
                 <span class="pc-chip">{x}</span>
               ))}
             </div>
           ) : null}
           {dateStyle.length ? (
             <div class="pc-datestyle">
-              <h2>{t("สไตล์การเดตของฉัน", "How I date")}</h2>
-              <dl class="pc-facts">
-                {dateStyle.map((x) => (
-                  <div>
-                    <dt>
-                      <span aria-hidden="true">{x.emoji}</span> {x.title}
-                    </dt>
-                    <dd>{x.label}</dd>
-                  </div>
-                ))}
-              </dl>
+              <h3>{t("สไตล์การเดตของฉัน", "How I date")}</h3>
+              <Rows rows={dateStyle.map((x) => ({ e: x.emoji, k: x.title, v: x.label, show: true }))} />
             </div>
           ) : null}
           {datingAnswered.map(({ q, a }) => (
             <PromptCard v={props.v} q={q} a={a} photo={null} />
           ))}
-        </section>
+        </Fold>
       ) : null}
 
-      {slot()}
+      {second ?? null}
 
       {comm.length ? (
-        <section class="pc-sec" id="pc-style">
-          <h2>{t("สไตล์การสื่อสาร", "How I keep in touch")}</h2>
-          <div class="pc-comm">
+        <Fold title={t("สไตล์การสื่อสาร", "How I keep in touch")}>
+          <div class="pc-chips">
             {comm.map((c) => (
-              <div class="pc-comm-item">
-                <b aria-hidden="true">{c!.emoji}</b>
-                <span>
-                  <strong>{L(lang, c!)}</strong>
-                  <small>{L(lang, c!.blurb)}</small>
-                </span>
-              </div>
+              <span class="pc-chip">
+                <span aria-hidden="true">{c!.emoji}</span> {L(lang, c!)}
+              </span>
             ))}
           </div>
-        </section>
+        </Fold>
       ) : null}
-
-      {slot()}
 
       {interests.length ? (
         <section class="pc-sec" id="pc-interests">
           <h2>{t("ความสนใจ", "Interests")}</h2>
           {props.viewerInterests && sharedCount ? <p class="muted pc-shared-note">✨ {t(`ชอบเหมือนกัน ${sharedCount} อย่าง`, `${sharedCount} in common`)}</p> : null}
           {props.viewerUniversity && universityKey(bio) === props.viewerUniversity ? <p class="muted pc-shared-note">🎓 {t("มหาวิทยาลัยเดียวกับคุณ", "Same university as you")}</p> : null}
-          <div class="pc-chips">
-            {sharedFirst.map((x) => (
-              <span class={`pc-chip ${shared.has(x.value) ? "pc-shared" : ""}`}>
-                {shared.has(x.value) ? "✨ " : x.o ? `${x.o.emoji} ` : ""}
-                {x.o ? L(lang, x.o) : x.value}
-              </span>
-            ))}
-          </div>
+          <div class="pc-chips">{sharedFirst.slice(0, chipsShown).map((x) => <InterestChip x={x} shared={shared.has(x.value)} lang={lang} />)}</div>
+          {sharedFirst.length > chipsShown ? (
+            <details class="pc-more-chips">
+              <summary>
+                +{sharedFirst.length - chipsShown}
+                <span class="sr-only"> {t("ความสนใจอื่น", "more interests")}</span>
+              </summary>
+              <div class="pc-chips">{sharedFirst.slice(chipsShown).map((x) => <InterestChip x={x} shared={shared.has(x.value)} lang={lang} />)}</div>
+            </details>
+          ) : null}
         </section>
       ) : null}
 
-      {cards.slice(next)}
+      {restCards.length || moreRows.length ? (
+        <Fold cls="pc-more" title={t(`ข้อมูลเพิ่มเติมของ ${p.nickname}`, `More about ${p.nickname}`)}>
+          {moreRows.length ? <Rows rows={moreRows} /> : null}
+          {restCards}
+        </Fold>
+      ) : null}
 
       {props.invite && sparse ? (
         <section class="pc-sec pc-empty">
@@ -386,6 +393,59 @@ export function ProfileCard(props: {
         </section>
       ) : null}
     </article>
+  );
+}
+
+/** At most this many facts in the glance strip, and interests before the "+N". */
+const GLANCE_MAX = 6;
+const INTERESTS_SHOWN = 6;
+
+/** One fact: emoji, its label (spoken, and shown when `show`), and the value. */
+type Row = { e: string; k: string; v: string; show?: boolean };
+
+/** Compact emoji rows with no boxes; the label is visually hidden unless the value needs it. */
+function Rows(props: { rows: Row[] }) {
+  return (
+    <ul class="pc-rows">
+      {props.rows.map((r) => (
+        <li>
+          <span aria-hidden="true">{r.e}</span>
+          <span>
+            {r.show ? <span class="pc-k">{r.k}</span> : <span class="sr-only">{r.k}</span>}
+            <span class={r.show ? "pc-sep" : "sr-only"}>: </span>
+            {r.v}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * A section below the top, folded: a native details/summary (no script), the
+ * heading as a 44px summary row with a chevron, closed until opened.
+ */
+export function Fold(props: { title: string; emoji?: string; cls?: string; children: Child }) {
+  return (
+    <details class={props.cls ? `pc-fold ${props.cls}` : "pc-fold"}>
+      <summary>
+        <h2 class="pc-fold-h">
+          {props.emoji ? <span aria-hidden="true">{props.emoji} </span> : null}
+          {props.title}
+        </h2>
+      </summary>
+      <div class="pc-fold-body">{props.children}</div>
+    </details>
+  );
+}
+
+function InterestChip(props: { x: { value: string; o: ReturnType<typeof interestOpt> }; shared: boolean; lang: "th" | "en" }) {
+  const { x, shared } = props;
+  return (
+    <span class={`pc-chip ${shared ? "pc-shared" : ""}`}>
+      {shared ? "✨ " : x.o ? `${x.o.emoji} ` : ""}
+      {x.o ? L(props.lang, x.o) : x.value}
+    </span>
   );
 }
 
@@ -529,20 +589,10 @@ export const PROFILE_CSS = `
 .pc-pronouns{font-size:1rem;font-weight:500;color:var(--ink-3)}
 .pc-where{margin:8px 0 0;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .pc-badges{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.pc-badges .type-spark small{margin-top:6px}
-.pc-lines{display:grid;gap:10px}
 /* Open sections (owner, 2026-10-16): straight on the page, a thin line above each; the 💘 one keeps a love-red line. */
-.pc-dating{display:grid;gap:12px;padding:24px 0 0;border-top:1px solid color-mix(in srgb,var(--love) 45%,var(--line))}
-.pc-dating .eyebrow{margin:0;color:var(--love-ink)}
-.pc-datestyle{padding:0}
-.pc-datestyle h2{margin:0 0 8px;font-size:1.05rem}
-.pc-datestyle .pc-facts{margin:0}
-.pc-group-h{margin:18px 0 0;font-size:.82rem;font-weight:700;color:var(--ink-2);text-transform:none}
-.pc-group-h+.pc-facts{margin-top:8px}
-.pc-sec h2.pc-tables-h{margin-top:20px}
+.pc-dating{border-top:1px solid color-mix(in srgb,var(--love) 45%,var(--line))}
 .pc-lock{margin:-4px 0 10px;font-size:.86rem;color:var(--love-ink)}
-.pc-lines span[aria-hidden],.pc-q span[aria-hidden],.pc-facts dt span[aria-hidden]{margin-right:6px}
-.pc-lines p{margin:0;font-size:1.05rem;color:var(--ink);line-height:1.5}
+.pc-q span[aria-hidden]{margin-right:6px}
 .pc-actions{display:flex;gap:10px;flex-wrap:wrap}
 .pc-sec{padding:24px 0 0;border-top:1px solid var(--line)}
 .pc-chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -551,15 +601,6 @@ export const PROFILE_CSS = `
 .pc-new{background:var(--brand-soft);color:var(--brand);padding:3px 10px;font-size:.8rem}
 .pc-shared{background:var(--brand);color:var(--brand-ink);font-weight:600}
 .pc-shared-note{margin:-4px 0 12px}
-.pc-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin:20px 0 0}
-.pc-facts:first-child{margin-top:0}
-.pc-facts dt{font-size:.8rem;color:var(--ink-3)}
-.pc-facts dd{margin:4px 0 0;font-weight:600}
-.pc-comm{display:grid;gap:12px}
-.pc-comm-item{display:flex;gap:14px;align-items:center}
-.pc-comm-item b{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--brand-soft);font-size:1.35rem;font-weight:400;flex:none}
-.pc-comm-item span{display:flex;flex-direction:column}
-.pc-comm-item small{color:var(--ink-3)}
 .pc-card{padding:24px 0 0;border-top:1px solid var(--line)}
 .pc-q{margin:0 0 12px;font-size:.92rem;font-weight:600;color:var(--ink-2)}
 .pc-a{margin:0;font-size:1.35rem;line-height:1.4;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
@@ -582,7 +623,7 @@ p.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
 .pc-fig img{width:100%;max-height:420px;object-fit:cover;border-radius:18px;display:block}
 .pc-fig figcaption{margin-top:10px;color:var(--ink-2)}
 @media (min-width:700px){.pc-hero{flex-direction:row;align-items:flex-end}.pc-hero .pc-photo{width:300px;flex:none}}
-/* My own card (owner card E): a small avatar beside the name, Edit on the same row, and sticky chips to each section. */
+/* My own card (owner card E): a small avatar beside the name, Edit on the same row. */
 .pc-compact{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 14px}
 .pc-compact .pc-photo{width:72px;height:72px;aspect-ratio:1;max-height:none;border-radius:20px;flex:none;box-shadow:none}
 .pc-compact .pc-initial span{font-size:2rem}
@@ -594,7 +635,4 @@ p.pc-emoji{font-size:3rem;margin:0;letter-spacing:.12em;line-height:1.2}
 .pc-compact .pc-actions .btn{padding-inline:14px}
 @media (max-width:359.98px){.pc-compact .pc-actions{flex-basis:100%;align-items:flex-start}}
 @media (min-width:700px){.pc-hero.pc-compact{align-items:center}.pc-hero.pc-compact .pc-photo{width:72px}.pc-compact .pc-actions{flex-direction:row}}
-.pc-jump{position:sticky;top:var(--disc-top,60px);z-index:3;display:flex;gap:8px;overflow-x:auto;margin:-8px calc(-1 * var(--gx,20px)) 0;padding:8px var(--gx,20px);background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
-.pc-jump a{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;text-decoration:none;white-space:nowrap}
-.pc-sec[id]{scroll-margin-top:130px}
 `;

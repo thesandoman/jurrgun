@@ -1061,4 +1061,36 @@ main details.ann-host{margin-top:8px;border-top:1px solid var(--line)}
 .ann-form textarea{width:100%}
 details.ann-host>summary{display:flex;align-items:center;gap:6px;min-height:44px;font-weight:700;color:var(--brand);cursor:pointer}
 details.ann-host .ann-form{padding-top:4px}
+/* Profile view, dropdowns and trim (owner, 2026-10-18). The glance strip: one line of emoji facts in plain text, no boxes, wrapping naturally; the dot between items is silent. */
+.pc-glance{margin:-8px 0 0;padding:0;list-style:none;color:var(--ink);font-size:1rem;line-height:1.7}
+.pc-glance li{display:inline}
+.pc-glance li+li::before{content:"·";content:"·" / "";margin:0 8px;color:var(--ink-3)}
+.pc-glance span[aria-hidden]{margin-right:2px}
+/* Sections below the top fold into native details: a hairline above, the heading as a 44px row with a chevron. Folds in a row sit together like a list. */
+.pc-fold{border-top:1px solid var(--line);background:none;border-radius:0;box-shadow:none}
+.pc>.pc-fold+.pc-fold{margin-top:-24px}
+.pc-fold.pc-dating{border-top-color:color-mix(in srgb,var(--love) 45%,var(--line))}
+main .pc-fold>summary{display:flex;align-items:center;gap:8px;min-height:52px;padding:4px 0;cursor:pointer;list-style:none;color:var(--ink)}
+.pc-fold>summary::-webkit-details-marker{display:none}
+.pc-fold>summary::after{content:"";flex:none;margin:0 6px 4px auto;width:8px;height:8px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg)}
+.pc-fold[open]>summary::after{transform:rotate(-135deg);margin:4px 6px 0 auto}
+.pc .pc-fold-h,.pc-fold-h{margin:0;font-size:1rem;font-weight:700;color:var(--ink);line-height:1.35}
+.pc-fold.pc-dating .pc-fold-h{color:var(--love-ink)}
+.pc-fold-body{display:grid;gap:16px;padding:4px 0 20px}
+.pc-fold-body>.pc-card:first-child{border-top:0;padding-top:0}
+.pc-fold-body .pc-lock{margin:0}
+.pc-fold-body p{margin:0}
+.pc-fold-body h3{margin:0 0 8px;font-size:.92rem;color:var(--ink-2)}
+.pc-fold>summary:focus-visible,.pc-more-chips>summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:8px}
+/* Compact emoji rows; a short label only where the value needs one. */
+.pc-rows{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.pc-rows li{display:flex;gap:10px;align-items:baseline;line-height:1.45}
+.pc-rows li>span[aria-hidden]{flex:none;width:1.6em;text-align:center}
+.pc-k{color:var(--ink-2)}
+.pc-sep{color:var(--ink-2);margin-right:4px}
+/* Interests past the first six: a "+N" that opens the rest. */
+.pc-more-chips{margin-top:8px}
+main .pc-more-chips>summary{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font-weight:700;cursor:pointer;list-style:none}
+.pc-more-chips>summary::-webkit-details-marker{display:none}
+.pc-more-chips[open]>summary{margin-bottom:8px}
 `);
