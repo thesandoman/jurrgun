@@ -1063,12 +1063,15 @@ details.ann-host>summary{display:flex;align-items:center;gap:6px;min-height:44px
 details.ann-host .ann-form{padding-top:4px}
 /* Profile view, dropdowns and trim (owner, 2026-10-18). The glance strip: one line of emoji facts in plain text, no boxes, wrapping naturally; the dot between items is silent. */
 .pc-glance{margin:-8px 0 0;padding:0;list-style:none;color:var(--ink);font-size:1rem;line-height:1.7}
-.pc-glance li{display:inline}
-.pc-glance li+li::before{content:"·";content:"·" / "";margin:0 8px;color:var(--ink-3)}
+.pc-glance li{display:inline-block;max-width:100%}
+.pc-glance li:not(:last-child)::after{content:"·";content:"·" / "";margin:0 8px;color:var(--ink-3)}
 .pc-glance span[aria-hidden]{margin-right:2px}
 /* Sections below the top fold into native details: a hairline above, the heading as a 44px row with a chevron. Folds in a row sit together like a list. */
-.pc-fold{border-top:1px solid var(--line);background:none;border-radius:0;box-shadow:none}
+details.pc-fold{margin:0;padding:0;border:0;border-top:1px solid var(--line);background:none;border-radius:0;box-shadow:none}
 .pc>.pc-fold+.pc-fold{margin-top:-24px}
+/* Together sits under the card: joined to the list when the card ends on a dropdown, a normal gap otherwise. */
+main .pc+details.pc-fold{margin-top:-16px}
+main .pc:has(>.pc-fold:last-child)+details.pc-fold{margin-top:-40px}
 .pc-fold.pc-dating{border-top-color:color-mix(in srgb,var(--love) 45%,var(--line))}
 main .pc-fold>summary{display:flex;align-items:center;gap:8px;min-height:52px;padding:4px 0;cursor:pointer;list-style:none;color:var(--ink)}
 .pc-fold>summary::-webkit-details-marker{display:none}
@@ -1085,11 +1088,11 @@ main .pc-fold>summary{display:flex;align-items:center;gap:8px;min-height:52px;pa
 /* Compact emoji rows; a short label only where the value needs one. */
 .pc-rows{margin:0;padding:0;list-style:none;display:grid;gap:10px}
 .pc-rows li{display:flex;gap:10px;align-items:baseline;line-height:1.45}
-.pc-rows li>span[aria-hidden]{flex:none;width:1.6em;text-align:center}
+.pc-rows li>span[aria-hidden]{flex:none;min-width:1.6em;text-align:center;white-space:nowrap}
 .pc-k{color:var(--ink-2)}
-.pc-sep{color:var(--ink-2);margin-right:4px}
+.pc-sep{color:var(--ink-2)}
 /* Interests past the first six: a "+N" that opens the rest. */
-.pc-more-chips{margin-top:8px}
+details.pc-more-chips{margin:8px 0 0;padding:0;border:0;background:none;border-radius:0}
 main .pc-more-chips>summary{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font-weight:700;cursor:pointer;list-style:none}
 .pc-more-chips>summary::-webkit-details-marker{display:none}
 .pc-more-chips[open]>summary{margin-bottom:8px}
