@@ -315,7 +315,7 @@ export function ProfileCard(props: {
       ) : null}
 
       {tables.length ? (
-        <Fold title={tables.length > 1 ? t(`ขาประจำ ${tables.length} โต๊ะ`, `Regular at ${tables.length} tables`) : t("โต๊ะประจำ", "Regular table")} emoji="🪑">
+        <Fold title={t(`ขาประจำ ${tables.length} โต๊ะ`, `Regular at ${tables.length} ${tables.length === 1 ? "table" : "tables"}`)} emoji="🪑">
           <div class="pc-chips">
             {tables.map((name) => (
               <span class="pc-chip">{name}</span>
