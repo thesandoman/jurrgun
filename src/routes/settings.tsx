@@ -73,7 +73,7 @@ import {
 import { MeHub, type MeStep } from "../ui/me-hub";
 import { SubLabel } from "../ui/section-head";
 import { ProfileFormScript } from "../ui/profile-form";
-import { hostSection, isSectionName, promptOf, sectionAnchor, SectionForm, SectionHead, SECTIONS, type ProfileVals, type SectionData, type SectionName } from "../ui/profile-sections";
+import { hostSection, isSectionName, MoreRow, OPEN_SECTIONS, promptOf, sectionAnchor, SectionForm, SectionHead, SECTIONS, type ProfileVals, type SectionData, type SectionName } from "../ui/profile-sections";
 import { hashPassword, newId, sha256, verifyPassword } from "../lib/crypto";
 import { allowedEndpoint } from "../lib/webpush";
 import { vapidKeys } from "../services/push";
@@ -583,7 +583,10 @@ settingsRoutes.post("/settings/badge", async (c) => {
 // which reads, validates and writes only that section's fields. The old
 // all-in-one POST /settings/profile still works and runs every section.
 
-/** The long form: every section, each with its own Save. */
+/**
+ * The long form: basics first (photo, basics, languages and interests open), then each optional
+ * section as a row under "More (optional)" that opens in place. Every section has its own Save.
+ */
 function ProfileForm(props: {
   d: SectionData;
   back: "card" | "edit";
@@ -592,40 +595,44 @@ function ProfileForm(props: {
   errorSection?: SectionName | "all";
   filesLost?: boolean;
   saved?: SectionName | null;
+  /** A row to show open (a link to it, or the section just saved). */
+  open?: string | null;
 }) {
   const { t } = props.d.v;
-  const shown = SECTIONS.filter((n) => n !== "dating-prompts" || props.d.datingDeck.length);
   const errorIn = (n: SectionName) => props.errorSection === "all" || props.errorSection === n;
+  const form = (n: SectionName) => <SectionForm d={props.d} name={n} back={props.back} saved={props.saved === n} dirty={errorIn(n)} />;
+  const more = SECTIONS.filter((n) => !OPEN_SECTIONS.includes(n) && (n !== "dating-prompts" || props.d.datingDeck.length));
   return (
     <>
       <p class="spread">
         <a href="/settings">← {t("ฉัน", "Me")}</a>
-        <a href="/me/profile">👀 {t("ดูโปรไฟล์ของฉัน", "Preview my profile")}</a>
+        <a href="/me/profile" class="pe-preview-link">
+          👀 {t("ดูโปรไฟล์ของฉัน", "Preview my profile")}
+        </a>
       </p>
       <h1>{t("แก้ไขโปรไฟล์", "Edit profile")}</h1>
-      <p class="muted">{t("ทุกอย่างไม่บังคับ ยกเว้นชื่อเล่น เขต ภาษา และความสนใจ เขียนแบบที่เป็นตัวคุณ", "Everything is optional except nickname, district, languages and interests. Be yourself.")}</p>
       {props.error ? (
         <Notice kind="error">
           {props.error}
           {props.filesLost ? <span class="pf-files-lost">{t(" รูปที่เลือกไว้ยังไม่ได้บันทึก เลือกอีกครั้งได้เลย", " The photo you picked wasn't saved yet. Please choose it again.")}</span> : null}
         </Notice>
       ) : null}
-      {/* A long page: shortcuts to each part, kept in view while scrolling. */}
-      <nav class="pf-jump" aria-label={t("ไปยังส่วนต่าง ๆ", "Jump to")}>
-        <a href="#basics">{t("พื้นฐาน", "Basics")}</a>
-        <a href="#interests">{t("ความสนใจ", "Interests")}</a>
-        <a href="#bangkok">{t("กรุงเทพฯ", "Bangkok")}</a>
-        <a href="#work">{t("ข้อมูลสั้น ๆ", "Facts")}</a>
-        <a href="#meet">{t("การนัดเจอ", "Meetups")}</a>
-        <a href="#prompts">{t("คำถาม", "Prompts")}</a>
-        <a href="#links">{t("ลิงก์", "Links")}</a>
-      </nav>
-      {shown.map((n) => (
-        <section class="pf-section" id={n}>
-          <SectionHead t={t} name={n} />
-          <SectionForm d={props.d} name={n} back={props.back} saved={props.saved === n} dirty={errorIn(n)} />
+      <div class="pe-forms" id="pe-forms">
+        {OPEN_SECTIONS.map((n) => (
+          <section class="pf-section" id={n}>
+            <SectionHead t={t} name={n as (typeof SECTIONS)[number]} />
+            {form(n)}
+          </section>
+        ))}
+        <section class="pe-more" aria-labelledby="pe-more-h">
+          <h2 id="pe-more-h">{t("เพิ่มเติม (ไม่บังคับ)", "More (optional)")}</h2>
+          {more.map((n) => (
+            <MoreRow d={props.d} name={n} open={props.open === n || props.saved === n || (errorIn(n) && props.errorSection !== "all")}>
+              {form(n)}
+            </MoreRow>
+          ))}
         </section>
-      ))}
+      </div>
       <ProfileFormScript />
     </>
   );
@@ -682,10 +689,13 @@ async function renderProfileForm(
   // Reached from an ✏️ on my card (no JS): a plain save goes back to the card.
   const back = opts.back ?? (c.req.query("from") === "card" ? "card" : "edit");
   const saved = c.req.query("saved");
+  const savedName = saved && isSectionName(saved) ? saved : null;
+  // A prompt saved on its own opens the prompts it belongs to.
+  const open = c.req.query("open") ?? (savedName ? hostSection(savedName, d.datingDeck) : null);
   return page(
     c,
     { title: view(c).t("แก้ไขโปรไฟล์", "Edit profile"), tab: "me", status: opts.status },
-    <ProfileForm d={d} back={back} error={opts.error} errorSection={opts.errorSection} filesLost={opts.filesLost} saved={saved && isSectionName(saved) ? saved : null} />,
+    <ProfileForm d={d} back={back} error={opts.error} errorSection={opts.errorSection} filesLost={opts.filesLost} saved={savedName} open={open} />,
   );
 }
 
@@ -1200,7 +1210,7 @@ settingsRoutes.get("/settings/profile/section/:name", async (c) => {
   const x = editCtx(c);
   const one = promptOf(name);
   if ((one && !x.deck.includes(one) && !x.datingDeck.includes(one)) || (name === "dating-prompts" && !x.datingDeck.length)) return c.notFound();
-  if (!inPlace(c)) return c.redirect(`/settings/profile#${sectionAnchor(name)}`);
+  if (!inPlace(c)) return c.redirect(`/settings/profile?open=${hostSection(name, x.datingDeck)}#${sectionAnchor(name)}`);
   return sectionFragment(c, name, profileVals(me(c).profile!), { back: c.req.query("back") === "card" ? "card" : "edit" });
 });
 
@@ -1255,7 +1265,7 @@ settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   const deck = dating ? currentDatingDeck(user.account.id, bio) : currentDeck(user.account.id, bio);
   if (!deck.includes(id)) return c.text("Unknown prompt", 400);
   const next = swapPrompt(deck, id, Math.random, bio.skipped ?? []);
-  if (next === deck) return c.redirect(dating ? "/settings/profile#dating-prompts" : "/settings/profile#prompts");
+  if (next === deck) return c.redirect(dating ? "/settings/profile?open=dating-prompts#dating-prompts" : "/settings/profile?open=prompts#prompts");
   const answers = { ...(bio.answers ?? {}) };
   const dropKey = answers[id]?.photoKey;
   delete answers[id];
@@ -1263,7 +1273,7 @@ settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   await getDb(c.env).update(profiles).set({ bio: newBio, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
   if (dropKey) await deleteObject(c.env, dropKey).catch(() => {});
   const fresh = next[deck.indexOf(id)];
-  return c.redirect(`/settings/profile?notice=saved#prompt-${fresh}`);
+  return c.redirect(`/settings/profile?notice=saved&open=${dating ? "dating-prompts" : "prompts"}#prompt-${fresh}`);
 });
 
 /** My own photo. Deployed: redirect to a signed URL. Locally: serve the bytes (dev only). */

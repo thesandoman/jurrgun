@@ -11,6 +11,7 @@
  * meet, prompts, dating-prompts, links, and prompt-<id> for one prompt (the
  * card's sheets edit prompts one at a time).
  */
+import type { Child } from "hono/jsx";
 import { INTENTS, LANGUAGES, SOCIAL_STYLES, districtsAZ } from "../lib/constants";
 import {
   ACCESS_NEEDS,
@@ -424,3 +425,64 @@ export function SectionHead(props: { t: View["t"]; name: (typeof SECTIONS)[numbe
   );
 }
 
+
+/** An answer that says something (an empty photo prompt or an empty pick doesn't). */
+const answered = (a: { kind: string; value: unknown; photoKey?: string } | undefined) =>
+  !!a && (a.kind === "photo" ? !!a.photoKey : Array.isArray(a.value) ? a.value.length > 0 : a.value !== "" && a.value !== null && a.value !== undefined);
+
+/** How much of an optional section is filled in, as [done, of]. Links say on or off instead. */
+export function sectionProgress(name: SectionName, d: Pick<SectionData, "vals" | "deck" | "datingDeck">): [number, number] {
+  const b = d.vals.bio;
+  const n = (...xs: unknown[]) => xs.filter((x) => (Array.isArray(x) ? x.length > 0 : !!x)).length;
+  switch (name) {
+    case "here":
+      return [n(d.vals.intents, d.vals.socialStyles.filter((s) => !SIZE_STYLES.includes(s))), 2];
+    case "comm":
+      return [(b.comm ?? []).length, MAX_COMM];
+    case "bangkok":
+      return [n(b.residency, b.story, b.bkkTime, b.hometown, b.reflections && Object.keys(b.reflections).length), 5];
+    case "work":
+      return [n(b.occupation, b.education, b.university || b.universityName, b.learning), 4];
+    case "meet":
+      return [n(b.energy, b.weekend, b.groupSize, b.times, b.budget, b.activities, b.meals, b.access, b.pay, b.bill, b.travel, b.diet, b.spice, b.pets, b.punctual), 15];
+    case "prompts":
+    case "dating-prompts": {
+      const ids = name === "prompts" ? d.deck : d.datingDeck;
+      return [ids.filter((id) => answered(b.answers?.[id])).length, ids.length];
+    }
+    case "links":
+      return [Object.values(d.vals.links ?? {}).filter((x) => x.trim()).length, NETWORKS.length];
+  }
+  return [0, 0];
+}
+
+/**
+ * One optional section on the long form, as a row: its name and how much is filled in. A tap opens
+ * it in place (details and summary, no script); a refused or just-saved section opens by itself.
+ */
+export function MoreRow(props: { d: SectionData; name: (typeof SECTIONS)[number]; open: boolean; children: Child }) {
+  const { t } = props.d.v;
+  const m = SECTION_META[props.name];
+  const [done, of] = sectionProgress(props.name, props.d);
+  const progress =
+    props.name === "links"
+      ? props.d.vals.linksOn
+        ? t(`${done} ลิงก์ · เปิดให้เห็น`, `${done} ${done === 1 ? "link" : "links"} · shown`)
+        : t(`${done} ลิงก์ · ปิดอยู่`, `${done} ${done === 1 ? "link" : "links"} · hidden`)
+      : t(`${done} จาก ${of}`, `${done} of ${of}`);
+  return (
+    <details class={`pe-row${props.name === "dating-prompts" ? " pe-love" : ""}`} id={props.name} open={props.open}>
+      <summary>
+        <span class="pe-row-e" aria-hidden="true">
+          {m.emoji}
+        </span>
+        <span class="pe-row-t">{t(m.th, m.en)}</span>
+        <small class="pe-prog">{progress}</small>
+      </summary>
+      <div class="pe-row-body">
+        {m.hint ? <p class="muted">{t(m.hint[0], m.hint[1])}</p> : null}
+        {props.children}
+      </div>
+    </details>
+  );
+}

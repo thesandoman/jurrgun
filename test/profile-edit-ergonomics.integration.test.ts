@@ -131,6 +131,6 @@ describe.skipIf(!HAS_DB)("edit profile ergonomics", () => {
     expect(PROFILE_EDIT_JS).toContain("isComposing");
     expect(PROFILE_EDIT_JS).toContain('form[data-guard="dirty"]');
     expect(A11Y_FORM_JS).toContain("snap(g.f)!==g.start");
-    expect(A11Y_CSS).toContain("html:has(main .pf-jump){scroll-padding-top");
+    expect(A11Y_CSS).toContain("html:has(main .pe-forms){scroll-padding-top");
   });
 });

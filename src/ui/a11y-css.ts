@@ -1114,4 +1114,32 @@ fieldset[aria-invalid="true"]{box-shadow:none}
 .pf-photo .pf-preview:empty{display:none}
 .pf-preview{flex:none}
 .pf-files-lost{display:block;font-weight:400}
+/* ---- Edit profile one section at a time (owner cards, 2026-10-18) ---- */
+/* No jump bar any more: anchors and focused fields land just under the sticky header. */
+html:has(main .pe-forms){scroll-padding-top:calc(72px + env(safe-area-inset-top,0px));scroll-padding-bottom:24px}
+main .pe-forms .pf-section,main .pe-row{scroll-margin-top:0}
+@media (min-width:1024px){html:has(main .pe-forms){scroll-padding-top:88px}}
+/* Each section's own Save, with the tick beside it. */
+.pe-form{margin:0}
+.pe-save{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;margin:16px 0 0}
+.pe-save .btn{min-width:132px}
+.pe-tick{color:var(--brand);font-weight:700}
+.pe-tick:empty{display:none}
+.pe-form-err{margin:0 0 12px}
+/* "More (optional)": each section a flat 52px row with how much is filled in, opening in place. */
+.pe-more{margin:40px 0 24px}
+.pe-more>h2{margin:0 0 8px;font-size:1.15rem}
+main details.pe-row{margin:0;padding:0;border:0;border-top:1px solid var(--line);border-radius:0;background:none;box-shadow:none}
+main details.pe-row:last-child{border-bottom:1px solid var(--line)}
+main .pe-row>summary{display:flex;align-items:center;gap:10px;min-height:52px;padding:4px 0;cursor:pointer;list-style:none;color:var(--ink);font-weight:700}
+.pe-row>summary::-webkit-details-marker{display:none}
+.pe-row>summary::after{content:"";flex:none;margin:0 6px 4px 0;width:8px;height:8px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg)}
+.pe-row[open]>summary::after{transform:rotate(-135deg);margin:4px 6px 0 0}
+.pe-row>summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:8px}
+.pe-row-e{flex:none;width:28px;text-align:center}
+.pe-row-t{flex:1;min-width:0}
+.pe-prog{flex:none;font-weight:500;color:var(--ink-2);font-size:.9rem}
+.pe-row-body{padding:0 0 24px}
+.pe-row-body>p.muted{margin:0 0 12px}
+.pe-love>summary .pe-row-t{color:var(--love-ink)}
 `);

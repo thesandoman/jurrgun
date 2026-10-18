@@ -236,7 +236,7 @@ describe.skipIf(!HAS_DB)("profile: save per section", () => {
     expect(html).not.toContain("pf-shuffle");
     r = await app.request("/settings/profile/section/meet", { headers: { cookie: en(m) } }, ENV);
     expect(r.status).toBe(302);
-    expect(r.headers.get("location")).toBe("/settings/profile#meet");
+    expect(r.headers.get("location")).toBe("/settings/profile?open=meet#meet");
   });
 
   it("refuses sections that aren't mine: unknown names, prompts outside my deck, dating prompts without 💘", async () => {
@@ -274,5 +274,48 @@ describe.skipIf(!HAS_DB)("profile: save per section", () => {
     s = await snapshot(m);
     expect(s.p.socialStyles).toEqual(["activity", "big_group"]);
     expect(s.bio.groupSize).toBe("big");
+  });
+});
+
+describe.skipIf(!HAS_DB)("profile: basics first, the rest behind More", () => {
+  it("shows photo, basics, languages and interests open, and every optional section as a row with progress", async () => {
+    const m = await seeded("more");
+    const html = await (await req("/settings/profile", { cookie: en(m) })).text();
+    const more = html.indexOf('id="pe-more-h"');
+    expect(more).toBeGreaterThan(0);
+    for (const n of ["photo", "basics", "languages", "interests"]) {
+      const at = html.indexOf(`<section class="pf-section" id="${n}"`);
+      expect(at, n).toBeGreaterThan(0);
+      expect(at, n).toBeLessThan(more);
+    }
+    expect(html).toContain("More (optional)");
+    // Rows, closed until tapped, saying how much is filled in.
+    expect(html).toMatch(/<details class="pe-row" id="prompts"><summary>[\s\S]*?My prompts<\/span><small class="pe-prog">2 of 2<\/small>/);
+    expect(html).toMatch(/<details class="pe-row" id="meet"><summary>[\s\S]*?<small class="pe-prog">15 of 15<\/small>/);
+    expect(html).toMatch(/<details class="pe-row" id="links"><summary>[\s\S]*?<small class="pe-prog">1 link · shown<\/small>/);
+    // No 💘 row for a friends-only member; no jump bar.
+    expect(html).not.toContain('id="dating-prompts"');
+    expect(html).not.toContain('<nav class="pf-jump"');
+
+    // Thai first, naturally.
+    const th = await (await req("/settings/profile", { cookie: `${m.cookie}; lang=th` })).text();
+    expect(th).toContain("เพิ่มเติม (ไม่บังคับ)");
+    expect(th).toMatch(/คำถามของฉัน<\/span><small class="pe-prog">2 จาก 2<\/small>/);
+  });
+
+  it("opens a row from a link, after its save, and when its save is refused", async () => {
+    const m = await seeded("open");
+    let html = await (await req("/settings/profile?open=bangkok", { cookie: en(m) })).text();
+    expect(html).toContain('<details class="pe-row" id="bangkok" open="">');
+    html = await (await req("/settings/profile?saved=comm", { cookie: en(m) })).text();
+    expect(html).toContain('<details class="pe-row" id="comm" open="">');
+    // A prompt saved on its own opens My prompts.
+    html = await (await req(`/settings/profile?saved=prompt-${TEXT.id}`, { cookie: en(m) })).text();
+    expect(html).toContain('<details class="pe-row" id="prompts" open="">');
+    const r = await postSection(m, "comm", { comm: COMM_STYLES.slice(0, 4).map((x) => x.value), back: "edit" });
+    expect(r.status).toBe(400);
+    html = await r.text();
+    expect(html).toContain('<details class="pe-row" id="comm" open="">');
+    expect(html).not.toContain('<details class="pe-row" id="meet" open');
   });
 });

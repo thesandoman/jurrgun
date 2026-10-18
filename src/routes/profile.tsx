@@ -249,7 +249,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
         }
         invite={
           self && answered < 3 ? (
-            <LinkButton href="/settings/profile#prompts" kind="ghost">💬 {t("ตอบคำถามเพิ่ม", "Answer a few prompts")}</LinkButton>
+            <LinkButton href="/settings/profile?open=prompts#prompts" kind="ghost">💬 {t("ตอบคำถามเพิ่ม", "Answer a few prompts")}</LinkButton>
           ) : undefined
         }
       />
