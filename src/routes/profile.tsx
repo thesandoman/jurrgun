@@ -287,6 +287,45 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   );
 }
 
+/**
+ * "How others see it" on the edit form (owner card 3): my card drawn from values not saved yet,
+ * through the same cardPerson a connection's view uses, as a friends-only connection sees it (no
+ * 💘 details, no women-only tables, no social links: those only ever show to a mutual connection
+ * on the card itself, never in a preview). Saves nothing.
+ */
+export async function previewCard(c: Ctx, profile: Profile) {
+  const v = view(c);
+  const { t } = v;
+  const me = c.var.user!;
+  const db = getDb(c.env);
+  // Seen by a friends-only connection: cardPerson keeps 💘 details only for a viewer who is open to dating too.
+  const person = cardPerson(profile, { ...profile, accountId: "", romanceOn: false });
+  const [vibes, tables] = await Promise.all([vibesFor(db, [me.account.id]), regularAt(db, me.account.id, { id: me.account.id, gender: null })]);
+  const vibe = vibes.get(me.account.id);
+  const resident = showsResidentBadge(me.account, profile);
+  return (
+    <div class="pe-preview-in">
+      <p class="muted">{t("คนที่เคยเจอคุณจะเห็นแบบนี้ ยังไม่ได้บันทึก", "What people you've met will see. Not saved yet.")}</p>
+      <ProfileCard
+        v={v}
+        person={person}
+        photo={profile.photoKey ? photoUrl(me.account.id, "main") : null}
+        promptPhoto={(id) => photoUrl(me.account.id, id)}
+        badges={
+          resident || vibe?.visible ? (
+            <>
+              {resident ? <ResidentTag v={v} /> : null}
+              <TypeSpark v={v} theirs={vibe} mine={undefined} />
+            </>
+          ) : null
+        }
+        viewerInterests={null}
+        regularAt={tables}
+      />
+    </div>
+  );
+}
+
 profileRoutes.get("/me/profile", requireMember, async (c) => {
   const me = c.var.user!;
   return renderCard(c, { account: me.account, profile: me.profile! }, true);

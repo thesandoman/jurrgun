@@ -10,7 +10,10 @@
  *    "✓ Saved" tick; one on the long form swaps in the fresh form and updates the row's progress.
  *    Sheets with unsaved edits are carried over to the refreshed card, nothing typed is lost.
  * 3. A link to #something inside a closed row or fold opens it.
- * 4. The "Edit | How others see it" switch (PE_PREVIEW_JS, below).
+ * 4. The "Edit | How others see it" switch on the long form: every section's fields as they are now
+ *    (photos left out) go to POST /settings/profile/preview, which draws my card from them through
+ *    the same template and privacy filter a connection's view uses, and saves nothing. The forms are
+ *    only hidden meanwhile, so switching back loses nothing. A photo picked but not saved shows too.
  */
 export const PE_JS = `(function(){
 if(window.__pe)return;window.__pe=1;
@@ -62,4 +65,18 @@ D.addEventListener("input",clearTick,true);D.addEventListener("change",clearTick
 function openTo(){var id=decodeURIComponent(location.hash.slice(1));if(!id)return;var el=D.getElementById(id);if(!el)return;var opened=false,d=el.closest("details:not(.sheet)");
   while(d){if(!d.open){d.open=true;opened=true}d=d.parentElement&&d.parentElement.closest("details:not(.sheet)")}if(opened)el.scrollIntoView()}
 openTo();addEventListener("hashchange",openTo);
+
+var seg=D.querySelector(".pe-seg"),forms=D.getElementById("pe-forms"),pv=D.getElementById("pe-preview"),seq=0;
+if(seg&&forms&&pv){
+  var show=function(mode){[].forEach.call(seg.querySelectorAll("[data-pe-view]"),function(b){b.setAttribute("aria-pressed",String(b.dataset.peView===mode))});forms.hidden=mode!=="edit";pv.hidden=mode==="edit"};
+  seg.addEventListener("click",function(e){var b=e.target.closest("[data-pe-view]");if(!b)return;
+    if(b.dataset.peView==="edit"){seq++;show("edit");return}
+    var fd=new FormData();[].forEach.call(forms.querySelectorAll("form[data-pe]"),function(f){new FormData(f).forEach(function(v,k){if(typeof v==="string")fd.append(k,v)})});
+    var my=++seq;pv.setAttribute("aria-busy","true");show("preview");
+    fetch("/settings/profile/preview",{method:"POST",body:fd,headers:{"x-pe":"1"},credentials:"same-origin"}).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(h){if(my!==seq)return;pv.innerHTML=h;pv.removeAttribute("aria-busy");
+      var picked=forms.querySelector("#photo [data-preview] img"),undo=forms.querySelector("#photo .pf-undo"),ph=pv.querySelector(".pc-photo");
+      if(picked&&undo&&!undo.hidden&&ph){var img=D.createElement("img");img.className="pc-photo";img.src=picked.src;img.alt=picked.alt;ph.replaceWith(img)}})
+    .catch(function(){if(my!==seq)return;pv.removeAttribute("aria-busy");pv.textContent="";var p=D.createElement("p");p.className="field-err";p.setAttribute("role","alert");p.textContent=seg.dataset.previewErr||"";pv.appendChild(p)});
+  });
+}
 })();`;

@@ -132,6 +132,7 @@ import { Button, Card, Field, LinkButton, list, Notice, page, str, TextArea, Tog
 import { myTables } from "../services/regular-tables";
 import { linkInputValue, linkText, normaliseLink, NETWORKS, PROFILE_LINKS_CONSENT } from "../content/social-links";
 import { linksSwitch, ownLinks } from "../services/profile-links";
+import { previewCard } from "./profile";
 import { CONSENT_VERSION, ConnectionsFields, connectionsPatch, dropPendingDating, pendingDatingIntent, withGenderSelf } from "./onboarding";
 import { acceptedTerms, consentEffects, consentRow, deleteDatingIntents, GENDER_CONSENT, hasConsent, NOTIFICATIONS_CONSENT, privateFieldConsents, RELATIONSHIP_CONSENT, researchWithdrawn, ROMANCE_CONSENT, termsRow } from "../services/consent";
 import { isArchetype, loadVibe } from "./quiz";
@@ -611,6 +612,17 @@ function ProfileForm(props: {
         </a>
       </p>
       <h1>{t("แก้ไขโปรไฟล์", "Edit profile")}</h1>
+      {/* With JS: swap the form for my card drawn from what's typed now, and back, losing nothing (PE_JS).
+          Without it, "Preview my profile" above shows the saved card. */}
+      <div class="pe-seg" role="group" aria-label={t("มุมมอง", "View")} data-preview-err={t("ดูตัวอย่างไม่ได้ตอนนี้ ลองใหม่อีกครั้ง", "The preview didn't load. Please try again.")}>
+        <button type="button" aria-pressed="true" data-pe-view="edit">
+          {t("แก้ไข", "Edit")}
+        </button>
+        <button type="button" aria-pressed="false" data-pe-view="preview">
+          {t("คนอื่นเห็นแบบนี้", "How others see it")}
+        </button>
+      </div>
+      <div class="pe-preview" id="pe-preview" role="region" hidden tabindex={-1} aria-label={t("คนอื่นเห็นแบบนี้", "How others see it")} />
       {props.error ? (
         <Notice kind="error">
           {props.error}
@@ -1237,6 +1249,37 @@ settingsRoutes.post("/settings/profile/section/:name", async (c) => {
   if (err) return refuse(parsed.draft.vals, err);
   if (inPlace(c)) return sectionFragment(c, name, profileVals(me(c).profile!), { back, saved: true });
   return c.redirect(savedUrl(name, back), 303);
+});
+
+/**
+ * "How others see it" (owner card 3): the edit form's current values, saved or not, drawn as my
+ * card the way a connection sees it. The page's script posts every section's fields here (photos
+ * left out). Every section reads the post exactly as a save would, then nothing is written: the
+ * card is rendered from that draft through the same template and privacy filter as the real one.
+ */
+settingsRoutes.post("/settings/profile/preview", async (c) => {
+  const body = (await c.req.parseBody({ all: true })) as Body;
+  const x = editCtx(c);
+  const d = newDraft(x);
+  // Problems don't stop a preview: it shows what was typed, as far as it can be read.
+  for (const n of APPLY_ORDER) if (n !== "dating-prompts" || x.datingDeck.length) APPLY[n](body, d, x);
+  const v = d.vals;
+  const draft: Profile = {
+    ...x.p,
+    nickname: v.nickname || x.p.nickname,
+    district: v.district,
+    pronouns: v.pronouns,
+    showPronouns: v.showPronouns,
+    languages: v.languages,
+    interests: v.interests,
+    socialStyles: v.socialStyles,
+    intents: [...(v.intents.length ? v.intents : ["friends"]), ...(x.p.romanceOn ? ["romance"] : [])],
+    newcomer: v.newcomer,
+    photoKey: d.removePhoto ? null : x.p.photoKey,
+    bio: v.bio,
+  };
+  c.header("cache-control", "no-store");
+  return c.html(await previewCard(c, draft));
 });
 
 /**

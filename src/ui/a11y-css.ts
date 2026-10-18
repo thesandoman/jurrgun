@@ -1174,4 +1174,14 @@ details.pe-sheet>summary.pe-btn::-webkit-details-marker{display:none}
 .pe-load{min-height:88px}
 /* A long edit sheet keeps its title and ✕ in view while it scrolls. */
 .pe-sheet .sheet-head{position:sticky;top:-8px;z-index:2;margin:-8px -16px 4px;padding:8px 16px 0;background:var(--surface)}
+/* "Edit | How others see it": a two-way switch at the top of the long form, needing JS (without it, "Preview my profile" stays). */
+html:not(.sheet-js) .pe-seg{display:none}
+html.sheet-js .pe-preview-link{display:none}
+.pe-seg{display:flex;gap:4px;margin:0 0 24px;padding:4px;border-radius:999px;background:var(--surface-2);max-width:440px}
+.pe-seg button{flex:1 1 0;min-width:0;min-height:44px;padding:4px 12px;border:0;border-radius:999px;background:none;color:var(--ink-2);font:inherit;font-weight:600;line-height:1.25;cursor:pointer}
+.pe-seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.pe-seg button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.pe-preview:focus{outline:none}
+.pe-preview[aria-busy="true"]{opacity:.5}
+.pe-preview-in>p.muted{margin:0 0 8px}
 `);

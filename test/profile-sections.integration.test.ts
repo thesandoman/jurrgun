@@ -377,6 +377,44 @@ describe.skipIf(!HAS_DB)("profile: edit in place on my card", () => {
     expect(html).not.toContain("/settings/profile/section/");
   });
 
+  it("previews what's typed as a connection sees it, and saves nothing", async () => {
+    const m = await createMember({ romanceOn: true, relationship: "single" });
+    const q = DATING_PROMPT_BANK.find((p) => p.kind === "text")!;
+    await db()
+      .update(profiles)
+      .set({ bio: { deck: [TEXT.id, CHOICE.id], datingDeck: [q.id], answers: { [q.id]: { kind: "text", value: "Dating answer, only for 💘" } } } })
+      .where(eq(profiles.accountId, m.id));
+    expect((await req("/settings/profile", { cookie: en(m), form: variant(0, "pv") })).status).toBe(302);
+    const before = await snapshot(m);
+    const form = { ...variant(1, "pv"), nickname: "Previewed", [`a_${TEXT.id}`]: "Typed, not saved", [`m_${q.id}`]: "1", [`a_${q.id}`]: "Dating answer, only for 💘" };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(form)) for (const x of Array.isArray(v) ? v : [v]) p.append(k, x);
+    const r = await app.request("/settings/profile/preview", { method: "POST", headers: { cookie: en(m), "content-type": "application/x-www-form-urlencoded", "x-pe": "1" }, body: p.toString() }, ENV);
+    expect(r.status).toBe(200);
+    const html = await r.text();
+    expect(html).not.toContain("<html");
+    expect(html).toContain("Previewed");
+    expect(html).toContain("Typed, not saved");
+    expect(html).toContain("they/them");
+    // What a connection sees: no 💘 answers, no edit spots, no social links.
+    expect(html).not.toContain("Dating answer");
+    expect(html).not.toContain("data-pe-spot");
+    expect(html).not.toContain("bravo_pv");
+    expect(await snapshot(m)).toEqual(before);
+  });
+
+  it("puts the Edit | How others see it switch on the long form, with the plain preview link kept for no JS", async () => {
+    const m = await seeded("seg");
+    const html = await (await req("/settings/profile", { cookie: en(m) })).text();
+    expect(html).toContain('<div class="pe-seg" role="group" aria-label="View"');
+    expect(html).toContain('<button type="button" aria-pressed="true" data-pe-view="edit">Edit</button>');
+    expect(html).toContain('<button type="button" aria-pressed="false" data-pe-view="preview">How others see it</button>');
+    expect(html).toContain('<a href="/me/profile" class="pe-preview-link">');
+    expect(html).toContain('id="pe-preview" role="region" hidden');
+    const th = await (await req("/settings/profile", { cookie: `${m.cookie}; lang=th` })).text();
+    expect(th).toContain(">คนอื่นเห็นแบบนี้</button>");
+  });
+
   it("ships scripts that parse: sheets trap Tab on laptops too for a form, and saves go in place", () => {
     for (const js of [PE_JS, PROFILE_EDIT_JS, SHEET_JS, A11Y_FORM_JS]) expect(() => new Function(js)).not.toThrow();
     expect(SHEET_JS).toContain('cur.hasAttribute("data-sheet-trap")');
