@@ -626,7 +626,7 @@ var f=document.querySelector('form[data-guard="dirty"]');
 if(f){var e=f.querySelector("[aria-invalid=true],[data-err-focus]");if(e){
   if(e.hasAttribute("data-err-focus")){var own=e.parentNode.querySelector("textarea[aria-invalid=true],input[aria-invalid=true]");if(own)e=own}
   var d=e.closest("details");if(d)d.open=true;
-  e.focus();
+  e.focus({preventScroll:true});e.scrollIntoView({block:"center"});
 }}
 })();`;
 

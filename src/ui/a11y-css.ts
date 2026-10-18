@@ -1104,7 +1104,7 @@ html:has(main .pf-jump) .pf-section{scroll-margin-top:0}
 /* Phones: while typing, the save bar goes back to the end of the form so it never floats over the field or rides the keyboard. */
 @media (max-width:1023.98px) and (hover:none){main form[data-guard]:has(:is(input:not([type=checkbox],[type=radio],[type=range],[type=file],[type=hidden]),textarea):focus) .pf-save{position:static}}
 /* Switch rows are full 44px targets. */
-main form[data-guard] .toggle{min-height:44px;align-items:center;margin:4px 0}
+main form[data-guard] .toggle{min-height:44px;align-items:center}
 /* Errors that belong to a group sit at its top; the red ring is for single fields only. */
 .pf-err{margin:0 0 8px}
 .pf-comm .pf-err{grid-column:1/-1}
