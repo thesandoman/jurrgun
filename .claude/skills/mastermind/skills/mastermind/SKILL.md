@@ -33,7 +33,7 @@ One router and one rulebook over the UI skills installed in this repo. Read this
 | Generic-ness check | "looks AI-generated", "templated", "slop" | `anti-slop` | `frontend-design` calibration list |
 | Ship in Jurrgun | any UI change here | `jurrgun-ui` | everything above |
 
-Skill files live in `.claude/skills/<name>/SKILL.md`; impeccable's commands are in `.claude/skills/impeccable/reference/<command>.md`. ui-ux-pro-max is driven by its script: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<product> <industry> <keywords>" --design-system -p "<Project>"`.
+Skill files live in `.claude/skills/mastermind/skills/<name>/SKILL.md`; impeccable's commands are in `.claude/skills/mastermind/skills/impeccable/reference/<command>.md`. ui-ux-pro-max is driven by its script: `python3 .claude/skills/mastermind/skills/ui-ux-pro-max/scripts/search.py "<product> <industry> <keywords>" --design-system -p "<Project>"`.
 
 
 ## 1b. Process (superpowers)
@@ -93,7 +93,7 @@ These are the rules all the source skills agree on, stated once. Follow them unl
 
 ## 4. In the Jurrgun repo
 
-Load `.claude/skills/jurrgun-ui/SKILL.md` and follow its loop: shoot (375 and 1280, light and dark, Thai and English), check, fix plain bugs at once, put every design change on decision cards with the recommended option first, build only what is approved, verify, then ship (full suite on GitHub CI through a `ci/*` branch, rebase, push to main). House rules that override every skill above:
+Load `.claude/skills/mastermind/skills/jurrgun-ui/SKILL.md` and follow its loop: shoot (375 and 1280, light and dark, Thai and English), check, fix plain bugs at once, put every design change on decision cards with the recommended option first, build only what is approved, verify, then ship (full suite on GitHub CI through a `ci/*` branch, rebase, push to main). House rules that override every skill above:
 - Thai first, written naturally; no em or en dashes anywhere.
 - The fonts (Sao Chingcha, Anuphan) and the palette (green, cream, mango) are fixed. 💘 visuals use love red only, never coral or orange.
 - No visible scores or percentages about people.

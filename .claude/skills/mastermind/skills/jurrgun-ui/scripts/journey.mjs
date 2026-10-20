@@ -2,7 +2,7 @@
 // sign-up, onboarding and the quiz, Discover, an event, RSVP, the table intro, the main tabs.
 // Prints each screen and, at the end, how many screens came before Discover.
 //
-//   BASE=http://localhost:8787 node .claude/skills/jurrgun-ui/scripts/journey.mjs [outDir]
+//   BASE=http://localhost:8787 node .claude/skills/mastermind/skills/jurrgun-ui/scripts/journey.mjs [outDir]
 //
 // It creates a throwaway qa_ account in the LOCAL database only.
 import { spawn } from "node:child_process";

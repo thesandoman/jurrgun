@@ -1,0 +1,6 @@
+{
+  "name": "mastermind",
+  "version": "1.0.0",
+  "description": "One entry point for UI and frontend design work: the Mastermind router plus the design, craft and process skills it routes to, including Jurrgun's own UI review-and-ship loop.",
+  "author": { "name": "Jurrgun" }
+}

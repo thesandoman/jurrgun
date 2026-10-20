@@ -16,7 +16,7 @@ Arguments are optional: a page or an area ("profile", "/events", "onboarding"). 
 Start the local app (`npm run dev`, or reuse a running dev server) and use `scripts/shots.mjs`. It signs in as a seeded persona, so first make sure the local database is seeded (`scripts/seed.ts`). It only talks to localhost.
 
 ```bash
-BASE=http://localhost:8787 node .claude/skills/jurrgun-ui/scripts/shots.mjs '[{"who":"ploy","path":"/settings","name":"me-375","w":375,"full":true,"check":true}]' /tmp/jurrgun-ui
+BASE=http://localhost:8787 node .claude/skills/mastermind/skills/jurrgun-ui/scripts/shots.mjs '[{"who":"ploy","path":"/settings","name":"me-375","w":375,"full":true,"check":true}]' /tmp/jurrgun-ui
 ```
 
 - Every page at **375 px** (phone, `lang` th and en) and **1280 px** (laptop), light; two or three pages in **dark** (`"mode":"dark"`).
