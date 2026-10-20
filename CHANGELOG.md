@@ -294,7 +294,7 @@ tests, CI, tooling)
 
 ---
 
-## [0.10.0] - 2026-10-16 · Email sign-in, social links and the PDPA review (current)
+## [0.10.0] - 2026-10-16 · Email sign-in, social links and the PDPA review
 
 ### Features
 - Sign in with an email code [a63f070]
@@ -339,6 +339,68 @@ tests, CI, tooling)
 
 ---
 
+## [0.11.0] - 2026-10-16 → 10-17 · Say hi first, host announcements and one palette
+
+### Features
+- **Say hi first** and **Who finishes**: from 36 hours before a meetup, people going can answer one light prompt for their table [9b72042] [e96aacb]
+- **Host announcements**: hosts, organisers and BMA admins send an Update, Time changed, Venue moved or Cancelled to everyone going [cf92b52] [52544bc] [4148e81]
+- Evening summary: non-urgent notifications (thank-yous, new connections, plan ideas, plain host updates) come together once in the evening [18a0a85] [4148e81]
+- Buddy deck without swiping: each person is a card you read, leading with their own words and what you share [7bbfab7]
+- Discover list leads with Popular picks and Top 10 this week [33a1b54]
+
+### UX/UI
+- Event page: a status strip under the title says where you stand and the one next action [2242b11]
+- Laptop event page: details on the left, a sticky rail with the next action and My registration on the right [4290a63]
+- My people: a New messages group at the top when chats are unread [334c408]
+- Chats list shows a photo or initial for people, and the category emoji for hangouts and Regular Tables [3b50591]
+- My events: older past events fold into one Show all row [add117a]
+- Unread on the bell and the My people tab is a small dot (screen readers still hear the count) [ac084c8]
+- 💘 row in settings: no pink box; a love-red switch and a small "💘 On" tag [d50c9c4]
+
+### Branding
+- One colour palette for the whole app, lighter and friendlier: no yellow or cream tints, teal for food and nights, light mint for the city [fd8291a] [b787aa2] [22e835c] [5347d4b]
+- Thai type: no letter-spacing on Thai text and taller line-height so tone marks fit [f807e56]
+- Copy: My events is นัดของฉัน everywhere; English booking and pass wording fixed [11f3fd8] [f05e8f1]
+
+### Legal & privacy
+- Compliance documents, including a one-page personal data breach plan (PDPA s37(4)) [728e003]
+- Privacy notice and code agree: contact shares deleted on removal and block, research answers deleted at deactivation, fuller export [5750b53] [831fa15]
+- Consent centre names what personalization actually uses [c14edc6]
+- Sign-in throttling comment corrected: keyed HMACs, not plain SHA-256 [0ff0ca8]
+
+### Fixes
+- Colour contrast on muted tags, stickers, avatar initials and passport stamps [74a81a1]
+- My profile on phones: Answer prompts no longer covers the district line; birthday label lines up [d05f7d4] [70cb47e]
+- Buddy card keeps a readable width on laptops [4b36048]
+
+### Platform
+- Migrations 0023 (hello line) and 0024 (event announcements) [9b72042] [cf92b52]
+- Mastermind skill: one entry point for UI and UX work [8ca449b]
+- Tests: retention and clock files run on their own; steadier day-of and consent fixtures [c31fc18] [79c7d3d] [dde473a]
+- Design checker exception for the demo page [39f6beb]
+
+---
+
+## [0.12.0] - 2026-10-17 → 10-18 · Editing your profile (current)
+
+### Features
+- **Edit in place** on my profile: each section has a ✏️ that opens a sheet with only that section's fields [6158523]
+- "Edit | How others see it" switch: preview your card from what you've typed, saved or not [31493aa]
+- Edit profile saves one section at a time, each with its own Save [9bdec6d]
+- Old "Send a notice" form removed; hosts use announcements instead [f2dd8ba]
+
+### UX/UI
+- Profile view: one glance strip of up to 6 emoji facts, the top 2 prompt answers, the rest in dropdowns [9ece912] [64634ed]
+- Edit profile: basics first, optional sections behind More [695bd28]
+
+### QOL
+- Edit profile ergonomics: errors next to their field, nothing typed is lost, photo preview with undo [9847942] [b0ec7a5]
+
+### Fixes
+- Regular tables dropdown reads "Regular at 1 table" / "ขาประจำ 1 โต๊ะ" [73fe187]
+
+---
+
 [0.0.1]: https://github.com/thesandoman/jurrgun/compare/29cf49a...85e6dc7
 [0.1.0]: https://github.com/thesandoman/jurrgun/compare/85e6dc7...1ccb922
 [0.2.0]: https://github.com/thesandoman/jurrgun/compare/1ccb922...673bc4e
@@ -350,6 +412,8 @@ tests, CI, tooling)
 [0.8.0]: https://github.com/thesandoman/jurrgun/compare/88287bd...b6caf06
 [0.9.0]: https://github.com/thesandoman/jurrgun/compare/b6caf06...0fd9bfe
 [0.10.0]: https://github.com/thesandoman/jurrgun/compare/0fd9bfe...bc3a86f
+[0.11.0]: https://github.com/thesandoman/jurrgun/compare/bc3a86f...c31fc18
+[0.12.0]: https://github.com/thesandoman/jurrgun/compare/c31fc18...31493aa
 
 <!-- commit links -->
 [29cf49a]: https://github.com/thesandoman/jurrgun/commit/29cf49a
@@ -610,3 +674,49 @@ tests, CI, tooling)
 [d90d6e7]: https://github.com/thesandoman/jurrgun/commit/d90d6e7
 [d3a1435]: https://github.com/thesandoman/jurrgun/commit/d3a1435
 [b144cbe]: https://github.com/thesandoman/jurrgun/commit/b144cbe
+[9b72042]: https://github.com/thesandoman/jurrgun/commit/9b72042
+[e96aacb]: https://github.com/thesandoman/jurrgun/commit/e96aacb
+[cf92b52]: https://github.com/thesandoman/jurrgun/commit/cf92b52
+[52544bc]: https://github.com/thesandoman/jurrgun/commit/52544bc
+[4148e81]: https://github.com/thesandoman/jurrgun/commit/4148e81
+[18a0a85]: https://github.com/thesandoman/jurrgun/commit/18a0a85
+[7bbfab7]: https://github.com/thesandoman/jurrgun/commit/7bbfab7
+[33a1b54]: https://github.com/thesandoman/jurrgun/commit/33a1b54
+[2242b11]: https://github.com/thesandoman/jurrgun/commit/2242b11
+[4290a63]: https://github.com/thesandoman/jurrgun/commit/4290a63
+[334c408]: https://github.com/thesandoman/jurrgun/commit/334c408
+[3b50591]: https://github.com/thesandoman/jurrgun/commit/3b50591
+[add117a]: https://github.com/thesandoman/jurrgun/commit/add117a
+[ac084c8]: https://github.com/thesandoman/jurrgun/commit/ac084c8
+[d50c9c4]: https://github.com/thesandoman/jurrgun/commit/d50c9c4
+[fd8291a]: https://github.com/thesandoman/jurrgun/commit/fd8291a
+[b787aa2]: https://github.com/thesandoman/jurrgun/commit/b787aa2
+[22e835c]: https://github.com/thesandoman/jurrgun/commit/22e835c
+[5347d4b]: https://github.com/thesandoman/jurrgun/commit/5347d4b
+[f807e56]: https://github.com/thesandoman/jurrgun/commit/f807e56
+[11f3fd8]: https://github.com/thesandoman/jurrgun/commit/11f3fd8
+[f05e8f1]: https://github.com/thesandoman/jurrgun/commit/f05e8f1
+[728e003]: https://github.com/thesandoman/jurrgun/commit/728e003
+[5750b53]: https://github.com/thesandoman/jurrgun/commit/5750b53
+[831fa15]: https://github.com/thesandoman/jurrgun/commit/831fa15
+[c14edc6]: https://github.com/thesandoman/jurrgun/commit/c14edc6
+[0ff0ca8]: https://github.com/thesandoman/jurrgun/commit/0ff0ca8
+[74a81a1]: https://github.com/thesandoman/jurrgun/commit/74a81a1
+[d05f7d4]: https://github.com/thesandoman/jurrgun/commit/d05f7d4
+[70cb47e]: https://github.com/thesandoman/jurrgun/commit/70cb47e
+[4b36048]: https://github.com/thesandoman/jurrgun/commit/4b36048
+[8ca449b]: https://github.com/thesandoman/jurrgun/commit/8ca449b
+[c31fc18]: https://github.com/thesandoman/jurrgun/commit/c31fc18
+[79c7d3d]: https://github.com/thesandoman/jurrgun/commit/79c7d3d
+[dde473a]: https://github.com/thesandoman/jurrgun/commit/dde473a
+[39f6beb]: https://github.com/thesandoman/jurrgun/commit/39f6beb
+[6158523]: https://github.com/thesandoman/jurrgun/commit/6158523
+[31493aa]: https://github.com/thesandoman/jurrgun/commit/31493aa
+[9bdec6d]: https://github.com/thesandoman/jurrgun/commit/9bdec6d
+[f2dd8ba]: https://github.com/thesandoman/jurrgun/commit/f2dd8ba
+[9ece912]: https://github.com/thesandoman/jurrgun/commit/9ece912
+[64634ed]: https://github.com/thesandoman/jurrgun/commit/64634ed
+[695bd28]: https://github.com/thesandoman/jurrgun/commit/695bd28
+[9847942]: https://github.com/thesandoman/jurrgun/commit/9847942
+[b0ec7a5]: https://github.com/thesandoman/jurrgun/commit/b0ec7a5
+[73fe187]: https://github.com/thesandoman/jurrgun/commit/73fe187
