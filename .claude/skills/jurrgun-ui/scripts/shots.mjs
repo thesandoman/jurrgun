@@ -1,6 +1,6 @@
 // Screenshots of the local app in headless Chrome, plus layout checks.
 //
-//   BASE=http://localhost:8787 node .claude/skills/mastermind/skills/jurrgun-ui/scripts/shots.mjs '<jobs json>' [outDir]
+//   BASE=http://localhost:8787 node .claude/skills/jurrgun-ui/scripts/shots.mjs '<jobs json>' [outDir]
 //
 // Each job: { name, path, who?, w?, h?, mode?: "light"|"dark", lang?: "th"|"en", js?, wait?, full?, check? }
 //   who    seeded username to sign in as (password read from scripts/seed.ts, never printed)
@@ -17,7 +17,7 @@ if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(BASE)) throw new Error(
 const jobs = JSON.parse(process.argv[2] || "[]");
 const OUT = process.argv[3] || "/tmp/jurrgun-ui";
 mkdirSync(OUT, { recursive: true });
-const seed = readFileSync(new URL("../../../../../../scripts/seed.ts", import.meta.url), "utf8");
+const seed = readFileSync(new URL("../../../../scripts/seed.ts", import.meta.url), "utf8");
 const PASSWORD = seed.match(/const PASSWORD = "([^"]+)"/)?.[1];
 const CHROME = process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const port = 9600 + Math.floor(Math.random() * 300);
