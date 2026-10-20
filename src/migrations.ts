@@ -299,5 +299,37 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"social_event_announcements_event_idx\" ON \"social_event_announcements\" (\"event_id\",\"created_at\");",
       "CREATE INDEX \"social_event_announcements_author_idx\" ON \"social_event_announcements\" (\"author_account_id\");"
     ]
+  },
+  {
+    "id": "0025_outside_events",
+    "statements": [
+      "CREATE TABLE \"social_calendar_tokens\" (\n\t\"account_id\" text PRIMARY KEY NOT NULL,\n\t\"token\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_event_feeds\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"url\" text NOT NULL,\n\t\"source_name\" text NOT NULL,\n\t\"credit\" text,\n\t\"terms_note\" text NOT NULL,\n\t\"partner_org_id\" text,\n\t\"added_by\" text,\n\t\"status\" text DEFAULT 'active' NOT NULL,\n\t\"last_read_at\" timestamp with time zone,\n\t\"last_result\" text,\n\t\"last_count\" integer,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_event_inbox\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"dedupe_key\" text NOT NULL,\n\t\"feed_id\" text,\n\t\"partner_org_id\" text,\n\t\"source_name\" text NOT NULL,\n\t\"source_url\" text,\n\t\"credit\" text,\n\t\"title\" text NOT NULL,\n\t\"description\" text DEFAULT '' NOT NULL,\n\t\"starts_at\" timestamp with time zone NOT NULL,\n\t\"ends_at\" timestamp with time zone,\n\t\"venue_name\" text,\n\t\"venue_address\" text,\n\t\"status\" text DEFAULT 'new' NOT NULL,\n\t\"attached_event_id\" text,\n\t\"added_by\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"identity_partner_applications\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"org_name\" text NOT NULL,\n\t\"kind\" text DEFAULT 'events' NOT NULL,\n\t\"website\" text,\n\t\"contact\" text NOT NULL,\n\t\"about\" text DEFAULT '' NOT NULL,\n\t\"status\" text DEFAULT 'pending' NOT NULL,\n\t\"reviewed_by\" text,\n\t\"reviewed_at\" timestamp with time zone,\n\t\"review_note\" text,\n\t\"partner_org_id\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"identity_partner_keys\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"partner_org_id\" text NOT NULL,\n\t\"key_hash\" text NOT NULL,\n\t\"prefix\" text NOT NULL,\n\t\"label\" text DEFAULT '' NOT NULL,\n\t\"created_by\" text,\n\t\"last_used_at\" timestamp with time zone,\n\t\"revoked_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"source_name\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"source_url\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"source_credit\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"source_venue\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"source_starts_at\" timestamp with time zone;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"inbox_id\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"referral_code\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"warmup_url\" text;",
+      "ALTER TABLE \"identity_partner_orgs\" ADD COLUMN \"status\" text DEFAULT 'verified' NOT NULL;",
+      "ALTER TABLE \"identity_partner_orgs\" ADD COLUMN \"website\" text;",
+      "CREATE UNIQUE INDEX \"social_calendar_tokens_token_idx\" ON \"social_calendar_tokens\" (\"token\");",
+      "CREATE UNIQUE INDEX \"social_event_feeds_url_idx\" ON \"social_event_feeds\" (\"url\");",
+      "CREATE INDEX \"social_event_feeds_partner_idx\" ON \"social_event_feeds\" (\"partner_org_id\");",
+      "CREATE UNIQUE INDEX \"social_event_inbox_dedupe_idx\" ON \"social_event_inbox\" (\"dedupe_key\");",
+      "CREATE INDEX \"social_event_inbox_status_idx\" ON \"social_event_inbox\" (\"status\",\"starts_at\");",
+      "CREATE INDEX \"social_event_inbox_partner_idx\" ON \"social_event_inbox\" (\"partner_org_id\");",
+      "CREATE INDEX \"identity_partner_applications_status_idx\" ON \"identity_partner_applications\" (\"status\",\"created_at\");",
+      "CREATE INDEX \"identity_partner_applications_account_idx\" ON \"identity_partner_applications\" (\"account_id\");",
+      "CREATE UNIQUE INDEX \"identity_partner_keys_hash_idx\" ON \"identity_partner_keys\" (\"key_hash\");",
+      "CREATE INDEX \"identity_partner_keys_org_idx\" ON \"identity_partner_keys\" (\"partner_org_id\");",
+      "CREATE INDEX \"social_events_partner_idx\" ON \"social_events\" (\"partner_org_id\");",
+      "CREATE INDEX \"social_events_inbox_idx\" ON \"social_events\" (\"inbox_id\");"
+    ]
   }
 ];
