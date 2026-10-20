@@ -339,6 +339,11 @@ hostRoutes.get("/host", async (c) => {
           </div>
         </form>
       </Card>
+      {me.role !== "partner_admin" ? (
+        <p class="muted">
+          <a href="/partner/apply">{t("จัดงานในนามองค์กร? สมัครเป็นพาร์ตเนอร์", "Run events as an organisation? Become a partner")}</a>
+        </p>
+      ) : null}
       {c.req.query("notice") === "bad_link" ? <Notice kind="error">{t("ลิงก์นี้ใช้ไม่ได้ ใส่ลิงก์ที่ขึ้นต้นด้วย https:// ของหน้ากิจกรรม", "That link can't be used. Paste the event page's link, starting with https://")}</Notice> : null}
       {/* Said once, above the list, instead of under every live event (Phase 3). */}
       {mine.some((e) => e.status === "published") ? (
@@ -502,8 +507,17 @@ function ProposalForm(props: {
           <Field label={t("เริ่ม (เวลากรุงเทพฯ)", "Starts (Bangkok time)")} name="startsAt" type="datetime-local" value={d.startsAt} required />
           <Field label={t("จบ (เวลากรุงเทพฯ)", "Ends (Bangkok time)")} name="endsAt" type="datetime-local" value={d.endsAt} required />
         </div>
-        <Field label={t("สถานที่", "Venue")} name="venueName" value={d.venueName} required maxlength={200} />
-        <Field label={t("ที่อยู่", "Address")} name="venueAddress" value={d.venueAddress} maxlength={400} />
+        {d.goTogether ? (
+          <>
+            <Field label={t("จุดนัดพบ (ที่สาธารณะ)", "Meeting point (a public place)")} name="venueName" value={d.venueName} required maxlength={200} />
+            <Field label={t("ที่อยู่จุดนัดพบ", "Meeting point address")} name="venueAddress" value={d.venueAddress} required maxlength={400} />
+          </>
+        ) : (
+          <>
+            <Field label={t("สถานที่", "Venue")} name="venueName" value={d.venueName} required maxlength={200} />
+            <Field label={t("ที่อยู่", "Address")} name="venueAddress" value={d.venueAddress} maxlength={400} />
+          </>
+        )}
         <Field label={t("ลิงก์แผนที่ (ไม่บังคับ)", "Map link (optional)")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
         <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
         <VenueFields v={v} d={d} />
@@ -692,7 +706,7 @@ hostRoutes.get("/host/inbox", async (c) => {
               {i.venueName ? ` · ${i.venueName}` : ""}
               {" · "}
               {i.sourceUrl ? (
-                <a href={i.sourceUrl} rel="noopener noreferrer nofollow" target="_blank">
+                <a class="nowrap" href={i.sourceUrl} rel="noopener noreferrer nofollow" target="_blank">
                   {t("ผ่าน", "Via")} {i.sourceName} ↗
                 </a>
               ) : (

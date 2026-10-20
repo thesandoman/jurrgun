@@ -227,14 +227,31 @@ adminPartnerReview.get("/", async (c) => {
       )}
 
       <h2>{t("พาร์ตเนอร์", "Partners")}</h2>
-      {orgs.map((o) => (
-        <Card>
-          <strong>{o.name}</strong> {o.status === "review" ? <Tag tone="warn">{t("กำลังตรวจ", "Under review")}</Tag> : <Tag tone="ok">{t("ยืนยันแล้ว", "Verified")}</Tag>}
-          <form method="post" action={`/admin/partner-review/org/${o.id}/${o.status === "review" ? "verify" : "review"}`}>
-            <Button kind="ghost">{o.status === "review" ? t("ยืนยันอีกครั้ง", "Verify again") : t("ส่งกลับไปตรวจ", "Back to review")}</Button>
-          </form>
-        </Card>
-      ))}
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">{t("พาร์ตเนอร์", "Partners")}</caption>
+          <thead>
+            <tr>
+              <th>{t("ชื่อ", "Name")}</th>
+              <th>{t("สถานะ", "Status")}</th>
+              <th>{t("ทำอะไร", "Action")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orgs.map((o) => (
+              <tr>
+                <td>{o.name}</td>
+                <td>{o.status === "review" ? <Tag tone="warn">{t("กำลังตรวจ", "Under review")}</Tag> : <Tag tone="ok">{t("ยืนยันแล้ว", "Verified")}</Tag>}</td>
+                <td>
+                  <form method="post" action={`/admin/partner-review/org/${o.id}/${o.status === "review" ? "verify" : "review"}`}>
+                    <Button kind="ghost">{o.status === "review" ? t("ยืนยันอีกครั้ง", "Verify again") : t("ส่งกลับไปตรวจ", "Back to review")}</Button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h2>{t("กิจกรรมพาร์ตเนอร์และไปด้วยกันที่กำลังจะมา", "Upcoming partner and go-together events")}</h2>
       {evs.length === 0 ? (

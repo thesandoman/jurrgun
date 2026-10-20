@@ -97,6 +97,9 @@ publicRoutes.get("/", (c) => {
       <p class="muted">
         <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a> · <a href="/learn">{t("เรียนรู้", "Learn")}</a> · <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
       </p>
+      <p class="muted">
+        <a href="/partner/apply">{t("ผู้จัดงานและสถานที่: สมัครเป็นพาร์ตเนอร์", "For organisers and venues: become a partner")}</a>
+      </p>
     </>,
   );
 });

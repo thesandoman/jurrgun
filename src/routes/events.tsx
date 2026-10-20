@@ -21,6 +21,7 @@
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
 import { cleanHello, HELLO_MAX, helloOpen, helloPrompt } from "../domain/hello";
+import { isGoTogether, ShowLine, TicketButton, TicketNote, ViaLine, WarmupLine } from "../ui/go-together";
 import { TableIntroPrompt } from "../ui/table-intro";
 import { OfflineSavedNote, SaveNext } from "../ui/offline-next";
 import { IcebreakerCard } from "../ui/icebreakers";
@@ -162,6 +163,7 @@ export function ageText(e: Event, t: T): string {
 }
 
 export function costText(e: Event, t: T): string {
+  if (e.costThb === 0 && e.sourceName) return t(`โต๊ะฟรี บัตรซื้อที่ ${e.sourceName}`, `Table free, ticket on ${e.sourceName}`);
   return e.costThb > 0 ? `฿${e.costThb}` : t("ฟรี", "Free");
 }
 
@@ -314,6 +316,8 @@ localStorage.setItem(k,o.toString())}catch(e){}})()`;
 /** "Free" / "฿250", and the first category, for the line above a title. */
 function eyebrow(e: Event, t: T, lang: Lang): string {
   const first = e.tags[0];
+  // Going together: the ticket is bought at the source, so "Free" would mislead; only a table cost shows.
+  if (isGoTogether(e)) return [t("ไปด้วยกัน", "Go together"), e.costThb > 0 ? costText(e, t) : null].filter(Boolean).join(" · ");
   return [first ? label(EVENT_TAGS, first, lang) : null, costText(e, t)].filter(Boolean).join(" · ");
 }
 
@@ -373,6 +377,7 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
           <span><FactIcon name="place" /> {label(DISTRICTS, e.district, lang)}</span>
           <span><FactIcon name="lang" /> {langsText(e, lang)}</span>
         </p>
+        <ViaLine e={e} t={t} />
         <Seats capacity={e.capacity} taken={props.taken} />
         <div class="tags">
           {props.pick ? <Tag tone="ok">⭐ {t("เลือกให้คุณ", "Your pick")}</Tag> : null}
@@ -1319,7 +1324,12 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           cols={4}
           class="ev-facts"
           facts={[
-            { icon: "📅", label: t("เมื่อไหร่", "When"), answer: fmtDate(event.startsAt, lang), sub: t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`) },
+            {
+              icon: "📅",
+              label: t("เมื่อไหร่", "When"),
+              answer: fmtDate(event.startsAt, lang),
+              sub: isGoTogether(event) ? t("เวลานัดเจอ", "time we meet") : t(`ถึง ${fmtParts(event.endsAt, lang).time}`, `until ${fmtParts(event.endsAt, lang).time}`),
+            },
             { icon: "📍", label: t("ที่ไหน", "Where"), answer: event.venueName, sub: label(DISTRICTS, event.district, lang) },
             {
               icon: "👥",
@@ -1335,7 +1345,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
             },
           ]}
         />
+        <ShowLine e={event} t={t} lang={lang} />
         {reg?.status === "confirmed" && !started ? <TableIntroPrompt v={v} next={`/events/${event.id}`} /> : null}
+        <WarmupLine e={event} t={t} confirmed={reg?.status === "confirmed"} now={now} />
         {reg?.status === "confirmed" && event.status === "published" && !ended ? <SaveNext paths={[`/me/events/${event.id}/pass`]} /> : null}
         {event.venueAddress || event.mapUrl ? (
           <p class="ev-line">
@@ -1352,7 +1364,9 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           <LinkButton kind="tonal" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
             <span aria-hidden="true">🧭</span> {t("เส้นทาง", "Directions")}
           </LinkButton>
+          <TicketButton e={event} t={t} />
         </p>
+        <TicketNote e={event} t={t} />
         <div class="tags">
           {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
           {event.tags.map((tag) => (
@@ -2303,6 +2317,11 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
           ) : null}
         </>
       )}
+      <p class="me-cal-link">
+        <a href="/settings/calendar">
+          <span aria-hidden="true">📅</span> {t("เพิ่มนัดที่จองไว้ในปฏิทินของฉัน", "Add my bookings to my calendar")}
+        </a>
+      </p>
     </>,
   );
 });
@@ -2545,6 +2564,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
       ) : null}
       <PassSteps t={t} checkedIn={!!reg.checkedInAt} />
       {now < event.startsAt ? <TableIntroPrompt v={view(c)} next={`/me/events/${event.id}/pass`} /> : null}
+      <WarmupLine e={event} t={t} confirmed now={now} />
       <div class="pass-actions">
         <a class="chip-btn" href={`/me/events/${event.id}/calendar.ics`} download={`jurrgun-${event.id}.ics`}>
           <span aria-hidden="true">🗓️</span> {t("เพิ่มในปฏิทิน", "Add to calendar")}

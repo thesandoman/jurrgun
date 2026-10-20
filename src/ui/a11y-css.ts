@@ -1184,4 +1184,16 @@ html.sheet-js .pe-preview-link{display:none}
 .pe-preview:focus{outline:none}
 .pe-preview[aria-busy="true"]{opacity:.5}
 .pe-preview-in>p.muted{margin:0 0 8px}
+/* Go-together cards (D45): one quiet line under the card's facts, saying where tickets come from and where the table meets. */
+.ev-card .ev-via{margin:4px 0 0;color:var(--ink-2);font-size:.88rem;line-height:1.4}
+/* Event page: the show's own time and place, the ticket note, and the online hello (D50). */
+.ev-show{margin-top:8px}
+.ev-ticket-note{margin:4px 0 0;font-size:.88rem}
+.ev-warmup{margin:8px 0;display:flex;gap:8px;align-items:baseline}
+.ev-warmup a{display:inline-block;padding:10px 0;line-height:1.4}
+/* My events: the calendar link at the foot, a full tap target. */
+.me-cal-link{margin:24px 0 8px}
+.me-cal-link a{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+/* Host inbox: "Via Luma ↗" stays on one line. */
+a.nowrap{white-space:nowrap}
 `);

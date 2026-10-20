@@ -316,3 +316,54 @@ describe.skipIf(!HAS_DB)("D50: the online warm-up link", () => {
     expect(e).toMatchObject({ warmupUrl: "https://meet.example.com/abc", sourceName: null });
   });
 });
+
+describe.skipIf(!HAS_DB)("owner cards 2026-10-20: go-together on Discover and the event page, warm-up, entry points", () => {
+  it("Discover shows Via and the meeting point; the page has the ticket link; only confirmed seats see the online hello", async () => {
+    const id = newId();
+    const startsAt = new Date(Date.now() + 4 * 86_400_000);
+    await db()
+      .insert(events)
+      .values({
+        id,
+        title: `GO-${id.slice(0, 6)}`,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+        venueName: "Café by the hall",
+        venueAddress: "12 Charoen Krung Road",
+        district: "bang_rak",
+        capacity: 8,
+        status: "published",
+        createdBy: "test",
+        sourceName: "Ticketmelon",
+        sourceUrl: "https://www.ticketmelon.com/x/jazz",
+        sourceVenue: "River Hall",
+        sourceStartsAt: new Date(startsAt.getTime() + 90 * 60_000),
+        warmupUrl: "https://meet.example.com/hello",
+      });
+    const [going, looking] = await Promise.all([createMember(), createMember()]);
+    await db().insert(registrations).values({ id: newId(), eventId: id, accountId: going.id, status: "confirmed", passToken: randomToken(18) });
+
+    const list = await (await req("/events?view=list&lang=en", { cookie: looking.cookie })).text();
+    expect(list).toContain("Via Ticketmelon · meet at Café by the hall");
+
+    const page = await (await req(`/events/${id}?lang=en`, { cookie: looking.cookie })).text();
+    expect(page).toContain('href="https://www.ticketmelon.com/x/jazz"');
+    expect(page).toContain("Ticket on Ticketmelon ↗");
+    expect(page).toContain("The show:");
+    expect(page).toContain("Table free, ticket on Ticketmelon");
+    expect(page).not.toContain("meet.example.com");
+
+    const mine = await (await req(`/events/${id}?lang=en`, { cookie: going.cookie })).text();
+    expect(mine).toContain('href="https://meet.example.com/hello"');
+    const pass = await (await req(`/me/events/${id}/pass?lang=en`, { cookie: going.cookie })).text();
+    expect(pass).toContain('href="https://meet.example.com/hello"');
+  });
+
+  it("Settings and My events link to the calendar; the landing and host page link to partner applications", async () => {
+    const [m, host] = await Promise.all([createMember(), createMember({ role: "circle_head" })]);
+    expect(await (await req("/settings", { cookie: m.cookie })).text()).toContain('href="/settings/calendar"');
+    expect(await (await req("/me/events", { cookie: m.cookie })).text()).toContain('href="/settings/calendar"');
+    expect(await (await req("/", { cookie: "jg_intro=seen" })).text()).toContain('href="/partner/apply"');
+    expect(await (await req("/host", { cookie: host.cookie })).text()).toContain('href="/partner/apply"');
+  });
+});
