@@ -14,6 +14,7 @@ import { adminPartners } from "./partners";
 import { adminAudit } from "./audit";
 import { adminReview } from "./review";
 import { adminQuizHealth } from "./quiz-health";
+import { adminFeeds, adminPartnerReview } from "./outside";
 
 export const adminRoutes = new Hono<AppEnv>();
 
@@ -30,3 +31,5 @@ adminRoutes.route("/partners", adminPartners);
 adminRoutes.route("/audit", adminAudit);
 adminRoutes.route("/review", adminReview);
 adminRoutes.route("/quiz-health", adminQuizHealth);
+adminRoutes.route("/feeds", adminFeeds);
+adminRoutes.route("/partner-review", adminPartnerReview);

@@ -11,6 +11,8 @@
  *                  hour before the start (sameDayDue)
  *   window open    checked-in members of events that ended 1 to 14 hours ago,
  *                  while the 72-hour People I Met window is open
+ *   feeds          outside calendar feeds into the host inbox, each at most
+ *                  once a day (src/services/outside-events.ts)
  *   summary        once a day from 18:00: one push per member counting the
  *                  day's unread non-urgent notifications (src/domain/digest.ts)
  *
@@ -38,6 +40,7 @@ import { accounts, consents, events, notifications, profiles, registrations, typ
 import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
 import { retentionIfDue } from "./retention";
+import { readDueFeeds } from "./outside-events";
 
 const HOUR = 3_600_000;
 export const CLOCK_TASK = "clock";
@@ -52,7 +55,7 @@ export const SAME_DAY_LEAD_MS = 3 * HOUR;
 /** Below this, the day-before reminder's window (18 to 30 hours) has passed. */
 const DAY_BEFORE_MIN_MS = 18 * HOUR;
 
-export type ClockRun = { retention: boolean; quiet: boolean; tomorrow: number; today: number; windowOpen: number; digest: number; pushed: number };
+export type ClockRun = { retention: boolean; quiet: boolean; feeds: number; tomorrow: number; today: number; windowOpen: number; digest: number; pushed: number };
 
 /** The next hourly slot after `firedAt`, skipping any that already passed. */
 export function nextSlot(firedAt: number, now: number): number {
@@ -137,9 +140,11 @@ function usable(now: Date) {
 }
 
 export async function runClock(env: Bindings, now: Date = new Date()): Promise<ClockRun> {
-  const out: ClockRun = { retention: false, quiet: false, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, pushed: 0 };
+  const out: ClockRun = { retention: false, quiet: false, feeds: 0, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, pushed: 0 };
   const before = await retentionIfDue(env, "system", now);
   out.retention = !!before && before.at.getTime() === now.getTime();
+  // Outside calendar feeds into the host inbox, each at most once a day (D46). Quiet hours don't matter: nobody is messaged.
+  out.feeds = await readDueFeeds(env, now);
   if (quietHours(now)) {
     out.quiet = true;
     return out;

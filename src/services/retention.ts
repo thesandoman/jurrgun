@@ -68,6 +68,11 @@ import { deleteObject, type StorageEnv } from "../storage";
 import {
   accounts,
   announcements,
+  calendarTokens,
+  eventFeeds,
+  eventInbox,
+  partnerApplications,
+  partnerKeys,
   auditLog,
   blocks,
   buddyMatches,
@@ -407,6 +412,14 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       // Their sign-in email (a hash only) and any codes still waiting for it.
       db.delete(loginCodes).where(inArray(loginCodes.emailHash, db.select({ h: emailLinks.emailHash }).from(emailLinks).where(inArray(emailLinks.accountId, ids)))),
       db.delete(emailLinks).where(inArray(emailLinks.accountId, ids)),
+      // Their private calendar link stops working, and partner applications go.
+      db.delete(calendarTokens).where(inArray(calendarTokens.accountId, ids)),
+      db.delete(partnerApplications).where(inArray(partnerApplications.accountId, ids)),
+      db.update(partnerApplications).set({ reviewedBy: null }).where(inArray(partnerApplications.reviewedBy, ids)),
+      // Links they pasted, feeds and keys they added stay for the partner, without the link to them.
+      db.update(eventInbox).set({ addedBy: null }).where(inArray(eventInbox.addedBy, ids)),
+      db.update(eventFeeds).set({ addedBy: null }).where(inArray(eventFeeds.addedBy, ids)),
+      db.update(partnerKeys).set({ createdBy: null }).where(inArray(partnerKeys.createdBy, ids)),
       // Their mutual connections end, so the other person no longer sees them.
       db
         .update(connections)

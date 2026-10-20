@@ -165,8 +165,65 @@ export const partnerOrgs = pgTable("identity_partner_orgs", {
   kind: text("kind").$type<PartnerKind>().notNull().default("events"),
   /** Internal notes for staff. Never shown to members. */
   notes: text("notes"),
+  /**
+   * verified (publishes go-together events live, D47) | review (a moderator
+   * sent it back after reports: its events wait for review, its keys still
+   * work but post as pending).
+   */
+  status: text("status").notNull().default("verified"),
+  /** The partner's own site, https only. */
+  website: text("website"),
   createdAt: created(),
 });
+
+/**
+ * Vendor and partner applications (D47). A signed-in member applies; a
+ * Jurrgun admin, a moderator or a BMA admin verifies it, which creates the
+ * partner organisation and makes the applicant its partner admin.
+ */
+export const partnerApplications = pgTable(
+  "identity_partner_applications",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    orgName: text("org_name").notNull(),
+    kind: text("kind").$type<PartnerKind>().notNull().default("events"),
+    website: text("website"),
+    /** How staff reach the organisation (a work email or phone the applicant gives). */
+    contact: text("contact").notNull(),
+    about: text("about").notNull().default(""),
+    /** pending | approved | declined */
+    status: text("status").notNull().default("pending"),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: ts("reviewed_at"),
+    reviewNote: text("review_note"),
+    partnerOrgId: text("partner_org_id"),
+    createdAt: created(),
+  },
+  (t) => [index("identity_partner_applications_status_idx").on(t.status, t.createdAt), index("identity_partner_applications_account_idx").on(t.accountId)],
+);
+
+/**
+ * Jurrgun-issued partner keys (D47): a partner's own system posts events
+ * with one. Only the SHA-256 of the key is kept; the key is shown once.
+ * Revoked keys stay for the record and never work again.
+ */
+export const partnerKeys = pgTable(
+  "identity_partner_keys",
+  {
+    id: text("id").primaryKey(),
+    partnerOrgId: text("partner_org_id").notNull(),
+    keyHash: text("key_hash").notNull(),
+    /** The first characters, so a partner can tell keys apart. */
+    prefix: text("prefix").notNull(),
+    label: text("label").notNull().default(""),
+    createdBy: text("created_by"),
+    lastUsedAt: ts("last_used_at"),
+    revokedAt: ts("revoked_at"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("identity_partner_keys_hash_idx").on(t.keyHash), index("identity_partner_keys_org_idx").on(t.partnerOrgId)],
+);
 
 // ------------------------------------------------------------------ social --
 
@@ -312,6 +369,25 @@ export const events = pgTable(
     /** A key from src/content/stations.ts (BTS, MRT, Airport Rail Link). */
     nearestStation: text("nearest_station"),
     walkMinutes: integer("walk_minutes"),
+    /**
+     * Outside events as go-together cards (D45, D46): where the event itself
+     * lives. source_name is shown as "Via <name>", source_url is its own page
+     * and ticket link (https only; payment stays there), source_credit is the
+     * credit line the source asks for. The Jurrgun event's venue is the
+     * meeting point; source_venue and source_starts_at are the outside
+     * event's own place and start. All null for an ordinary Jurrgun event.
+     */
+    sourceName: text("source_name"),
+    sourceUrl: text("source_url"),
+    sourceCredit: text("source_credit"),
+    sourceVenue: text("source_venue"),
+    sourceStartsAt: ts("source_starts_at"),
+    /** The host inbox row (social_event_inbox.id) this go-together event came from. */
+    inboxId: text("inbox_id"),
+    /** Per event, never per person (D47): the code a partner sees counts against. */
+    referralCode: text("referral_code"),
+    /** Optional online hello before the in-person event (D50). https only; shown to confirmed seats. */
+    warmupUrl: text("warmup_url"),
     createdBy: text("created_by").notNull(),
     createdAt: created(),
   },
@@ -320,6 +396,8 @@ export const events = pgTable(
     index("social_events_district_idx").on(t.district),
     index("social_events_status_idx").on(t.status),
     index("social_events_regular_table_idx").on(t.regularTableId),
+    index("social_events_partner_idx").on(t.partnerOrgId),
+    index("social_events_inbox_idx").on(t.inboxId),
   ],
 );
 
@@ -1182,6 +1260,89 @@ export const regularTableConflicts = pgTable(
   (t) => [uniqueIndex("social_regular_table_conflicts_pair_idx").on(t.tableId, t.aAccount, t.bAccount), index("social_regular_table_conflicts_status_idx").on(t.tableId, t.status)],
 );
 
+// --------------------------------------------------------- outside events --
+
+/**
+ * Calendar feeds read into the host inbox (D46): a Luma calendar, a Meetup
+ * group, a venue's Google Calendar, the city calendar. Added by admins (or a
+ * verified partner for its own feed), only after the source's terms were
+ * checked (terms_note says how). Read once a day by the clock.
+ */
+export const eventFeeds = pgTable(
+  "social_event_feeds",
+  {
+    id: text("id").primaryKey(),
+    url: text("url").notNull(),
+    /** Shown as "Via <name>". */
+    sourceName: text("source_name").notNull(),
+    credit: text("credit"),
+    /** What the source's terms say about reading the feed, and when it was checked. */
+    termsNote: text("terms_note").notNull(),
+    partnerOrgId: text("partner_org_id"),
+    addedBy: text("added_by"),
+    /** active | paused */
+    status: text("status").notNull().default("active"),
+    lastReadAt: ts("last_read_at"),
+    /** ok | a short error such as http_404 or too_large */
+    lastResult: text("last_result"),
+    lastCount: integer("last_count"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_event_feeds_url_idx").on(t.url), index("social_event_feeds_partner_idx").on(t.partnerOrgId)],
+);
+
+/**
+ * The host inbox (D45): outside events that came in from a feed or a pasted
+ * link and wait for a host or partner to add a go-together group. Nothing
+ * here is on Discover. dedupe_key (the feed's own UID, or the page URL) keeps
+ * the daily read from adding the same event twice.
+ */
+export const eventInbox = pgTable(
+  "social_event_inbox",
+  {
+    id: text("id").primaryKey(),
+    dedupeKey: text("dedupe_key").notNull(),
+    feedId: text("feed_id"),
+    partnerOrgId: text("partner_org_id"),
+    sourceName: text("source_name").notNull(),
+    sourceUrl: text("source_url"),
+    credit: text("credit"),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    startsAt: ts("starts_at").notNull(),
+    endsAt: ts("ends_at"),
+    venueName: text("venue_name"),
+    venueAddress: text("venue_address"),
+    /** new | attached (a go-together event exists) | dismissed */
+    status: text("status").notNull().default("new"),
+    attachedEventId: text("attached_event_id"),
+    /** Who pasted the link (null for a feed). Cut when that account is deleted. */
+    addedBy: text("added_by"),
+    createdAt: created(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("social_event_inbox_dedupe_idx").on(t.dedupeKey),
+    index("social_event_inbox_status_idx").on(t.status, t.startsAt),
+    index("social_event_inbox_partner_idx").on(t.partnerOrgId),
+  ],
+);
+
+/**
+ * A member's private calendar link (D48): /cal/<token>.ics lists their
+ * bookings. Reset any time, which makes the old link stop working.
+ * Deleted with the account.
+ */
+export const calendarTokens = pgTable(
+  "social_calendar_tokens",
+  {
+    accountId: text("account_id").primaryKey(),
+    token: text("token").notNull(),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_calendar_tokens_token_idx").on(t.token)],
+);
+
 // ------------------------------------------------------------------- audit --
 
 export const auditLog = pgTable(
@@ -1201,6 +1362,9 @@ export const auditLog = pgTable(
 export type Account = typeof accounts.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
 export type Event = typeof events.$inferSelect;
+export type InboxItem = typeof eventInbox.$inferSelect;
+export type EventFeed = typeof eventFeeds.$inferSelect;
+export type PartnerOrg = typeof partnerOrgs.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;
 export type RegularTable = typeof regularTables.$inferSelect;
 export type BuddyMatch = typeof buddyMatches.$inferSelect;

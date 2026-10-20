@@ -1,0 +1,380 @@
+/**
+ * Partners and vendors (D47).
+ *
+ *   GET  /partner/apply   POST …          a signed-in member applies for their organisation
+ *   GET  /partner                         the partner area (partner admins)
+ *   POST /partner/feeds                   add the partner's own calendar feed (terms note required)
+ *   POST /partner/feeds/:id/pause|resume
+ *   POST /partner/keys                    make a key (shown once)
+ *   POST /partner/keys/:id/revoke
+ *
+ * A Jurrgun admin, a moderator or a BMA admin verifies applications
+ * (src/routes/admin/partner-review.tsx). A partner sees its own events with
+ * booking counts and a referral code per event: never names, never who.
+ */
+import { Hono, type Context } from "hono";
+import { and, asc, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { batch, getDb } from "../db";
+import { newId } from "../lib/crypto";
+import type { AppEnv } from "../lib/env";
+import { fmtDate } from "../lib/i18n";
+import { audit } from "../lib/records";
+import { requireRole, requireUser } from "../lib/session";
+import { accounts, eventFeeds, events, partnerApplications, partnerKeys, partnerOrgs, PARTNER_KINDS, type PartnerKind } from "../schema";
+import { checkOutsideUrl } from "../services/outside-fetch";
+import { createPartnerKey, KEYS_PER_ORG, revokePartnerKey } from "../services/partner-keys";
+import { bookingCounts } from "./partner-api";
+import { Button, Card, Empty, Field, LinkButton, Notice, page, str, Tag, TextArea, view, type View } from "../ui/kit";
+
+export const partnerRoutes = new Hono<AppEnv>();
+type C = Context<AppEnv>;
+
+export const KIND_TEXT: Record<PartnerKind, [string, string]> = {
+  events: ["ผู้จัดงานหรือแพลตฟอร์มขายบัตร", "Event organiser or ticketing platform"],
+  venue: ["สถานที่ (คาเฟ่ ร้าน แกลเลอรี)", "Venue (café, bar, gallery)"],
+  community: ["ชุมชน ชมรม หรือมหาวิทยาลัย", "Community, club or university"],
+  dating: ["แอปเดตหรือแอปหาเพื่อน 💘", "Dating or friend app 💘"],
+};
+const isKind = (k: string): k is PartnerKind => (PARTNER_KINDS as readonly string[]).includes(k);
+
+// ------------------------------------------------------------- apply --
+
+partnerRoutes.use("/partner/apply", requireUser);
+
+async function applyPage(c: C, errors: string[] = [], d: Record<string, string> = {}, status?: 400) {
+  const v = view(c);
+  const { t, lang } = v;
+  const me = c.var.user!.account;
+  const [mine] = await getDb(c.env)
+    .select()
+    .from(partnerApplications)
+    .where(eq(partnerApplications.accountId, me.id))
+    .orderBy(desc(partnerApplications.createdAt))
+    .limit(1);
+  const pending = mine?.status === "pending";
+  return page(
+    c,
+    { title: t("สมัครเป็นพาร์ตเนอร์", "Become a partner"), tab: "me", status },
+    <>
+      <h1>{t("สมัครเป็นพาร์ตเนอร์", "Become a partner")}</h1>
+      <p class="muted">
+        {t(
+          "ผู้จัดงาน สถานที่ ชุมชน และแพลตฟอร์มขายบัตร จัดโต๊ะไปงานด้วยกันบน Jurrgun ได้ ทีมงานตรวจและยืนยันก่อน แล้วคุณจะได้พื้นที่พาร์ตเนอร์ของตัวเอง",
+          "Organisers, venues, communities and ticketing platforms can run go-together tables on Jurrgun. The team checks and verifies you first, then you get your own partner area.",
+        )}
+      </p>
+      <p class="muted">
+        {t(
+          "พาร์ตเนอร์ไม่เคยได้ข้อมูลสมาชิก เห็นแค่จำนวนคนจองและเช็กอินของแต่ละงาน ทุกงานต้องมีเจ้าภาพที่ระบุชื่อและจุดนัดพบที่เป็นที่สาธารณะ",
+          "Partners never get member data: only how many booked and checked in at each event. Every event needs a named host and a public meeting point.",
+        )}
+      </p>
+      {me.role === "partner_admin" ? (
+        <p>
+          <LinkButton href="/partner">{t("ไปที่พื้นที่พาร์ตเนอร์", "Go to your partner area")}</LinkButton>
+        </p>
+      ) : pending ? (
+        <Notice kind="ok">{t(`ได้รับใบสมัครของ ${mine.orgName} แล้ว ทีมงานจะแจ้งผลในการแจ้งเตือน`, `We have ${mine.orgName}'s application. The team will tell you in your notifications.`)}</Notice>
+      ) : (
+        <form method="post" action="/partner/apply">
+          {mine?.status === "declined" && mine.reviewNote ? <Notice kind="warn">{t(`ใบสมัครก่อนหน้า: ${mine.reviewNote}`, `Your last application: ${mine.reviewNote}`)}</Notice> : null}
+          {errors.length ? (
+            <Notice kind="error">
+              <ul>
+                {errors.map((e) => (
+                  <li>{e}</li>
+                ))}
+              </ul>
+            </Notice>
+          ) : null}
+          <Card>
+            <Field label={t("ชื่อองค์กร", "Organisation name")} name="orgName" value={d.orgName} required maxlength={100} autocomplete="organization" />
+            <div class="field">
+              <label for="f-kind">{t("ประเภท", "Type")}</label>
+              <select id="f-kind" name="kind" required>
+                {PARTNER_KINDS.map((k) => (
+                  <option value={k} selected={(d.kind || "events") === k}>
+                    {lang === "en" ? KIND_TEXT[k][1] : KIND_TEXT[k][0]}
+                  </option>
+                ))}
+              </select>
+              <small>{t("แอปเดต: กิจกรรมจะเห็นได้เฉพาะสมาชิกที่เปิดรับเรื่องเดต 💘 เท่านั้น", "Dating apps: your events are seen only by members who opted into 💘.")}</small>
+            </div>
+            <Field label={t("เว็บไซต์ (ไม่บังคับ)", "Website (optional)")} name="website" type="url" value={d.website} placeholder="https://…" maxlength={300} inputmode="url" autocapitalize="none" />
+            <Field
+              label={t("ช่องทางติดต่อของงาน", "Work contact")}
+              name="contact"
+              value={d.contact}
+              required
+              maxlength={200}
+              hint={t("อีเมลหรือเบอร์โทรขององค์กร ทีมงานใช้ติดต่อเพื่อยืนยันเท่านั้น", "The organisation's email or phone. The team uses it only to verify you.")}
+            />
+            <TextArea label={t("เล่าสั้น ๆ ว่าจัดงานแบบไหน (ไม่บังคับ)", "What kind of events you run (optional)")} name="about" value={d.about} rows={3} maxlength={1000} />
+          </Card>
+          <div class="row end">
+            <Button>{t("ส่งใบสมัคร", "Send application")}</Button>
+          </div>
+        </form>
+      )}
+    </>,
+  );
+}
+
+partnerRoutes.get("/partner/apply", (c) => applyPage(c));
+
+partnerRoutes.post("/partner/apply", async (c) => {
+  const { t } = view(c);
+  const me = c.var.user!.account;
+  const body = await c.req.parseBody();
+  const d = { orgName: str(body.orgName), kind: str(body.kind) || "events", website: str(body.website), contact: str(body.contact), about: str(body.about) };
+  const errors: string[] = [];
+  if (d.orgName.length < 2 || d.orgName.length > 100) errors.push(t("ใส่ชื่อองค์กร (2 ถึง 100 ตัวอักษร)", "Add the organisation's name (2 to 100 characters)."));
+  if (!isKind(d.kind)) errors.push(t("เลือกประเภท", "Choose a type."));
+  const website = d.website ? checkOutsideUrl(d.website) : null;
+  if (d.website && !website) errors.push(t("เว็บไซต์ต้องขึ้นต้นด้วย https://", "The website must start with https://"));
+  if (d.contact.length < 5 || d.contact.length > 200) errors.push(t("ใส่ช่องทางติดต่อของงาน", "Add a work contact."));
+  if (d.about.length > 1000) errors.push(t("เล่าได้ไม่เกิน 1,000 ตัวอักษร", "At most 1,000 characters."));
+  const db = getDb(c.env);
+  const [open] = await db
+    .select({ id: partnerApplications.id })
+    .from(partnerApplications)
+    .where(and(eq(partnerApplications.accountId, me.id), eq(partnerApplications.status, "pending")))
+    .limit(1);
+  if (open) return c.redirect("/partner/apply");
+  if (errors.length) return applyPage(c, errors, d, 400);
+  const id = newId();
+  await batch(c.env, [
+    db.insert(partnerApplications).values({ id, accountId: me.id, orgName: d.orgName, kind: d.kind as PartnerKind, website: website?.toString() ?? null, contact: d.contact, about: d.about }),
+    audit(db, me.id, "partner.apply", { type: "partner_application", id }),
+  ]);
+  return c.redirect("/partner/apply?notice=done");
+});
+
+// ------------------------------------------------------- partner area --
+
+partnerRoutes.use("/partner", requireRole("partner_admin"));
+partnerRoutes.use("/partner/feeds/*", requireRole("partner_admin"));
+partnerRoutes.use("/partner/feeds", requireRole("partner_admin"));
+partnerRoutes.use("/partner/keys/*", requireRole("partner_admin"));
+partnerRoutes.use("/partner/keys", requireRole("partner_admin"));
+
+const orgIdOf = (c: C) => c.var.user!.account.partnerOrgId;
+
+async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 } = {}) {
+  const v: View = view(c);
+  const { t, lang } = v;
+  const orgId = orgIdOf(c);
+  if (!orgId) return page(c, { title: t("พื้นที่พาร์ตเนอร์", "Partner area"), admin: true }, <Empty>{t("บัญชีนี้ยังไม่ได้ผูกกับองค์กร", "This account isn't linked to an organisation yet.")}</Empty>);
+  const db = getDb(c.env);
+  const now = new Date();
+  const [[org], feeds, keys, evs, hosts] = await Promise.all([
+    db.select().from(partnerOrgs).where(eq(partnerOrgs.id, orgId)).limit(1),
+    db.select().from(eventFeeds).where(eq(eventFeeds.partnerOrgId, orgId)).orderBy(asc(eventFeeds.createdAt)).limit(20),
+    db.select().from(partnerKeys).where(eq(partnerKeys.partnerOrgId, orgId)).orderBy(desc(partnerKeys.createdAt)).limit(20),
+    db
+      .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, status: events.status, referralCode: events.referralCode })
+      .from(events)
+      .where(and(eq(events.partnerOrgId, orgId), gte(events.startsAt, new Date(now.getTime() - 30 * 86_400_000))))
+      .orderBy(desc(events.startsAt))
+      .limit(50),
+    db.select({ username: accounts.username, role: accounts.role }).from(accounts).where(and(eq(accounts.partnerOrgId, orgId), inArray(accounts.role, ["host", "partner_admin"]))).limit(50),
+  ]);
+  const counts = await bookingCounts(c.env, evs.map((e) => e.id));
+  const live = keys.filter((k) => !k.revokedAt);
+  const origin = new URL(c.req.url).origin;
+  return page(
+    c,
+    { title: t("พื้นที่พาร์ตเนอร์", "Partner area"), admin: true, status: opts.status },
+    <>
+      <h1>{org?.name ?? t("พื้นที่พาร์ตเนอร์", "Partner area")}</h1>
+      <p>
+        {org?.status === "review" ? (
+          <Tag tone="warn">{t("ทีมงานกำลังตรวจ: กิจกรรมใหม่รอตรวจก่อนขึ้น", "Under review: new events wait for the team")}</Tag>
+        ) : (
+          <Tag tone="ok">{t("ยืนยันแล้ว: กิจกรรมขึ้นหน้าค้นหาทันที", "Verified: events go live on Discover")}</Tag>
+        )}
+      </p>
+      {opts.error ? <Notice kind="error">{opts.error}</Notice> : null}
+      {opts.newKey ? (
+        <Notice kind="ok">
+          {t("คีย์ใหม่ คัดลอกเก็บไว้ตอนนี้ จะไม่แสดงอีก:", "Your new key. Copy it now; it won't be shown again:")}
+          <input type="text" readonly value={opts.newKey} onfocus="this.select()" aria-label={t("คีย์ใหม่", "New key")} />
+        </Notice>
+      ) : null}
+
+      <h2>{t("กิจกรรมและยอดจอง", "Events and bookings")}</h2>
+      <p class="muted">{t("เห็นแค่จำนวน ไม่เห็นว่าใครจอง", "Counts only, never who booked.")}</p>
+      {evs.length === 0 ? (
+        <Empty>{t("ยังไม่มีกิจกรรม", "No events yet.")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">{t("กิจกรรมและยอดจอง", "Events and bookings")}</caption>
+            <thead>
+              <tr>
+                <th>{t("กิจกรรม", "Event")}</th>
+                <th>{t("สถานะ", "Status")}</th>
+                <th>{t("จอง", "Booked")}</th>
+                <th>{t("เช็กอิน", "Checked in")}</th>
+                <th>{t("รหัสอ้างอิง", "Referral code")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evs.map((e) => (
+                <tr>
+                  <td>
+                    <a href={`/events/${e.id}`}>{lang === "en" && e.titleEn ? e.titleEn : e.title}</a>
+                    <br />
+                    <small>{fmtDate(e.startsAt, lang)}</small>
+                  </td>
+                  <td>{e.status}</td>
+                  <td>{counts.get(e.id)?.booked ?? 0}</td>
+                  <td>{counts.get(e.id)?.checked_in ?? 0}</td>
+                  <td>
+                    <code>{e.referralCode ?? "-"}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2>{t("คีย์สำหรับระบบของคุณ", "Keys for your system")}</h2>
+      <p class="muted">
+        {t("ระบบของคุณส่งกิจกรรมเข้ามาได้ที่", "Your system posts events to")} <code>POST {origin}/api/partner/events</code> {t("พร้อม", "with")} <code>Authorization: Bearer jgk_…</code>
+      </p>
+      {keys.length ? (
+        <ul class="plain">
+          {keys.map((k) => (
+            <li>
+              <code>{k.prefix}…</code> {k.label ? ` ${k.label}` : ""}{" "}
+              {k.revokedAt ? (
+                <Tag tone="muted">{t("ยกเลิกแล้ว", "Revoked")}</Tag>
+              ) : (
+                <form method="post" action={`/partner/keys/${k.id}/revoke`} style="display:inline">
+                  <Button kind="ghost">{t("ยกเลิกคีย์", "Revoke")}</Button>
+                </form>
+              )}
+              {k.lastUsedAt ? <small class="muted"> {t(`ใช้ล่าสุด ${fmtDate(k.lastUsedAt, lang)}`, `last used ${fmtDate(k.lastUsedAt, lang)}`)}</small> : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {live.length < KEYS_PER_ORG ? (
+        <form method="post" action="/partner/keys" class="row">
+          <Field label={t("ชื่อคีย์ (ไม่บังคับ)", "Key name (optional)")} name="label" maxlength={60} placeholder={t("เช่น ระบบขายบัตร", "e.g. ticketing system")} />
+          <Button>{t("สร้างคีย์", "Make a key")}</Button>
+        </form>
+      ) : null}
+
+      <h2>{t("ปฏิทินของคุณ", "Your calendar feed")}</h2>
+      <p class="muted">
+        {t(
+          "ใส่ลิงก์ iCal ของงานคุณ ทุกวันจะอ่านเข้ากล่องรอโต๊ะ เจ้าภาพของคุณเลือกงานไปเพิ่มจุดนัดพบกับโต๊ะได้",
+          "Add your events' iCal link. It's read into the waiting list once a day; your hosts pick events and add a meeting point and a table.",
+        )}
+      </p>
+      {feeds.map((f) => (
+        <Card>
+          <strong>{f.sourceName}</strong> <small class="muted">{f.url}</small>
+          <p class="muted" style="margin:4px 0">
+            {f.status === "paused" ? t("หยุดไว้", "Paused") : f.lastReadAt ? t(`อ่านล่าสุด ${fmtDate(f.lastReadAt, lang)}: ${f.lastResult} (${f.lastCount ?? 0})`, `Last read ${fmtDate(f.lastReadAt, lang)}: ${f.lastResult} (${f.lastCount ?? 0})`) : t("ยังไม่ได้อ่าน", "Not read yet")}
+          </p>
+          <form method="post" action={`/partner/feeds/${f.id}/${f.status === "paused" ? "resume" : "pause"}`}>
+            <Button kind="ghost">{f.status === "paused" ? t("อ่านต่อ", "Resume") : t("หยุด", "Pause")}</Button>
+          </form>
+        </Card>
+      ))}
+      {feeds.length < 5 ? (
+        <form method="post" action="/partner/feeds">
+          <Card>
+            <Field label={t("ลิงก์ iCal (https)", "iCal link (https)")} name="url" type="url" required maxlength={1000} inputmode="url" autocapitalize="none" />
+            <TextArea
+              label={t("ข้อตกลงการใช้งาน", "Terms")}
+              name="termsNote"
+              rows={2}
+              required
+              maxlength={500}
+              hint={t("ยืนยันว่าปฏิทินนี้เป็นของคุณ หรือคุณมีสิทธิ์ให้ Jurrgun อ่าน", "Confirm the calendar is yours, or that you may let Jurrgun read it.")}
+            />
+            <Button>{t("เพิ่มปฏิทิน", "Add the feed")}</Button>
+          </Card>
+        </form>
+      ) : null}
+
+      <h2>{t("เจ้าภาพของคุณ", "Your hosts")}</h2>
+      <p class="muted">{t("ทุกกิจกรรมต้องมีเจ้าภาพ ทีมงาน Jurrgun เพิ่มเจ้าภาพให้องค์กรของคุณ", "Every event needs a named host. The Jurrgun team adds hosts to your organisation.")}</p>
+      <ul class="plain">
+        {hosts.map((h) => (
+          <li>@{h.username}</li>
+        ))}
+      </ul>
+    </>,
+  );
+}
+
+partnerRoutes.get("/partner", (c) => area(c));
+
+partnerRoutes.post("/partner/keys", async (c) => {
+  const orgId = orgIdOf(c);
+  if (!orgId) return c.redirect("/partner");
+  const db = getDb(c.env);
+  const live = await db
+    .select({ id: partnerKeys.id })
+    .from(partnerKeys)
+    .where(and(eq(partnerKeys.partnerOrgId, orgId), isNull(partnerKeys.revokedAt)))
+    .limit(KEYS_PER_ORG + 1);
+  if (live.length >= KEYS_PER_ORG) return area(c, { error: view(c).t(`มีคีย์ได้ไม่เกิน ${KEYS_PER_ORG} อัน`, `At most ${KEYS_PER_ORG} keys.`), status: 400 });
+  const me = c.var.user!.account.id;
+  const { id, key } = await createPartnerKey(c.env, orgId, str((await c.req.parseBody()).label), me);
+  // The audit records that a key was made, never the key.
+  await audit(db, me, "partner.key_create", { type: "partner_key", id });
+  return area(c, { newKey: key });
+});
+
+partnerRoutes.post("/partner/keys/:id/revoke", async (c) => {
+  const orgId = orgIdOf(c);
+  if (orgId && (await revokePartnerKey(c.env, orgId, c.req.param("id")))) {
+    await audit(getDb(c.env), c.var.user!.account.id, "partner.key_revoke", { type: "partner_key", id: c.req.param("id") });
+  }
+  return c.redirect("/partner?notice=saved");
+});
+
+partnerRoutes.post("/partner/feeds", async (c) => {
+  const { t } = view(c);
+  const orgId = orgIdOf(c);
+  if (!orgId) return c.redirect("/partner");
+  const body = await c.req.parseBody();
+  const url = checkOutsideUrl(str(body.url));
+  const termsNote = str(body.termsNote);
+  if (!url) return area(c, { error: t("ลิงก์ปฏิทินต้องเป็น https ของเว็บสาธารณะ", "The feed link must be a public https link."), status: 400 });
+  if (termsNote.length < 5 || termsNote.length > 500) return area(c, { error: t("บอกเรื่องสิทธิ์การใช้ปฏิทินนี้ด้วย", "Say why Jurrgun may read this feed."), status: 400 });
+  const db = getDb(c.env);
+  const [org] = await db.select({ name: partnerOrgs.name }).from(partnerOrgs).where(eq(partnerOrgs.id, orgId)).limit(1);
+  const id = newId();
+  const added = await db
+    .insert(eventFeeds)
+    .values({ id, url: url.toString(), sourceName: org?.name ?? url.hostname, credit: org?.name ?? null, termsNote, partnerOrgId: orgId, addedBy: c.var.user!.account.id })
+    .onConflictDoNothing({ target: eventFeeds.url })
+    .returning({ id: eventFeeds.id });
+  if (!added.length) return area(c, { error: t("มีปฏิทินนี้อยู่แล้ว", "That feed is already added."), status: 400 });
+  await audit(db, c.var.user!.account.id, "feed.add", { type: "feed", id });
+  return c.redirect("/partner?notice=saved");
+});
+
+for (const [action, status] of [
+  ["pause", "paused"],
+  ["resume", "active"],
+] as const) {
+  partnerRoutes.post(`/partner/feeds/:id/${action}`, async (c) => {
+    const orgId = orgIdOf(c);
+    if (orgId) {
+      await getDb(c.env)
+        .update(eventFeeds)
+        .set({ status })
+        .where(and(eq(eventFeeds.id, c.req.param("id")), eq(eventFeeds.partnerOrgId, orgId)));
+    }
+    return c.redirect("/partner?notice=saved");
+  });
+}

@@ -10,6 +10,14 @@
  *   POST /host/:id/private-link/reset   new private link; the old one stops working
  *   POST /host/:id/table                send a hangout to my regular table (again: only new members get it)
  *   POST /host/:id/circle               send a private hangout to my people (connections) instead
+ *   GET  /host/inbox                    outside events waiting for a go-together group (D45)
+ *   POST /host/import                   paste an outside event link: into the inbox, then the form
+ *   POST /host/inbox/:id/dismiss        "Not for us" (admins, and partners for their own items)
+ *
+ * Going together (D45): an outside event becomes a Jurrgun event only when a
+ * host adds a meeting point, a time to meet and a table. The form is the
+ * usual one, opened with ?inbox=<id>; the event keeps its source, its own
+ * ticket link (payment stays there) and credit.
  *
  * A Table Host's hangout is for their regular table by default (src/routes/tables.tsx):
  * it is private, and goes to the table's members when it's published.
@@ -23,7 +31,7 @@
 import { lateOrLong, partnerEventTags } from "../domain/rules";
 import { partnerKindOf } from "../services/events";
 import { Hono, type Context } from "hono";
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, or, type SQL } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { canHost, checkProposal, memberCanEdit, ownsEvent, publishesDirectly, toBangkokInput, type ProposalInput } from "../domain/hosting";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values, districtsAZ } from "../lib/constants";
@@ -32,7 +40,8 @@ import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireUser } from "../lib/session";
-import { accounts, blocks, circleShares, connections, events, type Event, type RegularTable } from "../schema";
+import { accounts, blocks, circleShares, connections, eventInbox, events, partnerOrgs, type Event, type InboxItem, type RegularTable } from "../schema";
+import { importLink } from "../services/outside-events";
 import { hostTable, sendToTable } from "../services/regular-tables";
 import { Button, Card, Choices, Empty, FactIcon, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
 import { VenueFields } from "../ui/day-of";
@@ -89,6 +98,9 @@ function emptyInput(lang: string): ProposalInput {
     venueNotesEn: "",
     nearestStation: "",
     walkMinutes: "",
+    warmupUrl: "",
+    goTogether: false,
+    sourceUrl: "",
   };
 }
 
@@ -123,6 +135,9 @@ function inputFromEvent(e: Event): ProposalInput {
     venueNotesEn: e.venueNotesEn ?? "",
     nearestStation: e.nearestStation ?? "",
     walkMinutes: e.walkMinutes == null ? "" : String(e.walkMinutes),
+    warmupUrl: e.warmupUrl ?? "",
+    goTogether: !!e.sourceName,
+    sourceUrl: e.sourceUrl ?? "",
   };
 }
 
@@ -158,6 +173,9 @@ function inputFromBody(body: Record<string, unknown>): ProposalInput {
     venueNotesEn: s("venueNotesEn"),
     nearestStation: s("nearestStation"),
     walkMinutes: s("walkMinutes"),
+    warmupUrl: s("warmupUrl"),
+    goTogether: s("goTogether") === "1",
+    sourceUrl: s("sourceUrl"),
   };
 }
 
@@ -165,6 +183,67 @@ const viewerOf = (c: C) => {
   const a = c.var.user!.account;
   return { id: a.id, role: a.role, partnerOrgId: a.partnerOrgId };
 };
+
+// ------------------------------------------------------------- inbox --
+
+/** Which inbox items a host sees: Jurrgun's shared ones, plus their own partner's. Admins see all. */
+function inboxScope(a: { role: string; partnerOrgId: string | null }): SQL | undefined {
+  if (a.role === "bma_admin") return undefined;
+  return a.partnerOrgId ? or(isNull(eventInbox.partnerOrgId), eq(eventInbox.partnerOrgId, a.partnerOrgId)) : isNull(eventInbox.partnerOrgId);
+}
+
+async function inboxItem(c: C, id: string): Promise<InboxItem | null> {
+  if (!id || id.length > 64) return null;
+  const [item] = await getDb(c.env)
+    .select()
+    .from(eventInbox)
+    .where(and(eq(eventInbox.id, id), inboxScope(c.var.user!.account)))
+    .limit(1);
+  return item ?? null;
+}
+
+/** A pasted page we couldn't read keeps its paste time as a placeholder start. */
+export const inboxDateKnown = (i: { startsAt: Date; createdAt: Date }) => i.startsAt.getTime() > i.createdAt.getTime() + 3_600_000;
+
+const canDismiss = (a: { role: string; partnerOrgId: string | null }, i: InboxItem) =>
+  a.role === "bma_admin" || (a.role === "partner_admin" && !!a.partnerOrgId && i.partnerOrgId === a.partnerOrgId);
+
+/** A verified partner whose organisation a moderator sent back to review publishes nothing directly (D47). */
+async function partnerInReview(c: C): Promise<boolean> {
+  const org = c.var.user!.account.partnerOrgId;
+  if (!org) return false;
+  const [row] = await getDb(c.env).select({ status: partnerOrgs.status }).from(partnerOrgs).where(eq(partnerOrgs.id, org)).limit(1);
+  return row?.status === "review";
+}
+
+/** The form for a go-together event from an inbox item: meet an hour before, a public place to fill in. */
+function prefillFrom(item: InboxItem, d: ProposalInput): ProposalInput {
+  const known = inboxDateKnown(item);
+  const meet = known ? new Date(item.startsAt.getTime() - 3_600_000) : null;
+  const end = known ? (item.endsAt && item.endsAt > item.startsAt ? item.endsAt : new Date(item.startsAt.getTime() + 3 * 3_600_000)) : null;
+  return {
+    ...d,
+    title: item.title.slice(0, 120),
+    description: item.description,
+    startsAt: meet ? toBangkokInput(meet) : "",
+    endsAt: meet && end ? toBangkokInput(new Date(Math.min(end.getTime(), meet.getTime() + 12 * 3_600_000))) : "",
+    goTogether: true,
+    sourceUrl: item.sourceUrl ?? "",
+  };
+}
+
+const goTogetherOf = (v: View, d: ProposalInput, item: InboxItem | null, e?: Event | null) =>
+  d.goTogether
+    ? {
+        v,
+        d,
+        inbox: item,
+        sourceName: item?.sourceName ?? e?.sourceName ?? null,
+        credit: item?.credit ?? e?.sourceCredit ?? null,
+        venue: item?.venueName ?? e?.sourceVenue ?? null,
+        startsAt: item ? (inboxDateKnown(item) ? item.startsAt : null) : (e?.sourceStartsAt ?? null),
+      }
+    : null;
 
 /** The full private link for an event (shown to its host only). */
 const privateLink = (c: C, e: Event) => `${new URL(c.req.url).origin}/events/${e.id}?t=${encodeURIComponent(e.privateToken ?? "")}`;
@@ -235,6 +314,32 @@ hostRoutes.get("/host", async (c) => {
       <p>
         <LinkButton href="/host/new">＋ {t("เสนอกิจกรรม", "Propose an event")}</LinkButton>
       </p>
+      <Card>
+        <h2>{t("ไปงานข้างนอกด้วยกัน", "Go together to an outside event")}</h2>
+        <form method="post" action="/host/import">
+          <Field
+            label={t("วางลิงก์กิจกรรม", "Paste an event link")}
+            name="url"
+            type="url"
+            required
+            maxlength={1000}
+            placeholder="https://…"
+            inputmode="url"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck={false}
+            enterkeyhint="go"
+            hint={t("คอนเสิร์ต เทศกาล งานจาก Ticketmelon, Megatix, Luma หรือเว็บไหนก็ได้ แล้วเพิ่มจุดนัดพบกับโต๊ะของคุณ", "A concert, a festival, a Ticketmelon, Megatix or Luma page, any site. Then add your meeting point and table.")}
+          />
+          <div class="row">
+            <Button>{t("ต่อไป", "Next")}</Button>
+            <LinkButton href="/host/inbox" kind="ghost">
+              {t("กิจกรรมที่รอโต๊ะ", "Events waiting for a table")}
+            </LinkButton>
+          </div>
+        </form>
+      </Card>
+      {c.req.query("notice") === "bad_link" ? <Notice kind="error">{t("ลิงก์นี้ใช้ไม่ได้ ใส่ลิงก์ที่ขึ้นต้นด้วย https:// ของหน้ากิจกรรม", "That link can't be used. Paste the event page's link, starting with https://")}</Notice> : null}
       {/* Said once, above the list, instead of under every live event (Phase 3). */}
       {mine.some((e) => e.status === "published") ? (
         <p class="muted">{t("ถ้าอยากแก้ไขหรือยกเลิกกิจกรรมที่เผยแพร่แล้ว ติดต่อทีมงานได้เลย", "To change or cancel a live event, contact the team.")}</p>
@@ -315,7 +420,53 @@ hostRoutes.get("/host", async (c) => {
 
 // ------------------------------------------------------------------ form --
 
-function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors?: string[]; editing: boolean; direct: boolean; table?: RegularTable | null; audience?: string }) {
+/** The outside event a go-together event is for (D45): its source, credit and own link. */
+function GoTogetherCard(props: { v: View; d: ProposalInput; inbox: InboxItem | null; sourceName: string | null; credit: string | null; venue: string | null; startsAt: Date | null }) {
+  const { t, lang } = props.v;
+  return (
+    <Card>
+      <h2>{t("ไปงานนี้ด้วยกัน", "Going together")}</h2>
+      <input type="hidden" name="goTogether" value="1" />
+      {props.inbox ? <input type="hidden" name="inbox" value={props.inbox.id} /> : null}
+      <p class="muted">
+        {props.inbox ? <strong>{props.inbox.title}</strong> : null}
+        {props.sourceName ? ` · ${t("ผ่าน", "Via")} ${props.sourceName}` : ""}
+        {props.credit ? ` · ${props.credit}` : ""}
+        {props.startsAt ? ` · ${fmtDate(props.startsAt, lang)}` : ""}
+        {props.venue ? ` · ${props.venue}` : ""}
+      </p>
+      <Field
+        label={t("ลิงก์ซื้อบัตรหรือหน้ากิจกรรม", "Ticket or event link")}
+        name="sourceUrl"
+        type="url"
+        value={props.d.sourceUrl}
+        placeholder="https://…"
+        maxlength={500}
+        hint={t("ทุกคนซื้อบัตรเองที่นั่น Jurrgun ไม่รับเงิน", "Everyone buys their own ticket there. Jurrgun never takes payment.")}
+      />
+      <p class="muted">
+        {t(
+          "ข้างล่างคือจุดนัดพบของโต๊ะคุณ: ที่สาธารณะใกล้งาน พร้อมที่อยู่ และเวลาที่นัดเจอกันก่อนเข้างาน",
+          "Below is your table's meeting point: a public place near the event, with its address, and the time you meet before going in.",
+        )}
+      </p>
+    </Card>
+  );
+}
+
+function ProposalForm(props: {
+  v: View;
+  d: ProposalInput;
+  action: string;
+  errors?: string[];
+  editing: boolean;
+  direct: boolean;
+  table?: RegularTable | null;
+  audience?: string;
+  goTogether?: Parameters<typeof GoTogetherCard>[0] | null;
+  /** Things to know, not errors (for example: we couldn't read that page). */
+  notes?: string[];
+}) {
   const { v, d } = props;
   const { t, lang } = v;
   const tags = EVENT_TAGS.filter((x) => x.value !== "city_quest");
@@ -334,6 +485,10 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
           </ul>
         </Notice>
       ) : null}
+      {props.notes?.map((n) => (
+        <Notice kind="warn">{n}</Notice>
+      ))}
+      {props.goTogether ? <GoTogetherCard {...props.goTogether} /> : null}
       <Card>
         <h2>{t("จะทำอะไรกัน", "What's the plan?")}</h2>
         <Field label={t("ชื่อกิจกรรม", "Title")} name="title" value={d.title} required maxlength={120} />
@@ -352,6 +507,15 @@ function ProposalForm(props: { v: View; d: ProposalInput; action: string; errors
         <Field label={t("ลิงก์แผนที่ (ไม่บังคับ)", "Map link (optional)")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
         <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
         <VenueFields v={v} d={d} />
+        <Field
+          label={t("ลิงก์ทักทายออนไลน์ก่อนวันงาน (ไม่บังคับ)", "Online hello before the day (optional)")}
+          name="warmupUrl"
+          type="url"
+          value={d.warmupUrl}
+          placeholder="https://…"
+          maxlength={500}
+          hint={t("คุยสั้น ๆ ให้คนมาครั้งแรกรู้จักโต๊ะก่อน งานจริงยังเจอกันตัวจริงเสมอ ลิงก์นี้เห็นเฉพาะคนที่ได้ที่นั่ง", "A short call so first-timers meet their table first. The event itself is always in person. Only people with a seat see this link.")}
+        />
       </Card>
       <Card>
         <h2>{t("ใครมาได้", "Who it's for")}</h2>
@@ -457,7 +621,111 @@ hostRoutes.get("/host/new", async (c) => {
   // A Table Host's hangout goes to their regular table by default.
   const audience = table && (d.visibility === "private" || c.req.query("table") === "1") ? "table" : "none";
   if (audience === "table") d.visibility = "private";
-  return formPage(c, { v, d, action: "/host/new", editing: false, direct: publishesDirectly(me, d.visibility), table, audience });
+  const item = await inboxItem(c, c.req.query("inbox") ?? "");
+  const form = item ? prefillFrom(item, d) : d;
+  const notes = item ? importNotes(v, c.req.query("read"), c.req.query("online")) : [];
+  return formPage(c, {
+    v,
+    d: form,
+    action: "/host/new",
+    editing: false,
+    direct: publishesDirectly(me, form.visibility),
+    table,
+    audience: item ? "none" : audience,
+    goTogether: goTogetherOf(v, form, item),
+    notes,
+  });
+});
+
+/** What the host should know after pasting a link (shown at the top of the form). */
+function importNotes(v: View, read: string | undefined, online: string | undefined): string[] {
+  const out: string[] = [];
+  if (read === "0") out.push(v.t("เราอ่านรายละเอียดจากหน้านี้ไม่ได้ ใส่ชื่อ เวลา และจุดนัดพบเองได้เลย", "We couldn't read the details from that page. Type the name, time and meeting point yourself."));
+  if (online === "1") out.push(v.t("หน้านี้บอกว่าเป็นงานออนไลน์ กิจกรรมบน Jurrgun ต้องเจอกันตัวจริงเสมอ", "That page says the event is online. Jurrgun events always meet in person."));
+  return out;
+}
+
+hostRoutes.post("/host/import", async (c) => {
+  const body = await c.req.parseBody();
+  const me = c.var.user!.account;
+  const res = await importLink(c.env, str(body.url), { accountId: me.id, partnerOrgId: me.role === "partner_admin" || me.role === "host" ? me.partnerOrgId : null });
+  if (!res.ok) return c.redirect("/host?notice=bad_link");
+  const db = getDb(c.env);
+  await audit(db, me.id, "inbox.paste", { type: "inbox", id: res.inboxId }, { read: res.read });
+  return c.redirect(`/host/new?inbox=${encodeURIComponent(res.inboxId)}&read=${res.read || !res.reason ? "1" : "0"}${res.online ? "&online=1" : ""}`);
+});
+
+hostRoutes.get("/host/inbox", async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const me = c.var.user!.account;
+  const now = new Date();
+  const items = await getDb(c.env)
+    .select()
+    .from(eventInbox)
+    .where(and(eq(eventInbox.status, "new"), gte(eventInbox.startsAt, new Date(now.getTime() - 3_600_000)), inboxScope(me)))
+    .orderBy(asc(eventInbox.startsAt))
+    .limit(60);
+  return page(
+    c,
+    { title: t("กิจกรรมที่รอโต๊ะ", "Events waiting for a table"), tab: "me" },
+    <>
+      <p>
+        <a href="/host">← {t("จัดกิจกรรม", "Host an event")}</a>
+      </p>
+      <h1>{t("กิจกรรมที่รอโต๊ะ", "Events waiting for a table")}</h1>
+      <p class="muted">
+        {t(
+          "งานจากปฏิทินและลิงก์ที่วางไว้ จะขึ้นหน้าค้นหาเมื่อมีเจ้าภาพเพิ่มจุดนัดพบกับโต๊ะ",
+          "Events from calendars and pasted links. One shows on Discover only once a host adds a meeting point and a table.",
+        )}
+      </p>
+      {c.req.query("notice") === "dismissed" ? <Notice kind="ok">{t("เอาออกแล้ว", "Removed.")}</Notice> : null}
+      {items.length === 0 ? (
+        <Empty>{t("ยังไม่มีกิจกรรมรอ วางลิงก์ได้ที่หน้าจัดกิจกรรม", "Nothing waiting. Paste a link on the hosting page.")}</Empty>
+      ) : (
+        items.map((i) => (
+          <Card>
+            <strong>{i.title}</strong>
+            <p class="muted" style="margin:4px 0">
+              {inboxDateKnown(i) ? fmtDate(i.startsAt, lang) : t("ยังไม่รู้เวลา", "Time not known yet")}
+              {i.venueName ? ` · ${i.venueName}` : ""}
+              {" · "}
+              {i.sourceUrl ? (
+                <a href={i.sourceUrl} rel="noopener noreferrer nofollow" target="_blank">
+                  {t("ผ่าน", "Via")} {i.sourceName} ↗
+                </a>
+              ) : (
+                `${t("ผ่าน", "Via")} ${i.sourceName}`
+              )}
+              {i.credit ? ` · ${i.credit}` : ""}
+            </p>
+            <div class="row">
+              <LinkButton href={`/host/new?inbox=${encodeURIComponent(i.id)}`}>{t("เพิ่มโต๊ะไปด้วยกัน", "Add a go-together table")}</LinkButton>
+              {canDismiss(me, i) ? (
+                <form method="post" action={`/host/inbox/${i.id}/dismiss`}>
+                  <Button kind="ghost">{t("ไม่ใช่สำหรับเรา", "Not for us")}</Button>
+                </form>
+              ) : null}
+            </div>
+          </Card>
+        ))
+      )}
+    </>,
+  );
+});
+
+hostRoutes.post("/host/inbox/:id/dismiss", async (c) => {
+  const me = c.var.user!.account;
+  const item = await inboxItem(c, c.req.param("id"));
+  if (item && canDismiss(me, item) && item.status === "new") {
+    const db = getDb(c.env);
+    await batch(c.env, [
+      db.update(eventInbox).set({ status: "dismissed", updatedAt: new Date() }).where(and(eq(eventInbox.id, item.id), eq(eventInbox.status, "new"))),
+      audit(db, me.id, "inbox.dismiss", { type: "inbox", id: item.id }),
+    ]);
+  }
+  return c.redirect("/host/inbox?notice=dismissed");
 });
 
 hostRoutes.post("/host/new", async (c) => {
@@ -466,15 +734,19 @@ hostRoutes.post("/host/new", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const d = inputFromBody(body);
   const table = await hostTable(getDb(c.env), me.id);
-  const audience = table ? audienceOf(body) : "none";
+  const item = await inboxItem(c, str(body.inbox));
+  // A go-together event comes from an inbox item still waiting; without one it's an ordinary event.
+  if (!item || item.status !== "new") d.goTogether = false;
+  const audience = table && !item ? audienceOf(body) : "none";
   if (audience === "table") d.visibility = "private";
-  let direct = publishesDirectly(me, d.visibility);
+  let direct = publishesDirectly(me, d.visibility) && !(await partnerInReview(c));
   const { values: vals, errors } = checkProposal(d, ALLOWED());
   const msgs = errors.map((e) => v.t(e.th, e.en));
   if (!direct && (await pendingCount(c, me.id)) >= MAX_PENDING) {
     msgs.push(v.t(`มีกิจกรรมรอตรวจพร้อมกันได้ไม่เกิน ${MAX_PENDING} งาน`, `You can have up to ${MAX_PENDING} events waiting for review at once.`));
   }
-  if (!vals || msgs.length) return formPage(c, { v, d, action: "/host/new", errors: msgs, editing: false, direct, table, audience }, 400);
+  if (!vals || msgs.length)
+    return formPage(c, { v, d, action: "/host/new", errors: msgs, editing: false, direct, table, audience, goTogether: goTogetherOf(v, d, d.goTogether ? item : null) }, 400);
   // Late-night and very long events always get a second pair of eyes.
   if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
 
@@ -497,8 +769,22 @@ hostRoutes.post("/host/new", async (c) => {
       status: direct ? "published" : "pending",
       submittedAt: now,
       regularTableId: audience === "table" && table ? table.id : null,
+      ...(d.goTogether && item
+        ? {
+            sourceName: item.sourceName,
+            sourceUrl: vals.sourceUrl ?? item.sourceUrl,
+            sourceCredit: item.credit,
+            sourceVenue: item.venueName,
+            sourceStartsAt: inboxDateKnown(item) ? item.startsAt : null,
+            inboxId: item.id,
+            referralCode: partnerOrgId ? randomToken(6) : null,
+          }
+        : {}),
       createdBy: me.id,
     }),
+    ...(d.goTogether && item
+      ? [db.update(eventInbox).set({ status: "attached", attachedEventId: id, updatedAt: now }).where(and(eq(eventInbox.id, item.id), eq(eventInbox.status, "new")))]
+      : []),
     audit(db, me.id, direct ? "event.host_publish" : "event.host_submit", { type: "event", id }),
   ]);
   if (direct && audience === "table" && table) await sendPublished(c, id, table);
@@ -523,7 +809,8 @@ hostRoutes.get("/host/:id/edit", async (c) => {
   if (!e) return c.redirect("/host");
   const table = await hostTable(getDb(c.env), c.var.user!.account.id);
   const audience = table && e.regularTableId === table.id ? "table" : "none";
-  return formPage(c, { v, d: inputFromEvent(e), action: `/host/${e.id}/edit`, editing: true, direct: publishesDirectly(c.var.user!.account, e.visibility), table, audience });
+  const d = inputFromEvent(e);
+  return formPage(c, { v, d, action: `/host/${e.id}/edit`, editing: true, direct: publishesDirectly(c.var.user!.account, e.visibility), table, audience, goTogether: goTogetherOf(v, d, null, e) });
 });
 
 hostRoutes.post("/host/:id/edit", async (c) => {
@@ -533,12 +820,15 @@ hostRoutes.post("/host/:id/edit", async (c) => {
   if (!e) return c.redirect("/host");
   const body = await c.req.parseBody({ all: true });
   const d = inputFromBody(body);
+  // The form can't turn an ordinary event into a go-together one, or drop an outside event's source.
+  d.goTogether = !!e.sourceName;
   const table = await hostTable(getDb(c.env), me.id);
-  const audience = table ? audienceOf(body) : "none";
+  const audience = table && !e.sourceName ? audienceOf(body) : "none";
   if (audience === "table") d.visibility = "private";
-  let direct = publishesDirectly(me, d.visibility);
+  let direct = publishesDirectly(me, d.visibility) && !(await partnerInReview(c));
   const { values: vals, errors } = checkProposal(d, ALLOWED());
-  if (!vals) return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct, table, audience }, 400);
+  if (!vals)
+    return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct, table, audience, goTogether: goTogetherOf(v, d, null, e) }, 400);
   if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
   const db = getDb(c.env);
   const tags = partnerEventTags(vals.tags, await partnerKindOf(db, e.partnerOrgId));

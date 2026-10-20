@@ -118,6 +118,15 @@ export type ProposalInput = {
   visibility: string;
   accessibility: string;
   safetyInfo: string;
+  /** Optional online hello before the in-person event (D50), https only. */
+  warmupUrl?: string;
+  /**
+   * Going together to an outside event (D45): its own ticket link, where
+   * payment stays. A go-together event needs a public meeting point (an
+   * address, not just a name).
+   */
+  goTogether?: boolean;
+  sourceUrl?: string;
 } & VenueExtrasInput;
 
 export type ProposalValues = {
@@ -146,6 +155,8 @@ export type ProposalValues = {
   visibility: "public" | "private";
   accessibility: string;
   safetyInfo: string;
+  warmupUrl: string | null;
+  sourceUrl: string | null;
 } & VenueExtras;
 
 // ------------------------------------------------- finding the table --
@@ -255,6 +266,14 @@ export function checkProposal(
   need(d.visibility === "public" || d.visibility === "private", "เลือกว่าใครเห็นกิจกรรมนี้", "Choose who can see this event.");
   need(d.accessibility.length <= 1000 && d.safetyInfo.length <= 1000, "ข้อมูลการเข้าถึง/ความปลอดภัยไม่เกิน 1,000 ตัวอักษร", "Accessibility and safety notes are at most 1,000 characters.");
 
+  const warmupUrl = d.warmupUrl ? httpsUrl(d.warmupUrl) : null;
+  need(!d.warmupUrl || !!warmupUrl, "ลิงก์ทักทายออนไลน์ต้องขึ้นต้นด้วย https://", "The online hello link must start with https://");
+  const sourceUrl = d.sourceUrl ? httpsUrl(d.sourceUrl) : null;
+  need(!d.sourceUrl || !!sourceUrl, "ลิงก์ซื้อบัตรต้องขึ้นต้นด้วย https://", "The ticket link must start with https://");
+  if (d.goTogether) {
+    need(d.venueAddress.trim().length >= 5, "ไปด้วยกัน: ใส่ที่อยู่จุดนัดพบที่เป็นที่สาธารณะ", "Going together: add the address of a public meeting point.");
+  }
+
   const extras = checkVenueExtras(d, allowed.stations ?? []);
   errors.push(...extras.errors);
 
@@ -288,6 +307,8 @@ export function checkProposal(
       visibility: d.visibility as "public" | "private",
       accessibility: d.accessibility,
       safetyInfo: d.safetyInfo,
+      warmupUrl,
+      sourceUrl: d.goTogether ? sourceUrl : null,
     },
   };
 }

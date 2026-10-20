@@ -38,6 +38,9 @@ import { settingsRoutes } from "./routes/settings";
 import { setup } from "./routes/setup";
 import { errorPage, notFoundPage, plainErrorHtml, wantsHtml } from "./routes/errors";
 import { vendorRoutes } from "./routes/vendor";
+import { partnerApi } from "./routes/partner-api";
+import { partnerRoutes } from "./routes/partners";
+import { calendarRoutes } from "./routes/calendar";
 
 const app = new Hono<AppEnv>();
 
@@ -49,6 +52,7 @@ app.use("*", loadUser);
 app.use("*", captureSource);
 
 app.route("/api/setup", setup);
+app.route("/api/partner", partnerApi);
 app.route("/", publicRoutes);
 app.route("/", policyRoutes);
 app.route("/", newcomerRoutes);
@@ -65,6 +69,8 @@ app.route("/", tableRoutes);
 app.route("/", chatRoutes);
 app.route("/", planRoutes);
 app.route("/", hostInsightRoutes);
+app.route("/", partnerRoutes);
+app.route("/", calendarRoutes);
 app.route("/", authRoutes);
 app.route("/", oauthRoutes);
 app.route("/", emailCodeRoutes);

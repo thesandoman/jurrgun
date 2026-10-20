@@ -320,6 +320,9 @@ function AdminNav(props: { v: View }) {
     ["/admin/pulse", "City Pulse", all],
     ["/admin/insights", t("ข้อมูลเชิงลึก", "Insights"), all || role === "insight_viewer"],
     ["/admin/partners", t("พาร์ตเนอร์และสิทธิ์", "Partners & roles"), all],
+    ["/admin/partner-review", t("ตรวจพาร์ตเนอร์", "Partner review"), all || role === "moderator"],
+    ["/admin/feeds", t("ปฏิทินจากข้างนอก", "Outside calendars"), all],
+    ["/partner", t("พื้นที่พาร์ตเนอร์", "Partner area"), role === "partner_admin"],
     ["/admin/audit", t("บันทึกการตรวจสอบ", "Audit log"), all],
     ["/events", t("← แอปสมาชิก", "← Member app"), true],
   ];
