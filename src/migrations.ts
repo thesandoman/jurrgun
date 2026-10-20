@@ -331,5 +331,23 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"social_events_partner_idx\" ON \"social_events\" (\"partner_org_id\");",
       "CREATE INDEX \"social_events_inbox_idx\" ON \"social_events\" (\"inbox_id\");"
     ]
+  },
+  {
+    "id": "0026_partner_kinds_and_entry_rules",
+    "statements": [
+      "CREATE TABLE \"social_event_partners\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"event_id\" text NOT NULL,\n\t\"partner_org_id\" text NOT NULL,\n\t\"status\" text DEFAULT 'invited' NOT NULL,\n\t\"invited_by\" text,\n\t\"responded_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_talk_questions\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"event_id\" text NOT NULL,\n\t\"body\" text NOT NULL,\n\t\"asker_hash\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"talk_mode\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"open_entry\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"approval_required\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"alcohol_served\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"smoking_area\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"requirements\" jsonb DEFAULT '[]'::jsonb NOT NULL;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"group_label\" text;",
+      "ALTER TABLE \"social_events\" ADD COLUMN \"group_join_code\" text;",
+      "CREATE UNIQUE INDEX \"social_event_partners_pair_idx\" ON \"social_event_partners\" (\"event_id\",\"partner_org_id\");",
+      "CREATE INDEX \"social_event_partners_org_idx\" ON \"social_event_partners\" (\"partner_org_id\");",
+      "CREATE INDEX \"social_talk_questions_event_idx\" ON \"social_talk_questions\" (\"event_id\",\"created_at\");"
+    ]
   }
 ];
