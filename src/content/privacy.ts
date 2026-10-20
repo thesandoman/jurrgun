@@ -124,6 +124,12 @@ export const RETENTION: RetentionItem[] = [
     code: "RESEARCH_RETENTION_DAYS",
   },
   {
+    what: { th: "เช็กสถานที่หลังโต๊ะ และคำถามที่คุณเสนอให้ City Pulse", en: "After-table place checks and questions you suggest to City Pulse" },
+    keep: { th: "เก็บกับสถานที่และเดือนเท่านั้น ไม่มีชื่อหรือรหัส คำที่คุณเสนอถูกลบเมื่อทีมดูแลจัดเป็นหัวข้อ ลบทั้งหมดหลัง", en: "kept with the place and month only, no name or code; your suggested words are deleted once a moderator sorts them into a topic; all deleted after" },
+    period: { n: 24, unit: "months" },
+    code: "RESEARCH_RETENTION_DAYS",
+  },
+  {
     what: { th: "การแจ้งเตือนที่อ่านแล้ว", en: "Notifications you've read" },
     keep: { th: "ลบหลัง", en: "deleted after" },
     period: { n: 90, unit: "days" },

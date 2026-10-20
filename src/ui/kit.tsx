@@ -190,6 +190,8 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
             <summary>{t("ทดลอง", "Prototype")}</summary>
             <p>{t("เวอร์ชันทดลอง อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data")}</p>
           </details>
+          {/* City Pulse is a main feature with its own place in the top bar, not a tab (owner D62). No dot or count, ever. */}
+          {member && !opts.admin && !opts.bare ? <PulseButton v={v} on={opts.tab === "pulse"} /> : null}
           {/* Laptops: the main menu sits in the header (top-down); phones use the bottom bar. */}
           {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} top /> : null}
           <nav class="top-actions">
@@ -283,7 +285,7 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
     // "นัดของฉัน", not "ของฉัน": it sat next to "ฉัน" (Me) and read as the same word (Phase 3).
     ["mine", "/me/events", TAB_ICONS.mine, t("นัดของฉัน", "My events")],
     ["connections", "/connections", TAB_ICONS.connections, t("คนรู้จัก", "My people")],
-    // City Pulse lives under Me (and in the Discover ticker).
+    // City Pulse is not a tab: it has its own button in the top bar (PulseButton, owner D62).
     ["me", "/settings", TAB_ICONS.me, t("ฉัน", "Me")],
   ];
   // Unread chats show on My people, where Chats live: a dot like the bell, and the count in the name.
@@ -293,7 +295,7 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
       {items.map(([key, href, icon, text]) => (
         <a
           href={href}
-          class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && (props.tab === "pulse" || props.tab === "learn")) ? "on" : ""}`.trim() || undefined}
+          class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && props.tab === "learn") ? "on" : ""}`.trim() || undefined}
           aria-current={props.tab === key ? "page" : undefined}
           aria-label={key === "connections" && chats > 0 ? t(`${text} แชตยังไม่ได้อ่าน ${chats}`, `${text}, ${chats} unread ${chats === 1 ? "chat" : "chats"}`) : undefined}
         >
@@ -303,6 +305,23 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
         </a>
       ))}
     </nav>
+  );
+}
+
+/** A heartbeat line: City Pulse's mark in the top bar. */
+export const PULSE_ICON = (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+  </svg>
+);
+
+/** City Pulse's own place in the top bar (owner D62): same on every member page, no badge. */
+export function PulseButton(props: { v: View; on?: boolean }) {
+  return (
+    <a href="/pulse" class={`pulse-btn${props.on ? " on" : ""}`} aria-current={props.on ? "page" : undefined}>
+      {PULSE_ICON}
+      <span>City Pulse</span>
+    </a>
   );
 }
 
@@ -318,6 +337,8 @@ function AdminNav(props: { v: View }) {
     ["/admin/moderation", t("รายงาน", "Moderation"), all || role === "moderator"],
     ["/admin/users", t("ผู้ใช้", "Users"), all || role === "moderator"],
     ["/admin/pulse", "City Pulse", all],
+    // Members' suggested questions: moderators only, the words never reach the BMA (D66).
+    ["/admin/pulse-suggestions", t("คำถามที่สมาชิกเสนอ", "Suggested questions"), role === "moderator"],
     ["/admin/insights", t("ข้อมูลเชิงลึก", "Insights"), all || role === "insight_viewer"],
     ["/admin/partners", t("พาร์ตเนอร์และสิทธิ์", "Partners & roles"), all],
     ["/admin/partner-review", t("ตรวจพาร์ตเนอร์", "Partner review"), all || role === "moderator"],

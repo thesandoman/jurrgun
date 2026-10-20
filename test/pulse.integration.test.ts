@@ -62,14 +62,11 @@ describe.skipIf(!HAS_DB)("City Pulse", () => {
     // Born on 1 January, 27 years ago → age band "25-29"
     const birthDate = `${new Date().getUTCFullYear() - 27}-01-01`;
     const m = await createMember({ research: true, district: "nong_chok", birthDate });
+    // One question at a time (D64): out-of-segment, future, expired and draft ones never show or take answers.
     const html = await (await req("/pulse", { cookie: m.cookie })).text();
-    expect(shows(html, everyone)).toBe(true);
-    expect(shows(html, myDistrict)).toBe(true);
-    expect(shows(html, myBand)).toBe(true);
     for (const id of [otherDistrict, otherBand, future, expired, draft]) expect(shows(html, id)).toBe(false);
-    // Out-of-segment answers are refused too.
-    expect((await req(`/pulse/${otherDistrict}`, { cookie: m.cookie, form: { answer: "heat" } })).status).toBe(404);
-    expect((await req(`/pulse/${draft}`, { cookie: m.cookie, form: { answer: "heat" } })).status).toBe(404);
+    for (const id of [otherDistrict, otherBand, future, expired, draft]) expect((await req(`/pulse/${id}`, { cookie: m.cookie, form: { answer: "heat" } })).status).toBe(404);
+    for (const id of [everyone, myDistrict, myBand]) expect((await req(`/pulse/${id}`, { cookie: m.cookie, form: { answer: "heat" } })).status).toBe(302);
   });
 
   it("validates answers by kind and stores them under researchId only", async () => {
@@ -79,7 +76,8 @@ describe.skipIf(!HAS_DB)("City Pulse", () => {
     const text = await question({ kind: "text" });
     const area = await question({ kind: "area" });
     const m = await createMember({ research: true, district: "sathon", birthDate: "1990-01-01" });
-    const post = (id: string, answer: string | string[]) => req(`/pulse/${id}`, { cookie: m.cookie, form: { answer } });
+    const m2 = await createMember({ research: true, district: "sathon", birthDate: "1990-01-01" });
+    const post = (id: string, answer: string | string[], who = m) => req(`/pulse/${id}`, { cookie: who.cookie, form: { answer } });
 
     expect((await post(single, "flying-cars")).status).toBe(400);
     expect((await post(multi, ["heat", "nope"])).status).toBe(400);
@@ -90,19 +88,20 @@ describe.skipIf(!HAS_DB)("City Pulse", () => {
     expect((await post(text, "   ")).status).toBe(400);
     expect((await post(area, "atlantis")).status).toBe(400);
 
-    for (const [id, answer] of [
-      [single, "heat"],
-      [multi, ["heat", "cost"]],
-      [scale, "4"],
-      [text, "More shade on sidewalks"],
-      [area, "bang_rak"],
-    ] as [string, string | string[]][]) {
-      const r = await post(id, answer);
+    // At most 3 a week (D64), so the last two go to a second member.
+    for (const [id, answer, who] of [
+      [single, "heat", m],
+      [multi, ["heat", "cost"], m],
+      [scale, "4", m],
+      [text, "More shade on sidewalks", m2],
+      [area, "bang_rak", m2],
+    ] as [string, string | string[], typeof m][]) {
+      const r = await post(id, answer, who);
       expect(r.status).toBe(302);
       expect(r.headers.get("location")).toBe("/pulse?notice=answered");
     }
 
-    const rows = await db().select().from(pulseResponses).where(eq(pulseResponses.researchId, m.researchId));
+    const rows = await db().select().from(pulseResponses).where(inArray(pulseResponses.researchId, [m.researchId, m2.researchId]));
     const by = new Map(rows.map((r) => [r.questionId, r]));
     expect(by.get(single)!.answer).toBe("heat");
     expect(by.get(multi)!.answer).toEqual(["heat", "cost"]);
@@ -111,12 +110,15 @@ describe.skipIf(!HAS_DB)("City Pulse", () => {
     expect(by.get(single)!.district).toBe("sathon");
     expect(by.get(single)!.ageBand).toBe("35-44");
     expect(JSON.stringify(rows)).not.toContain(m.id);
+    expect(JSON.stringify(rows)).not.toContain(m2.id);
 
-    // Answered questions disappear; answering again is refused.
+    // Answered questions disappear; answering again is refused; a 4th this week is refused.
     const html = await (await req("/pulse", { cookie: m.cookie })).text();
-    for (const id of [single, multi, scale, text, area]) expect(shows(html, id)).toBe(false);
+    for (const id of [single, multi, scale]) expect(shows(html, id)).toBe(false);
     const again = await post(single, "cost");
     expect(again.status).toBe(409);
+    expect((await post(text, "One more")).status).toBe(409);
+    expect(await db().select().from(pulseResponses).where(and(eq(pulseResponses.researchId, m.researchId), eq(pulseResponses.questionId, text)))).toHaveLength(0);
     expect(by.get(single)!.answer).toBe("heat");
   });
 

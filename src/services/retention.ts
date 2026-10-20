@@ -27,7 +27,8 @@
  *   reports, moderation       2 years after the report or action, once the
  *   actions, strikes          report is closed (actioned or dismissed) (R6)
  *   audit log                 1 year (R6)
- *   City Pulse and wellbeing  24 months after the answer (research code rows)
+ *   City Pulse and wellbeing  24 months after the answer (research code rows;
+ *                             place checks and suggestions by their month)
  *   research ids              cut, with every answer under them, from any
  *                             account whose newest research answer isn't yes
  *                             (a research_id exists only with research consent)
@@ -107,6 +108,8 @@ import {
   oauthLinks,
   profiles,
   pulseResponses,
+  placeChecks,
+  pulseSuggestions,
   registrations,
   reports,
   sessions,
@@ -311,6 +314,13 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     await dropFiles(env, theirPhotos.map((p) => p.key!));
   }
 
+  // City Pulse place checks and suggestions (D66) carry only a month: gone once the whole month is past the research period.
+  const researchMonth = new Date(researchCutoff.getTime() + 7 * HOUR).toISOString().slice(0, 7);
+  const [placesOld, suggestionsOld] = await batch(env, [
+    db.delete(placeChecks).where(lt(placeChecks.month, researchMonth)).returning({ id: placeChecks.id }),
+    db.delete(pulseSuggestions).where(lt(pulseSuggestions.month, researchMonth)).returning({ id: pulseSuggestions.id }),
+  ]);
+
   const counts: RetentionCounts = {
     signalsCleared: signals.length,
     choicesDeleted: choices.length,
@@ -318,7 +328,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     loginAttemptsDeleted: attempts.length,
     loginCodesDeleted: codesOld.length,
     checkInsAggregated: checkIns.length,
-    researchAnswersDeleted: pulseOld.length + wellOld.length,
+    researchAnswersDeleted: pulseOld.length + wellOld.length + placesOld.length + suggestionsOld.length,
     researchLinksCut: unconsented.length,
     readNotificationsDeleted: readOld.length,
     unreadNotificationsDeleted: unreadOld.length,

@@ -20,6 +20,9 @@
  * Every route is member-only. Middleware is attached per route (never with
  * `use("*")`): this sub-app is mounted at "/" and must not touch other areas.
  */
+import { pulseGlance, researchConsent, weatherBits } from "./pulse";
+import { PLACE_COMFORT, PLACE_REACH } from "../content/pulse";
+import { bkkMonth } from "../domain/pulse-heard";
 import { cleanHello, HELLO_MAX, helloOpen, helloPrompt } from "../domain/hello";
 import { isGoTogether, ShowLine, TicketButton, TicketNote, ViaLine, WarmupLine } from "../ui/go-together";
 import { TableIntroPrompt } from "../ui/table-intro";
@@ -68,6 +71,7 @@ import {
   buddyPairs,
   events,
   feedback,
+  placeChecks,
   invites,
   partnerOrgs,
   profiles,
@@ -103,6 +107,7 @@ import {
   FactIcon,
   FactTiles,
   safeNext,
+  PULSE_ICON,
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
 import { canView, ownsEvent } from "../domain/hosting";
@@ -760,11 +765,21 @@ eventRoutes.get("/events", requireMember, async (c) => {
     );
   }
 
+  // One calm City Pulse line (owner D62): Bangkok now, and whether a question is waiting. No count, no dot.
+  const glance = await pulseGlance(c);
+  const nowBits = weatherBits(t, glance.weather);
   return page(
     c,
     { title: t("ค้นหากิจกรรม", "Discover"), tab: "events" },
     <>
       <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
+      <a href="/pulse" class="cp-line">
+        {PULSE_ICON}
+        <b>City Pulse</b>
+        {nowBits.length ? <span>{t("กรุงเทพฯ ตอนนี้", "Bangkok now")} {nowBits.join(" · ")}</span> : null}
+        {glance.waiting ? <span>· {t("มีคำถามสัปดาห์นี้รออยู่", "this week's question is waiting")}</span> : null}
+        <span aria-hidden="true">›</span>
+      </a>
       <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
       <a href="/plan" class="plan-line">
@@ -2960,7 +2975,7 @@ async function feedbackGate(c: Ctx, id: string) {
   return { event, reg, error: null };
 }
 
-function FeedbackForm(props: { v: View; event: Event; values: Record<string, string>; error?: string }) {
+function FeedbackForm(props: { v: View; event: Event; values: Record<string, string>; error?: string; placeCheck?: boolean }) {
   const { t, lang } = props.v;
   const val = props.values;
   return (
@@ -2975,6 +2990,15 @@ function FeedbackForm(props: { v: View; event: Event; values: Record<string, str
         <Choices legend={t("รู้สึกว่ามีคนฟังคุณแค่ไหน (1-5)", "Did you feel heard? (1-5)")} name="feltHeard" type="radio" options={SCALE} values={[val.feltHeard ?? ""]} lang={lang} />
         <Choices legend={t("ให้คะแนนโต๊ะของคุณ (1-5)", "Rate your table (1-5)")} name="groupRating" type="radio" options={SCALE} values={[val.groupRating ?? ""]} lang={lang} required />
         <TextArea label={t("อยากบอกอะไรเพิ่มไหม (ไม่บังคับ)", "Anything else? (optional)")} name="comment" value={val.comment} maxlength={500} />
+        {props.placeCheck ? (
+          // City Pulse place check (owner D66): optional, research consent only, kept with the place and month, never with you.
+          <fieldset class="place-check">
+            <legend>{t("เรื่องสถานที่ สำหรับ City Pulse (ไม่บังคับ)", "About the place, for City Pulse (optional)")}</legend>
+            <p class="muted">{t("เก็บไว้กับชื่อสถานที่และเดือนเท่านั้น ไม่ผูกกับคุณ ใช้เลือกสถานที่ที่ดีขึ้นเมื่อมีคนตอบอย่างน้อย 10 คน", "Kept with the place and month only, never with you. Used to pick better places once 10 or more people answer.")}</p>
+            <Choices legend={t("มาถึงที่นี่ง่ายไหม?", "Was it easy to get here?")} name="placeReach" type="radio" options={PLACE_REACH} values={[val.placeReach ?? ""]} lang={lang} />
+            <Choices legend={t("มีร่มเงาหรือที่นั่งพอไหม?", "Was there shade or somewhere to sit?")} name="placeComfort" type="radio" options={PLACE_COMFORT} values={[val.placeComfort ?? ""]} lang={lang} />
+          </fieldset>
+        ) : null}
         <Button>{t("ส่งความคิดเห็น", "Send feedback")}</Button>
       </form>
     </>
@@ -3003,7 +3027,9 @@ eventRoutes.get("/events/:id/feedback", requireMember, async (c) => {
         comment: fb.comment,
       }
     : {};
-  return page(c, { title: v.t("ความคิดเห็น", "Feedback"), tab: "mine" }, <FeedbackForm v={v} event={gate.event!} values={vals} />);
+  // Offered only with the first feedback for an event, so nothing per person needs to record whether it was answered.
+  const placeCheck = !fb && !!me(c).account.researchId && (await researchConsent(c, me(c).account.id));
+  return page(c, { title: v.t("ความคิดเห็น", "Feedback"), tab: "mine" }, <FeedbackForm v={v} event={gate.event!} values={vals} placeCheck={placeCheck} />);
 });
 
 eventRoutes.post("/events/:id/feedback", requireMember, async (c) => {
@@ -3021,6 +3047,8 @@ eventRoutes.post("/events/:id/feedback", requireMember, async (c) => {
     feltHeard: str(body.feltHeard),
     groupRating: str(body.groupRating),
     comment: str(body.comment),
+    placeReach: str(body.placeReach),
+    placeComfort: str(body.placeComfort),
   };
   const yn = (s: string) => (s === "yes" ? true : s === "no" ? false : undefined);
   const scale = (s: string) => (/^[1-5]$/.test(s) ? Number(s) : undefined);
@@ -3037,6 +3065,18 @@ eventRoutes.post("/events/:id/feedback", requireMember, async (c) => {
   }
   const data = { metNewPerson: met, wouldMeetAgain: again, feltSafe: safe, feltHeard: scale(vals.feltHeard) ?? null, groupRating: rating, comment: vals.comment };
   const db = getDb(c.env);
+  // City Pulse place check (D66): research consent only, and only with the first feedback for this event
+  // (the form offers it then). The answer is stored with the venue, district and month alone; nothing
+  // records who answered or even whether you did.
+  const reach = PLACE_REACH.some((o) => o.value === vals.placeReach) ? vals.placeReach : null;
+  const comfort = PLACE_COMFORT.some((o) => o.value === vals.placeComfort) ? vals.placeComfort : null;
+  if ((reach || comfort) && user.account.researchId && (await researchConsent(c, user.account.id))) {
+    const [prev] = await db.select({ id: feedback.id }).from(feedback).where(and(eq(feedback.eventId, id), eq(feedback.accountId, user.account.id))).limit(1);
+    if (!prev) {
+      const ev = gate.event!;
+      await db.insert(placeChecks).values({ id: newId(), venue: ev.venueName.trim().slice(0, 120), district: ev.district, reach, comfort, month: bkkMonth(new Date()) });
+    }
+  }
   await db
     .insert(feedback)
     .values({ id: newId(), eventId: id, accountId: user.account.id, ...data })

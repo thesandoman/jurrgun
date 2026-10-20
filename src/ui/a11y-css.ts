@@ -1196,4 +1196,18 @@ html.sheet-js .pe-preview-link{display:none}
 .me-cal-link a{display:inline-flex;align-items:center;gap:8px;min-height:44px}
 /* Host inbox: "Via Luma ↗" stays on one line. */
 a.nowrap{white-space:nowrap}
+/* City Pulse's own place in the top bar (D62): a quiet pill, never a badge. */
+.pulse-btn{display:inline-flex;align-items:center;gap:6px;flex:none;min-height:44px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--brand);font-weight:700;font-size:.85rem;text-decoration:none;white-space:nowrap}
+.pulse-btn:hover{border-color:var(--brand)}
+.pulse-btn.on{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
+.topbar .brand+.proto-chip+.pulse-btn{margin-right:auto}
+/* Phones: City Pulse takes the wordmark's room, the logo alone stands for the name (as under 360px before). */
+@media (max-width:480px){.topbar:has(.pulse-btn) .brand{font-size:0;gap:0}.topbar:has(.pulse-btn){gap:6px}.pulse-btn{padding:4px 10px;font-size:.8rem}}
+/* Under 360px the pill keeps its icon; its name stays for screen readers. */
+@media (max-width:359.98px){.pulse-btn{padding:4px 12px}.pulse-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+@media (min-width:1024px){.pulse-btn{margin-left:4px}.topbar .pulse-btn+.top-nav{margin-left:16px}}
+/* Discover: one calm City Pulse line above the page title (D62). */
+.cp-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-height:44px;margin:0 0 8px;color:var(--ink-3);font-size:.9rem;text-decoration:none}
+.cp-line b{color:var(--brand)}
+.cp-line:hover b{text-decoration:underline}
 `);

@@ -23,7 +23,8 @@ import type { AppEnv } from "../../lib/env";
 import { fmtDate, type Lang, type T } from "../../lib/i18n";
 import { audit } from "../../lib/records";
 import { requireRole } from "../../lib/session";
-import { pulseQuestions, pulseResponses } from "../../schema";
+import { pulseQuestions, pulseResponses, pulseSuggestions } from "../../schema";
+import { SUGGEST_TOPICS } from "../../content/pulse";
 import { Button, Card, Choices, Empty, Field, int, LinkButton, list, Notice, page, Select, str, Tag, TextArea, view } from "../../ui/kit";
 
 export const adminPulse = new Hono<AppEnv>();
@@ -291,6 +292,10 @@ adminPulse.get("/", async (c) => {
         <h1>{t("จัดการคำถาม City Pulse", "City Pulse questions")}</h1>
         <LinkButton href="/admin/pulse/new">{t("+ คำถามใหม่", "+ New question")}</LinkButton>
       </div>
+      <p class="row">
+        <a href="/admin/pulse/places">{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</a>
+        <a href="/admin/pulse/topics">{t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked")}</a>
+      </p>
       <p class="muted">{t("จำนวนคำตอบที่น้อยกว่า 10 จะแสดงเป็น \"<10\"", "Response counts under 10 are shown as \"<10\".")}</p>
       {qs.length === 0 ? (
         <Empty>{t("ยังไม่มีคำถาม", "No questions yet")}</Empty>
@@ -709,9 +714,176 @@ adminPulse.get("/:id/results", async (c) => {
         </>
       )}
 
+      <HeardNoteForm q={q} t={t} />
+
       {segTable(t("แยกตามเขต", "By district"), dRows)}
       {segTable(t("แยกตามช่วงอายุ", "By age band"), aRows)}
       {columns.length < r.options.length ? <p class="muted">{t("ตารางแยกกลุ่มแสดง 8 ตัวเลือกที่ได้รับเลือกมากที่สุด", "Segment tables show the 8 most chosen options.")}</p> : null}
+    </>,
+  );
+});
+
+// ----------------------------------------------------- what changed (D63) --
+
+const NOTE_MAX = 280;
+
+/** "What changed": a short note members see under this question's result once it closes with 10+ answers. */
+function HeardNoteForm(props: { q: Question; t: T }) {
+  const { q, t } = props;
+  return (
+    <section class="card" style="margin:24px 0">
+      <h2 style="margin-top:0">{t("สิ่งที่เปลี่ยนไป (สมาชิกเห็น)", "What changed (members see this)")}</h2>
+      <p class="muted">
+        {t(
+          "ข้อความสั้น ๆ ใต้ผลลัพธ์ในหน้า City Pulse ของสมาชิก เช่น เมืองทำอะไรจากคำตอบนี้ แสดงเมื่อคำถามปิดแล้วและมีคนตอบอย่างน้อย 10 คน อย่าใส่ชื่อคนหรือข้อมูลส่วนตัว",
+          "A short line under this result on members' City Pulse page, such as what the city did about it. Shown once the question has closed with 10 or more answers. No names or personal details.",
+        )}
+      </p>
+      <form method="post" action={`/admin/pulse/${encodeURIComponent(q.id)}/heard`}>
+        <TextArea label={t("ภาษาไทย", "Thai")} name="noteTh" value={q.heardNoteTh ?? ""} rows={2} maxlength={NOTE_MAX} />
+        <TextArea label={t("ภาษาอังกฤษ", "English")} name="noteEn" value={q.heardNoteEn ?? ""} rows={2} maxlength={NOTE_MAX} />
+        <Button>{t("บันทึกข้อความ", "Save note")}</Button>
+      </form>
+    </section>
+  );
+}
+
+adminPulse.post("/:id/heard", async (c) => {
+  const q = await loadQuestion(c);
+  if (!q) return c.text("Not found", 404);
+  const body = await c.req.parseBody();
+  const clean = (v: unknown) => str(v).replace(/\s+/g, " ").trim();
+  const th = clean(body.noteTh);
+  const en = clean(body.noteEn);
+  if (th.length > NOTE_MAX || en.length > NOTE_MAX) return c.text("Bad request", 400);
+  const db = getDb(c.env);
+  const me = c.var.user!.account.id;
+  const any = !!(th || en);
+  await batch(c.env, [
+    db
+      .update(pulseQuestions)
+      .set({ heardNoteTh: th || null, heardNoteEn: en || null, heardNoteAt: any ? new Date() : null })
+      .where(eq(pulseQuestions.id, q.id)),
+    audit(db, me, "pulse.heard_note", { type: "pulse_question", id: q.id }, { set: any }),
+  ]);
+  return c.redirect(`/admin/pulse/${encodeURIComponent(q.id)}/results?notice=saved`);
+});
+
+// --------------------------------------- place checks and topics (D66) --
+
+/** Venue totals from after-table place checks: only places with 10+ answers, any cell under 10 shown as "<10". */
+adminPulse.get("/places", async (c) => {
+  const { t, lang } = view(c);
+  const db = getDb(c.env);
+  const rows = (await db.execute(sql`
+    select venue, district, count(*) as n,
+      count(*) filter (where reach = 'easy') as easy, count(*) filter (where reach = 'hard') as hard,
+      count(*) filter (where comfort = 'yes') as cyes, count(*) filter (where comfort = 'no') as cno
+    from research_place_checks
+    group by venue, district
+    having count(*) >= 10
+    order by count(*) desc
+    limit 200`)) as unknown as unknown[];
+  const vals = rows.map((r) => (Array.isArray(r) ? r : Object.values(r as Record<string, unknown>)));
+  return page(
+    c,
+    { title: t("เช็กสถานที่หลังโต๊ะ", "After-table place checks"), admin: true },
+    <>
+      <p>
+        <a href="/admin/pulse">← City Pulse</a>
+      </p>
+      <h1>{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</h1>
+      <p class="muted">
+        {t(
+          "คำตอบเก็บกับชื่อสถานที่ เขต และเดือนเท่านั้น ไม่มีรหัสหรือบัญชี แสดงเฉพาะสถานที่ที่มีคำตอบอย่างน้อย 10 ข้อ",
+          "Stored with the place, district and month only: no code, no account. Only places with 10 or more answers are listed.",
+        )}
+      </p>
+      {vals.length === 0 ? (
+        <Empty>{t("ยังไม่มีสถานที่ที่มีคำตอบถึง 10 ข้อ", "No place has 10 answers yet")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</caption>
+            <thead>
+              <tr>
+                <th>{t("สถานที่", "Place")}</th>
+                <th>{t("เขต", "District")}</th>
+                <th>{t("คำตอบ", "Answers")}</th>
+                <th>{t("มาง่าย", "Easy to reach")}</th>
+                <th>{t("มายาก", "Hard to reach")}</th>
+                <th>{t("ร่มเงาหรือที่นั่งพอ", "Enough shade or seats")}</th>
+                <th>{t("ไม่มีเลย", "None")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vals.map(([venue, district, n, easy, hard, cyes, cno]) => (
+                <tr>
+                  <td>{String(venue)}</td>
+                  <td>{label(DISTRICTS, String(district), lang)}</td>
+                  <td>{show(Number(n))}</td>
+                  <td>{show(Number(easy))}</td>
+                  <td>{show(Number(hard))}</td>
+                  <td>{show(Number(cyes))}</td>
+                  <td>{show(Number(cno))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>,
+  );
+});
+
+/** Topics members asked the city about: counts per topic, 10+ only. The words never reach this page. */
+adminPulse.get("/topics", async (c) => {
+  const { t, lang } = view(c);
+  const db = getDb(c.env);
+  const rows = await db
+    .select({ topic: pulseSuggestions.topic, n: sql<number>`count(*)`.mapWith(Number) })
+    .from(pulseSuggestions)
+    .where(eq(pulseSuggestions.status, "sorted"))
+    .groupBy(pulseSuggestions.topic)
+    .limit(100);
+  const shown = rows.filter((r) => r.topic && safeCount(r.n) !== null).sort((a, b) => b.n - a.n);
+  return page(
+    c,
+    { title: t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked"), admin: true },
+    <>
+      <p>
+        <a href="/admin/pulse">← City Pulse</a>
+      </p>
+      <h1>{t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked")}</h1>
+      <p class="muted">
+        {t(
+          "ทีมดูแลอ่านคำถามที่สมาชิกส่งมา จัดเป็นหัวข้อ แล้วลบข้อความทิ้ง หน้านี้แสดงเฉพาะจำนวนต่อหัวข้อที่มีอย่างน้อย 10",
+          "Moderators read members' suggested questions, sort them into topics and delete the words. This page shows counts per topic, 10 or more only.",
+        )}
+      </p>
+      {shown.length === 0 ? (
+        <Empty>{t("ยังไม่มีหัวข้อที่ถึง 10", "No topic has reached 10 yet")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">{t("หัวข้อ", "Topics")}</caption>
+            <thead>
+              <tr>
+                <th>{t("หัวข้อ", "Topic")}</th>
+                <th>{t("จำนวน", "Count")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r) => (
+                <tr>
+                  <td>{label(SUGGEST_TOPICS, r.topic!, lang)}</td>
+                  <td>{r.n}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>,
   );
 });

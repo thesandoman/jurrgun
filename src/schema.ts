@@ -43,6 +43,8 @@ export type ProfileBio = {
   gradYear?: number;
   residency?: string;
   story?: string;
+  /** City Pulse: the Bangkok week (its Monday) a question was last suggested in; only that one was, never what (D66). */
+  pulseSuggestWeek?: string;
   bkkTime?: string;
   hometown?: string;
   guide?: boolean;
@@ -619,6 +621,8 @@ export const feedback = pgTable(
     feltHeard: integer("felt_heard"),
     groupRating: integer("group_rating"),
     comment: text("comment").notNull().default(""),
+    // place_checked (migration 0027) is deliberately unused: a per-person "answered" flag could single out
+    // a lone place check at a small venue, so the check is offered only with the first feedback instead.
     createdAt: created(),
   },
   (t) => [uniqueIndex("social_feedback_unique_idx").on(t.eventId, t.accountId)],
@@ -706,9 +710,52 @@ export const pulseQuestions = pgTable(
     segment: jsonb("segment").$type<{ districts?: string[]; ageBands?: string[] }>().notNull().default({}),
     sortOrder: integer("sort_order").notNull().default(0),
     createdBy: text("created_by").notNull(),
+    /** "What changed" (D63): a short staff-written note members see under the result. */
+    heardNoteTh: text("heard_note_th"),
+    heardNoteEn: text("heard_note_en"),
+    heardNoteAt: ts("heard_note_at"),
     createdAt: created(),
   },
   (t) => [index("research_pulse_questions_status_idx").on(t.status)],
+);
+
+/**
+ * After-table place checks (D66): venue, district and month only. No research
+ * code, no account, no event, no exact time, and no flag on the member's side
+ * saying they answered, so a row can't be traced to a person.
+ */
+export const placeChecks = pgTable(
+  "research_place_checks",
+  {
+    id: text("id").primaryKey(),
+    venue: text("venue").notNull(),
+    district: text("district").notNull(),
+    /** easy | ok | hard */
+    reach: text("reach"),
+    /** yes | some | no: shade or a seat */
+    comfort: text("comfort"),
+    /** YYYY-MM */
+    month: text("month").notNull(),
+  },
+  (t) => [index("research_place_checks_venue_idx").on(t.venue, t.district)],
+);
+
+/**
+ * "What should the city ask?" (D66). No person. The words are read by
+ * moderators only and wiped once sorted into a topic; the BMA sees topic totals of 10+.
+ */
+export const pulseSuggestions = pgTable(
+  "research_pulse_suggestions",
+  {
+    id: text("id").primaryKey(),
+    body: text("body").notNull().default(""),
+    topic: text("topic"),
+    /** new | sorted | dropped */
+    status: text("status").notNull().default("new"),
+    /** YYYY-MM */
+    month: text("month").notNull(),
+  },
+  (t) => [index("research_pulse_suggestions_status_idx").on(t.status, t.month)],
 );
 
 /** Keyed by research_id only. District and age band are copied in coarse form for aggregation. */

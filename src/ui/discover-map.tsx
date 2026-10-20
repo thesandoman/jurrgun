@@ -201,6 +201,13 @@ export function FullDiscover(props: {
           <b aria-hidden="true">🃏</b>
           {t("การ์ด", "Cards")}
         </a>
+        {/* City Pulse's place on the map (owner D62): the header has no room left, so it rides with the map tools. */}
+        <a href="/pulse" class="fd-rail-btn fd-pulse">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+          </svg>
+          Pulse
+        </a>
         <button type="button" class="fd-rail-btn" id="fd-me" aria-label={t("แสดงตำแหน่งของฉัน", "Show where I am")}>
           <b aria-hidden="true">◎</b>
           {t("ใกล้ฉัน", "Locate")}
@@ -457,6 +464,7 @@ body.fullmap-body{padding:0;overflow:hidden;height:100dvh;overscroll-behavior:no
 .fullmap:has(.svm-sheet:not([hidden])) :is(.fd-rail,.svm-key){visibility:hidden}
 .fullmap .maplibregl-ctrl-bottom-right{bottom:calc(var(--tab-h) + var(--sheet-h) + 6px)}
 /* floating header */
+.fd-rail-btn.fd-pulse{color:var(--brand)}
 .fd-top{position:fixed;z-index:8;top:calc(var(--tk-h) + var(--gap));left:10px;right:10px;height:var(--top-h);display:flex;gap:8px;align-items:center}
 .fd-logo,.fd-round{flex:none;display:grid;place-items:center;width:var(--top-h);height:var(--top-h);border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);text-decoration:none;color:var(--ink);font-weight:700;cursor:pointer;font-size:1rem}
 .fd-logo{line-height:1;color:var(--brand);gap:2px;padding-top:4px}.fd-logo svg{width:24px;height:24px}.fd-logo small{font-size:.75rem;color:var(--ink-2);font-weight:700}
