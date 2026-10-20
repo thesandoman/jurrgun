@@ -153,7 +153,13 @@ export const oauthLinks = pgTable(
   (t) => [uniqueIndex("identity_oauth_links_provider_subject_idx").on(t.provider, t.subject), index("identity_oauth_links_account_idx").on(t.accountId)],
 );
 
-export const PARTNER_KINDS = ["events", "dating", "venue", "community"] as const;
+/**
+ * health (D51: BMA public health centres, the Thai Red Cross, NGO and
+ * non-profit clinics; set up by an admin only, information only) and
+ * public_sector (D55: BMA departments, district offices, national agencies,
+ * embassies; set up by an admin only) never come from the apply form.
+ */
+export const PARTNER_KINDS = ["events", "dating", "venue", "community", "health", "public_sector"] as const;
 export type PartnerKind = (typeof PARTNER_KINDS)[number];
 
 export const partnerOrgs = pgTable("identity_partner_orgs", {
@@ -390,6 +396,26 @@ export const events = pgTable(
     referralCode: text("referral_code"),
     /** Optional online hello before the in-person event (D50). https only; shown to confirmed seats. */
     warmupUrl: text("warmup_url"),
+    /**
+     * Private talk mode (D52), for health talks: no attendee list, no choosing
+     * who to see again, never on a profile or in a public feed, an anonymous
+     * question box, and partners see totals only from 10 people up.
+     */
+    talkMode: boolean("talk_mode").notNull().default(false),
+    /** Open entry (D56): the event itself needs no booking; only the go-together groups have seats. */
+    openEntry: boolean("open_entry").notNull().default(false),
+    /** Organiser approval (D57): an RSVP becomes a request the host approves or declines. */
+    approvalRequired: boolean("approval_required").notNull().default(false),
+    /** Alcohol served (D58): the event is 20+ (Thailand's drinking age). False means alcohol-free. */
+    alcoholServed: boolean("alcohol_served").notNull().default(false),
+    /** A smoking area at the venue (D59). False means smoke-free. Vaping is never allowed. */
+    smokingArea: boolean("smoking_area").notNull().default(false),
+    /** Bring or know before (D57): short lines a member ticks to confirm before booking. */
+    requirements: jsonb("requirements").$type<string[]>().notNull().default([]),
+    /** Verified group only (D57): who it is for ("Chula students and staff"), shown on the event. */
+    groupLabel: text("group_label"),
+    /** The join code a member types to book. Never shown to members; the host shares it. */
+    groupJoinCode: text("group_join_code"),
     createdBy: text("created_by").notNull(),
     createdAt: created(),
   },
@@ -1390,6 +1416,43 @@ export const calendarTokens = pgTable(
   (t) => [uniqueIndex("social_calendar_tokens_token_idx").on(t.token)],
 );
 
+/**
+ * Collab events (D53): the lead partner is social_events.partner_org_id; up
+ * to 2 co-hosts are invited here and each must accept before the event shows.
+ * Mixing rules (D54) are checked when inviting and when accepting.
+ */
+export const eventPartners = pgTable(
+  "social_event_partners",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").notNull(),
+    partnerOrgId: text("partner_org_id").notNull(),
+    /** invited | accepted | declined */
+    status: text("status").notNull().default("invited"),
+    invitedBy: text("invited_by"),
+    respondedAt: ts("responded_at"),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("social_event_partners_pair_idx").on(t.eventId, t.partnerOrgId), index("social_event_partners_org_idx").on(t.partnerOrgId)],
+);
+
+/**
+ * Anonymous questions at a private talk (D52). No account id is kept: only
+ * a keyed hash of event and member, so one person can't flood the box.
+ * Deleted 30 days after the talk.
+ */
+export const talkQuestions = pgTable(
+  "social_talk_questions",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").notNull(),
+    body: text("body").notNull(),
+    askerHash: text("asker_hash").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("social_talk_questions_event_idx").on(t.eventId, t.createdAt)],
+);
+
 // ------------------------------------------------------------------- audit --
 
 export const auditLog = pgTable(
@@ -1412,6 +1475,7 @@ export type Event = typeof events.$inferSelect;
 export type InboxItem = typeof eventInbox.$inferSelect;
 export type EventFeed = typeof eventFeeds.$inferSelect;
 export type PartnerOrg = typeof partnerOrgs.$inferSelect;
+export type EventPartner = typeof eventPartners.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;
 export type RegularTable = typeof regularTables.$inferSelect;
 export type BuddyMatch = typeof buddyMatches.$inferSelect;

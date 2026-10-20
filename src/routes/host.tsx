@@ -28,19 +28,20 @@
  * in src/domain/hosting.ts. Money never passes through Jurrgun: the host says
  * whether it's free or paid at the venue, and may link their own payment page.
  */
-import { lateOrLong, partnerEventTags } from "../domain/rules";
+import { canBeWomenOnly, lateOrLong, partnerEventTags, WOMEN_ONLY_TAG } from "../domain/rules";
 import { partnerKindOf } from "../services/events";
 import { Hono, type Context } from "hono";
 import { and, asc, desc, eq, gte, inArray, isNull, or, type SQL } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { canHost, checkProposal, memberCanEdit, ownsEvent, publishesDirectly, toBangkokInput, type ProposalInput } from "../domain/hosting";
+import { emptyEntryRules, EntryRuleFields, entryRulesFromBody, entryRulesFromEvent, type EntryRuleDraft } from "../ui/entry-rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values, districtsAZ } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireUser } from "../lib/session";
-import { accounts, blocks, circleShares, connections, eventInbox, events, partnerOrgs, type Event, type InboxItem, type RegularTable } from "../schema";
+import { accounts, blocks, circleShares, connections, eventInbox, events, partnerOrgs, profiles, type Event, type InboxItem, type RegularTable } from "../schema";
 import { importLink } from "../services/outside-events";
 import { hostTable, sendToTable } from "../services/regular-tables";
 import { Button, Card, Choices, Empty, FactIcon, Field, LinkButton, list, Notice, page, Select, str, Tag, TextArea, Toggle, view, type View } from "../ui/kit";
@@ -101,6 +102,7 @@ function emptyInput(lang: string): ProposalInput {
     warmupUrl: "",
     goTogether: false,
     sourceUrl: "",
+    ...emptyEntryRules(),
   };
 }
 
@@ -138,6 +140,7 @@ function inputFromEvent(e: Event): ProposalInput {
     warmupUrl: e.warmupUrl ?? "",
     goTogether: !!e.sourceName,
     sourceUrl: e.sourceUrl ?? "",
+    ...entryRulesFromEvent(e),
   };
 }
 
@@ -176,6 +179,7 @@ function inputFromBody(body: Record<string, unknown>): ProposalInput {
     warmupUrl: s("warmupUrl"),
     goTogether: s("goTogether") === "1",
     sourceUrl: s("sourceUrl"),
+    ...entryRulesFromBody(body),
   };
 }
 
@@ -471,6 +475,8 @@ function ProposalForm(props: {
   goTogether?: Parameters<typeof GoTogetherCard>[0] | null;
   /** Things to know, not errors (for example: we couldn't read that page). */
   notes?: string[];
+  /** Show private talk mode (health partners and admins, D52). */
+  talk?: boolean;
 }) {
   const { v, d } = props;
   const { t, lang } = v;
@@ -544,6 +550,7 @@ function ProposalForm(props: {
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Guests can bring a friend (+1)")} checked={d.plusOneAllowed} />
         <Select label={t("ใครเห็นกิจกรรมนี้", "Who can see it")} name="visibility" options={visOpts} value={d.visibility} lang={lang} />
+        <EntryRuleFields t={t} d={{ ...emptyEntryRules(), ...d, requirements: d.requirements ?? "", groupLabel: d.groupLabel ?? "", groupJoinCode: d.groupJoinCode ?? "" } as EntryRuleDraft} talk={!!props.talk} />
         {props.table ? (
           <Select
             label={t("ชวนใคร", "Who's it for")}
@@ -595,8 +602,9 @@ function ProposalForm(props: {
   );
 }
 
-const formPage = (c: C, props: Parameters<typeof ProposalForm>[0], status?: 400) =>
-  page(
+const formPage = async (c: C, props: Parameters<typeof ProposalForm>[0], status?: 400) => {
+  const talk = props.talk ?? ((await posterOf(c)).partnerKind === "health" || c.var.user!.account.role === "bma_admin");
+  return page(
     c,
     { title: props.v.t("เสนอกิจกรรม", "Propose an event"), tab: "me", status },
     <>
@@ -604,9 +612,23 @@ const formPage = (c: C, props: Parameters<typeof ProposalForm>[0], status?: 400)
         <a href="/host">← {props.v.t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
       </p>
       <h1>{props.editing ? props.v.t("แก้ไขกิจกรรม", "Edit your event") : props.v.t("เสนอกิจกรรม", "Propose an event")}</h1>
-      <ProposalForm {...props} />
+      <ProposalForm {...props} talk={talk} />
     </>,
   );
+};
+
+/** Who is posting, for the partner-type rules (D51, D52). */
+async function posterOf(c: C): Promise<{ partnerKind: string | null; isAdmin: boolean }> {
+  const a = c.var.user!.account;
+  return { partnerKind: await partnerKindOf(getDb(c.env), a.partnerOrgId), isAdmin: a.role === "bma_admin" };
+}
+
+/** Women and non-binary only events need a woman or non-binary host (D57). Reads only the host's own private gender. */
+async function womenOnlyRefusal(c: C, tags: string[]): Promise<{ th: string; en: string } | null> {
+  if (!tags.includes(WOMEN_ONLY_TAG)) return null;
+  const [p] = await getDb(c.env).select({ gender: profiles.gender }).from(profiles).where(eq(profiles.accountId, c.var.user!.account.id)).limit(1);
+  return canBeWomenOnly(p?.gender) ? null : { th: "กิจกรรมเฉพาะผู้หญิงและนอนไบนารี จัดได้เฉพาะโฮสต์ที่เป็นผู้หญิงหรือนอนไบนารี", en: "Only a woman or non-binary host can run a women and non-binary only event." };
+}
 
 async function pendingCount(c: C, accountId: string): Promise<number> {
   const rows = await getDb(c.env)
@@ -754,7 +776,9 @@ hostRoutes.post("/host/new", async (c) => {
   const audience = table && !item ? audienceOf(body) : "none";
   if (audience === "table") d.visibility = "private";
   let direct = publishesDirectly(me, d.visibility) && !(await partnerInReview(c));
-  const { values: vals, errors } = checkProposal(d, ALLOWED());
+  const { values: vals, errors } = checkProposal(d, ALLOWED(), new Date(), await posterOf(c));
+  const women = await womenOnlyRefusal(c, d.tags);
+  if (women) errors.push(women);
   const msgs = errors.map((e) => v.t(e.th, e.en));
   if (!direct && (await pendingCount(c, me.id)) >= MAX_PENDING) {
     msgs.push(v.t(`มีกิจกรรมรอตรวจพร้อมกันได้ไม่เกิน ${MAX_PENDING} งาน`, `You can have up to ${MAX_PENDING} events waiting for review at once.`));
@@ -840,8 +864,10 @@ hostRoutes.post("/host/:id/edit", async (c) => {
   const audience = table && !e.sourceName ? audienceOf(body) : "none";
   if (audience === "table") d.visibility = "private";
   let direct = publishesDirectly(me, d.visibility) && !(await partnerInReview(c));
-  const { values: vals, errors } = checkProposal(d, ALLOWED());
-  if (!vals)
+  const { values: vals, errors } = checkProposal(d, ALLOWED(), new Date(), await posterOf(c));
+  const women = await womenOnlyRefusal(c, d.tags);
+  if (women) errors.push(women);
+  if (!vals || women)
     return formPage(c, { v, d, action: `/host/${e.id}/edit`, errors: errors.map((x) => v.t(x.th, x.en)), editing: true, direct, table, audience, goTogether: goTogetherOf(v, d, null, e) }, 400);
   if (direct && lateOrLong(vals.startsAt, vals.endsAt)) direct = false;
   const db = getDb(c.env);

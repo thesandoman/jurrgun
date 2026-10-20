@@ -28,6 +28,7 @@ import { SEAT_STATUSES } from "../services/events";
 import { ARCHETYPES, isArchetypeKey } from "../vibe/archetypes";
 import { hasConsent, PERSONALIZATION_CONSENT } from "../services/consent";
 import { Button, Card, Field, LinkButton, Notice, page, Select, str, view, type View } from "../ui/kit";
+import { noOpenInvite } from "../services/collabs";
 
 export const planRoutes = new Hono<AppEnv>();
 planRoutes.use("/plan", requireMember);
@@ -76,18 +77,20 @@ async function planFor(c: C) {
     db
       .select()
       .from(events)
-      .where(and(eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * DAY))))
+      .where(and(eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * DAY)), noOpenInvite()))
       .limit(200),
     db.select({ eventId: registrations.eventId, checkedInAt: registrations.checkedInAt }).from(registrations).where(eq(registrations.accountId, me)).limit(500),
   ]);
   const tablesAttended = mine.filter((x) => x.checkedInAt).length;
   const ids = upcoming.map((e) => e.id);
+  const talkFree = upcoming.filter((e) => !e.talkMode).map((e) => e.id);
   const [taken, friends, quest] = await Promise.all([
     ids.length
       ? db.select({ eventId: registrations.eventId, n: count() }).from(registrations).where(and(inArray(registrations.eventId, ids), inArray(registrations.status, [...SEAT_STATUSES]))).groupBy(registrations.eventId).limit(ids.length)
       : [],
-    ids.length && circle.ids.length
-      ? db.select({ eventId: registrations.eventId, n: count() }).from(registrations).where(and(inArray(registrations.eventId, ids), inArray(registrations.accountId, circle.ids), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]))).groupBy(registrations.eventId).limit(ids.length)
+    // Private talks never say which of your people are going (D52).
+    ids.length && circle.ids.length && talkFree.length
+      ? db.select({ eventId: registrations.eventId, n: count() }).from(registrations).where(and(inArray(registrations.eventId, talkFree), inArray(registrations.accountId, circle.ids), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]))).groupBy(registrations.eventId).limit(ids.length)
       : [],
     circle.matchId
       ? db.select().from(buddyQuests).where(and(eq(buddyQuests.matchId, circle.matchId), eq(buddyQuests.week, week))).limit(1)

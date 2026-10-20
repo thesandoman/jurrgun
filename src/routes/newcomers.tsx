@@ -21,6 +21,7 @@ import { events, registrations, type Profile } from "../schema";
 import { BRAND } from "../ui/brand";
 import { Empty, LinkButton, page, view, type View } from "../ui/kit";
 import { Bento, Big, Pill, Tile } from "../ui/visual";
+import { noOpenInvite } from "../services/collabs";
 
 export const newcomerRoutes = new Hono<AppEnv>();
 type Ctx = Context<AppEnv>;
@@ -104,6 +105,7 @@ async function landing(c: Ctx, audience: Audience) {
         gt(events.startsAt, now),
         or(...k.tags.map((tag) => has(events.tags, tag)))!,
         sql`not ${has(events.tags, OPEN_TO_MORE_TAG)}`,
+        noOpenInvite(),
       ),
     )
     .orderBy(asc(events.startsAt))
@@ -218,7 +220,7 @@ export async function firstTable(env: AppEnv["Bindings"], p: Profile, now = new 
   const rows = await db
     .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district, costThb: events.costThb, tags: events.tags })
     .from(events)
-    .where(and(eq(events.status, "published"), ne(events.visibility, "private"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * 86_400_000))))
+    .where(and(eq(events.status, "published"), ne(events.visibility, "private"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * 86_400_000)), noOpenInvite()))
     .orderBy(
       desc(sql`${events.district} = ${p.district}`),
       ...(wish.length ? [desc(inArray(events.district, wish))] : []),

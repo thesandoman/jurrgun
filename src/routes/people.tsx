@@ -241,7 +241,8 @@ async function loadPeople(c: Ctx, eventId: string): Promise<PeopleState> {
   const db = getDb(c.env);
   const me = c.var.user!;
   const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
-  if (!event) return { kind: "missing" };
+  // A private talk has no People I Met (D52).
+  if (!event || event.talkMode) return { kind: "missing" };
   const [mine] = await db
     .select({ checkedInAt: registrations.checkedInAt, groupNo: registrations.groupNo })
     .from(registrations)

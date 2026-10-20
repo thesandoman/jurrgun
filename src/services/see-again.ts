@@ -51,6 +51,8 @@ export async function seeAgain(
         eq(registrations.accountId, me.id),
         isNotNull(registrations.checkedInAt),
         lte(events.endsAt, now),
+        // A private talk never leads to seeing anyone again (D52).
+        eq(events.talkMode, false),
         ...(opts.eventId ? [eq(events.id, opts.eventId)] : []),
       ),
     )
@@ -137,6 +139,7 @@ async function nextStep(db: Db, me: { id: string; birthDate: string }, list: See
           eq(events.visibility, "public"),
           isNull(events.regularTableId),
           gt(events.startsAt, now),
+          eq(events.talkMode, false),
         ),
       )
       .orderBy(asc(events.startsAt))

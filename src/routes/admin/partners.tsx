@@ -4,7 +4,8 @@
  * Lists partner organisations and every staff account, creates partner
  * organisations and sets a username's role. Every write is audited.
  *
- * Each organisation has a kind (events, dating, venue, community) and optional
+ * Each organisation has a kind (events, dating, venue, community, health,
+ * public sector) and optional
  * internal notes. Both are admin only: no member-facing page names the kind.
  * A dating partner's events always carry the open_to_more tag, so only members
  * who chose Open to something more see them (rules.ts partnerEventTags).
@@ -39,6 +40,8 @@ export const PARTNER_KIND_LABELS: Record<PartnerKind, [string, string]> = {
   dating: ["แอปเดตหรือแอปหาเพื่อน 💘", "Dating or friend app 💘"],
   venue: ["สถานที่", "Venue"],
   community: ["ชุมชน", "Community"],
+  health: ["สุขภาพ (รัฐหรือไม่แสวงกำไร)", "Health (public or non-profit)"],
+  public_sector: ["หน่วยงานรัฐ", "Public sector"],
 };
 
 const NOTES_MAX = 1000;

@@ -20,7 +20,7 @@ import { Hono, type Context } from "hono";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { suggestGroups } from "../../domain/matching";
-import { checkInOpen, OPEN_TO_MORE_TAG, partnerEventTags, strikeExpiry } from "../../domain/rules";
+import { canBeWomenOnly, checkInOpen, OPEN_TO_MORE_TAG, partnerEventTags, seatAvailable, strikeExpiry, WOMEN_ONLY_TAG } from "../../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../../lib/constants";
 import { newId, randomToken } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
@@ -39,8 +39,9 @@ import {
   strikes,
   type Account,
   type Event,
+  talkQuestions,
 } from "../../schema";
-import { loadAttendees, refreshWaitlist, runBuddyRound } from "../../services/events";
+import { loadAttendees, refreshWaitlist, runBuddyRound, seatState } from "../../services/events";
 import { announceOpen, cancelWrites, eventAnnouncements, postAnnouncement, type AnnounceInput } from "../../services/announcements";
 import { ANNOUNCE_MAX, ANNOUNCE_PER_DAY, canAnnounce, cleanBody, isAnnouncementKind } from "../../domain/announcements";
 import { fromBangkok } from "../../domain/hosting";
@@ -50,6 +51,8 @@ import { STATIONS } from "../../content/stations";
 import { VenueFields, DayStatusForm, EtaSummary } from "../../ui/day-of";
 import { DAY_OF_LEAD_HOURS, cleanNote, dayOfOpen, dayOfOpensAt, isDayStatus, shownDayStatus, shownEta, DAY_STATUS_TEXT } from "../../domain/day-of";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../../storage";
+import { checkEventRules, effectiveAgeMin } from "../../domain/event-rules";
+import { emptyEntryRules, EntryRuleFields, entryRulesFromBody, entryRulesFromEvent, type EntryRuleDraft } from "../../ui/entry-rules";
 import {
   Button,
   Card,
@@ -343,7 +346,7 @@ function StatusTag(props: { v: View; status: string }) {
 // ------------------------------------------------------- create / edit --
 
 /** The event form's values, as typed (strings), so a 400 can re-render them. */
-type Draft = {
+type Draft = EntryRuleDraft & {
   title: string;
   titleEn: string;
   description: string;
@@ -385,6 +388,7 @@ type Draft = {
 
 function emptyDraft(): Draft {
   return {
+    ...emptyEntryRules(),
     title: "",
     titleEn: "",
     description: "",
@@ -427,6 +431,7 @@ function emptyDraft(): Draft {
 
 function draftFromEvent(e: Event): Draft {
   return {
+    ...entryRulesFromEvent(e),
     title: e.title,
     titleEn: e.titleEn ?? "",
     description: e.description,
@@ -471,6 +476,7 @@ function draftFromBody(body: Record<string, unknown>): Draft {
   const s = (k: string) => str(body[k]);
   const b = (k: string) => str(body[k]) === "1";
   return {
+    ...entryRulesFromBody(body),
     title: s("title"),
     titleEn: s("titleEn"),
     description: s("description"),
@@ -595,6 +601,12 @@ async function loadFormCtx(db: Db, a: Account): Promise<FormCtx> {
   return { hosts, orgs, ownOrg: own[0] ?? null };
 }
 
+/** Women and non-binary only events need a woman or non-binary host (D57). Reads only that host's private gender, never shown. */
+async function womenHostOk(db: Db, hostId: string): Promise<boolean> {
+  const [p] = await db.select({ gender: profiles.gender }).from(profiles).where(eq(profiles.accountId, hostId)).limit(1);
+  return canBeWomenOnly(p?.gender);
+}
+
 /** The partner kind an event's form resolves to (dating partners lock open_to_more). */
 function orgKindFor(a: Account, ctx: FormCtx, partnerOrgId: string | null | undefined): string | null {
   if (a.role !== "bma_admin") return ctx.ownOrg?.kind ?? null;
@@ -610,7 +622,15 @@ const intIn = (s: string, min: number, max: number): number | null => {
 };
 
 /** Server-side validation of every §7.1 field. */
-function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event | null): { data: EventValues | null; errors: string[] } {
+function validate(
+  d: Draft,
+  v: View,
+  a: Account,
+  ctx: FormCtx,
+  existing: Event | null,
+  /** Whether the host may run a women and non-binary only event (D57). */
+  womenOk = true,
+): { data: EventValues | null; errors: string[] } {
   const { t } = v;
   const errors: string[] = [];
   const need = (ok: boolean, th: string, en: string) => {
@@ -698,6 +718,11 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
     partnerOrgId = a.partnerOrgId;
   }
 
+  // Entry rules (D51, D52, D56 to D61).
+  const rules = checkEventRules(d, { partnerKind: orgKindFor(a, ctx, partnerOrgId), isAdmin: a.role === "bma_admin", costThb: costThb ?? 0, hasPaymentOrTicketLink: !!paymentUrl });
+  for (const x of rules.errors) errors.push(t(x.th, x.en));
+  need(!d.tags.includes(WOMEN_ONLY_TAG) || womenOk, "กิจกรรมเฉพาะผู้หญิงและนอนไบนารี ต้องมีโฮสต์ที่เป็นผู้หญิงหรือนอนไบนารี", "A women and non-binary only event needs a host who is a woman or non-binary.");
+
   if (errors.length) return { data: null, errors };
   return {
     errors,
@@ -713,12 +738,13 @@ function validate(d: Draft, v: View, a: Account, ctx: FormCtx, existing: Event |
       mapUrl,
       district: d.district,
       capacity: capacity!,
-      ageMin: ageMin!,
-      ageMax: ageMax!,
+      ageMin: effectiveAgeMin(ageMin!, rules.values.alcoholServed),
+      ageMax: Math.max(ageMax!, effectiveAgeMin(ageMin!, rules.values.alcoholServed)),
       languages: d.languages,
       costThb: costThb!,
       paymentNote: d.paymentNote || null,
       paymentUrl,
+      ...rules.values,
       visibility: d.visibility as "public" | "private",
       // A private event needs its link; it survives switching back and forth.
       privateToken: d.visibility === "private" ? (existing?.privateToken ?? randomToken(32)) : (existing?.privateToken ?? null),
@@ -868,6 +894,7 @@ function EventForm(props: {
         <Toggle name="buddyEnabled" label={t("เปิด Event Buddy", "Enable Event Buddy")} hint={t("จับคู่คนที่ไม่อยากมาคนเดียว 48 ชม. ก่อนงาน", "Pairs people who don't want to arrive alone, 48h before")} checked={d.buddyEnabled} />
         <Toggle name="residentPriority" label={t("ให้สิทธิ์ผู้อยู่อาศัยในกรุงเทพฯ ก่อน", "Bangkok resident priority")} checked={d.residentPriority} />
         <Field label={t("โควตาผู้อยู่อาศัย (ที่นั่ง)", "Resident quota (seats)")} name="residentQuota" type="number" min={0} max={ORGANISER_MAX_CAPACITY} value={d.residentQuota} hint={t("ไม่เกินจำนวนที่นั่ง", "At most the capacity")} />
+        <EntryRuleFields t={t} d={d} talk={props.a.role === "bma_admin" || orgKindFor(props.a, ctx, d.partnerOrgId || null) === "health"} />
       </Card>
       <Card>
         <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>
@@ -942,7 +969,7 @@ adminEvents.post("/new", async (c) => {
   const ctx = await loadFormCtx(db, a);
   const body = await c.req.parseBody({ all: true });
   const d = draftFromBody(body);
-  const { data, errors } = validate(d, v, a, ctx, null);
+  const { data, errors } = validate(d, v, a, ctx, null, await womenHostOk(db, d.hostAccountId || a.id));
   const file = coverFile(body);
   const coverErr = coverError(file, v);
   const id = newId();
@@ -1000,7 +1027,7 @@ adminEvents.post(
     const ctx = await loadFormCtx(db, a);
     const body = await c.req.parseBody({ all: true });
     const d = draftFromBody(body);
-    const { data: validated, errors } = validate(d, v, a, ctx, e);
+    const { data: validated, errors } = validate(d, v, a, ctx, e, await womenHostOk(db, d.hostAccountId || a.id));
     const file = coverFile(body);
     const coverErr = coverError(file, v);
     const bad = async (errs: string[]) =>
@@ -1149,6 +1176,38 @@ function registrationStatusLabel(v: View, s: string): string {
   }
 }
 
+/**
+ * Organiser approval (D57): approving takes a seat if one is free (else the
+ * waitlist), declining frees nothing. Both tell the member.
+ */
+for (const answer of ["approve", "decline"] as const) {
+  adminEvents.post(
+    `/:id/requests/:reg/${answer}`,
+    withEvent(async (c, e, db) => {
+      const a = me(c);
+      const [reg] = await db
+        .select({ id: registrations.id, accountId: registrations.accountId })
+        .from(registrations)
+        .where(and(eq(registrations.id, c.req.param("reg") ?? ""), eq(registrations.eventId, e.id), eq(registrations.status, "requested")))
+        .limit(1);
+      if (!reg) return c.redirect(`${BASE}/${e.id}#requests`);
+      const [acct] = await db.select({ bkk: accounts.bkkRegistered }).from(accounts).where(eq(accounts.id, reg.accountId)).limit(1);
+      const status = answer === "decline" ? "cancelled" : seatAvailable(await seatState(db, e), acct?.bkk === "verified") ? "confirmed" : "waitlisted";
+      const title = e.titleEn ?? e.title;
+      await batch(c.env, [
+        db.update(registrations).set({ status, cancelledAt: status === "cancelled" ? new Date() : null }).where(eq(registrations.id, reg.id)),
+        audit(db, a.id, `event.request_${answer}`, { type: "event", id: e.id }),
+        status === "confirmed"
+          ? notify(db, reg.accountId, "rsvp", `ได้ที่นั่งแล้ว: ${e.title}`, `You're in: ${title}`, `/me/events/${e.id}/pass`)
+          : status === "waitlisted"
+            ? notify(db, reg.accountId, "waitlist", `ผู้จัดอนุมัติแล้ว อยู่ในคิวสำรอง: ${e.title}`, `Approved, and on the waitlist: ${title}`, `/events/${e.id}`)
+            : notify(db, reg.accountId, "rsvp_declined", `ผู้จัดไม่ได้รับคำขอครั้งนี้: ${e.title}`, `The organiser couldn't take your request: ${title}`, `/events`),
+      ]);
+      return c.redirect(`${BASE}/${e.id}?notice=saved#requests`);
+    }),
+  );
+}
+
 /** Checked-in count for the station and JSON responses. */
 async function checkedInCount(db: Db, eventId: string): Promise<number> {
   const [row] = await db
@@ -1180,9 +1239,24 @@ adminEvents.get(
     // Totals come from one grouped count, never from loading every registration
     // (an event can hold 100,000). The attendee table is paged.
     const { page: ap, offset } = pageOf(c.req.query("ap"), ATTENDEE_PAGE);
-    const notWaitlisted = and(eq(registrations.eventId, e.id), ne(registrations.status, "waitlisted"));
+    const notWaitlisted = and(eq(registrations.eventId, e.id), ne(registrations.status, "waitlisted"), ne(registrations.status, "requested"));
     const anns = await eventAnnouncements(db, e.id);
     const announcer = canAnnounce(e, a);
+    // Requests waiting for the organiser (D57), and a private talk's anonymous questions (D52).
+    const [requests, questions] = await Promise.all([
+      e.approvalRequired
+        ? db
+            .select({ id: registrations.id, nickname: profiles.nickname, createdAt: registrations.createdAt })
+            .from(registrations)
+            .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
+            .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "requested")))
+            .orderBy(asc(registrations.createdAt))
+            .limit(200)
+        : Promise.resolve([] as { id: string; nickname: string | null; createdAt: Date }[]),
+      e.talkMode
+        ? db.select({ id: talkQuestions.id, body: talkQuestions.body, createdAt: talkQuestions.createdAt }).from(talkQuestions).where(eq(talkQuestions.eventId, e.id)).orderBy(asc(talkQuestions.createdAt)).limit(300)
+        : Promise.resolve([] as { id: string; body: string; createdAt: Date }[]),
+    ]);
     const [totals, pageRows, waitRows, checked, pairs, hostRow] = await Promise.all([
       db
         .select({
@@ -1248,7 +1322,7 @@ adminEvents.get(
     const checkedCount = tally((r) => r.checkedIn, (s) => s === "confirmed");
     const waitlistedCount = tally((r) => r.n, (s) => s === "waitlisted");
     const waitlistCount = tally((r) => r.n, (s) => s === "waitlisted" || s === "offered");
-    const attendingCount = tally((r) => r.n, (s) => s !== "waitlisted");
+    const attendingCount = tally((r) => r.n, (s) => s !== "waitlisted" && s !== "requested");
     const anyPlusOne = tally((r) => r.plusOnes, (s) => s !== "waitlisted") > 0;
     const noShowPending = tally((r) => r.noShowPending, (s) => s === "confirmed");
     const ended = now.getTime() >= e.endsAt.getTime();
@@ -1358,6 +1432,48 @@ adminEvents.get(
           <Stat label={t("ไม่มาตามนัด", "No-shows")} value={ended ? noShows : t("ยังไม่มี", "Not yet")} hint={ended ? undefined : t("นับหลังจบงาน", "Counted after the end")} />
           <Stat label={t("คิวสำรอง", "Waitlist")} value={waitlistedCount} />
         </div>
+
+        {e.approvalRequired ? (
+          <>
+            <h2 id="requests">{t("คำขอที่นั่ง", "Place requests")}</h2>
+            {requests.length === 0 ? (
+              <Empty>{t("ยังไม่มีคำขอ", "No requests waiting")}</Empty>
+            ) : (
+              <ul class="plain">
+                {requests.map((r) => (
+                  <li class="row">
+                    <span>{r.nickname ?? t("(ไม่มีชื่อ)", "(no name)")}</span>
+                    {e.status === "published" ? (
+                      <>
+                        <form method="post" action={`${BASE}/${e.id}/requests/${r.id}/approve`} style="display:inline">
+                          <Button>{t("อนุมัติ", "Approve")}</Button>
+                        </form>
+                        <form method="post" action={`${BASE}/${e.id}/requests/${r.id}/decline`} style="display:inline">
+                          <Button kind="ghost">{t("ปฏิเสธ", "Decline")}</Button>
+                        </form>
+                      </>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        ) : null}
+        {e.talkMode ? (
+          <>
+            <h2 id="questions">{t("คำถามแบบไม่ระบุชื่อ", "Anonymous questions")}</h2>
+            <p class="muted">{t("ไม่มีใครรู้ว่าใครถาม รวมถึงทีมงาน", "Nobody, staff included, can see who asked.")}</p>
+            {questions.length === 0 ? (
+              <Empty>{t("ยังไม่มีคำถาม", "No questions yet")}</Empty>
+            ) : (
+              <ol>
+                {questions.map((q) => (
+                  <li>{q.body}</li>
+                ))}
+              </ol>
+            )}
+          </>
+        ) : null}
 
         <h2 id="attendees">{t("ผู้เข้าร่วม", "Attendees")}</h2>
         {attendingCount === 0 ? (

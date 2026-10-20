@@ -16,6 +16,8 @@
  *    venue, or the host links their own payment page.
  */
 
+import { checkEventRules, effectiveAgeMin, type EventRules, type EventRulesInput } from "./event-rules";
+
 export type Lang2 = { th: string; en: string };
 export type Viewer = { id: string; role: string; partnerOrgId: string | null };
 export type HostedEvent = {
@@ -127,7 +129,8 @@ export type ProposalInput = {
    */
   goTogether?: boolean;
   sourceUrl?: string;
-} & VenueExtrasInput;
+} & VenueExtrasInput &
+  EventRulesInput;
 
 export type ProposalValues = {
   title: string;
@@ -157,7 +160,8 @@ export type ProposalValues = {
   safetyInfo: string;
   warmupUrl: string | null;
   sourceUrl: string | null;
-} & VenueExtras;
+} & VenueExtras &
+  EventRules;
 
 // ------------------------------------------------- finding the table --
 
@@ -221,6 +225,8 @@ export function checkProposal(
   d: ProposalInput,
   allowed: { districts: string[]; languages: string[]; intensity: string[]; tags: string[]; stations?: readonly string[] },
   now = new Date(),
+  /** Who is posting, for the partner-type rules (D51, D52). */
+  poster: { partnerKind?: string | null; isAdmin?: boolean } = {},
 ): { values: ProposalValues | null; errors: Lang2[] } {
   const errors: Lang2[] = [];
   const need = (ok: boolean, th: string, en: string) => {
@@ -276,12 +282,15 @@ export function checkProposal(
 
   const extras = checkVenueExtras(d, allowed.stations ?? []);
   errors.push(...extras.errors);
+  const rules = checkEventRules(d, { ...poster, costThb: costThb ?? 0, hasPaymentOrTicketLink: !!paymentUrl || (!!d.goTogether && !!sourceUrl) });
+  errors.push(...rules.errors);
 
   if (errors.length) return { values: null, errors };
   return {
     errors,
     values: {
       ...extras.values,
+      ...rules.values,
       title: d.title,
       titleEn: d.titleEn || null,
       description: d.description,
@@ -292,8 +301,9 @@ export function checkProposal(
       mapUrl,
       district: d.district,
       capacity: capacity!,
-      ageMin: ageMin!,
-      ageMax: ageMax!,
+      // An event serving alcohol is 20+ (D58).
+      ageMin: effectiveAgeMin(ageMin!, rules.values.alcoholServed),
+      ageMax: Math.max(ageMax!, effectiveAgeMin(ageMin!, rules.values.alcoholServed)),
       languages: d.languages,
       costThb: costThb!,
       paymentNote: d.paymentNote || null,

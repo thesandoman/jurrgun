@@ -122,6 +122,8 @@ import {
   datingIntents,
   passportStamps,
   safeArrivals,
+  talkQuestions,
+  eventPartners,
 } from "../schema";
 
 const HOUR = 3_600_000;
@@ -321,6 +323,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     db.delete(pulseSuggestions).where(lt(pulseSuggestions.month, researchMonth)).returning({ id: pulseSuggestions.id }),
   ]);
 
+  // Anonymous questions at a private talk go 30 days after it (D52). Kept out of the batch above, whose results are read by position.
+  await db.delete(talkQuestions).where(inArray(talkQuestions.eventId, endedBefore(new Date(now.getTime() - 30 * DAY))));
   const counts: RetentionCounts = {
     signalsCleared: signals.length,
     choicesDeleted: choices.length,
@@ -430,6 +434,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.update(eventInbox).set({ addedBy: null }).where(inArray(eventInbox.addedBy, ids)),
       db.update(eventFeeds).set({ addedBy: null }).where(inArray(eventFeeds.addedBy, ids)),
       db.update(partnerKeys).set({ createdBy: null }).where(inArray(partnerKeys.createdBy, ids)),
+      db.update(eventPartners).set({ invitedBy: null }).where(inArray(eventPartners.invitedBy, ids)),
       // Their mutual connections end, so the other person no longer sees them.
       db
         .update(connections)

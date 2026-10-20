@@ -68,6 +68,8 @@ const NOTICES: Record<string, [string, string]> = {
   welcome: ["ยินดีต้อนรับสู่ Jurrgun!", "Welcome to Jurrgun!"],
   rsvp_confirmed: ["ได้ที่นั่งแล้ว ดูบัตรเข้างานได้ในนัดของฉัน", "You're in, your pass is in My events"],
   rsvp_waitlisted: ["อยู่ในคิวสำรองแล้ว มีที่ว่างเมื่อไหร่ เราจะบอกทันทีนะ", "You're on the waitlist, we'll tell you if a spot opens"],
+  rsvp_requested: ["ส่งคำขอแล้ว ผู้จัดจะตอบในการแจ้งเตือน", "Request sent. The organiser will answer in your notifications"],
+  question_sent: ["ส่งคำถามแล้ว ไม่มีใครเห็นว่าใครถาม", "Question sent. Nobody can see who asked"],
   cancelled: ["ยกเลิกแล้ว", "Cancelled"],
   late_cancel: ["ยกเลิกแล้ว แต่ยกเลิกไม่ถึง 24 ชั่วโมงก่อนงาน เลยนับเป็นใบเตือน 1 ใบ", "Cancelled, cancelling within 24h counts as 1 strike"],
   offer_accepted: ["รับที่นั่งแล้ว!", "Spot accepted!"],

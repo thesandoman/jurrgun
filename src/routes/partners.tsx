@@ -7,23 +7,29 @@
  *   POST /partner/feeds/:id/pause|resume
  *   POST /partner/keys                    make a key (shown once)
  *   POST /partner/keys/:id/revoke
+ *   POST /partner/events/:id/cohosts                 invite a co-host (D53)
+ *   POST /partner/events/:id/cohosts/:invite/remove  withdraw or remove a co-host
+ *   POST /partner/invites/:invite/accept|decline     answer an invitation
  *
  * A Jurrgun admin, a moderator or a BMA admin verifies applications
  * (src/routes/admin/partner-review.tsx). A partner sees its own events with
  * booking counts and a referral code per event: never names, never who.
  */
 import { Hono, type Context } from "hono";
-import { and, asc, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { requireRole, requireUser } from "../lib/session";
-import { accounts, eventFeeds, events, partnerApplications, partnerKeys, partnerOrgs, PARTNER_KINDS, type PartnerKind } from "../schema";
+import { accounts, eventFeeds, partnerApplications, partnerKeys, partnerOrgs, PARTNER_KINDS, type PartnerKind } from "../schema";
 import { checkOutsideUrl } from "../services/outside-fetch";
+import { isAdminOnlyKind } from "../domain/event-rules";
 import { createPartnerKey, KEYS_PER_ORG, revokePartnerKey } from "../services/partner-keys";
-import { bookingCounts } from "./partner-api";
+import { partnerCounts, partnerEvents } from "./partner-api";
+import { cohostsFor, invitablePartners, invitationsFor, inviteCohost, removeCohost, respondToInvite } from "../services/collabs";
+import { MAX_COHOSTS } from "../domain/event-rules";
 import { Button, Card, Empty, Field, LinkButton, Notice, page, str, Tag, TextArea, view, type View } from "../ui/kit";
 
 export const partnerRoutes = new Hono<AppEnv>();
@@ -34,8 +40,12 @@ export const KIND_TEXT: Record<PartnerKind, [string, string]> = {
   venue: ["สถานที่ (คาเฟ่ ร้าน แกลเลอรี)", "Venue (café, bar, gallery)"],
   community: ["ชุมชน ชมรม หรือมหาวิทยาลัย", "Community, club or university"],
   dating: ["แอปเดตหรือแอปหาเพื่อน 💘", "Dating or friend app 💘"],
+  health: ["สุขภาพ (รัฐหรือไม่แสวงกำไร)", "Health (public or non-profit)"],
+  public_sector: ["หน่วยงานรัฐ", "Public sector"],
 };
 const isKind = (k: string): k is PartnerKind => (PARTNER_KINDS as readonly string[]).includes(k);
+/** Types a member can apply for. Health and public sector are set up by an admin only (D51, D55). */
+const APPLY_KINDS = PARTNER_KINDS.filter((k) => !isAdminOnlyKind(k));
 
 // ------------------------------------------------------------- apply --
 
@@ -92,13 +102,19 @@ async function applyPage(c: C, errors: string[] = [], d: Record<string, string> 
             <div class="field">
               <label for="f-kind">{t("ประเภท", "Type")}</label>
               <select id="f-kind" name="kind" required>
-                {PARTNER_KINDS.map((k) => (
+                {APPLY_KINDS.map((k) => (
                   <option value={k} selected={(d.kind || "events") === k}>
                     {lang === "en" ? KIND_TEXT[k][1] : KIND_TEXT[k][0]}
                   </option>
                 ))}
               </select>
               <small>{t("แอปเดต: กิจกรรมจะเห็นได้เฉพาะสมาชิกที่เปิดรับเรื่องเดต 💘 เท่านั้น", "Dating apps: your events are seen only by members who opted into 💘.")}</small>
+              <small>
+                {t(
+                  "หน่วยงานรัฐ ศูนย์บริการสาธารณสุข และคลินิกไม่แสวงกำไร ทีมงานตั้งให้โดยตรง ติดต่อทีม Jurrgun",
+                  "Government bodies, public health centres and non-profit clinics are set up by the team directly. Contact the Jurrgun team.",
+                )}
+              </small>
             </div>
             <Field label={t("เว็บไซต์ (ไม่บังคับ)", "Website (optional)")} name="website" type="url" value={d.website} placeholder="https://…" maxlength={300} inputmode="url" autocapitalize="none" />
             <Field
@@ -129,7 +145,7 @@ partnerRoutes.post("/partner/apply", async (c) => {
   const d = { orgName: str(body.orgName), kind: str(body.kind) || "events", website: str(body.website), contact: str(body.contact), about: str(body.about) };
   const errors: string[] = [];
   if (d.orgName.length < 2 || d.orgName.length > 100) errors.push(t("ใส่ชื่อองค์กร (2 ถึง 100 ตัวอักษร)", "Add the organisation's name (2 to 100 characters)."));
-  if (!isKind(d.kind)) errors.push(t("เลือกประเภท", "Choose a type."));
+  if (!isKind(d.kind) || isAdminOnlyKind(d.kind)) errors.push(t("เลือกประเภท", "Choose a type."));
   const website = d.website ? checkOutsideUrl(d.website) : null;
   if (d.website && !website) errors.push(t("เว็บไซต์ต้องขึ้นต้นด้วย https://", "The website must start with https://"));
   if (d.contact.length < 5 || d.contact.length > 200) errors.push(t("ใส่ช่องทางติดต่อของงาน", "Add a work contact."));
@@ -157,6 +173,8 @@ partnerRoutes.use("/partner/feeds/*", requireRole("partner_admin"));
 partnerRoutes.use("/partner/feeds", requireRole("partner_admin"));
 partnerRoutes.use("/partner/keys/*", requireRole("partner_admin"));
 partnerRoutes.use("/partner/keys", requireRole("partner_admin"));
+partnerRoutes.use("/partner/events/*", requireRole("partner_admin"));
+partnerRoutes.use("/partner/invites/*", requireRole("partner_admin"));
 
 const orgIdOf = (c: C) => c.var.user!.account.partnerOrgId;
 
@@ -167,19 +185,17 @@ async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 
   if (!orgId) return page(c, { title: t("พื้นที่พาร์ตเนอร์", "Partner area"), admin: true }, <Empty>{t("บัญชีนี้ยังไม่ได้ผูกกับองค์กร", "This account isn't linked to an organisation yet.")}</Empty>);
   const db = getDb(c.env);
   const now = new Date();
-  const [[org], feeds, keys, evs, hosts] = await Promise.all([
+  const [[org], feeds, keys, evs, hosts, invites, invitable] = await Promise.all([
     db.select().from(partnerOrgs).where(eq(partnerOrgs.id, orgId)).limit(1),
     db.select().from(eventFeeds).where(eq(eventFeeds.partnerOrgId, orgId)).orderBy(asc(eventFeeds.createdAt)).limit(20),
     db.select().from(partnerKeys).where(eq(partnerKeys.partnerOrgId, orgId)).orderBy(desc(partnerKeys.createdAt)).limit(20),
-    db
-      .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, status: events.status, referralCode: events.referralCode })
-      .from(events)
-      .where(and(eq(events.partnerOrgId, orgId), gte(events.startsAt, new Date(now.getTime() - 30 * 86_400_000))))
-      .orderBy(desc(events.startsAt))
-      .limit(50),
+    partnerEvents(c.env, orgId, 50),
     db.select({ username: accounts.username, role: accounts.role }).from(accounts).where(and(eq(accounts.partnerOrgId, orgId), inArray(accounts.role, ["host", "partner_admin"]))).limit(50),
+    invitationsFor(c.env, orgId),
+    invitablePartners(c.env, orgId),
   ]);
-  const counts = await bookingCounts(c.env, evs.map((e) => e.id));
+  const [counts, cohosts] = await Promise.all([partnerCounts(c.env, evs), cohostsFor(c.env, evs.map((e) => e.id))]);
+  const shown = (n: number | null | undefined) => (n === null ? t("ไม่ถึง 10", "under 10") : (n ?? 0));
   const live = keys.filter((k) => !k.revokedAt);
   const origin = new URL(c.req.url).origin;
   return page(
@@ -202,8 +218,28 @@ async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 
         </Notice>
       ) : null}
 
+      {invites.length ? (
+        <>
+          <h2>{t("คำเชิญร่วมจัด", "Invitations to co-host")}</h2>
+          {invites.map((i) => (
+            <Card>
+              <strong>{lang === "en" && i.titleEn ? i.titleEn : i.title}</strong> <small class="muted">{fmtDate(i.startsAt, lang)}</small>
+              <p class="muted" style="margin:4px 0">{t(`${i.leadName} ชวนคุณร่วมจัด ชื่อคุณจะขึ้นในกิจกรรม และเห็นยอดเดียวกัน`, `${i.leadName} invites you to co-host. Your name shows on the event and you see the same counts.`)}</p>
+              <div class="row">
+                <form method="post" action={`/partner/invites/${i.inviteId}/accept`}>
+                  <Button>{t("ร่วมจัด", "Accept")}</Button>
+                </form>
+                <form method="post" action={`/partner/invites/${i.inviteId}/decline`}>
+                  <Button kind="ghost">{t("ไม่ร่วม", "Decline")}</Button>
+                </form>
+              </div>
+            </Card>
+          ))}
+        </>
+      ) : null}
+
       <h2>{t("กิจกรรมและยอดจอง", "Events and bookings")}</h2>
-      <p class="muted">{t("เห็นแค่จำนวน ไม่เห็นว่าใครจอง", "Counts only, never who booked.")}</p>
+      <p class="muted">{t("เห็นแค่จำนวน ไม่เห็นว่าใครจอง วงพูดคุยส่วนตัวแสดงตัวเลขเมื่อมี 10 คนขึ้นไป", "Counts only, never who booked. Private talks show numbers from 10 people up.")}</p>
       {evs.length === 0 ? (
         <Empty>{t("ยังไม่มีกิจกรรม", "No events yet.")}</Empty>
       ) : (
@@ -226,10 +262,23 @@ async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 
                     <a href={`/events/${e.id}`}>{lang === "en" && e.titleEn ? e.titleEn : e.title}</a>
                     <br />
                     <small>{fmtDate(e.startsAt, lang)}</small>
+                    {e.partnerOrgId !== orgId ? (
+                      <>
+                        {" "}
+                        <Tag tone="muted">{t("ร่วมจัด", "Co-host")}</Tag>
+                      </>
+                    ) : null}
+                    <CohostCell
+                      v={v}
+                      eventId={e.id}
+                      lead={e.partnerOrgId === orgId && e.startsAt.getTime() > now.getTime()}
+                      list={cohosts.get(e.id) ?? []}
+                      invitable={invitable}
+                    />
                   </td>
                   <td>{e.status}</td>
-                  <td>{counts.get(e.id)?.booked ?? 0}</td>
-                  <td>{counts.get(e.id)?.checked_in ?? 0}</td>
+                  <td>{shown(counts.get(e.id)?.booked)}</td>
+                  <td>{shown(counts.get(e.id)?.checked_in)}</td>
                   <td>
                     <code>{e.referralCode ?? "-"}</code>
                   </td>
@@ -314,7 +363,71 @@ async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 
   );
 }
 
+/** Co-hosts of one event: names and status, and for the lead an invite form (D53). */
+function CohostCell(props: { v: View; eventId: string; lead: boolean; list: { inviteId: string; orgId: string; name: string; status: string }[]; invitable: { id: string; name: string }[] }) {
+  const { t } = props.v;
+  const live = props.list.filter((x) => x.status !== "declined");
+  const taken = new Set(live.map((x) => x.orgId));
+  const options = props.invitable.filter((o) => !taken.has(o.id));
+  if (!props.lead && !live.length) return null;
+  return (
+    <div style="margin-top:4px">
+      {live.map((x) => (
+        <div>
+          <small>
+            + {x.name} {x.status === "invited" ? <Tag tone="warn">{t("รอตอบ: ยังไม่ขึ้นหน้าค้นหา", "Waiting: not on Discover yet")}</Tag> : null}
+          </small>
+          {props.lead ? (
+            <form method="post" action={`/partner/events/${props.eventId}/cohosts/${x.inviteId}/remove`} style="display:inline">
+              <Button kind="ghost">{t("เอาออก", "Remove")}</Button>
+            </form>
+          ) : null}
+        </div>
+      ))}
+      {props.lead && live.length < MAX_COHOSTS && options.length ? (
+        <form method="post" action={`/partner/events/${props.eventId}/cohosts`} class="row">
+          <label class="sr-only" for={`co-${props.eventId}`}>
+            {t("เชิญผู้ร่วมจัด", "Invite a co-host")}
+          </label>
+          <select id={`co-${props.eventId}`} name="orgId" required>
+            <option value="">{t("เชิญผู้ร่วมจัด…", "Invite a co-host…")}</option>
+            {options.map((o) => (
+              <option value={o.id}>{o.name}</option>
+            ))}
+          </select>
+          <Button kind="ghost">{t("เชิญ", "Invite")}</Button>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
 partnerRoutes.get("/partner", (c) => area(c));
+
+const byOf = (c: C) => ({ accountId: c.var.user!.account.id, orgId: orgIdOf(c)! });
+
+partnerRoutes.post("/partner/events/:id/cohosts", async (c) => {
+  const v = view(c);
+  if (!orgIdOf(c)) return c.redirect("/partner");
+  const refusal = await inviteCohost(c.env, byOf(c), c.req.param("id"), str((await c.req.parseBody()).orgId));
+  if (refusal) return area(c, { error: v.t(refusal.th, refusal.en), status: 400 });
+  return c.redirect("/partner?notice=saved");
+});
+
+partnerRoutes.post("/partner/events/:id/cohosts/:invite/remove", async (c) => {
+  if (orgIdOf(c)) await removeCohost(c.env, byOf(c), c.req.param("id"), c.req.param("invite"));
+  return c.redirect("/partner?notice=saved");
+});
+
+for (const answer of ["accept", "decline"] as const) {
+  partnerRoutes.post(`/partner/invites/:invite/${answer}`, async (c) => {
+    const v = view(c);
+    if (!orgIdOf(c)) return c.redirect("/partner");
+    const refusal = await respondToInvite(c.env, byOf(c), c.req.param("invite"), answer === "accept");
+    if (refusal) return area(c, { error: v.t(refusal.th, refusal.en), status: 400 });
+    return c.redirect("/partner?notice=saved");
+  });
+}
 
 partnerRoutes.post("/partner/keys", async (c) => {
   const orgId = orgIdOf(c);

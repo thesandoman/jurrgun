@@ -55,7 +55,7 @@ import {
   type StrikeStanding,
 } from "../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, SIGNALS, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../lib/constants";
-import { newId, randomToken } from "../lib/crypto";
+import { hmacSha256, newId, randomToken } from "../lib/crypto";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import { fmtDate, fmtMonth, fmtParts, type Lang, type T } from "../lib/i18n";
 import { SubLabel } from "../ui/section-head";
@@ -73,8 +73,8 @@ import {
   feedback,
   placeChecks,
   invites,
-  partnerOrgs,
   profiles,
+  talkQuestions,
   registrations,
   strikes,
   vibes,
@@ -118,6 +118,9 @@ import { dayOfOpen, shownDayStatus, shownEta, isEtaStatus } from "../domain/day-
 import { DayStatusLine, EtaBox, EtaSummary, FindTheTable } from "../ui/day-of";
 import { canJoin as canJoinTable, tableVisible } from "../domain/regular-tables";
 import { blockedAmong, getTable, hostTable, memberIds, rejoinAfterFor, seatedFor, standing } from "../services/regular-tables";
+import { collabNamesFor, noOpenInvite, partnerNames } from "../services/collabs";
+import { BookingChecks, EntryRulesLine } from "../ui/entry-rules";
+import { joinCodeMatches, needsDisclaimer, TALK_QUESTION_MAX, TALK_QUESTIONS_PER_MEMBER } from "../domain/event-rules";
 
 export const eventRoutes = new Hono<AppEnv>();
 
@@ -364,7 +367,7 @@ function Seats(props: { capacity: number; taken: number }) {
   );
 }
 
-function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null; feat?: boolean; pick?: boolean }) {
+function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cover?: string | null; feat?: boolean; pick?: boolean; partners?: string[] }) {
   const { e, v } = props;
   const { t, lang } = v;
   const quest = questLabel(e, lang);
@@ -383,6 +386,7 @@ function EventCard(props: { e: Event; taken: number; v: View; mine?: string; cov
           <span><FactIcon name="lang" /> {langsText(e, lang)}</span>
         </p>
         <ViaLine e={e} t={t} />
+        {props.partners && props.partners.length > 1 ? <p class="ev-via">🤝 {t(`ร่วมกับ ${props.partners.join(" + ")}`, `With ${props.partners.join(" + ")}`)}</p> : null}
         <Seats capacity={e.capacity} taken={props.taken} />
         <div class="tags">
           {props.pick ? <Tag tone="ok">⭐ {t("เลือกให้คุณ", "Your pick")}</Tag> : null}
@@ -413,7 +417,7 @@ function statusLabel(status: string, t: T): string {
 
 /** The next `n` public events this member may see, with seats taken and covers, for an empty My events. */
 async function nextEvents(env: AppEnv["Bindings"], db: Db, profile: Profile, now: Date, n: number) {
-  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now)];
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), noOpenInvite()];
   if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
   if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(n);
@@ -493,7 +497,7 @@ const WHEN_OPTS = [
  * anyone who hasn't said).
  */
 function listable(profile: Profile, now: Date) {
-  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now)];
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now), noOpenInvite()];
   if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
   if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   return where;
@@ -597,6 +601,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
     free: c.req.query("free") === "1",
     short: c.req.query("short") === "1",
     small: c.req.query("small") === "1",
+    alcoholFree: c.req.query("alcoholFree") === "1",
+    smokeFree: c.req.query("smokeFree") === "1",
     language: c.req.query("language") ?? "",
     intensity: c.req.query("intensity") ?? "",
     plusOne: c.req.query("plusOne") === "1",
@@ -614,6 +620,9 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (q.free) where.push(eq(events.costThb, 0));
   // Short and sweet: 90 minutes or less, for carers and long work days.
   if (q.short) where.push(sql`${events.endsAt} - ${events.startsAt} <= interval '90 minutes'`);
+  // Alcohol-free and smoke-free (D58, D59).
+  if (q.alcoholFree) where.push(eq(events.alcoholServed, false));
+  if (q.smokeFree) where.push(eq(events.smokingArea, false));
   // Small tables: the whole event is one table, for members who find a big room a lot.
   if (q.small) where.push(lte(events.capacity, SMALL_TABLE_MAX));
   if (values(LANGUAGES).includes(q.language)) where.push(jsonHas(events.languages, q.language));
@@ -650,8 +659,9 @@ eventRoutes.get("/events", requireMember, async (c) => {
   ]);
   const picked = new Set(((plan?.picks ?? []) as { kind: string; ref: string }[]).filter((x) => x.kind === "event").map((x) => x.ref));
   const covers = new Map(coverPairs);
+  const collabs = await collabNamesFor(c.env, list);
   const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
-  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.small || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
+  const filtered = !!(q.when !== "all" || q.district || q.tag || q.free || q.short || q.small || q.alcoholFree || q.smokeFree || q.language || q.intensity || q.plusOne || q.fitsAge || q.resident || q.text);
   // The plain list leads with the popular picks and the top 10 this week (owner, 2026-10-17); once you
   // filter, you see just your matches. The full list below leaves out the events already shown above.
   const top = mapView || filtered ? null : await discoverPicks(c.env, db, user, now);
@@ -681,6 +691,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <Toggle name="free" label={t("ฟรีเท่านั้น", "Free only")} checked={q.free} />
       <Toggle name="short" label={t("สั้น ๆ ไม่เกิน 90 นาที", "Short: 90 minutes or less")} checked={q.short} />
       <Toggle name="small" label={t(`โต๊ะเล็ก ไม่เกิน ${SMALL_TABLE_MAX} คน`, `Small tables: ${SMALL_TABLE_MAX} people or fewer`)} checked={q.small} />
+      <Toggle name="alcoholFree" label={t("ไม่มีแอลกอฮอล์", "Alcohol-free")} checked={q.alcoholFree} />
+      <Toggle name="smokeFree" label={t("ปลอดบุหรี่", "Smoke-free")} checked={q.smokeFree} />
       <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
       <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
       <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
@@ -708,7 +720,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       );
     const items = rest.map((e) => (
       <div class="ev-item" data-s={`${title(e, lang)} ${e.venueName} ${label(DISTRICTS, e.district, lang)}`.toLowerCase()}>
-        <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} pick={picked.has(e.id)} />
+        <EventCard e={e} taken={taken.get(e.id) ?? 0} v={v} mine={myStatus.get(e.id)} cover={covers.get(e.id)} pick={picked.has(e.id)} partners={collabs.get(e.id)} />
       </div>
     ));
     return (
@@ -719,7 +731,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       </>
     );
   };
-  const filterCount = [q.district, q.tag, q.free, q.short, q.small, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
+  const filterCount = [q.district, q.tag, q.free, q.short, q.small, q.alcoholFree, q.smokeFree, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
   const forYouHidden = getCookie(c, FOR_YOU_COOKIE) === "hide";
   const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
 
@@ -1238,9 +1250,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
     buddyNicknames(db, event, user.account.id, now),
     myStrikes(db, user.account.id),
     coverSrc(c.env, event),
-    event.partnerOrgId
-      ? db.select({ name: partnerOrgs.name }).from(partnerOrgs).where(eq(partnerOrgs.id, event.partnerOrgId)).limit(1)
-      : Promise.resolve([] as { name: string }[]),
+    partnerNames(c.env, event),
     tablePrompt(db, event, user, now),
     // Host announcements: everyone who can open this page can read them (visibleEvent decided that).
     eventAnnouncements(db, event.id),
@@ -1272,7 +1282,8 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
   const quest = questLabel(event, lang);
   const standing = strikeStanding(standingRows, now);
   // Afterwards: the people I met here, and one way back to them.
-  const again = ended && reg?.checkedInAt ? await seeAgain(db, { id: user.account.id, birthDate: user.profile.birthDate }, { eventId: event.id, now }) : null;
+  // A private talk never asks who to see again (D52).
+  const again = ended && reg?.checkedInAt && !event.talkMode ? await seeAgain(db, { id: user.account.id, birthDate: user.profile.birthDate }, { eventId: event.id, now }) : null;
   // On the day: the host's one-line status for people going (and the host), and "running late" / "on my way".
   const going = reg?.status === "confirmed" && event.status === "published";
   const hosting = ownsEvent(event, { id: user.account.id, role: user.account.role, partnerOrgId: user.account.partnerOrgId });
@@ -1361,6 +1372,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
           ]}
         />
         <ShowLine e={event} t={t} lang={lang} />
+        <EntryRulesLine e={event} t={t} />
         {reg?.status === "confirmed" && !started ? <TableIntroPrompt v={v} next={`/events/${event.id}`} /> : null}
         <WarmupLine e={event} t={t} confirmed={reg?.status === "confirmed"} now={now} />
         {reg?.status === "confirmed" && event.status === "published" && !ended ? <SaveNext paths={[`/me/events/${event.id}/pass`]} /> : null}
@@ -1383,7 +1395,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         </p>
         <TicketNote e={event} t={t} />
         <div class="tags">
-          {partner[0] ? <Tag tone="ok">🤝 {t(`ร่วมกับพาร์ตเนอร์ ${partner[0].name}`, `With partner ${partner[0].name}`)}</Tag> : null}
+          {partner.length ? <Tag tone="ok">🤝 {t(`ร่วมกับ ${partner.join(" + ")}`, `With ${partner.join(" + ")}`)}</Tag> : null}
           {event.tags.map((tag) => (
             <Tag tone={tag === OPEN_TO_MORE_TAG ? "love" : "muted"}>{label(EVENT_TAGS, tag, lang)}</Tag>
           ))}
@@ -1411,10 +1423,10 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         <dl class="facts">
           <dt>{t("ผู้จัด / โฮสต์", "Host")}</dt>
           <dd>{host[0]?.nickname ?? t("ทีม Jurrgun", "Jurrgun team")}</dd>
-          {partner[0] ? (
+          {partner.length ? (
             <>
-              <dt>{t("พาร์ตเนอร์", "Partner")}</dt>
-              <dd>🤝 {partner[0].name}</dd>
+              <dt>{t("พาร์ตเนอร์", "Partners")}</dt>
+              <dd>🤝 {partner.join(" + ")}</dd>
             </>
           ) : null}
           <dt>{t("จำนวนที่นั่ง", "Capacity")}</dt>
@@ -1470,7 +1482,17 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
         </details>
       </section>
 
-      <BuddyBox names={buddies} event={event} t={t} />
+      {event.talkMode && reg?.status === "confirmed" && !ended ? (
+        <Card>
+          <h2 class="h3">{t("ถามแบบไม่ระบุชื่อ", "Ask anonymously")}</h2>
+          <p class="muted">{t("ผู้จัดเห็นแค่คำถาม ไม่มีใครรู้ว่าใครถาม รวมถึงทีมงาน", "The organiser sees only the question. Nobody, staff included, can see who asked.")}</p>
+          <form method="post" action={`/events/${event.id}/questions`}>
+            <TextArea label={t("คำถามของคุณ", "Your question")} name="question" rows={3} required maxlength={TALK_QUESTION_MAX} />
+            <Button>{t("ส่งคำถาม", "Send the question")}</Button>
+          </form>
+        </Card>
+      ) : null}
+      {event.talkMode ? null : <BuddyBox names={buddies} event={event} t={t} />}
       <TableBox box={tableBox} t={t} />
       </div>
 
@@ -1498,7 +1520,7 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       </div>
       {again ? <SeeAgainCard v={v} data={again} here /> : null}
       {event.status === "published" && !started && (!reg || reg.status === "cancelled" || reg.status === "late_cancelled") ? (
-        <StickyRsvp t={t} left={left} />
+        <StickyRsvp t={t} left={left} e={event} />
       ) : null}
     </>,
   );
@@ -1554,6 +1576,9 @@ export function StatusStrip(props: {
       </button>,
     );
   }
+  if (status === "requested" && !started) {
+    return strip("warn", t("ขอที่นั่งแล้ว", "Requested"), t("รอผู้จัดตอบ", "Waiting for the organiser"), null);
+  }
   if (status === "waitlisted" && !started) {
     return strip(
       "warn",
@@ -1567,8 +1592,8 @@ export function StatusStrip(props: {
     return strip("muted", t("ยังลงทะเบียนไม่ได้", "You can't RSVP yet"), t(`ได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `Again after ${fmtDate(props.standing.blockedUntil, lang)}`), null);
   }
   // With choices to make first (+1, buddy, a free seat) the button takes you to them; otherwise it RSVPs at once.
-  const choices = event.plusOneAllowed || event.buddyEnabled || (event.freeSeats > 0 && event.costThb > 0);
-  const label = left > 0 ? t("ลงทะเบียนเข้าร่วม", "RSVP") : t("ต่อคิวสำรอง", "Join the waitlist");
+  const choices = event.plusOneAllowed || event.buddyEnabled || (event.freeSeats > 0 && event.costThb > 0) || !!event.groupJoinCode || needsDisclaimer(event);
+  const label = left > 0 ? bookLabel(event, t) : t("ต่อคิวสำรอง", "Join the waitlist");
   return strip(
     left > 0 ? "open" : "full",
     left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full"),
@@ -1585,11 +1610,18 @@ export function StatusStrip(props: {
   );
 }
 
+/** The booking button's words: a request (D57), a go-together group at an open event (D56), or an RSVP. */
+function bookLabel(e: Event, t: T): string {
+  if (e.approvalRequired) return t("ขอที่นั่ง", "Request a place");
+  if (e.openEntry) return t("เข้ากลุ่มไปด้วยกัน", "Join a group");
+  return t("ลงทะเบียนเข้าร่วม", "RSVP");
+}
+
 /**
  * The main action, always in reach: a bar above the tab bar that jumps to the
  * RSVP form. It hides while the status strip or the form is on screen.
  */
-function StickyRsvp(props: { t: T; left: number }) {
+function StickyRsvp(props: { t: T; left: number; e: Event }) {
   const { t, left } = props;
   return (
     <div class="sticky-cta" id="sticky-rsvp">
@@ -1597,7 +1629,7 @@ function StickyRsvp(props: { t: T; left: number }) {
         {left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว ต่อคิวสำรองได้", "Full, join the waitlist")}
       </span>
       <a href="#rsvp" class="btn primary">
-        {left > 0 ? t("ลงทะเบียนเข้าร่วม", "RSVP") : t("ต่อคิวสำรอง", "Join the waitlist")}
+        {left > 0 ? bookLabel(props.e, t) : t("ต่อคิวสำรอง", "Join the waitlist")}
       </a>
       <script
         dangerouslySetInnerHTML={{
@@ -1712,6 +1744,19 @@ function RegistrationBox(props: {
     );
   }
 
+  if (status === "requested") {
+    return (
+      <>
+        <p>
+          <Tag tone="warn">{t("ขอที่นั่งแล้ว", "Requested")}</Tag> {t("รอผู้จัดตอบ เราจะแจ้งในการแจ้งเตือน", "Waiting for the organiser. We'll tell you in your notifications.")}
+        </p>
+        <form method="post" action={`${base}/cancel`}>
+          <Button kind="ghost">{t("ถอนคำขอ", "Withdraw the request")}</Button>
+        </form>
+      </>
+    );
+  }
+
   if (status === "waitlisted") {
     return (
       <>
@@ -1773,8 +1818,9 @@ function RegistrationBox(props: {
             hint={t("เพื่อนลงทะเบียนเองและใส่ชื่อผู้ใช้ของคุณ", "They RSVP too, with your username.")}
           />
         ) : null}
+        <BookingChecks e={event} t={t} />
         <button type="submit" class="btn primary btn-ticket">
-          <span>{t("ลงทะเบียนเข้าร่วม", "RSVP")}</span>
+          <span>{bookLabel(event, t)}</span>
         </button>
       </form>
     </>
@@ -1830,7 +1876,8 @@ export async function rsvpGate(
   }
 
   const existing = await myRegistration(db, event.id, user.account.id);
-  if (existing && (ACTIVE as readonly string[]).includes(existing.status)) return { refusal: null, existing, active: true };
+  // A request waiting for the organiser (D57) holds the member's place in line like an active RSVP.
+  if (existing && ((ACTIVE as readonly string[]).includes(existing.status) || existing.status === "requested")) return { refusal: null, existing, active: true };
 
   const standing = strikeStanding(await myStrikes(db, user.account.id), now);
   if (standing.blockedUntil) {
@@ -1995,6 +2042,28 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
   if (gate.active) return c.redirect(`/events/${id}`);
 
   const body = await c.req.parseBody();
+  // Verified group only (D57) and the disclaimer ticked before booking (D61).
+  if (event.groupJoinCode && !joinCodeMatches(str(body.joinCode), event.groupJoinCode)) {
+    return fail("รหัสเข้าร่วมไม่ถูกต้อง ขอรหัสได้จากกลุ่มของคุณ", "That join code isn't right. Your group can share it with you.", 403);
+  }
+  if (needsDisclaimer(event) && str(body.disclaimer) !== "1") {
+    return fail("ติ๊กยืนยันกติกาก่อนจอง", "Tick to confirm the rules before booking.");
+  }
+  // Organiser approval (D57): a request, not a seat, until the host says yes.
+  if (event.approvalRequired) {
+    const row = { status: "requested", offeredUntil: null, cancelledAt: null, passToken: randomToken(18) };
+    const queries: Query[] = [
+      gate.existing
+        ? db.update(registrations).set(row).where(eq(registrations.id, gate.existing.id))
+        : db.insert(registrations).values({ id: newId(), eventId: id, accountId: user.account.id, ...row }).onConflictDoNothing(),
+      audit(db, user.account.id, "event.rsvp_requested", { type: "event", id }),
+    ];
+    if (event.hostAccountId) {
+      queries.push(notify(db, event.hostAccountId, "rsvp_request", `มีคนขอที่นั่ง: ${event.title}`, `A place was requested: ${event.titleEn ?? event.title}`, `/admin/events/${id}#requests`));
+    }
+    await batch(c.env, queries);
+    return c.redirect(`/events/${id}?notice=rsvp_requested`);
+  }
   // The member's own weekly rhythm: a gentle check, never a block.
   const rhythm = cleanBio(user.profile.bio).rhythm ?? DEFAULT_RHYTHM;
   if (str(body.rhythmOk) !== "1" && (await plansThatWeek(db, user.account.id, event)) >= rhythm) {
@@ -2067,6 +2136,32 @@ eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
   return c.redirect(`/events/${id}?notice=${status === "confirmed" ? "rsvp_confirmed" : "rsvp_waitlisted"}`);
 });
 
+// ------------------------------------------------- private talk (D52) --
+
+/** An anonymous question at a private talk. Only a keyed hash of event and member is kept, to cap it at 3 each. */
+eventRoutes.post("/events/:id/questions", requireMember, async (c) => {
+  const { t } = view(c);
+  const user = me(c);
+  const id = c.req.param("id");
+  const db = getDb(c.env);
+  const event = await visibleEvent(c, id);
+  if (!event || !event.talkMode) return notFound(c);
+  const reg = await myRegistration(db, id, user.account.id);
+  if (reg?.status !== "confirmed" || event.endsAt.getTime() <= Date.now()) return c.redirect(`/events/${id}`);
+  const question = str((await c.req.parseBody()).question).replace(/\s+/g, " ").trim();
+  if (question.length < 3 || question.length > TALK_QUESTION_MAX) {
+    return renderDetail(c, event, { error: t(`คำถามยาว 3 ถึง ${TALK_QUESTION_MAX} ตัวอักษร`, `A question is 3 to ${TALK_QUESTION_MAX} characters.`), status: 400 });
+  }
+  const askerHash = await hmacSha256(c.env.IP_HASH_SECRET ?? "", `talk:${id}:${user.account.id}`);
+  const [{ n }] = await db.select({ n: count() }).from(talkQuestions).where(and(eq(talkQuestions.eventId, id), eq(talkQuestions.askerHash, askerHash)));
+  if (Number(n) >= TALK_QUESTIONS_PER_MEMBER) {
+    return renderDetail(c, event, { error: t(`ถามได้ไม่เกิน ${TALK_QUESTIONS_PER_MEMBER} ข้อต่อวง`, `Up to ${TALK_QUESTIONS_PER_MEMBER} questions per talk.`), status: 409 });
+  }
+  // No audit row: an audit line would tie the question to the member.
+  await db.insert(talkQuestions).values({ id: newId(), eventId: id, body: question, askerHash });
+  return c.redirect(`/events/${id}?notice=question_sent`);
+});
+
 // -------------------------------------------------------------- invite --
 
 /** Create (or reuse my unused) invite link for a +1 event (PRD §8.2). */
@@ -2124,6 +2219,14 @@ eventRoutes.post("/events/:id/cancel", requireMember, async (c) => {
   const event = await visibleEvent(c, id);
   if (!event) return notFound(c);
   const reg = await myRegistration(db, id, user.account.id);
+  // Withdrawing a request (D57) is never a strike and frees no seat.
+  if (reg?.status === "requested") {
+    await batch(c.env, [
+      db.update(registrations).set({ status: "cancelled", cancelledAt: now }).where(eq(registrations.id, reg.id)),
+      audit(db, user.account.id, "event.request_withdraw", { type: "event", id }),
+    ]);
+    return c.redirect(`/events/${id}`);
+  }
   if (!reg || !(ACTIVE as readonly string[]).includes(reg.status)) return c.redirect(`/events/${id}`);
   if (event.startsAt.getTime() <= now.getTime()) {
     const { t } = view(c);
@@ -2840,7 +2943,8 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
 
       <Card>
         <h2>{t("โต๊ะของฉัน", "My table")}</h2>
-        {event.groupsPublishedAt && reg.groupNo !== null ? (
+        {/* A private talk never lists who else is there (D52). */}
+        {event.groupsPublishedAt && reg.groupNo !== null && !event.talkMode ? (
           <>
             <p>
               <Tag tone="accent">{t(`โต๊ะ ${reg.groupNo}`, `Table ${reg.groupNo}`)}</Tag>

@@ -4,7 +4,14 @@
  *
  *   POST /api/partner/events   one event; a named host of the partner and a
  *                              public meeting point are required
- *   GET  /api/partner/events   the partner's upcoming events with counts
+ *   GET  /api/partner/events   the partner's upcoming events with counts, led or
+ *                              co-hosted (D53); private talks show counts only
+ *                              from 10 people up (D52)
+ *
+ * Optional fields (D51 to D61): alcohol_served, smoking_area, open_entry,
+ * talk_mode (health partners only), approval_required, requirements (a list
+ * of short lines), group_label with join_code, and the women_only tag (only
+ * when the named host is a woman or non-binary).
  *
  * A verified partner's events go live on Discover; a partner a moderator sent
  * back to review posts into the review queue. A dating partner's events
@@ -12,15 +19,16 @@
  * about members ever leaves through here: booking counts only (D47).
  */
 import { Hono } from "hono";
-import { and, count, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import { checkProposal, toBangkokInput, type ProposalInput } from "../domain/hosting";
-import { lateOrLong, partnerEventTags } from "../domain/rules";
+import { canBeWomenOnly, lateOrLong, partnerEventTags, WOMEN_ONLY_TAG } from "../domain/rules";
+import { talkSafeCount } from "../domain/event-rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, values } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { audit } from "../lib/records";
-import { accounts, events, registrations, type PartnerOrg } from "../schema";
+import { accounts, eventPartners, events, profiles, registrations, type PartnerOrg } from "../schema";
 import { orgForKey } from "../services/partner-keys";
 import { checkOutsideUrl } from "../services/outside-fetch";
 import { sourceForHost } from "../content/sources";
@@ -102,12 +110,25 @@ partnerApi.post("/events", async (c) => {
     nearestStation: text(meet.station, 40),
     walkMinutes: text(meet.walk_minutes ?? ""),
     warmupUrl: text(body.warmup_url, 600),
+    alcoholServed: body.alcohol_served === true,
+    smokingArea: body.smoking_area === true,
+    openEntry: body.open_entry === true,
+    talkMode: body.talk_mode === true,
+    approvalRequired: body.approval_required === true,
+    requirements: strings(body.requirements).map((r) => r.replace(/\s+/g, " ")).join("\n"),
+    groupLabel: text(body.group_label, 200),
+    groupJoinCode: text(body.join_code, 60),
     // A public meeting point is required for every partner event (D47), not just go-together ones.
     goTogether: true,
     sourceUrl: ticketUrl?.toString() ?? "",
   };
-  const { values: vals, errors: problems } = checkProposal(d, ALLOWED());
+  const { values: vals, errors: problems } = checkProposal(d, ALLOWED(), new Date(), { partnerKind: org.kind });
   errors.push(...problems.map((p) => p.en));
+  // Women and non-binary only: the named host must be a woman or non-binary (D57).
+  if (host && d.tags.includes(WOMEN_ONLY_TAG)) {
+    const [hp] = await db.select({ gender: profiles.gender }).from(profiles).where(eq(profiles.accountId, host.id)).limit(1);
+    if (!canBeWomenOnly(hp?.gender)) errors.push("women_only needs a host who is a woman or non-binary");
+  }
   if (errors.length || !vals || !host) return c.json({ error: "Invalid event", problems: errors }, 400);
 
   const [{ n }] = await db
@@ -144,18 +165,58 @@ partnerApi.post("/events", async (c) => {
 
 partnerApi.get("/events", async (c) => {
   const org = c.var.partnerOrg;
-  const db = getDb(c.env);
-  const rows = await db
-    .select({ id: events.id, title: events.title, startsAt: events.startsAt, status: events.status, referralCode: events.referralCode })
-    .from(events)
-    .where(and(eq(events.partnerOrgId, org.id), gte(events.startsAt, new Date(Date.now() - 30 * 86_400_000))))
-    .orderBy(desc(events.startsAt))
-    .limit(100);
-  const counts = await bookingCounts(c.env, rows.map((r) => r.id));
+  const rows = await partnerEvents(c.env, org.id, 100);
+  const counts = await partnerCounts(c.env, rows);
   return c.json({
-    events: rows.map((r) => ({ id: r.id, title: r.title, starts_at: r.startsAt.toISOString(), status: r.status, referral_code: r.referralCode, ...(counts.get(r.id) ?? { booked: 0, checked_in: 0 }) })),
+    events: rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      starts_at: r.startsAt.toISOString(),
+      status: r.status,
+      role: r.partnerOrgId === org.id ? "lead" : "cohost",
+      talk_mode: r.talkMode,
+      open_entry: r.openEntry,
+      referral_code: r.referralCode,
+      ...(counts.get(r.id) ?? { booked: 0, checked_in: 0 }),
+    })),
   });
 });
+
+/** The partner's events from 30 days ago on: the ones it leads and the ones it co-hosts (accepted, D53). */
+export async function partnerEvents(env: AppEnv["Bindings"], orgId: string, limit = 50) {
+  const db = getDb(env);
+  const cohosted = db.select({ id: eventPartners.eventId }).from(eventPartners).where(and(eq(eventPartners.partnerOrgId, orgId), eq(eventPartners.status, "accepted")));
+  return db
+    .select({
+      id: events.id,
+      title: events.title,
+      titleEn: events.titleEn,
+      startsAt: events.startsAt,
+      status: events.status,
+      referralCode: events.referralCode,
+      partnerOrgId: events.partnerOrgId,
+      talkMode: events.talkMode,
+      openEntry: events.openEntry,
+    })
+    .from(events)
+    .where(and(or(eq(events.partnerOrgId, orgId), inArray(events.id, cohosted)), gte(events.startsAt, new Date(Date.now() - 30 * 86_400_000))))
+    .orderBy(desc(events.startsAt))
+    .limit(limit);
+}
+
+/** Counts a partner may see: totals only, and at a private talk only from 10 people up (D52). */
+export async function partnerCounts(
+  env: AppEnv["Bindings"],
+  rows: { id: string; talkMode: boolean }[],
+): Promise<Map<string, { booked: number | null; checked_in: number | null }>> {
+  const raw = await bookingCounts(env, rows.map((r) => r.id));
+  return new Map(
+    rows.map((r) => {
+      const n = raw.get(r.id) ?? { booked: 0, checked_in: 0 };
+      return [r.id, { booked: talkSafeCount(r.talkMode, n.booked), checked_in: talkSafeCount(r.talkMode, n.checked_in) }];
+    }),
+  );
+}
 
 /** Booked seats and check-ins per event: totals only, never who (D47). */
 export async function bookingCounts(env: AppEnv["Bindings"], ids: string[]): Promise<Map<string, { booked: number; checked_in: number }>> {

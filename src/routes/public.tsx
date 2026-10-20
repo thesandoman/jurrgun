@@ -217,6 +217,7 @@ publicRoutes.get("/code-of-conduct", (c) => {
     ["ถ้าเปิดใจมากกว่าเพื่อน ต้องบอกสถานะความสัมพันธ์ตามจริง", "Be truthful about your relationship status if you use romance features."],
     ["ห้ามเปิดเผยตัวตนหรือข้อมูลของผู้อื่น (รวมถึงอัตลักษณ์ทางเพศ) โดยไม่ได้รับอนุญาต", "Never out anyone or share someone's details (including gender identity) without consent."],
     ["ห้ามขายของ หลอกลวง หรือชักชวนเข้าธุรกิจ", "No selling, scams or recruiting."],
+    ["ดื่มอย่างรับผิดชอบ งานที่มีแอลกอฮอล์สำหรับอายุ 20 ปีขึ้นไป ห้ามบุหรี่ไฟฟ้า และห้ามกัญชาหรือยาเสพติดทุกชนิดในกิจกรรม", "Drink responsibly: events with alcohol are 20+. No vaping, and no cannabis or other drugs at any event."],
     ["ทำตามคำแนะนำของโฮสต์และแจ้งเหตุไม่ปลอดภัยทันที", "Follow your host and report anything unsafe right away."],
     ["ไม่หายเงียบ (ghosting) ดูรายละเอียดด้านล่าง", "No ghosting: see the details below."],
   ];

@@ -106,6 +106,8 @@ export async function visibleProfile(db: Db, viewerId: string, targetId: string)
             and(
               eq(registrations.accountId, targetId),
               isNotNull(registrations.checkedInAt),
+              // Being at the same private talk never opens a profile (D52).
+              inArray(registrations.eventId, db.select({ id: events.id }).from(events).where(eq(events.talkMode, false))),
               inArray(
                 registrations.eventId,
                 db

@@ -24,6 +24,7 @@ import { OPEN_TO_MORE_TAG } from "../domain/rules";
 import { toIcal, toJsonLd, type CalEvent } from "../domain/calendar-out";
 import { accounts, calendarTokens, events, profiles, registrations, type Event } from "../schema";
 import { Button, Card, LinkButton, Notice, page, view } from "../ui/kit";
+import { noOpenInvite } from "../services/collabs";
 
 export const calendarRoutes = new Hono<AppEnv>();
 type C = Context<AppEnv>;
@@ -163,6 +164,9 @@ async function publicEvents(c: C): Promise<CalEvent[]> {
         gte(events.startsAt, new Date(now)),
         lt(events.startsAt, new Date(now + PUBLIC_FEED_DAYS * DAY)),
         not(sql`${events.tags} @> ${JSON.stringify([OPEN_TO_MORE_TAG])}::jsonb`),
+        // Private talks never appear in a public feed (D52); collabs only once every co-host answered (D53).
+        eq(events.talkMode, false),
+        noOpenInvite(),
       ),
     )
     .orderBy(asc(events.startsAt))
