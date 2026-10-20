@@ -349,5 +349,18 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"social_event_partners_org_idx\" ON \"social_event_partners\" (\"partner_org_id\");",
       "CREATE INDEX \"social_talk_questions_event_idx\" ON \"social_talk_questions\" (\"event_id\",\"created_at\");"
     ]
+  },
+  {
+    "id": "0027_city_pulse_home",
+    "statements": [
+      "CREATE TABLE \"research_place_checks\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"venue\" text NOT NULL,\n\t\"district\" text NOT NULL,\n\t\"reach\" text,\n\t\"comfort\" text,\n\t\"month\" text NOT NULL\n);",
+      "CREATE TABLE \"research_pulse_suggestions\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"body\" text DEFAULT '' NOT NULL,\n\t\"topic\" text,\n\t\"status\" text DEFAULT 'new' NOT NULL,\n\t\"month\" text NOT NULL\n);",
+      "ALTER TABLE \"research_pulse_questions\" ADD COLUMN \"heard_note_th\" text;",
+      "ALTER TABLE \"research_pulse_questions\" ADD COLUMN \"heard_note_en\" text;",
+      "ALTER TABLE \"research_pulse_questions\" ADD COLUMN \"heard_note_at\" timestamp with time zone;",
+      "ALTER TABLE \"social_feedback\" ADD COLUMN \"place_checked\" boolean DEFAULT false NOT NULL;",
+      "CREATE INDEX \"research_place_checks_venue_idx\" ON \"research_place_checks\" (\"venue\",\"district\");",
+      "CREATE INDEX \"research_pulse_suggestions_status_idx\" ON \"research_pulse_suggestions\" (\"status\",\"month\");"
+    ]
   }
 ];
