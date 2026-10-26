@@ -294,7 +294,7 @@ describe.skipIf(!HAS_DB)("owner P2: a 💘 event is never limited to a group", (
       },
     });
     expect(r.status).toBe(400);
-    expect(await r.text()).toContain("can't be limited to a group");
+    expect(await r.text()).toContain("be limited to a group with a join code");
     expect(await db().select().from(events).where(eq(events.title, title))).toHaveLength(0);
   });
 
@@ -322,7 +322,7 @@ describe.skipIf(!HAS_DB)("owner P2: a 💘 event is never limited to a group", (
       },
     });
     expect(r.status).toBe(400);
-    expect(await r.text()).toContain("can't be limited to a group");
+    expect(await r.text()).toContain("be limited to a group with a join code");
     expect(await db().select().from(events).where(eq(events.title, title))).toHaveLength(0);
   });
 
