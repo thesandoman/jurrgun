@@ -1228,4 +1228,14 @@ a.nowrap{white-space:nowrap}
 }
 /* Under 360px (320 included) the controls wrap onto a second row instead of pushing the page sideways. */
 @media (max-width:359.98px){.topbar{flex-wrap:wrap;row-gap:4px}.topbar .top-actions{margin-left:auto}}
+/* Safe areas (viewport-fit=cover): the top bar clears the status bar and notch, the page and the
+   floating tab bar clear the side notch in landscape, and the page ends above the tab bar on phones
+   with a home indicator. */
+.topbar{padding-top:calc(8px + env(safe-area-inset-top,0px))}
+@media (min-width:481px){.topbar{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}}
+@media (max-width:1023.98px){
+  main.wrap{padding-left:max(var(--gx,20px),env(safe-area-inset-left,0px));padding-right:max(var(--gx,20px),env(safe-area-inset-right,0px))}
+  .tabbar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}
+  body:has(.tabbar){padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+}
 `);
