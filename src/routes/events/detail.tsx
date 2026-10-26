@@ -733,12 +733,15 @@ function RsvpBar(props: StripProps) {
   );
 }
 
-/** Hides the RSVP bar while typing (keyboard up or a text field focused) or while My registration or the strip is in view. */
+/**
+ * Hides the RSVP bar while typing (keyboard up or a text field focused) or while My registration or the strip is in view.
+ * "In view" means above the tab bar and the bar itself (the bottom 180px) and below the top bar (72px), so an edge peeking behind either doesn't count.
+ */
 const RSVP_BAR_JS = `(function(){var b=document.getElementById("sticky-rsvp");if(!b)return;
 var seen=new Map(),typing=false,TXT='input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]),textarea,[contenteditable="true"]';
 var vv=window.visualViewport;function kb(){return !!vv&&vv.height<window.innerHeight*0.75}
 function sync(){var on=typing||kb();seen.forEach(function(x){if(x)on=true});b.classList.toggle("is-off",on);if(on)b.setAttribute("inert","");else b.removeAttribute("inert")}
-if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});sync()});document.querySelectorAll(".ev-reg,.ev-strip").forEach(function(s){io.observe(s)})}
+if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});sync()},{rootMargin:"-72px 0px -180px 0px"});document.querySelectorAll(".ev-reg,.ev-strip").forEach(function(s){io.observe(s)})}
 document.addEventListener("focusin",function(e){typing=!!(e.target&&e.target.matches&&e.target.matches(TXT));sync()});
 document.addEventListener("focusout",function(){typing=false;setTimeout(sync,50)});
 if(vv)vv.addEventListener("resize",sync);

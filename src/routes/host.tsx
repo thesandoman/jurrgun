@@ -487,7 +487,10 @@ setTimeout(function(){due=false;var first=[].filter.call(f.elements,function(x){
 function clear(e){var el=e.target;if(!el||!el.id||!el.checkValidity||!el.checkValidity())return;var s=document.getElementById(el.id+"-verr");if(!s)return;s.remove();
 el.setAttribute("aria-describedby",(el.getAttribute("aria-describedby")||"").split(" ").filter(function(x){return x&&x!==s.id}).join(" "));el.removeAttribute("aria-invalid")}
 f.addEventListener("input",clear);f.addEventListener("change",clear);
-var vv=window.visualViewport;if(vv)vv.addEventListener("resize",function(){f.classList.toggle("is-typing",vv.height<window.innerHeight*0.75)})})()`;
+var vv=window.visualViewport,txt=false,TXT='input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]),textarea';
+function typing(){f.classList.toggle("is-typing",txt||(!!vv&&vv.height<window.innerHeight*0.75))}
+f.addEventListener("focusin",function(e){txt=!!(e.target.matches&&e.target.matches(TXT));typing()});f.addEventListener("focusout",function(){txt=false;setTimeout(typing,50)});
+if(vv)vv.addEventListener("resize",typing)})()`;
 
 function ProposalForm(props: {
   v: View;
