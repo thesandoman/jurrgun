@@ -1412,4 +1412,8 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
   .tabbar a.on{white-space:normal;padding-inline:6px}
   .tabbar a.on>span.tab-label{text-align:center;line-height:1.15}
 }
+/* Section headings at large text (owner, 2026-10-26): the gap above an h2 grows with the text size, so at
+   200% it passed the spacing cap (40px phones, 56px laptops). It still scales, but never past the cap. */
+h2{margin-top:min(1.8rem,56px)}
+@media (max-width:520px){h2{margin-top:min(1.5rem,40px)}}
 `);
