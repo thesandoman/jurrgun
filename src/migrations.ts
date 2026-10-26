@@ -381,5 +381,18 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "CREATE TABLE \"social_city_now\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"weather\" jsonb,\n\t\"weather_at\" timestamp with time zone,\n\t\"sanroo\" jsonb,\n\t\"sanroo_at\" timestamp with time zone,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);"
     ]
+  },
+  {
+    "id": "0031_pinky_plans",
+    "statements": [
+      "CREATE TABLE \"social_pinkies\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"a_account\" text NOT NULL,\n\t\"b_account\" text NOT NULL,\n\t\"source\" text NOT NULL,\n\t\"source_key\" text NOT NULL,\n\t\"connection_id\" text NOT NULL,\n\t\"state\" text DEFAULT 'active' NOT NULL,\n\t\"paused_by\" text,\n\t\"paused_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"social_pinky_idea_views\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"pinky_id\" text NOT NULL,\n\t\"day\" text NOT NULL,\n\t\"shown\" integer DEFAULT 0 NOT NULL\n);",
+      "CREATE TABLE \"social_pinky_plans\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"pinky_id\" text NOT NULL,\n\t\"place_name\" text,\n\t\"idea_key\" text,\n\t\"district\" text,\n\t\"starts_at\" timestamp with time zone,\n\t\"note\" text DEFAULT '' NOT NULL,\n\t\"a_confirmed_at\" timestamp with time zone,\n\t\"b_confirmed_at\" timestamp with time zone\n);",
+      "CREATE UNIQUE INDEX \"social_pinkies_connection_idx\" ON \"social_pinkies\" (\"connection_id\");",
+      "CREATE INDEX \"social_pinkies_a_idx\" ON \"social_pinkies\" (\"a_account\");",
+      "CREATE INDEX \"social_pinkies_b_idx\" ON \"social_pinkies\" (\"b_account\");",
+      "CREATE UNIQUE INDEX \"social_pinky_idea_views_day_idx\" ON \"social_pinky_idea_views\" (\"pinky_id\",\"day\");",
+      "CREATE UNIQUE INDEX \"social_pinky_plans_pinky_idx\" ON \"social_pinky_plans\" (\"pinky_id\");"
+    ]
   }
 ];

@@ -218,6 +218,13 @@
       "when": 1792998851972,
       "tag": "0030_city_now",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793006614790,
+      "tag": "0031_pinky_plans",
+      "breakpoints": true
     }
   ]
 }
