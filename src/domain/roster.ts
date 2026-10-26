@@ -9,9 +9,10 @@
  *    with 💘 on, and staff never see romance data. Only the event's named host
  *    works with the people, and only through seat codes, never names (the host
  *    runs check-in and the tables). Everyone else, bma_admin and the partner's
- *    own admins included, sees "under 10" or a FROZEN count rounded to 5. The
- *    count is frozen at 00:00 Bangkok time so it can't move while someone
- *    watches and give one person's booking away.
+ *    own admins included, sees "under 10" or a count frozen at 00:00 Bangkok
+ *    time and rounded to 5, so watching it doesn't give one person's booking
+ *    away. Without a status history a few same-day changes can still show (see
+ *    services/roster.ts frozenCounts); the rounding blunts them.
  *  - Any other partner event: only the named host sees names. The partner's
  *    other admins (and bma_admin) see counts from 10 up, never who (D47).
  *  - Jurrgun's own events: the host and bma_admin see names, as before.
@@ -52,8 +53,12 @@ export function shownCount(policy: CountPolicy, n: number): number | null {
   return roundedCount(n);
 }
 
-/** Partner-facing counts (the partner area and API) for one event: the same rule as a counts-only viewer. */
-export const partnerCountPolicy = (e: { tags: string[] }): CountPolicy => (isRomanceEvent(e) ? "frozen5" : "exact");
+/**
+ * Partner-facing counts (the partner area and API) for one event: the same
+ * rule as a counts-only viewer. An API key has no person behind it, so it
+ * can't be the named host: from 10 up, or frozen and rounded on 💘 events.
+ */
+export const partnerCountPolicy = (e: { tags: string[] }): CountPolicy => (isRomanceEvent(e) ? "frozen5" : "from10");
 
 // ------------------------------------------------------------- seat codes --
 

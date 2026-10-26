@@ -94,7 +94,7 @@ describe.skipIf(!HAS_DB)("who staff and partners see at an event", () => {
     expect(JSON.stringify(body)).not.toContain(nick);
 
     // The member's pass shows the same seat code.
-    const pass = await (await req(`/me/events/${id}/pass`, { cookie: guest.cookie })).text();
+    const pass = await (await req(`/me/events/${id}/pass?show=pass`, { cookie: guest.cookie })).text();
     expect(pass).toContain(seatCode(passToken));
   });
 
@@ -112,6 +112,8 @@ describe.skipIf(!HAS_DB)("who staff and partners see at an event", () => {
     expect(row.details).toContain(details);
     // The report doesn't say it was a 💘 event.
     expect(row.targetEvent).toBeNull();
+    // Once a seat a day: the form can't fire repeated alerts.
+    expect((await req(`/admin/events/${id}/seat-concern`, { cookie: host.cookie, form: { registrationId: reg.id, details, urgent: "1" } })).status).toBe(409);
   });
 
   it("on a partner event only the named host sees names", async () => {
@@ -130,6 +132,11 @@ describe.skipIf(!HAS_DB)("who staff and partners see at an event", () => {
       expect(html).not.toContain(nick);
       expect(html).toMatch(/under 10|ไม่ถึง 10/);
     }
+    // The partner area and API follow the same rule: 1 booking shows as under 10.
+    const area = await (await req("/partner", { cookie: partner.cookie })).text();
+    expect(area).not.toContain(nick);
+    const api = await partnerCounts(ENV as never, [{ id, talkMode: false, tags: [] }]);
+    expect(api.get(id)?.booked).toBeNull();
     // Jurrgun's own events are unchanged: bma_admin still sees names.
     const ownId = await mkEvent(admin.id, { hostAccountId: named.id });
     await register(ownId, guest.id);

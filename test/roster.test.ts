@@ -41,7 +41,7 @@ describe("counts", () => {
     expect(countPolicy("codes", romance)).toBe("exact");
     expect(countPolicy("names", own)).toBe("exact");
     expect(partnerCountPolicy(romancePartner)).toBe("frozen5");
-    expect(partnerCountPolicy(partnerEvent)).toBe("exact");
+    expect(partnerCountPolicy(partnerEvent)).toBe("from10");
   });
 
   it("shows under 10 as null and rounds 💘 counts to 5", () => {

@@ -23,7 +23,6 @@ import { and, count, desc, eq, gte, inArray, isNotNull, or, sql } from "drizzle-
 import { batch, getDb } from "../db";
 import { checkProposal, toBangkokInput, type ProposalInput } from "../domain/hosting";
 import { canBeWomenOnly, lateOrLong, partnerEventTags, WOMEN_ONLY_TAG } from "../domain/rules";
-import { talkSafeCount } from "../domain/event-rules";
 import { partnerCountPolicy, shownCount } from "../domain/roster";
 import { frozenCounts } from "../services/roster";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, values } from "../lib/constants";
@@ -208,10 +207,9 @@ export async function partnerEvents(env: AppEnv["Bindings"], orgId: string, limi
 }
 
 /**
- * Counts a partner may see: totals only, and at a private talk only from 10
- * people up (D52). A 💘 event shows "under 10" or a count frozen at 00:00
- * Bangkok time and rounded to 5, so a partner can never watch one member book
- * (owner card C1, src/domain/roster.ts).
+ * Counts a partner may see (owner cards C1 + P1, src/domain/roster.ts):
+ * totals only, from 10 up (D47, D52). A 💘 event shows "under 10" or a count
+ * frozen at 00:00 Bangkok time and rounded to 5.
  */
 export async function partnerCounts(
   env: AppEnv["Bindings"],
@@ -226,7 +224,9 @@ export async function partnerCounts(
         return [r.id, { booked: shownCount("frozen5", f.booked), checked_in: shownCount("frozen5", f.checkedIn) }];
       }
       const n = raw.get(r.id) ?? { booked: 0, checked_in: 0 };
-      return [r.id, { booked: talkSafeCount(r.talkMode, n.booked), checked_in: talkSafeCount(r.talkMode, n.checked_in) }];
+      // From 10 up for every partner event, private talks included (D52 asked the same of them).
+      const policy = partnerCountPolicy(r);
+      return [r.id, { booked: shownCount(policy, n.booked), checked_in: shownCount(policy, n.checked_in) }];
     }),
   );
 }

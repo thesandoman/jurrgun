@@ -11,10 +11,14 @@ import { registrations } from "../schema";
 type Db = ReturnType<typeof getDb>;
 
 /**
- * Booked seats and check-ins per event, frozen at 00:00 Bangkok time today: a
- * seat counts if it was booked before then and not cancelled before then. The
- * number can't move during the day, so watching it never shows one person
- * booking, cancelling or arriving. Waitlist places and requests never count.
+ * Booked seats and check-ins per event, as of 00:00 Bangkok time today: a seat
+ * counts if it was booked before then and not cancelled before then, so new
+ * bookings, cancellations and arrivals don't show until the next day.
+ * Registrations keep no status history, so three rare same-day changes can
+ * still show: a re-booking (the row keeps its old createdAt), a waitlist place
+ * filled today, and a place waitlisted at midnight and cancelled today. Shown
+ * counts are "under 10" or rounded to 5, which blunts them. A true snapshot
+ * would need a daily table (a migration).
  */
 export async function frozenCounts(db: Db, eventIds: string[], now = new Date()): Promise<Map<string, { booked: number; checkedIn: number }>> {
   const out = new Map<string, { booked: number; checkedIn: number }>();

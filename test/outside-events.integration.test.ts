@@ -213,12 +213,12 @@ describe.skipIf(!HAS_DB)("D47: partners apply, get verified, post with their own
     const [e] = await db().select().from(events).where(eq(events.id, out.id));
     expect(e).toMatchObject({ partnerOrgId: p.orgId, hostAccountId: p.admin.id, sourceName: "Ticketmelon", sourceUrl: "https://www.ticketmelon.com/soi/concert", referralCode: out.referral_code });
 
-    // A member books; the partner sees a count, never who.
+    // A member books; the partner sees a count from 10 up, never who (owner card P1).
     const m = await createMember({ nickname: "SecretNick" });
     await db().insert(registrations).values({ id: newId(), eventId: e.id, accountId: m.id, status: "confirmed", passToken: randomToken(18) });
     const list = await api(p.key, "GET");
     const json = JSON.stringify(await list.json());
-    expect(json).toContain('"booked":1');
+    expect(json).toContain('"booked":null');
     expect(json).not.toContain(m.id);
     expect(json).not.toContain("SecretNick");
     const area = await (await req("/partner", { cookie: p.admin.cookie })).text();

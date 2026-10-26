@@ -2671,6 +2671,20 @@ adminEvents.post(
       const [th, en] = limitText(limit);
       return refuse(c, e, t(th, en), 409);
     }
+    // Urgent reports skip reportLimit, so the host form can't become an alert button
+    // (Trust & Operations): one concern per seat a day, and at most 3 urgent ones a day.
+    const since = new Date(Date.now() - 24 * 3_600_000);
+    const recent = await db
+      .select({ target: reports.targetAccount, severity: reports.severity })
+      .from(reports)
+      .where(and(eq(reports.reporter, a.id), gte(reports.createdAt, since), sql`${reports.details} like '[Host, seat concern]%'`))
+      .limit(50);
+    if (recent.some((r) => r.target === reg.accountId)) {
+      return refuse(c, e, t("แจ้งเรื่องที่นั่งนี้ไปแล้ววันนี้ ทีมดูแลกำลังดูอยู่ ถ้ามีอันตรายตอนนี้ โทร 191", "You've already raised this seat today and moderators have it. If someone is in danger now, call 191."), 409);
+    }
+    if (critical && recent.filter((r) => r.severity === "critical").length >= 3) {
+      return refuse(c, e, t("ส่งเรื่องด่วนครบ 3 ครั้งแล้ววันนี้ ถ้ามีอันตรายตอนนี้ โทร 191", "That's 3 urgent concerns today. If someone is in danger now, call 191."), 409);
+    }
     const alert = await staffAlert(c.env, db, { critical, aboutStaff: await isStaffTarget(db, reg.accountId) });
     const id = newId();
     await batch(c.env, [
