@@ -45,13 +45,18 @@ describe.skipIf(!HAS_DB)("POST /api/setup/universities", () => {
 
     const first = await post([A, B]);
     expect(first.status).toBe(200);
-    expect(await first.json()).toMatchObject({ upserted: 2 });
+    const body = (await first.json()) as { upserted: number; labelled: number; total: number };
+    expect(body.upserted).toBe(2);
+    // The report the loader prints: real numbers, not undefined (prod returned rows in another shape).
+    expect(body.labelled).toBeGreaterThanOrEqual(1);
+    expect(Number.isInteger(body.total) && body.total >= 2).toBe(true);
     const [p] = await db().select({ bio: profiles.bio }).from(profiles).where(eq(profiles.accountId, m.id));
     expect(p.bio.universityLabel).toEqual({ en: A.name, th: A.nameTh });
 
     // A refresh updates the row in place; a bio that already has a label is left alone.
     const again = await post([{ ...A, name: `${A.name} (renamed)` }]);
     expect(again.status).toBe(200);
+    expect(((await again.json()) as { labelled: number }).labelled).toBe(0); // already labelled: nothing to fill
     const rows = await db().select().from(socialUniversities).where(inArray(socialUniversities.id, [A.id, B.id]));
     expect(rows).toHaveLength(2);
     expect(rows.find((r) => r.id === A.id)?.name).toBe(`${A.name} (renamed)`);

@@ -12,7 +12,7 @@
  *   svcloud secrets remove jurrgun SETUP_KEY
  */
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { getDb, unlockTables } from "../db";
 import type { AppEnv } from "../lib/env";
 import { safeEqual } from "../lib/crypto";
@@ -150,13 +150,16 @@ setup.post("/universities", async (c) => {
         },
       });
   }
+  // Raw execute() returns rows as arrays on the deployed database and as objects locally, so only count them;
+  // the total comes from a typed select. (Reading { n } / .count from execute() gave "undefined" in prod.)
   const labelled = await db.execute(sql`
     UPDATE social_profiles p
        SET bio = p.bio || jsonb_build_object('universityLabel',
              jsonb_strip_nulls(jsonb_build_object('en', u.name, 'th', u.name_th)))
       FROM social_universities u
      WHERE p.bio->>'university' = u.id
-       AND NOT (p.bio ? 'universityLabel')`);
-  const [{ n }] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM social_universities`)) as unknown as { n: number }[];
-  return c.json({ upserted: rows.length, labelled: (labelled as unknown as { count?: number }).count ?? null, total: n });
+       AND NOT (p.bio ? 'universityLabel')
+    RETURNING p.account_id`);
+  const [{ n }] = await db.select({ n: count() }).from(socialUniversities);
+  return c.json({ upserted: rows.length, labelled: Array.from(labelled as unknown as unknown[]).length, total: n });
 });
