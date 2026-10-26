@@ -103,7 +103,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
               ))}
             </div>
           ) : null}
-          <p>
+          <p class="me-all">
             <a href="/events?view=list">{t("ดูกิจกรรมทั้งหมด", "See all events")} →</a>
           </p>
         </>

@@ -8,6 +8,7 @@ import { HAS_DB, createMember, db, req } from "./helpers";
 import { accounts, blocks, buddyPairs, events, feedback, profiles, registrations, strikes, vibes } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
 import { shortCode } from "../src/lib/qr";
+import { A11Y_CSS } from "../src/ui/a11y-css";
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -512,6 +513,10 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(html).toContain("coming up next.");
     expect(html).toContain(`EV-${soon.slice(0, 8)}`);
     expect(html).toContain("See all events");
+    // Mobile audit: the link was a 30px target 4px under the last card. Now a 44px target with room above it.
+    expect(html).toMatch(/<p class="me-all"><a href="\/events\?view=list">/);
+    expect(A11Y_CSS).toMatch(/\.me-all\{margin:(1[2-9]|[2-9]\d)px 0 0\}/);
+    expect(A11Y_CSS).toMatch(/\.me-all a\{[^}]*min-height:44px/);
     await mkReg(soon, m.id);
     const booked = await (await req("/me/events", { cookie: `${m.cookie}; lang=en` })).text();
     expect(booked).not.toContain("coming up next");

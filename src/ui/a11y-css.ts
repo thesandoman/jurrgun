@@ -1279,4 +1279,7 @@ main .pc-name>a{display:inline-block;min-width:44px}
 /* The alert's one-tap off in the notifications list, and the Settings switch's own row. */
 .notif-off{margin:0;padding:0 12px 8px}
 .notif-off .btn{min-height:44px}
+/* My events, nothing booked: "See all events" was a 30px target 4px under the last card (mobile audit). */
+.me-all{margin:12px 0 0}
+.me-all a{display:inline-flex;align-items:center;min-height:44px}
 `);
