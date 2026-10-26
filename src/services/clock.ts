@@ -30,6 +30,16 @@
  *
  * An admin starts and stops the chain from /admin. Locally there are no
  * stateful objects; tests call runClock directly.
+ *
+ * Self-healing (2026-10-26: the chain died at 04:00 UTC and nobody noticed).
+ * A task webhook that never arrives is not retried, so one lost tick used to
+ * end the chain for good. ensureClock is the watchdog: when the clock is on
+ * but its next tick is more than 10 minutes overdue, it re-arms it for one
+ * minute out and logs an error (visible in SV Cloud's error list). It runs
+ * from /api/health, from /admin, and, at most once per isolate every 10
+ * minutes, after any other request (watchClock, off the response path).
+ * "on" records the admin's start/stop, so the watchdog never restarts a clock
+ * someone stopped. "lastTick" is the last hour that actually ran.
  */
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
@@ -52,6 +62,10 @@ const HOUR = 3_600_000;
 export const CLOCK_TASK = "clock";
 const CLOCK_OBJECT = "clock:app";
 const BATCH = 500;
+/** How late a tick may be before the watchdog treats the chain as broken. */
+const GRACE_MS = 10 * 60_000;
+/** watchClock checks at most this often per isolate. */
+const WATCH_EVERY_MS = 10 * 60_000;
 
 export const KIND_TOMORROW = "event_tomorrow";
 export const KIND_TODAY = "event_today";
@@ -104,6 +118,7 @@ export async function startClock(env: Bindings, now: Date = new Date()): Promise
   const next = Math.ceil((now.getTime() + 1) / HOUR) * HOUR;
   await obj.scheduleTask(CLOCK_TASK, next, { secret: env.TASK_WEBHOOK_SECRET, data: {} });
   await obj.put("next", next);
+  await obj.put("on", true);
   return next;
 }
 
@@ -111,6 +126,7 @@ export async function stopClock(env: Bindings): Promise<void> {
   const obj = await getStatefulObject(env, CLOCK_OBJECT);
   await obj.cancelTasks(CLOCK_TASK);
   await obj.delete("next");
+  await obj.put("on", false);
 }
 
 /** When the clock fires next, or null when it is stopped (or not deployed). */
@@ -124,12 +140,61 @@ export async function clockNext(env: Bindings): Promise<number | null> {
   }
 }
 
+export type ClockHealth = {
+  /** on_time: the next tick is booked; rearmed: it was overdue and is booked again now; off: stopped by an admin. */
+  state: "on_time" | "rearmed" | "off" | "unavailable";
+  next: number | null;
+  lastTick: number | null;
+};
+
+/** The watchdog: re-arm a clock that should be running but missed its tick. Never throws. */
+export async function ensureClock(env: Bindings, now = Date.now()): Promise<ClockHealth> {
+  try {
+    const obj = await getStatefulObject(env, CLOCK_OBJECT);
+    const [on, next, last] = await Promise.all([obj.get("on"), obj.get("next"), obj.get("lastTick")]);
+    const nextAt = typeof next === "number" ? next : null;
+    const lastTick = typeof last === "number" ? last : null;
+    // Before "on" existed, a booked "next" meant the clock had been started.
+    const running = on === true || (on !== false && nextAt !== null);
+    if (!running) return { state: "off", next: nextAt, lastTick };
+    if (nextAt !== null && nextAt > now - GRACE_MS) return { state: "on_time", next: nextAt, lastTick };
+    // The tick never arrived (webhooks are not retried): drain any undelivered ones and book a run a minute from now.
+    await obj.takeTasks(100).catch(() => []);
+    await obj.cancelTasks(CLOCK_TASK);
+    const at = now + 60_000;
+    await obj.scheduleTask(CLOCK_TASK, at, { secret: env.TASK_WEBHOOK_SECRET, data: {} });
+    await obj.put("next", at);
+    await obj.put("on", true);
+    createLogger(env).error("clock was overdue and has been re-armed", { missed: nextAt, lastTick, rearmedFor: at });
+    return { state: "rearmed", next: at, lastTick };
+  } catch {
+    return { state: "unavailable", next: null, lastTick: null };
+  }
+}
+
+let lastWatch = 0;
+
+/** After any request, at most once per isolate every 10 minutes, without delaying the response. */
+export function watchClock(env: Bindings, waitUntil: ((p: Promise<unknown>) => void) | null, now = Date.now()): void {
+  if (!waitUntil || !env?.TASK_WEBHOOK_SECRET || now - lastWatch < WATCH_EVERY_MS) return;
+  lastWatch = now;
+  waitUntil(ensureClock(env, now));
+}
+
 /** The webhook's handler: book the next hour FIRST, then work, so one failure never ends the chain. */
 export async function onClockTask(env: Bindings, firedAt: number): Promise<ClockRun | null> {
   const obj = await getStatefulObject(env, CLOCK_OBJECT);
   const next = nextSlot(firedAt, Date.now());
-  await obj.scheduleTask(CLOCK_TASK, next, { secret: env.TASK_WEBHOOK_SECRET, data: {} });
-  await obj.put("next", next);
+  try {
+    // Cancel first, so a duplicate chain (two re-arms at once) collapses back to one.
+    await obj.cancelTasks(CLOCK_TASK);
+    await obj.scheduleTask(CLOCK_TASK, next, { secret: env.TASK_WEBHOOK_SECRET, data: {} });
+    await obj.put("next", next);
+  } catch (err) {
+    // Booking failed: still do this hour's work; the watchdog re-arms the chain.
+    createLogger(env).error("clock could not book its next run", { error: String(err) });
+  }
+  await obj.put("lastTick", firedAt).catch(() => {});
   try {
     return await runClock(env, new Date());
   } catch (err) {

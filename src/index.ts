@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { CLOCK_TASK, onClockTask } from "./services/clock";
+import { CLOCK_TASK, ensureClock, onClockTask, watchClock } from "./services/clock";
 import type { AppEnv } from "./lib/env";
 import { loadUser, sameOrigin } from "./lib/session";
 import { captureSource } from "./lib/source";
@@ -46,6 +46,18 @@ const app = new Hono<AppEnv>();
 // Every request: refuse cross-site form posts, then load the signed-in user
 // (no database trip when there is no session cookie).
 app.use("*", sameOrigin);
+// The hourly clock's watchdog, at most once per isolate every 10 minutes, after the response (src/services/clock.ts).
+app.use("*", async (c, next) => {
+  let waitUntil: ((p: Promise<unknown>) => void) | null = null;
+  try {
+    const ctx = c.executionCtx;
+    waitUntil = (p) => ctx.waitUntil(p);
+  } catch {
+    // No execution context (tests, local scripts): nothing to watch from here.
+  }
+  watchClock(c.env, waitUntil);
+  await next();
+});
 app.use("*", loadUser);
 // Public landings: remember a ?src= / utm placement for 30 days (src/lib/source.ts).
 app.use("*", captureSource);
@@ -85,7 +97,17 @@ app.route("/", pulseRoutes);
 app.route("/admin", adminRoutes);
 
 /** Liveness probe. Kept trivial and dependency-free so it always answers. */
-app.get("/api/health", (c) => c.json({ status: "ok" }));
+// Health: also the clock's watchdog (src/services/clock.ts ensureClock). Deployed, it reports the
+// hourly clock and re-arms it if a tick was missed, so an uptime check catches a dead clock.
+app.get("/api/health", async (c) => {
+  if (!c.env?.TASK_WEBHOOK_SECRET) return c.json({ status: "ok" });
+  const clock = await ensureClock(c.env);
+  return c.json({
+    status: "ok",
+    clock: clock.state,
+    ...(clock.lastTick ? { clockLastTick: new Date(clock.lastTick).toISOString() } : {}),
+  });
+});
 
 app.get("/api/hello", (c) => {
   const name = c.req.query("name")?.trim();

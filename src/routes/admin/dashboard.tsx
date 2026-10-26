@@ -26,7 +26,7 @@ import { fmtDate } from "../../lib/i18n";
 import { requireRole } from "../../lib/session";
 import { K_THRESHOLD, safeCount } from "../../domain/rules";
 import { lastRetentionRun, runRetention, type RetentionRun } from "../../services/retention";
-import { clockNext, startClock, stopClock } from "../../services/clock";
+import { ensureClock, startClock, stopClock, type ClockHealth } from "../../services/clock";
 import { vapidKeys } from "../../services/push";
 import { moderatorVisible } from "../../services/report-intake";
 import { alias } from "drizzle-orm/pg-core";
@@ -58,8 +58,12 @@ adminDashboard.post("/clock", requireRole("bma_admin"), async (c) => {
   return c.redirect("/admin?notice=done#clock");
 });
 
-function ClockCard(props: { next: number | null; push: boolean; t: (th: string, en: string) => string; lang: "th" | "en" }) {
+function ClockCard(props: { health: ClockHealth | null; push: boolean; t: (th: string, en: string) => string; lang: "th" | "en" }) {
   const { t } = props;
+  const h = props.health;
+  const when = (ms: number) =>
+    new Intl.DateTimeFormat(props.lang === "en" ? "en-GB" : "th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(ms));
+  const on = h?.state === "on_time" || h?.state === "rearmed";
   return (
     <section id="clock">
       <h2>{t("นาฬิการายชั่วโมง", "Hourly clock")}</h2>
@@ -71,23 +75,36 @@ function ClockCard(props: { next: number | null; push: boolean; t: (th: string, 
           )}
         </p>
         <p>
-          {props.next ? (
+          {h?.state === "rearmed" ? (
+            <>
+              <Tag tone="warn">{t("เพิ่งเริ่มใหม่", "Restarted")}</Tag> {t("นาฬิกาพลาดรอบและหยุดไป ระบบเริ่มให้ใหม่แล้ว รอบถัดไป ", "It had missed a run and stopped. It has been restarted; next run ")}
+              <strong>{when(h.next!)}</strong>
+            </>
+          ) : h?.state === "on_time" && h.next ? (
             <>
               <Tag tone="ok">{t("กำลังทำงาน", "Running")}</Tag> {t("รอบถัดไป ", "Next run ")}
-              <strong>{new Intl.DateTimeFormat(props.lang === "en" ? "en-GB" : "th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(props.next))}</strong>
+              <strong>{when(h.next)}</strong>
             </>
+          ) : h?.state === "unavailable" ? (
+            <Tag tone="muted">{t("อ่านสถานะไม่ได้", "Status unavailable")}</Tag>
           ) : (
             <Tag tone="muted">{t("หยุดอยู่", "Stopped")}</Tag>
           )}
         </p>
+        {h?.lastTick ? (
+          <p class="muted">
+            {t("รันล่าสุด ", "Last run ")}
+            {when(h.lastTick)}
+          </p>
+        ) : null}
         <p class="muted">
           {props.push
             ? t("การแจ้งเตือนบนมือถือ: เปิดแล้ว", "Phone notifications: on")
             : t("การแจ้งเตือนบนมือถือ: ยังไม่ได้ตั้งคีย์ VAPID ข้อความจะอยู่ในแอปเท่านั้น", "Phone notifications: VAPID keys not set, so messages stay in the app")}
         </p>
         <form method="post" action="/admin/clock">
-          <input type="hidden" name="on" value={props.next ? "0" : "1"} />
-          <Button kind={props.next ? "ghost" : "primary"}>{props.next ? t("หยุดนาฬิกา", "Stop the clock") : t("เริ่มนาฬิกา", "Start the clock")}</Button>
+          <input type="hidden" name="on" value={on ? "0" : "1"} />
+          <Button kind={on ? "ghost" : "primary"}>{on ? t("หยุดนาฬิกา", "Stop the clock") : t("เริ่มนาฬิกา", "Start the clock")}</Button>
         </form>
       </Card>
     </section>
@@ -267,7 +284,8 @@ adminDashboard.get("/", async (c) => {
       : Promise.resolve([]),
     showTrend ? weeklyReconnectedTrend(db, now) : Promise.resolve(null),
     isAdmin ? lastRetentionRun(c.env) : Promise.resolve(null),
-    isAdmin ? clockNext(c.env) : Promise.resolve(null),
+    // The watchdog: shows the clock and re-arms it if a tick was missed.
+    isAdmin ? ensureClock(c.env) : Promise.resolve(null),
   ]);
 
   const upcoming = adminStats?.[0][0]?.n ?? 0;
@@ -306,7 +324,7 @@ adminDashboard.get("/", async (c) => {
             <LinkButton href="/admin/quiz-health" kind="ghost">{t("สุขภาพแบบทดสอบ", "Quiz health")}</LinkButton>
           </div>
           {trend ? <TrendCard weeks={trend} suppress={false} t={t} lang={lang} /> : null}
-          <ClockCard next={clock} push={!!vapidKeys(c.env)} t={t} lang={lang} />
+          <ClockCard health={clock} push={!!vapidKeys(c.env)} t={t} lang={lang} />
           <RetentionCard run={retention} t={t} lang={lang} />
         </>
       ) : null}
