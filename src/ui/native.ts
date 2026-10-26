@@ -52,7 +52,6 @@ body:has(.tabbar) .foot{display:none}
 .view-switch a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 16px;border-radius:999px;color:var(--on-deep);text-decoration:none;font-weight:700;font-size:.92rem;white-space:nowrap}
 .view-switch a.on{background:var(--sel);color:var(--sel-ink)}
 .fullmap .view-switch{bottom:calc(var(--tab-h) + var(--sheet-h) + 14px)}
-.fullmap .svm-key{bottom:calc(var(--tab-h) + var(--sheet-h) + 70px)}
 @media (min-width:1024px){body:not(.fullmap-body) .view-switch{bottom:28px}}
 /* An open header menu (accessibility, notifications) sits above floating controls. */
 .topbar:has(details[open]){z-index:30}

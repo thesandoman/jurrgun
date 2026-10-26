@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
-import { FULLMAP_CSS, KEY_CLAMP_JS, NoEventsYet, sheetCopy } from "../src/ui/discover-map";
+import { readFileSync } from "node:fs";
+import { FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, sheetCopy } from "../src/ui/discover-map";
 
 const en = tr("en");
 const th = tr("th");
@@ -60,41 +61,34 @@ describe("Discover map sheet copy", () => {
   });
 });
 
-// The page script's Key placement, run as the browser runs it.
-type Free = { top: number; left: number; right: number; bottom: number };
-const keyFns = new Function(`${KEY_CLAMP_JS}; return { keyClamp, keySpot };`)() as {
-  keyClamp: (x: number, y: number, w: number, h: number, free: Free) => [number, number];
-  keySpot: (saved: unknown, w: number, h: number, free: Free, vw: number, vh: number) => [number, number] | null;
-};
-// A 412x908 phone: chips end at 120, the sheet starts at 700, the rail starts at 348.
-const FREE: Free = { top: 128, left: 8, right: 340, bottom: 692 };
+// The floating Key is gone (owner card 3): its legend lives in Filters.
+const SRC = readFileSync("src/ui/discover-map.tsx", "utf8");
+const page = (t = en) =>
+  String(
+    <FullDiscover t={t} lang={t === en ? "en" : "th"} points={[]} chips={[]} status={sheetCopy({ total: 0, week: 0, open: 0, filtered: false }, t)} search="" filtered={false} filters={<form class="ff" />} list={<p>list</p>} listHref="/events?view=list" langHref="/lang/th" hasQuests={false} />,
+  );
 
-describe("Discover map Key placement", () => {
-  it("clamps a spot into the free band: never over the search or chips, the rail, or the sheet", () => {
-    const { keyClamp } = keyFns;
-    expect(keyClamp(10, 80, 90, 42, FREE)).toEqual([10, 128]); // the owner's case: under the chips, not on them
-    expect(keyClamp(-50, -50, 90, 42, FREE)).toEqual([8, 128]);
-    expect(keyClamp(400, 300, 90, 42, FREE)).toEqual([250, 300]); // left of the rail
-    expect(keyClamp(20, 900, 90, 42, FREE)).toEqual([20, 650]); // above the sheet
-    expect(keyClamp(100.4, 200.6, 90, 42, FREE)).toEqual([100, 201]);
+describe("Discover map Key", () => {
+  it("leaves no movable Key code behind, only the line that clears its old saved spot", () => {
+    for (const gone of ["movableKey", "keyClamp", "keySpot", "KEY_CLAMP_JS", "svm-key-move", "placeKey", "keySave", "keyHome", "--z-key", ".svm-key"]) expect(SRC).not.toContain(gone);
+    expect(SRC.match(/bkk-key-pos/g)).toHaveLength(1);
+    expect(FULLMAP_JS).toContain('try{localStorage.removeItem("bkk-key-pos")}catch{}');
+    expect(FULLMAP_JS).toContain("legend: false");
+    expect(FULLMAP_CSS).not.toContain("svm-key");
   });
 
-  it("keeps a saved spot that fits this screen", () => {
-    expect(keyFns.keySpot([12, 300], 90, 42, FREE, 412, 908)).toEqual([12, 300]);
-    expect(keyFns.keySpot([10, 80], 90, 42, FREE, 412, 908)).toEqual([10, 128]);
-  });
-
-  it("drops a saved spot that is broken or belongs to another screen", () => {
-    const { keySpot } = keyFns;
-    for (const bad of [null, "abc", [1], [1, 2, 3], ["10", "80"], [Number.NaN, 4], [Infinity, 4], { x: 1, y: 2 }]) expect(keySpot(bad, 90, 42, FREE, 412, 908)).toBeNull();
-    expect(keySpot([1200, 700], 90, 42, FREE, 412, 908)).toBeNull(); // dragged there on a laptop
-    expect(keySpot([10, 880], 90, 42, FREE, 412, 908)).toBeNull(); // would hang off the bottom
-    expect(keySpot([-300, -50], 90, 42, FREE, 412, 908)).toBeNull();
-    expect(keySpot([10, 600], 90, 42, FREE, 812, 375)).toBeNull(); // a portrait spot, now in landscape
-  });
-
-  it("drops it when the free band is too small for the Key", () => {
-    expect(keyFns.keySpot([10, 140], 90, 42, { top: 128, left: 8, right: 340, bottom: 150 }, 812, 375)).toBeNull();
+  it("puts 'What the pins mean' inside the Filters panel, Thai first", () => {
+    for (const [t, word] of [[th, "หมุดหมายถึงอะไร"], [en, "What the pins mean"]] as const) {
+      const html = page(t);
+      const legend = html.indexOf('class="fd-legend"');
+      expect(legend).toBeGreaterThan(html.indexOf('class="fd-filters-body"'));
+      expect(legend).toBeLessThan(html.indexOf('class="fd-rail"'));
+      expect(html).toContain(word);
+      for (const k of ["svm-k exact", "svm-k area", "svm-k highlight"]) expect(html).toContain(k);
+    }
+    // A district-level pin still explains itself on its card.
+    expect(page(en)).toContain("District area: address on the event page");
+    expect(FULLMAP_CSS).toContain(".fullmap .svm-note::before{");
   });
 });
 
@@ -110,14 +104,11 @@ describe("Discover map page CSS", () => {
     expect(zs.length).toBeGreaterThan(8);
     // -1 is the search pill's blur layer, inside the pill's own isolated stack.
     expect(zs.filter((z) => !z.startsWith("var(--z-") && z !== "-1")).toEqual([]);
-    expect(FULLMAP_CSS).toContain("--z-map:0;--z-key:4;--z-rail:5;--z-chips:6;--z-top:8;--z-panel:9;--z-sheet:10;--z-tab:11;--z-card:12;--z-skip:30");
+    expect(FULLMAP_CSS).toContain("--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-panel:9;--z-sheet:10;--z-tab:11;--z-card:12;--z-skip:30");
   });
 
   it("keeps the fixed chrome inside the safe areas, and the rail comes back once a pin's card closes", () => {
     for (const s of ["env(safe-area-inset-top", "env(safe-area-inset-left", "env(safe-area-inset-right", "env(safe-area-inset-bottom"]) expect(FULLMAP_CSS).toContain(s);
-    expect(FULLMAP_CSS).not.toContain(":is(.fd-rail,.svm-key){visibility:hidden}");
     expect(FULLMAP_CSS).toContain("@media (max-width:899.98px){.fullmap:has(.svm-sheet:not([hidden])) .fd-rail{visibility:hidden}}");
-    // The details margin no longer nudges a dragged Key.
-    expect(FULLMAP_CSS).toContain(".fullmap .svm-key{position:fixed;margin:0;");
   });
 });
