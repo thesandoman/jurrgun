@@ -100,7 +100,8 @@ with what they said, the code wins, and the note says so.
    - `POST /api/vibe/score` accepts only `{ questionId: number }`.
 
    The API's contract no longer describes what it does. Nothing in the app
-   calls it. It could be retired, or rebuilt on `quizQuestions()`.
+   calls it. **Closed:** both routes were retired on 26 Oct (owner card C1)
+   and return 404.
 2. **The Thai copy needs a native read.** The quiz, profile, Learn and
    onboarding Thai was written as a draft. *Status now: partly done.* There
    were model-made passes: `5175ff5` (238 corrections), `30ca8a0` (about 830
@@ -236,7 +237,7 @@ then. Moderators get the review queue and reports, but not the rest of Staff.
 
 | Item | From | Owner |
 |---|---|---|
-| `/api/vibe/quiz` and `/api/vibe/score` don't match the curated quiz; `seed` and `per` are misleading | 1.0 | Core Platform (with Quiz) |
+| ~~`/api/vibe/quiz` and `/api/vibe/score` don't match the curated quiz~~: retired 26 Oct, both return 404 | 1.0 | Closed |
 | A native Thai read by a person, for quiz, profile, Learn and onboarding | 1.0 | Branding / Quiz, owner to source a reader |
 | BMA health and legal review of the Learn pages | 1.0 | Trust & Operations (parked with the lawyer questions) |
 | Rotate the Google and LINE secrets and the 21st key | 2.0 | Owner (only the owner can issue new ones) |

@@ -82,12 +82,12 @@ For each category: score = the mean of its item scores, from −1 to +1. Skipped
 | Any ranking or filtering that hides people | ❌ |
 | BMA dashboards | Aggregates only, k ≥ 10 (e.g. "night-owl share by district" to plan event times) |
 
-## API (prototype)
+## API (prototype, retired)
 
-| Route | Purpose |
-|---|---|
-| `GET /api/vibe/quiz?seed=…&per=3&lang=th\|en` | A public session: questions with no scoring data |
-| `POST /api/vibe/score` `{ seed, per?, answers: { [id]: number } }` | Rebuilds the session from the seed, scores it, and returns the vector, strengths and name |
+The public prototype routes `GET /api/vibe/quiz` and `POST /api/vibe/score`
+were retired on 2026-10-26 (owner card C1) and now return 404. They had drifted
+from the member quiz (the curated D26 set) and nothing in the app called them.
+The member quiz lives at `/quiz` (`src/routes/quiz.tsx`).
 
 ## Next steps
 
