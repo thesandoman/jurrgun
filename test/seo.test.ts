@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
 import { BRAND } from "../src/ui/brand";
-import { headLinks } from "../src/lib/seo";
+import { headLinks, ldJson } from "../src/lib/seo";
 
 const LIVE = "https://jurrgun.apps.sv-academy.org";
 const html = { headers: { accept: "text/html" } };
@@ -88,10 +88,28 @@ describe("head links", () => {
     expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/faq", status: 500 }).robots).toBe("noindex");
   });
 
-  it("login and other non-public pages are noindex with no canonical", async () => {
-    const page = await (await get(`${LIVE}/login`)).text();
+  it("the real sign-in page (200, with an env) is noindex with no canonical", async () => {
+    // /login reads the sign-in providers from env: without one it answers with the error page,
+    // which is noindex for its status alone and would hide a wrong entry in the public list.
+    const res = await app.request(`${LIVE}/login`, html, { NO_EXTERNAL: "1" });
+    expect(res.status).toBe(200);
+    const page = await res.text();
     expect(page).toContain('<meta name="robots" content="noindex"/>');
     expect(page).not.toContain('rel="canonical"');
+  });
+
+  it("canonical and alternates keep only ?lang, never tracking or other query strings", async () => {
+    const page = await (await get(`${LIVE}/faq?t=x&src=ig-bio&lang=en`)).text();
+    expect(page).toContain(`<link rel="canonical" href="${LIVE}/faq?lang=en"/>`);
+    expect(page).not.toMatch(/rel="(canonical|alternate)"[^>]*(t=x|src=)/);
+  });
+
+  it("the Bangkok Type pages are public and in the sitemap", async () => {
+    const xml = await (await get(`${LIVE}/sitemap.xml`)).text();
+    expect(xml).toContain(`<loc>${LIVE}/types/street-explorer</loc>`);
+    expect(xml.match(/<loc>[^<]*\/types\/[a-z-]+<\/loc>/g)?.length).toBe(16);
+    const page = await (await get(`${LIVE}/types/street-explorer?lang=en`)).text();
+    expect(page).toContain(`<link rel="canonical" href="${LIVE}/types/street-explorer?lang=en"/>`);
   });
 
   it("any host but the live one is noindex", async () => {
@@ -126,6 +144,25 @@ describe("JSON-LD", () => {
     expect(org.description).toContain(BRAND.bma.en);
     expect(all.some((b) => b["@type"] === "WebSite")).toBe(true);
     expect(JSON.stringify(all)).not.toMatch(/member(Count|s joined)|aggregateRating|review|sponsor|funder/i);
+  });
+
+  it("the Thai FAQ data matches the Thai page too", async () => {
+    const page = await (await get(`${LIVE}/faq?lang=th`)).text();
+    const faq = blocks(page).find((b) => b["@type"] === "FAQPage");
+    expect(faq.inLanguage).toBe("th");
+    for (const q of faq.mainEntity) expect(page).toContain(`<summary>${q.name.replace(/'/g, "&#39;")}</summary>`);
+  });
+
+  it("the Thai Organization description has no full stop after Thai text, and the logo is a PNG", async () => {
+    const org = blocks(await (await get(`${LIVE}/intro?lang=th`)).text()).find((b) => b["@type"] === "Organization");
+    expect(org.description.endsWith(BRAND.bma.th)).toBe(true);
+    expect(org.logo).toMatch(new RegExp(`^${LIVE}/assets/.+\\.png$`));
+  });
+
+  it("ldJson can't close its own script tag", () => {
+    const out = ldJson({ text: "</script><script>alert(1)</script>" });
+    expect(out).not.toContain("</script");
+    expect(JSON.parse(out).text).toBe("</script><script>alert(1)</script>");
   });
 
   it("only /faq has FAQ data", async () => {

@@ -158,7 +158,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>{`${opts.title} · Jurrgun`}</title>
-        <meta name="description" content={opts.description ?? `Jurrgun (เจอกัน): ${BRAND.tagline.th} · ${BRAND.tagline.en} Make friends in Bangkok, no endless swiping.`} />
+        <meta name="description" content={opts.description ?? opts.share?.description ?? `Jurrgun (เจอกัน): ${BRAND.tagline.th} · ${BRAND.tagline.en} Make friends in Bangkok, no endless swiping.`} />
         {props.seo.robots ? <meta name="robots" content={props.seo.robots} /> : null}
         {props.seo.canonical ? <link rel="canonical" href={props.seo.canonical} /> : null}
         {props.seo.alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}

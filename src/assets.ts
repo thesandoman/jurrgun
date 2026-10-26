@@ -10,6 +10,7 @@
 // Add a file to design/assets/, run `npm run assets`, and commit both.
 
 export const assets = {
+  "brand/mark-512.png": "/assets/826239741835/brand/mark-512.png",
   "og/site.jpg": "/assets/93b00d342909/og/site.jpg",
   "og/types/caf-curator.jpg": "/assets/bec8d05fc129/og/types/caf-curator.jpg",
   "og/types/cosy-creative.jpg": "/assets/0368f8727980/og/types/cosy-creative.jpg",

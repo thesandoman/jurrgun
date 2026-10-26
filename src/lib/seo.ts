@@ -15,6 +15,7 @@
  */
 import { ABOUT, FAQ, TOPICS } from "../content/learn";
 import { BRAND } from "../ui/brand";
+import { asset, assets } from "../assets";
 
 export const SITE_HOST = BRAND.url;
 export const SITE_ORIGIN = `https://${SITE_HOST}`;
@@ -26,6 +27,12 @@ export const SITE_ORIGIN = `https://${SITE_HOST}`;
  */
 const DATING_LED = new Set(["dating-in-bangkok", "date-responsibly"]);
 
+/** The 16 Bangkok Type pages, by the same slugs as their share images. */
+const TYPE_PATHS = Object.keys(assets)
+  .map((k) => /^og\/types\/([a-z0-9-]+)\.jpg$/.exec(k)?.[1])
+  .filter((x): x is string => !!x)
+  .map((slug) => `/types/${slug}`);
+
 /** Pages a visitor can open without signing in, and that may be indexed. */
 const INDEXABLE = new Set<string>([
   "/intro",
@@ -36,6 +43,7 @@ const INDEXABLE = new Set<string>([
   "/learn/bangkok-types",
   ...TOPICS.map((x) => `/learn/${x.slug}`),
   "/types",
+  ...TYPE_PATHS,
   "/safety",
   "/safety/how",
   "/code-of-conduct",
@@ -53,6 +61,7 @@ const SITEMAP: string[] = [
   "/international",
   "/faq",
   "/types",
+  ...TYPE_PATHS,
   "/learn",
   "/learn/bangkok-types",
   ...TOPICS.filter((x) => !DATING_LED.has(x.slug)).map((x) => `/learn/${x.slug}`),
@@ -183,9 +192,10 @@ export function siteJsonLd(lang: Lang): object[] {
       name: BRAND.name,
       alternateName: BRAND.th,
       url: SITE_ORIGIN,
-      logo: `${SITE_ORIGIN}/icon.svg`,
+      logo: SITE_ORIGIN + asset("brand/mark-512.png"),
       slogan: BRAND.tagline[lang],
-      description: `${ABOUT[lang]} ${BRAND.bma[lang]}.`,
+      // Thai doesn't end a sentence with a full stop.
+      description: `${ABOUT[lang]} ${BRAND.bma[lang]}${lang === "en" ? "." : ""}`,
     },
     {
       "@context": "https://schema.org",
