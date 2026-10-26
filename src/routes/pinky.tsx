@@ -82,7 +82,7 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
     { title: "เกี่ยวก้อย · Pinky", tab: "connections" },
     <>
       <p>
-        <a href="/connections">← {t("คนรู้จัก", "My people")}</a>
+        <a href="/connections" class="back-link">← {t("คนรู้จัก", "My people")}</a>
       </p>
       <section class="pk-head">
         <PinkyIcon />
@@ -123,7 +123,8 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
           <p class="muted">{t("ยังไม่มีแผน เลือกไอเดียด้านล่าง หรือใส่ที่ของคุณเอง", "No plan yet. Pick an idea below or add your own place.")}</p>
         )}
         {paused ? null : (
-          <details class="how">
+          // Open after "Use this place", so the chosen place and the time field are in view (QA, on phones).
+          <details class="how" id="pk-form" open={c.req.query("edit") === "1"}>
             <summary>{ready ? t("เปลี่ยนแผน", "Change the plan") : t("ใส่แผนเอง", "Add a plan")}</summary>
             <form method="post" action={back(p, "/plan")}>
               <Field label={t("ที่ไหน (ที่สาธารณะ)", "Where (somewhere public)")} name="place" value={plan?.ideaKey ? place : plan?.placeName} maxlength={PLACE_MAX} required />
@@ -263,7 +264,7 @@ pinkyRoutes.post("/pinky/:id/idea", requireMember, async (c) => {
   if (!idea) return c.redirect(back(p));
   const current = await planOf(db, p.id);
   await savePlan(db, p, current, { placeName: idea.place.en, ideaKey: idea.key, district: idea.district, startsAt: current?.startsAt ?? null }).execute();
-  return c.redirect(back(p, "#pk-plan"));
+  return c.redirect(back(p, "?edit=1#pk-form"));
 });
 
 pinkyRoutes.post("/pinky/:id/confirm", requireMember, async (c) => {

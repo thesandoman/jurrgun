@@ -43,6 +43,7 @@ describe.skipIf(!HAS_DB)("Pinky Plans", () => {
     const html = await (await space(b, p.id)).text();
     expect(html).toContain("Pinky: you both chose each other");
     expect(html).toContain("Ideas for you two");
+    expect(html).toContain('<a href="/connections" class="back-link">');
     expect(html).toContain(`href="/chat/conn:${p.connectionId}"`);
     // Nobody else, staff included.
     const [other, admin] = await Promise.all([createMember(), createMember({ role: "bma_admin" })]);
@@ -89,7 +90,10 @@ describe.skipIf(!HAS_DB)("Pinky Plans", () => {
     expect(last).not.toContain("Other ideas");
     // Using an idea fills the plan's place.
     const key = /name="idea" value="([a-z_]+)"/.exec(last)![1];
-    await post(a, `/pinky/${p.id}/idea`, { idea: key });
+    const used = await post(a, `/pinky/${p.id}/idea`, { idea: key });
+    // The plan form opens with the place filled in, so on a phone something visibly happens (QA).
+    expect(used.headers.get("location")).toBe(`/pinky/${p.id}?edit=1#pk-form`);
+    expect(await (await req(`/pinky/${p.id}?edit=1`, { cookie: en(a) })).text()).toMatch(/<details class="how" id="pk-form" open/);
     const [plan] = await db().select().from(pinkyPlans).where(eq(pinkyPlans.pinkyId, p.id));
     expect(plan.ideaKey).toBe(key);
   });
