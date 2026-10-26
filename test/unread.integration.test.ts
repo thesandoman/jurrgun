@@ -32,10 +32,10 @@ describe.skipIf(!HAS_DB)("clearer unread", () => {
     expect(en).toContain('<span class="unread-dot tab-badge" aria-hidden="true"></span>');
     expect(en).not.toMatch(/tab-badge"[^>]*>\d/);
     // The bell counts the RSVP only: the message is counted once, under Chats.
-    expect(en).toContain('aria-label="Notifications, 1 unread"');
+    expect(en).toContain('aria-label="1 unread notification"');
     const th = await (await req("/events?view=list", { cookie: `${a.cookie}; lang=th` })).text();
     expect(th).toContain('aria-label="คนรู้จัก แชตยังไม่ได้อ่าน 1"');
-    expect(th).toContain('aria-label="การแจ้งเตือน ยังไม่ได้อ่าน 1"');
+    expect(th).toContain('aria-label="การแจ้งเตือน 1 รายการที่ยังไม่อ่าน"');
     const people = await (await req("/connections", { cookie: `${a.cookie}; lang=en` })).text();
     expect(people).toContain('aria-label="Chats, 1 unread"');
   });

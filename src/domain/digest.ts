@@ -73,3 +73,24 @@ export function digestText(kinds: string[], lang: Lang): string {
   });
   return `${lang === "en" ? "Today" : "วันนี้"}: ${parts.join(" · ")}`;
 }
+
+/** The event a notification points at ("/events/abc", "/events/abc/live", "/events/abc?notice=x"), or null. */
+export function eventIdOfLink(link: string | null): string | null {
+  const m = /^\/events\/([^/?#]+)/.exec(link ?? "");
+  return m ? m[1]! : null;
+}
+
+/** The calendar day in Bangkok, "2026-10-26". */
+export function bangkokDay(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
+/**
+ * The bell says "วันนี้ / Today" instead of its dot (mobile card 5) when an unread notification is
+ * urgent (never one the evening summary holds back) and about an event that happens today in Bangkok.
+ * The session query (lib/session.ts) asks the same question in SQL; this is the rule in plain code.
+ */
+export function urgentForToday(n: { kind: string; link: string | null }, eventStartsAt: Date | null, now: Date = new Date()): boolean {
+  if (!eventStartsAt || !eventIdOfLink(n.link) || isDigest(n.kind, n.link)) return false;
+  return bangkokDay(eventStartsAt) === bangkokDay(now);
+}

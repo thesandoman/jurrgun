@@ -10,8 +10,20 @@ import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { getDb } from "../db";
-import { accounts, notifications, profiles, sessions, type Role } from "../schema";
+import { accounts, events, notifications, profiles, sessions, type Role } from "../schema";
 import { CHAT_KIND } from "../domain/chat";
+import { DIGEST_KINDS } from "../domain/digest";
+
+/**
+ * The bell's "วันนี้ / Today" (mobile card 5): an unread, urgent notification about an event that
+ * happens today in Bangkok. Urgent means any kind the evening summary does not hold back
+ * (domain/digest.ts; urgentForToday is the same rule in plain code). The event id is read from the
+ * link ("/events/<id>", "/events/<id>/live", "/events/<id>?notice=..."), so it is one primary-key lookup.
+ */
+const URGENT_TODAY = sql<boolean>`exists (select 1 from ${notifications} inner join ${events} on ${events.id} = split_part(split_part(split_part(substr(${notifications.link}, 9), '/', 1), '?', 1), '#', 1) where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.link} like '/events/%' and ${notifications.kind} <> ${CHAT_KIND} and ${notifications.kind} not in (${sql.join(
+  Object.keys(DIGEST_KINDS).map((k) => sql`${k}`),
+  sql`, `,
+)}) and (${events.startsAt} at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)`;
 import { randomToken, sha256 } from "./crypto";
 import type { AppEnv } from "./env";
 import { langFromHeader, pickLang } from "./i18n";
@@ -60,6 +72,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
         // "new message" notification per chat, read when that chat is opened.
         unread: sql<number>`(select count(*) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} <> ${CHAT_KIND})`.mapWith(Number),
         chatUnread: sql<number>`(select count(distinct ${notifications.link}) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} = ${CHAT_KIND})`.mapWith(Number),
+        urgentToday: URGENT_TODAY,
       })
       .from(sessions)
       .innerJoin(accounts, eq(accounts.id, sessions.accountId))
@@ -68,7 +81,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
       .limit(1);
     const row = rows[0];
     if (row && accountUsable(row.account)) {
-      c.set("user", { account: row.account, profile: row.profile, unread: Number(row.unread ?? 0), chatUnread: Number(row.chatUnread ?? 0) });
+      c.set("user", { account: row.account, profile: row.profile, unread: Number(row.unread ?? 0), chatUnread: Number(row.chatUnread ?? 0), urgentToday: row.urgentToday === true });
       // An explicit ?lang= or language cookie wins; otherwise use the profile's.
       if (!c.req.query("lang") && !getCookie(c, "lang") && row.profile) c.set("lang", pickLang(row.profile.locale));
     } else {

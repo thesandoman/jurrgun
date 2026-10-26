@@ -1376,5 +1376,10 @@ html.a11y-touch{--tap:56px;--tap-primary:56px}
 .btn.primary:not(#_){min-height:var(--tap-primary)}
 :is(a,button,label,summary).chip{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap)}
 .pill span{min-height:var(--tap)}
-
+/* Card 5: no counts. The bell says "วันนี้ / Today" in words when something urgent is about today's event,
+   otherwise a dot; the Chats link on My people has the same dot. The full count is in each accessible name. */
+.notif>summary:has(.notif-today){display:inline-flex;align-items:center;gap:4px;padding:0 8px 0 6px}
+.notif-today{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-family:var(--sub);font-size:.75rem;font-weight:800;line-height:1.3;white-space:nowrap}
+@media (forced-colors:active){.notif-today{border:1px solid CanvasText}}
+a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:middle}
 `);

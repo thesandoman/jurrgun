@@ -10,20 +10,38 @@ import type { notifications } from "../schema";
 import type { Lang } from "../lib/i18n";
 import { fmtDate } from "../lib/i18n";
 import { safeNext } from "./kit";
-import { NewBadge, UnreadDot, unreadLabel } from "./unread";
+import { NewBadge, UnreadDot } from "./unread";
 import { ALERT_OFF, KIND_DISTRICT_ALERT } from "../domain/district-alert";
 
 type T = (th: string, en: string) => string;
 type Notification = typeof notifications.$inferSelect;
 
-export function NotifMenu(props: { t: T; unread: number }) {
+/**
+ * The bell's name, with the full count for screen readers (mobile card 5: the bell itself shows no
+ * number). "วันนี้" / "Today" leads when the bell shows that word, so the visible label is in the name.
+ */
+export function bellLabel(t: T, unread: number, today = false): string {
+  if (unread <= 0) return t("การแจ้งเตือน", "Notifications");
+  const count = t(`การแจ้งเตือน ${unread} รายการที่ยังไม่อ่าน`, `${unread} unread ${unread === 1 ? "notification" : "notifications"}`);
+  return today ? `${t("วันนี้", "Today")}: ${count}` : count;
+}
+
+/** `today`: something urgent about an event happening today, so the bell says so in a word instead of its dot. */
+export function NotifMenu(props: { t: T; unread: number; today?: boolean }) {
   const { t, unread } = props;
-  const label = unreadLabel(t, { th: "การแจ้งเตือน", en: "Notifications" }, unread);
+  const today = !!props.today && unread > 0;
+  const label = bellLabel(t, unread, today);
   return (
     <details class="notif" id="notif">
       <summary aria-label={label} title={label}>
         <span aria-hidden="true">🔔</span>
-        <UnreadDot n={unread} class="notif-dot" />
+        {today ? (
+          <span class="notif-today" aria-hidden="true">
+            {t("วันนี้", "Today")}
+          </span>
+        ) : (
+          <UnreadDot n={unread} class="notif-dot" />
+        )}
       </summary>
       <div class="notif-panel" role="region" aria-label={t("การแจ้งเตือน", "Notifications")} data-src="/notifications/panel">
         <p class="notif-h">{t("การแจ้งเตือน", "Notifications")}</p>
@@ -89,7 +107,7 @@ m.addEventListener("toggle",function(){
   if(!m.open||loaded)return;loaded=true;
   fetch(p.getAttribute("data-src"),{credentials:"same-origin",headers:{accept:"text/html"}})
     .then(function(r){if(!r.ok)throw 0;return r.text()})
-    .then(function(h){b.innerHTML=h;var d=m.querySelector(".notif-dot");if(d)d.remove()})
+    .then(function(h){b.innerHTML=h;m.querySelectorAll(".notif-dot,.notif-today").forEach(function(d){d.remove()})})
     .catch(function(){loaded=false});
 });
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&m.open){m.open=false;m.querySelector("summary").focus()}});

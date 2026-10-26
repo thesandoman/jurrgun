@@ -50,6 +50,8 @@ export type CurrentUser = {
   unread?: number;
   /** Chats with a message not yet read, for the My people tab and the Chats chip. */
   chatUnread?: number;
+  /** An unread urgent notification about an event today (Bangkok): the bell says "วันนี้ / Today" instead of its dot. */
+  urgentToday?: boolean;
 };
 
 export type AppEnv = {

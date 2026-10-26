@@ -37,13 +37,13 @@ export function UnreadDot(props: { n: number; class?: string }) {
   return <span class={props.class ? `unread-dot ${props.class}` : "unread-dot"} aria-hidden="true" />;
 }
 
-/** The "💬 แชต / Chats" shortcut with its unread count. */
+/** The "💬 แชต / Chats" shortcut: a dot when something is unread, the count in its name only (mobile card 5). */
 export function ChatsLink(props: { t: T; n: number; class?: string }) {
   const { t, n } = props;
   return (
     <a href="/chat" class={props.class} aria-label={unreadLabel(t, { th: "แชต", en: "Chats" }, n)}>
       <span aria-hidden="true">💬</span> {t("แชต", "Chats")}
-      <UnreadCount n={n} />
+      <UnreadDot n={n} />
     </a>
   );
 }

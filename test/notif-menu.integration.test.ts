@@ -23,7 +23,7 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
     // A small dot, not a number (owner, 2026-10-17); the count stays in the accessible name.
     expect(html).toContain('<span class="unread-dot notif-dot" aria-hidden="true"></span>');
     expect(html).not.toMatch(/notif-dot"[^>]*>\d/);
-    expect(html).toContain('aria-label="Notifications, 2 unread"');
+    expect(html).toContain('aria-label="2 unread notifications"');
     expect(html).toContain('href="/notifications"');
 
     const panel = await req("/notifications/panel", { cookie });

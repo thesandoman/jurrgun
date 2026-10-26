@@ -220,7 +220,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} top /> : null}
           <nav class="top-actions">
             {staff ? <a href="/admin" class="chip">{t("ทีมงาน", "Staff")}</a> : null}
-            {member ? <NotifMenu t={t} unread={user?.unread ?? 0} /> : null}
+            {member ? <NotifMenu t={t} unread={user?.unread ?? 0} today={user?.urgentToday} /> : null}
             {/* Members switch language from the accessibility menu (mobile card 1); signed-out and first-run pages keep the switch in sight. */}
             <A11yMenu t={t} lang={langInMenu ? { other, href: langHref } : undefined} />
             {langInMenu ? null : (

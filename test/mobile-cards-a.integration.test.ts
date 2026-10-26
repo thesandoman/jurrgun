@@ -6,8 +6,23 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { profiles } from "../src/schema";
+import { events, notifications, profiles } from "../src/schema";
 import { A11Y_CSS } from "../src/ui/a11y-css";
+import { newId } from "../src/lib/crypto";
+import { tr } from "../src/lib/i18n";
+import { bangkokDay, eventIdOfLink, urgentForToday } from "../src/domain/digest";
+import { bellLabel } from "../src/ui/notif-menu";
+
+/** A published event starting at `startsAt`; returns its id. */
+async function eventAt(startsAt: Date): Promise<string> {
+  const id = newId();
+  await db().insert(events).values({ id, title: `EV-${id.slice(0, 8)}`, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3_600_000), venueName: "Lumphini Park", district: "pathum_wan", capacity: 10, status: "published", createdBy: "test" });
+  return id;
+}
+
+async function unread(accountId: string, kind: string, link: string) {
+  await db().insert(notifications).values({ id: newId(), accountId, kind, titleTh: "อัปเดต", titleEn: "Update", link, createdAt: new Date(Date.now() - 60_000) });
+}
 
 /** The accessibility menu's markup: from its <details> to the end of its panel. */
 function a11yMenu(html: string): string {
@@ -62,5 +77,80 @@ describe("card 4: 48px primary actions from the shared class", () => {
     expect(A11Y_CSS).toContain(".pill span{min-height:var(--tap)}");
     // The rule comes after every contextual ".x .btn{min-height:44px}" squeeze in the file.
     expect(A11Y_CSS.lastIndexOf(".btn{min-height:44px")).toBeLessThan(A11Y_CSS.indexOf(".btn.primary:not(#_)"));
+  });
+});
+
+describe("card 5: no counts, a dot or the word Today", () => {
+  it("reads the event from a notification's link", () => {
+    expect(eventIdOfLink("/events/abc")).toBe("abc");
+    expect(eventIdOfLink("/events/abc/live")).toBe("abc");
+    expect(eventIdOfLink("/events/abc?notice=x")).toBe("abc");
+    expect(eventIdOfLink("/events/abc#invite")).toBe("abc");
+    expect(eventIdOfLink("/me/events")).toBeNull();
+    expect(eventIdOfLink(null)).toBeNull();
+  });
+
+  it("is urgent for today only for an urgent kind about an event on today's Bangkok date", () => {
+    // 23:30 in Bangkok on 26 October is 16:30 UTC; an event at 00:30 Bangkok the next day is tomorrow.
+    const now = new Date("2026-10-26T16:30:00Z");
+    expect(bangkokDay(now)).toBe("2026-10-26");
+    const tonight = new Date("2026-10-26T12:00:00Z");
+    const tomorrow = new Date("2026-10-26T17:30:00Z");
+    expect(urgentForToday({ kind: "event_notice", link: "/events/a" }, tonight, now)).toBe(true);
+    expect(urgentForToday({ kind: "event_changed", link: "/events/a" }, tonight, now)).toBe(true);
+    expect(urgentForToday({ kind: "waitlist_offer", link: "/events/a" }, tonight, now)).toBe(true);
+    expect(urgentForToday({ kind: "event_notice", link: "/events/a" }, tomorrow, now)).toBe(false);
+    // A host's plain update waits for the evening summary: not urgent.
+    expect(urgentForToday({ kind: "event_update", link: "/events/a" }, tonight, now)).toBe(false);
+    expect(urgentForToday({ kind: "rsvp", link: "/me/events" }, tonight, now)).toBe(false);
+  });
+
+  it("says the full count to screen readers, with Today first when the bell shows it", () => {
+    const th = tr("th");
+    const en = tr("en");
+    expect(bellLabel(th, 0)).toBe("การแจ้งเตือน");
+    expect(bellLabel(th, 3)).toBe("การแจ้งเตือน 3 รายการที่ยังไม่อ่าน");
+    expect(bellLabel(en, 3)).toBe("3 unread notifications");
+    expect(bellLabel(en, 1)).toBe("1 unread notification");
+    expect(bellLabel(th, 2, true)).toBe("วันนี้: การแจ้งเตือน 2 รายการที่ยังไม่อ่าน");
+    expect(bellLabel(en, 2, true)).toBe("Today: 2 unread notifications");
+  });
+});
+
+describe.skipIf(!HAS_DB)("card 5: the bell on a page", () => {
+  /** The bell's <summary>, from the page. */
+  const bell = (html: string) => html.slice(html.indexOf('<details class="notif"'), html.indexOf("</summary>", html.indexOf('<details class="notif"')));
+
+  it("shows a dot, never a number, for ordinary unread items", async () => {
+    const m = await createMember();
+    await unread(m.id, "rsvp", "/me/events");
+    await unread(m.id, "event_notice", `/events/${await eventAt(new Date(Date.now() + 3 * 86_400_000))}`);
+    const html = bell(await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text());
+    expect(html).toContain('aria-label="2 unread notifications"');
+    expect(html).toContain('<span class="unread-dot notif-dot" aria-hidden="true"></span>');
+    expect(html).not.toContain("notif-today");
+    expect(html.replace(/<[^>]*>/g, "")).not.toMatch(/\d/);
+  });
+
+  it("says Today, in words, for an urgent item about an event happening today", async () => {
+    const m = await createMember();
+    const today = await eventAt(new Date());
+    await unread(m.id, "event_changed", `/events/${today}`);
+    await unread(m.id, "thanks", "/thanks");
+    const th = bell(await (await req("/settings", { cookie: `${m.cookie}; lang=th` })).text());
+    expect(th).toContain('aria-label="วันนี้: การแจ้งเตือน 2 รายการที่ยังไม่อ่าน"');
+    expect(th).toContain('<span class="notif-today" aria-hidden="true">วันนี้</span>');
+    expect(th).not.toContain("notif-dot");
+    const en = bell(await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text());
+    expect(en).toContain('<span class="notif-today" aria-hidden="true">Today</span>');
+    expect(en.replace(/<[^>]*>/g, "")).not.toMatch(/\d/);
+  });
+
+  it("keeps the dot when today's item is one the evening summary holds back", async () => {
+    const m = await createMember();
+    await unread(m.id, "event_update", `/events/${await eventAt(new Date())}`);
+    const html = bell(await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text());
+    expect(html).toContain("notif-dot");
+    expect(html).not.toContain("notif-today");
   });
 });
