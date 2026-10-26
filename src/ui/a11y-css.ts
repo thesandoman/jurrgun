@@ -1301,4 +1301,22 @@ main .pc-name>a{display:inline-block;min-width:44px}
 @container ev-picks (max-width:17rem){.disc-picks>.card.ev-card,.disc-picks>.card.ev-card.feat{-webkit-mask:none;mask:none}}
 /* The district alert under the list view's filtered empty line, centred like it (owner card 7 follow-up). */
 .empty-alert{display:grid;justify-items:center;margin:-12px 0 24px;text-align:center}
+/* Event page, phones (owner card 2): one RSVP bar above the tab bar, clear of the raised centre button.
+   The strip under the title keeps its RSVP on tablets only. The bar steps aside while a text field has
+   focus (here even without JS) and the page keeps room for it, so it never covers a focused control (2.4.11). */
+@media (max-width:760px){
+  .ev-strip.ev-tab{display:none}
+  .sticky-cta.rsvp-bar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(112px + env(safe-area-inset-bottom,0px));gap:12px;padding:8px 8px 8px 16px;background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;transition:transform .2s ease,opacity .2s ease,visibility .2s}
+  .rsvp-bar .sticky-cta-note{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.25em;flex:1 1 auto;min-width:0;margin:0;line-height:1.35;color:var(--ink-2);font-weight:600}
+  .rsvp-bar .sticky-cta-note b{color:var(--ink);font-weight:800}
+  .rsvp-bar.is-ok .sticky-cta-note b{color:var(--brand)}
+  .rsvp-bar .sticky-cta-note small{flex-basis:100%;font-size:.85rem;font-weight:400}
+  .rsvp-bar .btn{flex:none;margin:0}
+  body:has(main :is(input:not([type=checkbox],[type=radio],[type=range],[type=file],[type=hidden],[type=submit],[type=button]),textarea):focus) .rsvp-bar{transform:translateY(16px);opacity:0;visibility:hidden;pointer-events:none}
+  html:has(#sticky-rsvp){scroll-padding-bottom:calc(200px + env(safe-area-inset-bottom,0px))}
+  body:has(#sticky-rsvp) main.wrap{padding-bottom:96px}
+}
+@media (min-width:761px){#sticky-rsvp{display:none}body:has(#sticky-rsvp) main.wrap{padding-bottom:36px}}
+@media (min-width:1024px){body:has(#sticky-rsvp) main.wrap{padding-bottom:56px}}
+@media (prefers-reduced-motion:reduce){.sticky-cta,.sticky-cta.rsvp-bar{transition:none}}
 `);

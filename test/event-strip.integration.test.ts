@@ -29,7 +29,7 @@ describe.skipIf(!HAS_DB)("event page: the status strip", () => {
     const ev = await mkEvent();
     const html = await (await req(`/events/${ev}?lang=en`, { cookie: m.cookie })).text();
     const s = strip(html);
-    expect(s).toContain('class="ev-strip is-open ev-phone"');
+    expect(s).toContain('class="ev-strip is-open ev-phone ev-tab"');
     expect(s).toContain("10 spots left");
     expect(s).toContain('<button type="submit" form="rsvp" class="btn primary">RSVP</button>');
     expect(html).toContain('id="rsvp"');
@@ -54,7 +54,7 @@ describe.skipIf(!HAS_DB)("event page: the status strip", () => {
     const ev = await mkEvent({ capacity: 1 });
     await mkReg(ev, other.id);
     const s = strip(await (await req(`/events/${ev}?lang=en`, { cookie: m.cookie })).text());
-    expect(s).toContain('class="ev-strip is-full ev-phone"');
+    expect(s).toContain('class="ev-strip is-full ev-phone ev-tab"');
     expect(s).toContain(">Full<");
     expect(s).toContain("Join the waitlist");
   });
@@ -111,6 +111,6 @@ describe.skipIf(!HAS_DB)("event page: the status strip", () => {
     const html = await (await req(`/events/${ev}?lang=en`, { cookie: m.cookie })).text();
     expect(html.indexOf('class="ev-strip')).toBeLessThan(html.indexOf("<h2>My registration</h2>"));
     expect(html).toContain('id="sticky-rsvp"');
-    expect(html).toContain('document.querySelectorAll(".ev-strip")');
+    expect(html).toContain('document.querySelectorAll(".ev-reg,.ev-strip")');
   });
 });

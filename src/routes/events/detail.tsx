@@ -582,19 +582,12 @@ export async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) 
       </div>
       </div>
       {again ? <SeeAgainCard v={v} data={again} here /> : null}
-      {event.status === "published" && !started && (!reg || reg.status === "cancelled" || reg.status === "late_cancelled") ? (
-        <StickyRsvp t={t} left={left} e={event} />
-      ) : null}
+      {hosting ? null : <RsvpBar {...stripProps} />}
     </>,
   );
 }
 
-/**
- * The status strip under the title (owner card, 2026-10-17): where I stand and
- * the ONE next action. Its buttons drive the forms in My registration
- * (form="rsvp", form="offer"), so it posts nothing of its own.
- */
-export function StatusStrip(props: {
+type StripProps = {
   event: Event;
   reg: Registration | null;
   v: View;
@@ -603,26 +596,24 @@ export function StatusStrip(props: {
   started: boolean;
   ended: boolean;
   standing: StrikeStanding;
-  class?: string;
-}) {
+};
+
+/**
+ * Where I stand on an event and the ONE next action, worked out once for the
+ * status strip and the phone RSVP bar. "book" marks the RSVP or waitlist action.
+ * Its buttons drive the forms in My registration (form="rsvp", form="offer").
+ */
+function stripParts(props: StripProps): { tone: string; text: string; sub: string | null; action: Child | null; book: boolean } | null {
   const { event, reg, left, started, ended } = props;
   const { t, lang } = props.v;
   if (event.status !== "published" || ended) return null;
   const status = reg?.status;
-  const strip = (tone: string, text: string, sub: string | null, action: Child | null) => (
-    <div class={["ev-strip", `is-${tone}`, props.class].filter(Boolean).join(" ")}>
-      <p class="ev-strip-text">
-        <b>{text}</b>
-        {sub ? <small>{sub}</small> : null}
-      </p>
-      {action}
-    </div>
-  );
+  const part = (tone: string, text: string, sub: string | null, action: Child | null, book = false) => ({ tone, text, sub, action, book });
   if (status === "confirmed") {
     if (started && reg!.checkedInAt) {
-      return strip("ok", t("✓ เช็กอินแล้ว", "✓ You're checked in"), null, <LinkButton href={`/events/${event.id}/live`}>{t("หน้าในงาน", "Live page")}</LinkButton>);
+      return part("ok", t("✓ เช็กอินแล้ว", "✓ You're checked in"), null, <LinkButton href={`/events/${event.id}/live`}>{t("หน้าในงาน", "Live page")}</LinkButton>);
     }
-    return strip(
+    return part(
       "ok",
       t("✓ คุณได้ที่แล้ว", "✓ You're going"),
       started ? t("กิจกรรมเริ่มแล้ว", "Happening now") : null,
@@ -630,7 +621,7 @@ export function StatusStrip(props: {
     );
   }
   if (status === "offered" && !started) {
-    return strip(
+    return part(
       "accent",
       t("มีที่ว่างรอคุณ", "A spot opened for you"),
       reg!.offeredUntil ? t(`ยืนยันภายใน ${fmtDate(reg!.offeredUntil, lang)}`, `Confirm by ${fmtDate(reg!.offeredUntil, lang)}`) : null,
@@ -640,10 +631,10 @@ export function StatusStrip(props: {
     );
   }
   if (status === "requested" && !started) {
-    return strip("warn", t("ขอที่นั่งแล้ว", "Requested"), t("รอผู้จัดตอบ", "Waiting for the organiser"), null);
+    return part("warn", t("ขอที่นั่งแล้ว", "Requested"), t("รอผู้จัดตอบ", "Waiting for the organiser"), null);
   }
   if (status === "waitlisted" && !started) {
-    return strip(
+    return part(
       "warn",
       t("อยู่ในคิวสำรอง", "On the waitlist"),
       props.waitPos ? t(`ราวคิวที่ ${props.waitPos} มีที่ว่างเราจะแจ้ง`, `About #${props.waitPos} in line. We'll tell you if a spot opens.`) : null,
@@ -652,12 +643,12 @@ export function StatusStrip(props: {
   }
   if (started) return null;
   if (props.standing.blockedUntil) {
-    return strip("muted", t("ยังลงทะเบียนไม่ได้", "You can't RSVP yet"), t(`ได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `Again after ${fmtDate(props.standing.blockedUntil, lang)}`), null);
+    return part("muted", t("ยังลงทะเบียนไม่ได้", "You can't RSVP yet"), t(`ได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `Again after ${fmtDate(props.standing.blockedUntil, lang)}`), null);
   }
   // With choices to make first (+1, buddy, a free seat) the button takes you to them; otherwise it RSVPs at once.
   const choices = event.plusOneAllowed || event.buddyEnabled || (event.freeSeats > 0 && event.costThb > 0) || !!event.groupJoinCode || needsDisclaimer(event);
   const label = left > 0 ? bookLabel(event, t) : t("ต่อคิวสำรอง", "Join the waitlist");
-  return strip(
+  return part(
     left > 0 ? "open" : "full",
     left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full"),
     null,
@@ -670,6 +661,28 @@ export function StatusStrip(props: {
         {label}
       </button>
     ),
+    true,
+  );
+}
+
+/**
+ * The status strip under the title (owner card, 2026-10-17): where I stand and
+ * the ONE next action. On phones (owner card 2, 2026-10-26) the RSVP itself
+ * lives in the bottom bar instead, so the strip's RSVP shows on tablets only
+ * (ev-tab) and phones never see two RSVP buttons.
+ */
+export function StatusStrip(props: StripProps & { class?: string }) {
+  const p = stripParts(props);
+  if (!p) return null;
+  const phoneBook = p.book && props.class === "ev-phone";
+  return (
+    <div class={["ev-strip", `is-${p.tone}`, props.class, phoneBook ? "ev-tab" : null].filter(Boolean).join(" ")}>
+      <p class="ev-strip-text">
+        <b>{p.text}</b>
+        {p.sub ? <small>{p.sub}</small> : null}
+      </p>
+      {p.action}
+    </div>
   );
 }
 
@@ -681,27 +694,51 @@ function bookLabel(e: Event, t: T): string {
 }
 
 /**
- * The main action, always in reach: a bar above the tab bar that jumps to the
- * RSVP form. It hides while the status strip or the form is on screen.
+ * Phones (owner card 2, 2026-10-26): one bar above the tab bar with the price,
+ * the spots left and the next action, from the same logic as the status strip.
+ * It shows without JS; the script only hides it while the keyboard is open,
+ * a text field has focus, or My registration or the status strip is on screen,
+ * so two RSVP buttons are never visible together.
  */
-function StickyRsvp(props: { t: T; left: number; e: Event }) {
-  const { t, left } = props;
+function RsvpBar(props: StripProps) {
+  const { event } = props;
+  const { t } = props.v;
+  const p = stripParts(props);
+  if (!p) return null;
+  // Going together: the ticket is bought at the source, so "Free" would mislead; only a table cost shows.
+  const price = isGoTogether(event) && event.costThb === 0 ? null : costText(event, t);
   return (
-    <div class="sticky-cta" id="sticky-rsvp">
-      <span class="sticky-cta-note">
-        {left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว ต่อคิวสำรองได้", "Full, join the waitlist")}
-      </span>
-      <a href="#rsvp" class="btn primary">
-        {left > 0 ? bookLabel(props.e, t) : t("ต่อคิวสำรอง", "Join the waitlist")}
-      </a>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function(){var b=document.getElementById("sticky-rsvp"),f=document.getElementById("rsvp");if(!b||!f)return;if("IntersectionObserver" in window){var seen=new Map(),io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});var on=false;seen.forEach(function(x){if(x)on=true});b.classList.toggle("is-off",on)});io.observe(f);document.querySelectorAll(".ev-strip").forEach(function(s){io.observe(s)})}b.querySelector("a").addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("input:not([type=hidden]),button");if(c)c.focus({preventScroll:true})},350)})})()`,
-        }}
-      />
+    <div class={`sticky-cta rsvp-bar is-${p.tone}`} id="sticky-rsvp">
+      <p class="sticky-cta-note">
+        {p.book && price ? (
+          <>
+            <b>{price}</b>
+            <span aria-hidden="true"> · </span>
+            <span>{p.text}</span>
+          </>
+        ) : (
+          <>
+            <b>{p.text}</b>
+            {p.sub ? <small>{p.sub}</small> : null}
+          </>
+        )}
+      </p>
+      {p.action}
+      <script dangerouslySetInnerHTML={{ __html: RSVP_BAR_JS }} />
     </div>
   );
 }
+
+/** Hides the RSVP bar while typing (keyboard up or a text field focused) or while My registration or the strip is in view. */
+const RSVP_BAR_JS = `(function(){var b=document.getElementById("sticky-rsvp");if(!b)return;
+var seen=new Map(),typing=false,TXT='input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]),textarea,[contenteditable="true"]';
+var vv=window.visualViewport;function kb(){return !!vv&&vv.height<window.innerHeight*0.75}
+function sync(){var on=typing||kb();seen.forEach(function(x){if(x)on=true});b.classList.toggle("is-off",on);if(on)b.setAttribute("inert","");else b.removeAttribute("inert")}
+if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});sync()});document.querySelectorAll(".ev-reg,.ev-strip").forEach(function(s){io.observe(s)})}
+document.addEventListener("focusin",function(e){typing=!!(e.target&&e.target.matches&&e.target.matches(TXT));sync()});
+document.addEventListener("focusout",function(){typing=false;setTimeout(sync,50)});
+if(vv)vv.addEventListener("resize",sync);
+var a=b.querySelector('a[href="#rsvp"]'),f=document.getElementById("rsvp");if(a&&f)a.addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("input:not([type=hidden]),button");if(c)c.focus({preventScroll:true})},350)})})()`;
 
 /** A confirmed attendee of a +1 event, without a +1 yet, before the start. */
 export function canInvite(event: Event, reg: Registration | null, now = new Date()): boolean {
