@@ -71,13 +71,19 @@ describe("ensureClock, the watchdog", () => {
     expect(s.tasks).toHaveLength(1);
   });
 
-  it("never restarts a clock an admin stopped, or one never started", async () => {
+  it("never restarts a clock an admin stopped", async () => {
     const s = fakeState();
     await startClock(s.env, new Date(now - 5 * HOUR));
     await stopClock(s.env);
     expect((await ensureClock(s.env, now)).state).toBe("off");
     expect(s.tasks).toEqual([]);
-    expect((await ensureClock(fakeState().env, now)).state).toBe("off");
+  });
+
+  it("starts a clock nobody ever started (the state prod was in): on is the default", async () => {
+    const s = fakeState();
+    expect(await ensureClock(s.env, now)).toMatchObject({ state: "rearmed", next: now + 60_000 });
+    expect(s.tasks).toEqual([{ name: CLOCK_TASK, runAt: now + 60_000 }]);
+    expect(s.store.get("on")).toBe(true);
   });
 
   it("is quiet where there are no stateful objects (local, tests)", async () => {

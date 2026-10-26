@@ -31,15 +31,16 @@
  * An admin starts and stops the chain from /admin. Locally there are no
  * stateful objects; tests call runClock directly.
  *
- * Self-healing (2026-10-26: the chain died at 04:00 UTC and nobody noticed).
- * A task webhook that never arrives is not retried, so one lost tick used to
- * end the chain for good. ensureClock is the watchdog: when the clock is on
+ * Self-healing (2026-10-26: prod had no running clock and nobody noticed; it
+ * had never been started). A task webhook that never arrives is not retried,
+ * so one lost tick would also end the chain for good. ensureClock is the watchdog: when the clock is on
  * but its next tick is more than 10 minutes overdue, it re-arms it for one
  * minute out and logs an error (visible in SV Cloud's error list). It runs
  * from /api/health, from /admin, and, at most once per isolate every 10
  * minutes, after any other request (watchClock, off the response path).
- * "on" records the admin's start/stop, so the watchdog never restarts a clock
- * someone stopped. "lastTick" is the last hour that actually ran.
+ * The clock is on by default: the watchdog also starts one nobody started.
+ * "on" records an admin's Stop, so it never restarts a clock someone stopped.
+ * "lastTick" is the last hour that actually ran.
  */
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
@@ -154,8 +155,10 @@ export async function ensureClock(env: Bindings, now = Date.now()): Promise<Cloc
     const [on, next, last] = await Promise.all([obj.get("on"), obj.get("next"), obj.get("lastTick")]);
     const nextAt = typeof next === "number" ? next : null;
     const lastTick = typeof last === "number" ? last : null;
-    // Before "on" existed, a booked "next" meant the clock had been started.
-    const running = on === true || (on !== false && nextAt !== null);
+    // The clock is part of the product (reminders, and retention as the privacy notice promises), so it is on
+    // unless an admin pressed Stop (on === false). A never-started clock is started here: prod ran without one
+    // until 2026-10-26 because nobody had pressed Start.
+    const running = on !== false;
     if (!running) return { state: "off", next: nextAt, lastTick };
     if (nextAt !== null && nextAt > now - GRACE_MS) return { state: "on_time", next: nextAt, lastTick };
     // The tick never arrived (webhooks are not retried): drain any undelivered ones and book a run a minute from now.
@@ -165,7 +168,7 @@ export async function ensureClock(env: Bindings, now = Date.now()): Promise<Cloc
     await obj.scheduleTask(CLOCK_TASK, at, { secret: env.TASK_WEBHOOK_SECRET, data: {} });
     await obj.put("next", at);
     await obj.put("on", true);
-    createLogger(env).error("clock was overdue and has been re-armed", { missed: nextAt, lastTick, rearmedFor: at });
+    createLogger(env).error(nextAt === null && lastTick === null ? "clock was not running and has been started" : "clock was overdue and has been re-armed", { missed: nextAt, lastTick, rearmedFor: at });
     return { state: "rearmed", next: at, lastTick };
   } catch {
     return { state: "unavailable", next: null, lastTick: null };

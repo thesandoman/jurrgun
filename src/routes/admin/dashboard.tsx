@@ -77,7 +77,10 @@ function ClockCard(props: { health: ClockHealth | null; push: boolean; t: (th: s
         <p>
           {h?.state === "rearmed" ? (
             <>
-              <Tag tone="warn">{t("เพิ่งเริ่มใหม่", "Restarted")}</Tag> {t("นาฬิกาพลาดรอบและหยุดไป ระบบเริ่มให้ใหม่แล้ว รอบถัดไป ", "It had missed a run and stopped. It has been restarted; next run ")}
+              <Tag tone="warn">{h.lastTick ? t("เพิ่งเริ่มใหม่", "Restarted") : t("เพิ่งเริ่ม", "Started")}</Tag>{" "}
+              {h.lastTick
+                ? t("นาฬิกาพลาดรอบและหยุดไป ระบบเริ่มให้ใหม่แล้ว รอบถัดไป ", "It had missed a run and stopped. It has been restarted; next run ")
+                : t("นาฬิกายังไม่ได้ทำงาน ระบบเริ่มให้แล้ว รอบแรก ", "It wasn't running. It has been started; first run ")}
               <strong>{when(h.next!)}</strong>
             </>
           ) : h?.state === "on_time" && h.next ? (
