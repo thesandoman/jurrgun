@@ -343,6 +343,17 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     const target = rows.find((x) => x.accountId === people[5].id)!;
     expect((await req(`/admin/events/${id}/groups/move`, { cookie: host.cookie, form: { registrationId: target.id, groupNo: "abc" } })).status).toBe(400);
 
+    // By hand too, a blocked pair never shares a table, and can't be a +1 pair.
+    const r2 = rows.find((x) => x.accountId === p2.id)!;
+    const r3 = rows.find((x) => x.accountId === p3.id)!;
+    const toBlocked = await req(`/admin/events/${id}/groups/move`, { cookie: `${host.cookie}; lang=en`, form: { registrationId: r3.id, groupNo: String(r2.groupNo) } });
+    expect(toBlocked.status).toBe(409);
+    expect(await toBlocked.text()).not.toContain(p2.username);
+    expect((await req(`/admin/events/${id}/plusone`, { cookie: host.cookie, form: { a: r2.id, b: r3.id } })).status).toBe(409);
+    const pair = await db().select().from(registrations).where(inArray(registrations.id, [r2.id, r3.id])).limit(2);
+    expect(pair.find((x) => x.id === r3.id)!.groupNo).toBe(r3.groupNo);
+    expect(pair.every((x) => x.plusOneWith === null)).toBe(true);
+
     const pub = await req(`/admin/events/${id}/groups/publish`, { cookie: host.cookie, method: "POST" });
     expect(pub.headers.get("location")).toContain("notice=groups_published");
     for (const p of people) expect((await kinds(p.id, "group")).length).toBe(1);

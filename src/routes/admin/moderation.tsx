@@ -309,6 +309,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
   await batch(c.env, auditRows);
 
   const protectedTarget = target?.role === "bma_admin" && me.role !== "bma_admin";
+  const selfTarget = !!target && target.id === me.id;
   const evTitle = row.eventTitle ? (lang === "en" && row.eventTitleEn ? row.eventTitleEn : row.eventTitle) : null;
 
   return page(
@@ -474,6 +475,9 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
         {protectedTarget ? (
           <Notice kind="warn">{t("ผู้ดูแลจัดการบัญชีแอดมินไม่ได้", "Moderators can't act on an admin account.")}</Notice>
         ) : null}
+        {selfTarget ? (
+          <Notice kind="warn">{t("รายงานนี้เกี่ยวกับบัญชีของคุณ ให้ผู้ดูแลคนอื่นจัดการ", "This report is about your account. Another moderator has to handle it.")}</Notice>
+        ) : null}
         {/* Warnings, suspensions and bans ask once first (WCAG 3.3.4); notes, dismissals and lifts don't. */}
         <form
           method="post"
@@ -587,7 +591,9 @@ adminModeration.post("/:id/action", async (c) => {
   if (target && action === "lift" && target.status !== "suspended" && target.status !== "banned") {
     return bad(t("ยกเลิกได้เฉพาะบัญชีที่ถูกระงับหรือแบน", "Only a suspended or banned account can be lifted"));
   }
-  if (target && action !== "dismiss" && action !== "note") {
+  // Every action, dismiss and note included: a moderator must never close or
+  // shape a report about themselves, or about an admin.
+  if (target) {
     if (target.role === "bma_admin" && me.role !== "bma_admin") return c.text("Forbidden", 403);
     if (target.id === me.id) return bad(t("ดำเนินการกับบัญชีของตัวเองไม่ได้", "You can't act on your own account"));
   }

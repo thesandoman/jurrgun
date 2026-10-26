@@ -42,6 +42,7 @@ import {
   talkQuestions,
 } from "../../schema";
 import { loadAttendees, refreshWaitlist, runBuddyRound, seatState } from "../../services/events";
+import { blockedAmong } from "../../services/regular-tables";
 import { announceOpen, cancelWrites, eventAnnouncements, postAnnouncement, type AnnounceInput } from "../../services/announcements";
 import { ANNOUNCE_MAX, ANNOUNCE_PER_DAY, canAnnounce, cleanBody, isAnnouncementKind } from "../../domain/announcements";
 import { fromBangkok } from "../../domain/hosting";
@@ -2130,11 +2131,38 @@ adminEvents.post(
     const groupNo = rawGroup === "" ? null : intIn(rawGroup, 1, 99);
     if (rawGroup !== "" && groupNo === null) return refuse(c, e, t("เลขโต๊ะต้องอยู่ระหว่าง 1 ถึง 99", "Table number must be 1 to 99"));
     const [reg] = await db
-      .select({ id: registrations.id, groupNo: registrations.groupNo, status: registrations.status, checkedInAt: registrations.checkedInAt })
+      .select({
+        id: registrations.id,
+        accountId: registrations.accountId,
+        groupNo: registrations.groupNo,
+        status: registrations.status,
+        checkedInAt: registrations.checkedInAt,
+      })
       .from(registrations)
       .where(and(eq(registrations.id, regId), eq(registrations.eventId, e.id)))
       .limit(1);
     if (!reg || reg.status !== "confirmed" || !reg.checkedInAt) return refuse(c, e, t("ย้ายได้เฉพาะคนที่เช็กอินแล้ว", "Only checked-in attendees can be moved"), 404);
+    // Hard rule (PRD §8.1): blocked pairs are never seated together, by hand
+    // either. The refusal doesn't say who, or which way the block goes.
+    if (groupNo !== null && groupNo !== reg.groupNo) {
+      const mates = await db
+        .select({ accountId: registrations.accountId })
+        .from(registrations)
+        .where(
+          and(
+            eq(registrations.eventId, e.id),
+            eq(registrations.status, "confirmed"),
+            isNotNull(registrations.checkedInAt),
+            eq(registrations.groupNo, groupNo),
+            ne(registrations.id, reg.id),
+          ),
+        )
+        .limit(500);
+      const clash = await blockedAmong(db, reg.accountId, mates.map((m) => m.accountId));
+      if (clash.size) {
+        return refuse(c, e, t("ย้ายไปโต๊ะนี้ไม่ได้ เลือกโต๊ะอื่น", "This person can't be seated at that table. Choose another one"), 409);
+      }
+    }
     await batch(c.env, [
       db.update(registrations).set({ groupNo }).where(eq(registrations.id, reg.id)),
       audit(db, me(c).id, "event.group_move", { type: "registration", id: reg.id }, { eventId: e.id, from: reg.groupNo, to: groupNo }),
@@ -2352,6 +2380,10 @@ adminEvents.post(
       return refuse(c, e, t("ไม่พบผู้ลงทะเบียน", "Registration not found"), 404);
     }
     const [x, y] = regs;
+    // A +1 pair is always seated together, so a blocked pair can't be one.
+    if ((await blockedAmong(db, x.accountId, [y.accountId])).size) {
+      return refuse(c, e, t("จับคู่ 2 คนนี้ไม่ได้", "These two can't be linked"), 409);
+    }
     await batch(c.env, [
       db.update(registrations).set({ plusOneWith: y.accountId }).where(eq(registrations.id, x.id)),
       db.update(registrations).set({ plusOneWith: x.accountId }).where(eq(registrations.id, y.id)),

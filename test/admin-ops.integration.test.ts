@@ -125,6 +125,25 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     expect(acct.status).toBe("active");
   });
 
+  it("refuses dismissing or noting a report about yourself or a BMA admin", async () => {
+    const mod = await createMember({ role: "moderator" });
+    const admin = await createMember({ role: "bma_admin" });
+    const aboutAdmin = await report((await createMember()).id, admin.id);
+    const aboutMe = await report((await createMember()).id, mod.id);
+    for (const action of ["dismiss", "note"]) {
+      expect((await req(`/admin/moderation/${aboutAdmin}/action`, { cookie: mod.cookie, form: { action, note: "x" } })).status, action).toBe(403);
+      expect((await req(`/admin/moderation/${aboutMe}/action`, { cookie: mod.cookie, form: { action, note: "x" } })).status, action).toBe(400);
+    }
+    for (const id of [aboutAdmin, aboutMe]) {
+      const [rep] = await db().select().from(reports).where(eq(reports.id, id));
+      expect(rep.status).toBe("open");
+      expect(await db().select().from(moderationActions).where(eq(moderationActions.reportId, id))).toHaveLength(0);
+    }
+    // An admin can still close a report about another admin.
+    const other = await createMember({ role: "bma_admin" });
+    expect((await req(`/admin/moderation/${aboutAdmin}/action`, { cookie: other.cookie, form: { action: "dismiss" } })).status).toBe(302);
+  });
+
   it("dismisses a report and 404s an unknown one", async () => {
     const mod = await createMember({ role: "moderator" });
     const id = await report((await createMember()).id, (await createMember()).id);
