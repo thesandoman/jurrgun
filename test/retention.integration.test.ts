@@ -256,4 +256,18 @@ describe.skipIf(!HAS_DB)("retention on the staff dashboard", () => {
     const host = await createMember({ role: "host" });
     expect(await (await req("/admin", { cookie: host.cookie })).text()).not.toContain("/admin/retention");
   });
+
+  it("never runs when an admin opens the dashboard, even when due: the hourly clock is the only runner (owner card D2)", async () => {
+    // Make a run due: every earlier run in this throwaway database is now two days old.
+    await db()
+      .update(auditLog)
+      .set({ createdAt: new Date(Date.now() - 2 * 24 * 3_600_000) })
+      .where(eq(auditLog.action, RETENTION_ACTION));
+    const admin = await createMember({ role: "bma_admin" });
+    const page = await req("/admin", { cookie: admin.cookie });
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain('action="/admin/retention"');
+    const ran = await db().select().from(auditLog).where(and(eq(auditLog.actor, admin.id), eq(auditLog.action, RETENTION_ACTION))).limit(1);
+    expect(ran).toHaveLength(0);
+  });
 });

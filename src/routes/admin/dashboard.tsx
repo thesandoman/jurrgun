@@ -14,8 +14,9 @@
  * research threshold applies on the Insights and City Pulse pages.
  *
  * bma_admin also sees data retention (PRD §12.4): a manual "Run retention
- * cleanup" button (POST /admin/retention), and a lazy run at most once per
- * 24 hours when they open this page (no cron on this platform).
+ * cleanup" button (POST /admin/retention) and the last run. The hourly clock
+ * (services/clock.ts) runs retention once a day; opening this page never does
+ * (owner card D2, 2026-10-26: it made the page take seconds once a day).
  */
 import { Hono } from "hono";
 import { and, asc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
@@ -24,7 +25,7 @@ import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
 import { requireRole } from "../../lib/session";
 import { K_THRESHOLD, safeCount } from "../../domain/rules";
-import { retentionIfDue, runRetention, type RetentionRun } from "../../services/retention";
+import { lastRetentionRun, runRetention, type RetentionRun } from "../../services/retention";
 import { clockNext, startClock, stopClock } from "../../services/clock";
 import { vapidKeys } from "../../services/push";
 import { moderatorVisible } from "../../services/report-intake";
@@ -102,8 +103,8 @@ function RetentionCard(props: { run: RetentionRun | null; t: (th: string, en: st
       <Card>
         <p class="muted">
           {t(
-            "ลบข้อมูลตามระยะเวลาเก็บรักษา ได้แก่ สัญญาณทางสังคมที่เกิน 7 วัน ตัวเลือกที่ไม่ตรงกันเมื่อครบ 72 ชม. เซสชันที่หมดอายุ บันทึกการเข้าสู่ระบบที่เกิน 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้เองวันละไม่เกิน 1 ครั้งเมื่อผู้ดูแลเปิดหน้านี้",
-            "Deletes data on the retention schedule: social signals after 7 days, pending choices when the 72h window closes, expired sessions, sign-in attempts after 24h and accounts deactivated over 30 days ago. It also runs by itself at most once a day when an admin opens this page.",
+            "ลบข้อมูลตามระยะเวลาเก็บรักษา ได้แก่ สัญญาณทางสังคมที่เกิน 7 วัน ตัวเลือกที่ไม่ตรงกันเมื่อครบ 72 ชม. เซสชันที่หมดอายุ บันทึกการเข้าสู่ระบบที่เกิน 24 ชม. และบัญชีที่ปิดเกิน 30 วัน ระบบรันให้เองวันละครั้งผ่านนาฬิการายชั่วโมง",
+            "Deletes data on the retention schedule: social signals after 7 days, pending choices when the 72h window closes, expired sessions, sign-in attempts after 24h and accounts deactivated over 30 days ago. It also runs by itself once a day, on the hourly clock.",
           )}
         </p>
         {run ? (
@@ -211,13 +212,10 @@ adminDashboard.get("/", async (c) => {
     hostWhere = acct.partnerOrgId ? or(eq(events.partnerOrgId, acct.partnerOrgId), eq(events.hostAccountId, acct.id)) : eq(events.hostAccountId, acct.id);
   }
 
-  // Lazy timer: at most one retention run per 24 hours, triggered by an admin visit.
-  const retention = isAdmin ? await retentionIfDue(c.env, acct.id, now) : null;
-  const clock = isAdmin ? await clockNext(c.env) : null;
-
   const showTrend = isAdmin || role === "insight_viewer";
 
-  const [adminStats, reportStats, mine, trend] = await Promise.all([
+  // The last retention run and the clock's next tick are read alongside the stats, not before them.
+  const [adminStats, reportStats, mine, trend, retention, clock] = await Promise.all([
     isAdmin
       ? Promise.all([
           db
@@ -268,6 +266,8 @@ adminDashboard.get("/", async (c) => {
           .limit(10)
       : Promise.resolve([]),
     showTrend ? weeklyReconnectedTrend(db, now) : Promise.resolve(null),
+    isAdmin ? lastRetentionRun(c.env) : Promise.resolve(null),
+    isAdmin ? clockNext(c.env) : Promise.resolve(null),
   ]);
 
   const upcoming = adminStats?.[0][0]?.n ?? 0;

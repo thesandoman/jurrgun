@@ -51,7 +51,8 @@ settingsRoutes.get("/settings", async (c) => {
   const p = user.profile!;
   const db = getDb(c.env);
   const now = new Date();
-  const [termsOk, src, vibe, [been], [upcoming], [circle], tables, [nextUp], notifYes] = await Promise.all([
+  // Every read here is independent, so all go in one wave (owner card D3: the dating mode used to wait for the rest).
+  const [termsOk, src, vibe, [been], [upcoming], [circle], tables, [nextUp], notifYes, [dating]] = await Promise.all([
     acceptedTerms(db, user.account.id),
     photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
@@ -78,8 +79,8 @@ settingsRoutes.get("/settings", async (c) => {
       .orderBy(asc(events.startsAt))
       .limit(1),
     hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT),
+    db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, user.account.id)).limit(1),
   ]);
-  const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, user.account.id)).limit(1);
   const dates = dating?.mode === "dating" || dating?.mode === "dating_only";
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
   const crews = Number(circle?.crews ?? 0);
