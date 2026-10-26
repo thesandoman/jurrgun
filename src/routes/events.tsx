@@ -110,7 +110,7 @@ import {
   PULSE_ICON,
 } from "../ui/kit";
 import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
-import { canView, ownsEvent } from "../domain/hosting";
+import { canView, isReviewer, ownsEvent, PAUSED_LINE } from "../domain/hosting";
 import { notifyHostRunningLate } from "../services/eta-notice";
 import { eventAnnouncements } from "../services/announcements";
 import { AnnouncementList } from "../ui/announcements";
@@ -1322,6 +1322,17 @@ async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) {
       {event.status === "draft" ? <Notice kind="info">{t("ฉบับร่าง สมาชิกยังไม่เห็นกิจกรรมนี้", "Draft: members can't see this yet")}</Notice> : null}
       {event.status === "pending" ? <Notice kind="info">{t("รอทีมงานตรวจ สมาชิกยังไม่เห็นกิจกรรมนี้", "Waiting for review: members can't see this yet")}</Notice> : null}
       {event.status === "rejected" ? <Notice kind="warn">{t("ทีมงานส่งกลับให้แก้ไข", "Sent back by the team for changes")}{event.reviewNote ? `: ${event.reviewNote}` : ""}</Notice> : null}
+      {event.status === "paused" ? (
+        // The moderator's note is for the host side only; people with a place see the calm line.
+        hosting || isReviewer(user.account.role) ? (
+          <Notice kind="warn">
+            {t("ทีมงานพักกิจกรรมนี้ไว้ ดึงออกจากหน้าค้นหาแล้ว คนที่มีที่นั่งยังเก็บที่ไว้", "Paused by the team and off Discover. People with a place keep it.")}
+            {event.reviewNote ? ` ${t("เหตุผล", "Why")}: ${event.reviewNote}` : ""}
+          </Notice>
+        ) : (
+          <Notice kind="warn">{t(PAUSED_LINE[0], PAUSED_LINE[1])}</Notice>
+        )
+      ) : null}
       {event.visibility === "private" && event.regularTableId ? (
         <Notice kind="info" icon="🔒">{t("แฮงเอาต์ของโต๊ะประจำ เห็นได้เฉพาะคนในโต๊ะและคนที่ได้ลิงก์จากเจ้าภาพ", "A Regular Table hangout: only people at the table, and people the host sent the link to, can see it.")}</Notice>
       ) : event.visibility === "private" ? (
@@ -1711,6 +1722,24 @@ function RegistrationBox(props: {
   const { t, lang } = v;
   const base = `/events/${event.id}`;
   const status = reg?.status;
+
+  // Paused by the team: the place is kept, but no pass or check-in until it's back on.
+  // Giving the place up is still the member's call, and never a strike.
+  if (event.status === "paused") {
+    const holding = status === "confirmed" || status === "offered" || status === "waitlisted" || status === "requested";
+    return holding && !started ? (
+      <>
+        <p>
+          <Tag tone="warn">{t("พักไว้ชั่วคราว", "Paused")}</Tag> {status === "confirmed" ? t("ที่นั่งของคุณยังอยู่", "Your place is kept.") : statusLabel(status!, t)}
+        </p>
+        <form method="post" action={`${base}/cancel`}>
+          <Button kind="ghost">{status === "requested" ? t("ถอนคำขอ", "Withdraw the request") : t("สละที่นั่ง", "Give up my place")}</Button>
+        </form>
+      </>
+    ) : (
+      <p class="muted">{t("ปิดรับลงทะเบียน", "Registration is closed.")}</p>
+    );
+  }
 
   if (status === "confirmed") {
     return (
@@ -2406,6 +2435,7 @@ eventRoutes.get("/me/events", requireMember, async (c) => {
                   {fmtParts(event.startsAt, lang).time} · {event.venueName}
                 </p>
                 {event.status === "cancelled" ? <Notice kind="warn">{t("กิจกรรมนี้ถูกยกเลิก", "This event was cancelled")}</Notice> : null}
+                {event.status === "paused" ? <Notice kind="warn">{t(PAUSED_LINE[0], PAUSED_LINE[1])}</Notice> : null}
                 <div class="row">
                   {reg.status === "confirmed" && event.status === "published" ? (
                     <LinkButton href={`/me/events/${event.id}/pass`}>{t("🎟️ บัตรเข้างาน", "🎟️ Pass")}</LinkButton>
@@ -2603,6 +2633,8 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
     .innerJoin(events, eq(events.id, registrations.eventId))
     .where(and(eq(registrations.eventId, id), eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed")))
     .limit(1);
+  // Paused by the team: no pass until it is back on; the event page says why.
+  if (row?.event.status === "paused") return c.redirect(`/events/${id}`);
   if (!row || row.event.status !== "published") return notFound(c);
   const { event, reg } = row;
   // Phone-down mode: once checked in and while the event runs, the app steps back.

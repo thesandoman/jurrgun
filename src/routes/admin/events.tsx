@@ -340,6 +340,7 @@ function StatusTag(props: { v: View; status: string }) {
   if (props.status === "published") return <Tag tone="ok">{t("เผยแพร่", "Published")}</Tag>;
   if (props.status === "cancelled") return <Tag tone="warn">{t("ยกเลิก", "Cancelled")}</Tag>;
   if (props.status === "pending") return <Tag tone="warn">{t("รอตรวจ", "Waiting for review")}</Tag>;
+  if (props.status === "paused") return <Tag tone="warn">{t("พักไว้", "Paused")}</Tag>;
   if (props.status === "rejected") return <Tag tone="warn">{t("ส่งกลับ", "Sent back")}</Tag>;
   return <Tag tone="muted">{t("ร่าง", "Draft")}</Tag>;
 }
@@ -705,7 +706,7 @@ function validate(
   let status = d.status;
   if (existing?.status === "cancelled") status = "cancelled";
   // A member's proposal keeps its review status unless staff pick draft or published.
-  else if (existing && (existing.status === "pending" || existing.status === "rejected") && status === existing.status) status = existing.status;
+  else if (existing && (existing.status === "pending" || existing.status === "rejected" || existing.status === "paused") && status === existing.status) status = existing.status;
   else need(status === "draft" || status === "published", "สถานะไม่ถูกต้อง", "Invalid status");
 
   need(!d.hostAccountId || ctx.hosts.some((h) => h.id === d.hostAccountId), "ผู้ดูแลกิจกรรมไม่ถูกต้อง", "Choose a valid host");
@@ -793,6 +794,8 @@ function EventForm(props: {
     { value: "published", th: "เผยแพร่", en: "Published" },
     ...(d.status === "pending" ? [{ value: "pending", th: "รอตรวจ (สมาชิกเสนอ)", en: "Waiting for review (member proposal)" }] : []),
     ...(d.status === "rejected" ? [{ value: "rejected", th: "ส่งกลับให้แก้", en: "Sent back to the host" }] : []),
+    // Paused by the team: back on or cancelled from the review queue, so it isn't published from here.
+    ...(d.status === "paused" ? [{ value: "paused", th: "ทีมงานพักไว้ (ตัดสินที่หน้าตรวจกิจกรรม)", en: "Paused by the team (decide in Event review)" }] : []),
   ];
   const visOpts = [
     { value: "public", th: "สาธารณะ: แสดงในหน้าค้นหา", en: "Public: listed on Discover" },
@@ -1048,6 +1051,10 @@ adminEvents.post(
         </>
       ));
     if (!validated || coverErr) return bad([...errors, ...(coverErr ? [coverErr] : [])]);
+    // A paused event is put back on or cancelled from the review queue, where everyone with a place is told.
+    if (e.status === "paused" && validated.status !== "paused") {
+      return bad([v.t("ทีมงานพักกิจกรรมนี้ไว้ ให้ตัดสินที่หน้าตรวจกิจกรรม (กลับมาจัดต่อหรือยกเลิก)", "The team paused this event. Decide in Event review: back on, or cancel.")]);
+    }
     // Unpublishing would hide the event, its passes and its cancel button from
     // people already coming (and then strike them as no-shows). Cancel instead.
     if (e.status === "published" && validated.status === "draft") {

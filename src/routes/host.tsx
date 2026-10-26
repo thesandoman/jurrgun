@@ -262,6 +262,8 @@ function statusTag(t: View["t"], s: string) {
       return <Tag tone="ok">{t("เผยแพร่แล้ว", "Live")}</Tag>;
     case "cancelled":
       return <Tag tone="muted">{t("ยกเลิกแล้ว", "Cancelled")}</Tag>;
+    case "paused":
+      return <Tag tone="warn">{t("ทีมงานพักไว้", "Paused by the team")}</Tag>;
     default:
       return <Tag tone="muted">{t("ร่าง", "Draft")}</Tag>;
   }

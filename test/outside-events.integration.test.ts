@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, ENV, req } from "./helpers";
 import { newId, randomToken } from "../src/lib/crypto";
 import app from "../src/index";
-import { accounts, auditLog, calendarTokens, eventFeeds, eventInbox, events, partnerApplications, partnerKeys, registrations } from "../src/schema";
+import { accounts, auditLog, calendarTokens, eventFeeds, eventInbox, events, notifications, partnerApplications, partnerKeys, registrations } from "../src/schema";
 import { setOutsideFetch } from "../src/services/outside-fetch";
 import { readDueFeeds, readFeed } from "../src/services/outside-events";
 
@@ -245,9 +245,93 @@ describe.skipIf(!HAS_DB)("D47: partners apply, get verified, post with their own
 
     await req(`/admin/partner-review/event/${out.id}/pull`, { cookie: p.mod.cookie, method: "POST", form: { note: "Reports about this night" } });
     const [pulled] = await db().select().from(events).where(eq(events.id, out.id));
-    expect(pulled).toMatchObject({ status: "pending", reviewNote: "Reports about this night" });
+    expect(pulled).toMatchObject({ status: "paused", reviewNote: "Reports about this night" });
     const [a] = await db().select().from(auditLog).where(and(eq(auditLog.action, "event.pull"), eq(auditLog.targetId, out.id)));
     expect(a).toBeTruthy();
+  });
+
+  it("a pulled event is paused: people with a place keep it and are told, without the note, the pass or check-in", async () => {
+    const p = await verifiedPartner();
+    const admin = (await db().select().from(accounts).where(eq(accounts.id, p.admin.id)))[0];
+    const out = (await (await api(p.key, "POST", body(admin.username))).json()) as { id: string };
+    const [m, waiting, gone] = await Promise.all([createMember({ nickname: "PausedNick" }), createMember(), createMember()]);
+    await db()
+      .insert(registrations)
+      .values([
+        { id: newId(), eventId: out.id, accountId: m.id, status: "confirmed", passToken: randomToken(18) },
+        { id: newId(), eventId: out.id, accountId: waiting.id, status: "waitlisted", passToken: randomToken(18) },
+        { id: newId(), eventId: out.id, accountId: gone.id, status: "cancelled", passToken: randomToken(18) },
+      ]);
+    const note = `Checking reports ${randomToken(4)}`;
+    await req(`/admin/partner-review/event/${out.id}/pull`, { cookie: p.mod.cookie, method: "POST", form: { note } });
+    expect((await db().select().from(events).where(eq(events.id, out.id)))[0].status).toBe("paused");
+
+    // Booked and waitlisted members hear about it (no note); someone who already gave up their place doesn't.
+    const told = await db().select().from(notifications).where(and(eq(notifications.kind, "event_paused"), eq(notifications.link, `/events/${out.id}`)));
+    expect(told.map((n) => n.accountId).sort()).toEqual([m.id, waiting.id].sort());
+    expect(told[0].titleEn).toBe("Paused by the team. Your place is kept, and we'll let you know.");
+    expect(JSON.stringify(told)).not.toContain(note);
+
+    // The member's page: the calm line, their place, no note, no pass; the pass link goes back to the page.
+    const pageHtml = await (await req(`/events/${out.id}?lang=en`, { cookie: m.cookie })).text();
+    expect(pageHtml).toContain("Your place is kept");
+    expect(pageHtml).toContain("Give up my place");
+    expect(pageHtml).not.toContain(note);
+    expect(pageHtml).not.toContain(`/me/events/${out.id}/pass`);
+    expect((await req(`/me/events/${out.id}/pass`, { cookie: m.cookie })).headers.get("location")).toBe(`/events/${out.id}`);
+    // Nobody else can open it; the host side sees the note.
+    expect((await req(`/events/${out.id}`, { cookie: (await createMember()).cookie })).status).toBe(404);
+    expect(await (await req(`/events/${out.id}?lang=en`, { cookie: p.admin.cookie })).text()).toContain(note);
+
+    // Their private calendar keeps it, marked paused.
+    await req("/settings/calendar", { cookie: m.cookie, method: "POST" });
+    const [tok] = await db().select().from(calendarTokens).where(eq(calendarTokens.accountId, m.id));
+    const ics = await (await req(`/cal/${tok.token}.ics`)).text();
+    expect(ics).toContain(`UID:${out.id}@jurrgun`);
+    expect(ics).toContain("STATUS:TENTATIVE");
+
+    // In the review queue: no names, no counts. Back on tells the same people.
+    const queue = await (await req("/admin/review?lang=en", { cookie: p.mod.cookie })).text();
+    expect(queue).toContain("Paused by the team");
+    expect(queue).not.toContain("PausedNick");
+    await req(`/admin/review/${out.id}/approve`, { cookie: p.mod.cookie, method: "POST" });
+    expect((await db().select().from(events).where(eq(events.id, out.id)))[0]).toMatchObject({ status: "published", reviewNote: null });
+    const back = await db().select().from(notifications).where(and(eq(notifications.kind, "event_resumed"), eq(notifications.link, `/events/${out.id}`)));
+    expect(back.map((n) => n.accountId).sort()).toEqual([m.id, waiting.id].sort());
+
+    // Paused again, then sent back: a cancellation, every place given back and everyone told.
+    await req(`/admin/partner-review/event/${out.id}/pull`, { cookie: p.mod.cookie, method: "POST", form: { note } });
+    // Once it has started it can't go back on (nobody had a pass): only cancel.
+    const [{ startsAt }] = await db().select({ startsAt: events.startsAt }).from(events).where(eq(events.id, out.id));
+    await db().update(events).set({ startsAt: new Date(Date.now() - 60_000) }).where(eq(events.id, out.id));
+    const late = await req(`/admin/review/${out.id}/approve`, { cookie: p.mod.cookie, method: "POST" });
+    expect(late.headers.get("location")).toContain("notice=too_late");
+    expect((await db().select().from(events).where(eq(events.id, out.id)))[0].status).toBe("paused");
+    await db().update(events).set({ startsAt }).where(eq(events.id, out.id));
+    await req(`/admin/review/${out.id}/reject`, { cookie: p.mod.cookie, method: "POST", form: { note: "It can't go ahead" } });
+    expect((await db().select().from(events).where(eq(events.id, out.id)))[0].status).toBe("cancelled");
+    const regs = await db().select().from(registrations).where(eq(registrations.eventId, out.id));
+    expect(regs.every((r) => r.status === "cancelled")).toBe(true);
+    const cancelled = await db().select().from(notifications).where(and(eq(notifications.kind, "event_cancelled"), eq(notifications.link, `/events/${out.id}`)));
+    expect(cancelled.map((n) => n.accountId).sort()).toEqual([m.id, waiting.id].sort());
+  });
+
+  it("the review queue shows moderators a dating partner event and its checks, never the 💘 category; admins see the kind", async () => {
+    const p = await verifiedPartner("dating");
+    const admin = (await db().select().from(accounts).where(eq(accounts.id, p.admin.id)))[0];
+    await req(`/admin/partner-review/org/${p.orgId}/review`, { cookie: p.mod.cookie, method: "POST" });
+    const out = (await (await api(p.key, "POST", body(admin.username, { title: `Dating night ${randomToken(4)}` }))).json()) as { id: string; status: string };
+    expect(out.status).toBe("pending");
+    const modView = await (await req("/admin/review?lang=en", { cookie: p.mod.cookie })).text();
+    expect(modView).toContain("Dating partner event");
+    expect(modView).toContain("💘 rules");
+    expect(modView).not.toMatch(/Open to something more|เปิดใจมากกว่าเพื่อน/);
+    expect(modView).not.toContain("Dating or friend app");
+    const bma = await createMember({ role: "bma_admin" });
+    const adminView = await (await req("/admin/review?lang=en", { cookie: bma.cookie })).text();
+    expect(adminView).toContain("Dating or friend app");
+    expect(adminView).not.toMatch(/Open to something more|เปิดใจมากกว่าเพื่อน/);
+    await db().delete(events).where(eq(events.partnerOrgId, p.orgId));
   });
 
   it("members can't open the partner area or verify applications", async () => {

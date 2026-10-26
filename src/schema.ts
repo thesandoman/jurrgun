@@ -342,7 +342,9 @@ export const events = pgTable(
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
     /**
      * draft | pending (a member's proposal, waiting for review) | rejected
-     * (sent back with review_note) | published | cancelled
+     * (sent back with review_note) | published | cancelled | paused (pulled
+     * by the team while people have places; back in the review queue, and
+     * the review_note is for the host side only)
      */
     status: text("status").notNull().default("draft"),
     /** public (listed on Discover) | private (opens only with the private link) */

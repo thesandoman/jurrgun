@@ -84,9 +84,22 @@ export function canView(e: HostedEvent, v: Viewer, opts: { token?: string | null
     if (staff || opts.registered) return true;
     return !!e.privateToken && !!opts.token && sameSecret(opts.token, e.privateToken);
   }
-  if (e.status === "cancelled") return staff || !!opts.registered;
+  // Cancelled, or paused by the team (a pulled event, D47): only the host side, staff and people with a place.
+  if (e.status === "cancelled" || e.status === "paused") return staff || !!opts.registered;
   return staff;
 }
+
+/**
+ * What people with a place see while the team has paused an event (owner card,
+ * 2026-10-26). The moderator's note never goes with it: that is for the host side.
+ */
+export const PAUSED_LINE = [
+  "ทีมงานพักกิจกรรมนี้ไว้ชั่วคราว ที่นั่งของคุณยังอยู่ เราจะแจ้งให้ทราบ",
+  "Paused by the team. Your place is kept, and we'll let you know.",
+] as const;
+
+/** Registrations that hold a place (or ask for one) and hear about a pause. */
+export const PLACE_HOLDING = ["confirmed", "offered", "waitlisted", "requested"] as const;
 
 /** A member may change their proposal while it is a draft, waiting, or sent back. */
 export const memberCanEdit = (e: HostedEvent) => e.status === "draft" || e.status === "pending" || e.status === "rejected";

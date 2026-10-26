@@ -13,6 +13,8 @@ export type CalEvent = {
   url: string;
   costThb?: number;
   cancelled?: boolean;
+  /** Paused by the team: still in the member's own feed, marked tentative. */
+  paused?: boolean;
 };
 
 /** RFC 5545 TEXT: backslash, semicolon, comma and newlines escaped. */
@@ -64,7 +66,7 @@ export function toIcal(name: string, evs: CalEvent[], now = new Date()): string 
       `LOCATION:${icalText([e.venueName, e.venueAddress].filter(Boolean).join(", "))}`,
       `DESCRIPTION:${icalText(e.description)}`,
       `URL:${e.url}`,
-      `STATUS:${e.cancelled ? "CANCELLED" : "CONFIRMED"}`,
+      `STATUS:${e.cancelled ? "CANCELLED" : e.paused ? "TENTATIVE" : "CONFIRMED"}`,
       "END:VEVENT",
     );
   }

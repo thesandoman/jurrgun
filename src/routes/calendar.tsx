@@ -22,6 +22,7 @@ import { audit } from "../lib/records";
 import { requireMember } from "../lib/session";
 import { OPEN_TO_MORE_TAG } from "../domain/rules";
 import { toIcal, toJsonLd, type CalEvent } from "../domain/calendar-out";
+import { PAUSED_LINE } from "../domain/hosting";
 import { accounts, calendarTokens, events, profiles, registrations, type Event } from "../schema";
 import { Button, Card, LinkButton, Notice, page, view } from "../ui/kit";
 import { noOpenInvite } from "../services/collabs";
@@ -36,8 +37,8 @@ function calEvent(e: Event, origin: string, lang: string, path: string, plain = 
   const desc = lang === "en" && e.descriptionEn ? e.descriptionEn : e.description;
   return {
     id: e.id,
-    title: plain ? (lang === "en" ? "Jurrgun table" : "โต๊ะ Jurrgun") : titleOf(e, lang),
-    description: plain ? "" : `${desc.slice(0, 500)}${e.sourceName ? `\n${lang === "en" ? "Via" : "ผ่าน"} ${e.sourceName}${e.sourceUrl ? `: ${e.sourceUrl}` : ""}` : ""}`,
+    title: `${plain ? (lang === "en" ? "Jurrgun table" : "โต๊ะ Jurrgun") : titleOf(e, lang)}${e.status === "paused" ? (lang === "en" ? " (paused)" : " (พักไว้ชั่วคราว)") : ""}`,
+    description: (e.status === "paused" ? `${PAUSED_LINE[lang === "en" ? 1 : 0]}\n` : "") + (plain ? "" : `${desc.slice(0, 500)}${e.sourceName ? `\n${lang === "en" ? "Via" : "ผ่าน"} ${e.sourceName}${e.sourceUrl ? `: ${e.sourceUrl}` : ""}` : ""}`),
     startsAt: e.startsAt,
     endsAt: e.endsAt,
     venueName: e.venueName,
@@ -45,6 +46,7 @@ function calEvent(e: Event, origin: string, lang: string, path: string, plain = 
     url: `${origin}${path}`,
     costThb: e.costThb,
     cancelled: e.status === "cancelled",
+    paused: e.status === "paused",
   };
 }
 
@@ -69,7 +71,7 @@ calendarRoutes.get("/cal/:file", async (c) => {
     .select({ event: events })
     .from(registrations)
     .innerJoin(events, eq(events.id, registrations.eventId))
-    .where(and(eq(registrations.accountId, owner.accountId), eq(registrations.status, "confirmed"), gte(events.startsAt, new Date(Date.now() - 30 * DAY)), inArray(events.status, ["published", "cancelled"])))
+    .where(and(eq(registrations.accountId, owner.accountId), eq(registrations.status, "confirmed"), gte(events.startsAt, new Date(Date.now() - 30 * DAY)), inArray(events.status, ["published", "paused", "cancelled"])))
     .orderBy(asc(events.startsAt))
     .limit(200);
   const origin = new URL(c.req.url).origin;

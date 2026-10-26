@@ -16,7 +16,8 @@
  *   POST /admin/partner-review/:id/decline        with a note the applicant sees
  *   POST /admin/partner-review/org/:id/review     back to review (after reports): new events wait
  *   POST /admin/partner-review/org/:id/verify     verified again
- *   POST /admin/partner-review/event/:id/pull     off Discover, into the review queue with a note
+ *   POST /admin/partner-review/event/:id/pull     paused: off Discover, into the review queue with a note
+ *                                                 for the host; people with a place keep it and are told
  */
 import { Hono, type Context } from "hono";
 import { and, asc, eq, gte, inArray, isNotNull, or } from "drizzle-orm";
@@ -24,9 +25,10 @@ import { batch, getDb } from "../../db";
 import { newId } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
-import { audit, notify } from "../../lib/records";
+import { audit, notify, notifyMany } from "../../lib/records";
+import { PAUSED_LINE, PLACE_HOLDING } from "../../domain/hosting";
 import { requireRole } from "../../lib/session";
-import { accounts, eventFeeds, events, partnerApplications, partnerOrgs } from "../../schema";
+import { accounts, eventFeeds, events, partnerApplications, partnerOrgs, registrations } from "../../schema";
 import { checkOutsideUrl } from "../../services/outside-fetch";
 import { readFeed } from "../../services/outside-events";
 import { KIND_TEXT } from "../partners";
@@ -266,8 +268,8 @@ adminPartnerReview.get("/", async (c) => {
               {e.sourceName ? ` · ${t("ผ่าน", "Via")} ${e.sourceName}` : ""}
             </p>
             <form method="post" action={`/admin/partner-review/event/${e.id}/pull`}>
-              <TextArea label={t("เหตุผลที่ดึงออก (เจ้าภาพเห็น)", "Why it's pulled (the host sees this)")} name="note" rows={2} required maxlength={NOTE_MAX} />
-              <Button kind="ghost">{t("ดึงออกจากหน้าค้นหา", "Pull from Discover")}</Button>
+              <TextArea label={t("เหตุผลที่พักไว้ (เจ้าภาพเห็น คนที่จองไม่เห็น)", "Why it's paused (the host sees this, people with a place don't)")} name="note" rows={2} required maxlength={NOTE_MAX} />
+              <Button kind="ghost">{t("พักไว้และดึงออกจากหน้าค้นหา", "Pause and pull from Discover")}</Button>
             </form>
           </Card>
         ))
@@ -341,11 +343,19 @@ adminPartnerReview.post("/event/:id/pull", async (c) => {
   const me = c.var.user!.account;
   const [e] = await db.select().from(events).where(and(eq(events.id, c.req.param("id")), eq(events.status, "published"))).limit(1);
   if (!e) return c.redirect("/admin/partner-review");
-  // Pending, not cancelled: off Discover and back in the review queue, where it can be approved again.
+  // Paused, not cancelled (owner card, 2026-10-26): off Discover and into the review queue, where it can be
+  // approved again (back on) or sent back (a cancellation). People with a place keep it and hear about it,
+  // never the moderator's note; their pass and check-in wait until it's back on.
+  const holders = await db
+    .select({ accountId: registrations.accountId })
+    .from(registrations)
+    .where(and(eq(registrations.eventId, e.id), inArray(registrations.status, [...PLACE_HOLDING])))
+    .limit(100_000);
   await batch(c.env, [
-    db.update(events).set({ status: "pending", reviewNote: note }).where(and(eq(events.id, e.id), eq(events.status, "published"))),
-    notify(db, e.hostAccountId ?? e.createdBy, "host_pulled", `ทีมงานดึงกิจกรรมออกก่อน: ${e.title}`, `The team took your event off Discover for now: ${e.titleEn ?? e.title}`, "/host"),
-    audit(db, me.id, "event.pull", { type: "event", id: e.id }),
+    db.update(events).set({ status: "paused", reviewNote: note }).where(and(eq(events.id, e.id), eq(events.status, "published"))),
+    notify(db, e.hostAccountId ?? e.createdBy, "host_pulled", `ทีมงานพักกิจกรรมไว้ก่อน: ${e.title}`, `The team paused your event: ${e.titleEn ?? e.title}`, "/host"),
+    ...notifyMany(db, holders.map((h) => ({ accountId: h.accountId, th: PAUSED_LINE[0], en: PAUSED_LINE[1] })), "event_paused", `/events/${e.id}`),
+    audit(db, me.id, "event.pull", { type: "event", id: e.id }, { notified: holders.length }),
   ]);
   return c.redirect("/admin/partner-review?notice=saved");
 });
