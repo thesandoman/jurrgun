@@ -1248,4 +1248,9 @@ html{scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}
   html:where(:has(main :is(.chat-compose,.chat-send))){scroll-padding-bottom:calc(184px + env(safe-area-inset-bottom,0px))}
 }
 @media (min-width:1024px){html{scroll-padding-top:88px}}
+/* Time fields (the "home safe?" time) look and size like every other field: 16px text so iOS does
+   not zoom in, a 44px target, and the field colours in dark mode. */
+input[type=time]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--field-line);border-radius:14px;padding:8px 12px;min-height:44px;max-width:100%}
+input[type=time]:focus{background:var(--surface);border-color:var(--brand)}
+.safe-arrival label{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 `);
