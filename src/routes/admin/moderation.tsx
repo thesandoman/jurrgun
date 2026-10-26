@@ -31,6 +31,8 @@ import { Card, Empty, Field, int, Notice, page, pageOf, Pager, str, Tag, TextAre
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
 import { moderatorVisible, STAFF_TARGET_ROLES } from "../../services/report-intake";
+import { dropEvidence, evidenceKey, isPhotoReport } from "../../services/evidence";
+import { getObject, getObjectUrl } from "../../storage";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
 
 /** Rules a moderator can name as broken: the report reasons, minus "other". */
@@ -350,6 +352,21 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
         </p>
         <h2 class="h3">{t("รายละเอียดจากผู้รายงาน", "Reporter's details")}</h2>
         <p style="white-space:pre-wrap">{r.details || t("(ไม่มีรายละเอียด)", "(no details)")}</p>
+        {r.targetMessage ? (
+          <>
+            <h2 class="h3">{t("หลักฐานที่เก็บไว้", "Evidence kept")}</h2>
+            {isPhotoReport(r) && (r.status === "open" || r.status === "in_review") ? (
+              <>
+                <p class="muted">{t("สำเนารูปที่ถูกรายงาน เก็บไว้จนกว่าจะปิดรายงาน การเปิดดูจะถูกบันทึก", "A copy of the reported photo, kept until the report is closed. Opening it is recorded in the audit log.")}</p>
+                <img src={`/admin/moderation/${encodeURIComponent(r.id)}/evidence`} alt={t("รูปที่ถูกรายงาน", "The reported photo")} style="max-width:100%;max-height:420px" loading="lazy" />
+              </>
+            ) : isPhotoReport(r) ? (
+              <p class="muted">{t("รายงานปิดแล้ว ลบสำเนารูปแล้ว ข้อความด้านบนยังเก็บตามระยะเวลาของรายงาน", "The report is closed, so the photo copy is deleted. The text above stays for as long as the report.")}</p>
+            ) : (
+              <p class="muted">{t("ข้อความที่ถูกรายงานอยู่ด้านบน เก็บตามระยะเวลาของรายงาน ไม่ใช่ทั้งแชต", "The reported message is above, kept for as long as the report: that item only, never the whole chat.")}</p>
+            )}
+          </>
+        ) : null}
       </Card>
 
       {target ? (
@@ -578,6 +595,23 @@ adminModeration.get("/:id", (c) => renderDetail(c, c.req.param("id")));
 
 // ----------------------------------------------------------------- action --
 
+/** The reported photo, only while the report is open; every view is audited (owner card B). */
+adminModeration.get("/:id/evidence", async (c) => {
+  const row = await loadReport(c, c.req.param("id"));
+  if (!row) return c.notFound();
+  const r = row.report;
+  if (!isPhotoReport(r) || (r.status !== "open" && r.status !== "in_review")) return c.notFound();
+  const db = getDb(c.env);
+  await audit(db, c.var.user!.account.id, "moderation.view_evidence", { type: "report", id: r.id });
+  const key = evidenceKey(r.id);
+  if (c.env.FILES) {
+    return new Response(null, { status: 302, headers: { location: await getObjectUrl(c.env, key, { expiresIn: 300 }), "cache-control": "no-store" } });
+  }
+  const obj = await getObject(c.env, key).catch(() => null);
+  if (!obj) return c.notFound();
+  return new Response(obj.body, { headers: { "content-type": obj.metadata.contentType ?? "application/octet-stream", "cache-control": "no-store" } });
+});
+
 adminModeration.post("/:id/action", async (c) => {
   const { t } = view(c);
   const id = c.req.param("id");
@@ -719,6 +753,8 @@ adminModeration.post("/:id/action", async (c) => {
     }),
   );
   await batch(c.env, ops);
+  // Owner card B: the photo copy is held only while the report is open.
+  if (resolved && isPhotoReport(r)) await dropEvidence(c.env, r.id);
   // A banned member's seats go to the waitlist.
   if (target && action === "ban") await releaseUpcomingSeats(c.env, target.id);
   return c.redirect(`/admin/moderation/${encodeURIComponent(r.id)}?notice=saved`);

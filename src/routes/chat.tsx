@@ -19,6 +19,7 @@
  * week past. No read receipts, typing indicators or online status.
  */
 import { isStaffTarget, reportLimit, staffAlert } from "../services/report-intake";
+import { keepPhoto, PHOTO_DETAILS_PREFIX } from "../services/evidence";
 import { DayStatusLine } from "../ui/day-of";
 import { shownDayStatus } from "../domain/day-of";
 import { Hono, type Context } from "hono";
@@ -794,12 +795,14 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
       targetAccount: m.sender,
       targetMessage: m.id,
       reason: m.moneyFlag ? "spam_scam" : "harassment",
-      details: m.kind === "photo" ? `Chat photo (caption: ${m.body.slice(0, 200)})` : m.kind === "poll" ? `Chat poll: ${m.body.slice(0, 500)}` : `Chat message: ${m.body.slice(0, 500)}`,
+      details: m.kind === "photo" ? `${PHOTO_DETAILS_PREFIX} (caption: ${m.body.slice(0, 200)})` : m.kind === "poll" ? `Chat poll: ${m.body.slice(0, 500)}` : `Chat message: ${m.body.slice(0, 500)}`,
       severity: critical ? "critical" : "standard",
     }),
     audit(db, me, "chat.report", { type: "report", id }),
     ...alert.writes,
   ]);
+  // Owner card B: a copy of just the reported photo, kept until the report is closed.
+  if (m.kind === "photo" && m.photoKey) await keepPhoto(c.env, id, m.photoKey);
   await alert.push();
   return c.redirect(`/chat/${key}?notice=reported`);
 });

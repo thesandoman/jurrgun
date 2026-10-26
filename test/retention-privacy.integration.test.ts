@@ -139,7 +139,7 @@ describe.skipIf(!HAS_DB)("R5: account deletion reaches every table with the acco
 });
 
 describe.skipIf(!HAS_DB)("R6: retention periods", () => {
-  it("read notifications go after 90 days, closed reports, actions and strikes after 2 years, the audit log after 1 year", async () => {
+  it("read notifications go after 90 days, closed reports, actions, strikes and the audit log after 2 years", async () => {
     const m = await createMember();
     const ev = await pastEvent();
     const id = () => newId();
@@ -168,8 +168,8 @@ describe.skipIf(!HAS_DB)("R6: retention periods", () => {
     ]);
     const l = { old: id(), recent: id() };
     await db().insert(auditLog).values([
-      { id: l.old, actor: m.id, action: "test.old", createdAt: ago(366) },
-      { id: l.recent, actor: m.id, action: "test.recent", createdAt: ago(300) },
+      { id: l.old, actor: m.id, action: "test.old", createdAt: ago(731) },
+      { id: l.recent, actor: m.id, action: "test.recent", createdAt: ago(400) },
     ]);
 
     const counts = await runRetention(ENV, new Date());

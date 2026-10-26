@@ -26,7 +26,7 @@
  *                             remove and block routes delete them at once)
  *   reports, moderation       2 years after the report or action, once the
  *   actions, strikes          report is closed (actioned or dismissed) (R6)
- *   audit log                 1 year (R6)
+ *   audit log                 2 years, the same as the reports it traces (owner card B)
  *   City Pulse and wellbeing  24 months after the answer (research code rows;
  *                             place checks and suggestions by their month)
  *   unsorted suggestions      60 days after their month (C2), and the
@@ -170,8 +170,8 @@ export const EXIT_NOTE_RETENTION_DAYS = 365;
 export const SAFETY_RETENTION_DAYS = 730;
 /** Strikes follow the same 2 years as the reports they came from. */
 export const STRIKE_RETENTION_DAYS = SAFETY_RETENTION_DAYS;
-/** Audit rows are deleted after this (R6). */
-export const AUDIT_RETENTION_DAYS = 365;
+/** Audit rows are deleted after this: the same 2 years as reports, so who looked at a case lasts as long as the case (owner card B). */
+export const AUDIT_RETENTION_DAYS = SAFETY_RETENTION_DAYS;
 /** Research ids cut per run (accounts without research consent); the rest wait for the next run. */
 export const RESEARCH_BATCH = 500;
 /** Accounts anonymised per run; the rest wait for the next run. */

@@ -162,7 +162,7 @@ export const RETENTION: RetentionItem[] = [
   {
     what: { th: "บันทึกการทำงานของระบบ", en: "The system's audit log" },
     keep: { th: "ลบหลัง", en: "deleted after" },
-    period: { n: 1, unit: "years" },
+    period: { n: 2, unit: "years" },
     code: /^AUDIT_.*DAYS$/,
   },
   {
@@ -210,6 +210,10 @@ export const RETENTION_NOTES: Text[] = [
   {
     th: "ถ้ามีรายงานเรื่องบัญชีที่ยังตรวจไม่เสร็จ เราจะเก็บบัญชีนั้นไว้จนกว่าจะตรวจเสร็จ",
     en: "If a report about an account is still open, we keep that account until the report is closed.",
+  },
+  {
+    th: "ถ้ามีคนรายงานข้อความหรือรูปในแชต เราเก็บสำเนาไว้กับรายงานเฉพาะสิ่งที่ถูกรายงาน ไม่ใช่ทั้งแชต ข้อความเก็บตามระยะเวลาของรายงาน ส่วนรูปเก็บไว้จนกว่าจะปิดรายงาน",
+    en: "If someone reports a chat message or photo, we keep a copy of just that item with the report, never the whole chat. Text is kept as long as the report; a photo only until the report is closed.",
   },
   {
     th: "เหตุผลที่ออก (ถ้าบอกเรา) เก็บโดยไม่มีชื่อบัญชี จึงโยงกลับมาหาคุณไม่ได้ เหตุผลที่เลือกไว้เก็บเป็นยอดรวม ส่วนข้อความที่เขียนเองลบหลัง 1 ปี",

@@ -150,7 +150,7 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
     expect(await db().select().from(loginAttempts).where(eq(loginAttempts.username, username))).toHaveLength(0);
   });
 
-  it("read notifications go after 90 days and the audit log after a year (PENDING: privacy fixes)", async () => {
+  it("read notifications go after 90 days and the audit log after 2 years (PENDING: privacy fixes)", async () => {
     const m = await createMember();
     const old = new Date(Date.now() - 91 * DAY);
     const readId = newId();
@@ -160,7 +160,7 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
       { id: unreadId, accountId: m.id, kind: "test", titleTh: "ยังไม่อ่าน", titleEn: "Unread", link: "/events", createdAt: old },
     ]);
     const auditId = newId();
-    await db().insert(auditLog).values({ id: auditId, actor: m.id, action: "test.old", createdAt: new Date(Date.now() - 366 * DAY) });
+    await db().insert(auditLog).values({ id: auditId, actor: m.id, action: "test.old", createdAt: new Date(Date.now() - 731 * DAY) });
     await runRetention(ENV);
     expect(await db().select().from(notifications).where(eq(notifications.id, readId))).toHaveLength(0);
     expect(await db().select().from(auditLog).where(eq(auditLog.id, auditId))).toHaveLength(0);

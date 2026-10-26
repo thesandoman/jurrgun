@@ -1,10 +1,11 @@
 /** Circle chats: polls and votes, photos from the day, served only to members; the host badge. */
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import app from "../src/index";
 import { createMember, db, ENV, HAS_DB, req, type Member } from "./helpers";
 import { newId, randomToken } from "../src/lib/crypto";
-import { chatMessages, chatVotes, circleHeadRequests, events, registrations } from "../src/schema";
+import { auditLog, chatMessages, chatVotes, circleHeadRequests, events, registrations, reports } from "../src/schema";
+import { evidenceKey } from "../src/services/evidence";
 
 /** A tiny in-memory stand-in for the R2 bucket the app writes photos to. */
 function memBucket() {
@@ -82,6 +83,25 @@ describe.skipIf(!HAS_DB)("circle chat extras", () => {
     expect(mine.status).toBe(200);
     expect(mine.headers.get("content-type")).toBe("image/png");
     expect((await app.request(`/chat/${key}/photo/${m.id}`, { headers: { cookie: outsider.cookie } }, env)).status).toBe(404);
+
+    // Owner card B: reporting it keeps a copy of just that photo, shown to moderators until the report closes.
+    expect((await app.request(`/chat/${key}/report/${m.id}`, { method: "POST", headers: { cookie: host.cookie } }, env)).status).toBe(302);
+    const [rep] = await db().select().from(reports).where(eq(reports.targetMessage, m.id));
+    expect(BUCKET.store.has(evidenceKey(rep.id))).toBe(true);
+    const mod = await createMember({ role: "moderator" });
+    const page = await app.request(`/admin/moderation/${rep.id}`, { headers: { cookie: `${mod.cookie}; lang=en` } }, env);
+    expect(await page.text()).toContain("Evidence kept");
+    const shown = await app.request(`/admin/moderation/${rep.id}/evidence`, { headers: { cookie: mod.cookie } }, env);
+    expect(shown.status).toBe(200);
+    expect(shown.headers.get("cache-control")).toBe("no-store");
+    expect((await db().select().from(auditLog).where(and(eq(auditLog.actor, mod.id), eq(auditLog.action, "moderation.view_evidence")))).length).toBe(1);
+    expect((await app.request(`/admin/moderation/${rep.id}/evidence`, { headers: { cookie: guest.cookie } }, env)).status).toBe(403);
+    const closed = await app.request(`/admin/moderation/${rep.id}/action`, { method: "POST", headers: { cookie: mod.cookie, "content-type": "application/x-www-form-urlencoded" }, body: "action=dismiss" }, env);
+    expect(closed.status).toBe(302);
+    expect(BUCKET.store.has(evidenceKey(rep.id))).toBe(false);
+    expect((await app.request(`/admin/moderation/${rep.id}/evidence`, { headers: { cookie: mod.cookie } }, env)).status).toBe(404);
+    // The member's own chat copy is untouched.
+    expect(BUCKET.store.has(m.photoKey!)).toBe(true);
   });
 
   it("an approved circle head's messages carry their circle's name", async () => {
