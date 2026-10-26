@@ -26,7 +26,7 @@ import type { AppEnv } from "../../lib/env";
 import { fmtDate, fmtDay } from "../../lib/i18n";
 import { audit, notify } from "../../lib/records";
 import { requireRole } from "../../lib/session";
-import { accounts, events, moderationActions, profiles, registrations, reports, sessions } from "../../schema";
+import { accounts, events, moderationActions, partnerOrgs, profiles, registrations, reports, sessions } from "../../schema";
 import { Card, Empty, Field, int, Notice, page, pageOf, Pager, str, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
@@ -34,6 +34,7 @@ import { moderatorVisible, STAFF_TARGET_ROLES } from "../../services/report-inta
 import { dropEvidence, evidenceKey, isPhotoReport } from "../../services/evidence";
 import { banCopy, isLookAgain, LIFT_COPY, reporterCopy, suspendCopy } from "../../services/outcomes";
 import { getObject, getObjectUrl } from "../../storage";
+import { OPEN_TO_MORE_TAG } from "../../domain/rules";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
 
 /** Rules a moderator can name as broken: the report reasons, minus "other". */
@@ -312,7 +313,16 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
           })
           .from(registrations)
           .innerJoin(events, eq(events.id, registrations.eventId))
-          .where(eq(registrations.accountId, targetId!))
+          .leftJoin(partnerOrgs, eq(partnerOrgs.id, events.partnerOrgId))
+          // Staff never learn who is open to something more: 💘 events and dating
+          // partners' events are left out, with no marker that anything was left out.
+          .where(
+            and(
+              eq(registrations.accountId, targetId!),
+              sql`not ((case when jsonb_typeof(${events.tags}) = 'string' then (${events.tags} #>> '{}')::jsonb else ${events.tags} end) @> jsonb_build_array(${OPEN_TO_MORE_TAG}::text))`,
+              sql`coalesce(${partnerOrgs.kind}, '') <> 'dating'`,
+            ),
+          )
           .orderBy(desc(events.startsAt))
           .limit(100)
       : Promise.resolve(null),

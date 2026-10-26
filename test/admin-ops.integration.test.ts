@@ -117,6 +117,24 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     expect(rows[0].targetId).toBe(target.id);
   });
 
+  it("leaves 💘 events out of the participation history, with no trace", async () => {
+    const [mod, host, target] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "host" }), createMember()]);
+    const mk = async (title: string, tags: string[]) => {
+      const id = newId();
+      const startsAt = new Date(Date.now() - 5 * 86_400_000);
+      await db().insert(events).values({ id, title, startsAt, endsAt: new Date(startsAt.getTime() + 7_200_000), venueName: "Café", district: "bang_rak", capacity: 6, status: "published", tags, createdBy: host.id, hostAccountId: host.id });
+      await db().insert(registrations).values({ id: newId(), eventId: id, accountId: target.id, status: "confirmed", passToken: randomToken(16) });
+    };
+    const friendly = `Board games ${randomToken(4)}`;
+    const dating = `Speed friends plus ${randomToken(4)}`;
+    await mk(friendly, ["games"]);
+    await mk(dating, ["open_to_more"]);
+    const id = await report((await createMember()).id, target.id);
+    const html = await (await req(`/admin/moderation/${id}?history=1`, { cookie: `${mod.cookie}; lang=en` })).text();
+    expect(html).toContain(friendly);
+    expect(html).not.toContain(dating);
+  });
+
   it("refuses moderator actions against a BMA admin", async () => {
     const mod = await createMember({ role: "moderator" });
     const admin = await createMember({ role: "bma_admin" });
