@@ -55,6 +55,7 @@ import {
   MAX_REASONS,
   MODE_OPTS,
   offeredMode,
+  ROMANCE_EXPLAINER,
 } from "../content/dating";
 import { requireUser } from "../lib/session";
 import { AnswerCard, Flow, FlowStep } from "../ui/flow";
@@ -776,6 +777,7 @@ export function ConnectionsFields(props: { v: View }) {
         <RomanceFields v={props.v} openTo={openTo} />
         <PronounField v={props.v} value={p?.pronouns} />
         <Toggle name="showPronouns" label={t("แสดงสรรพนามในโปรไฟล์", "Show my pronouns on my profile")} checked={!!p?.showPronouns} />
+        <p class="muted">{t(ROMANCE_EXPLAINER.th, ROMANCE_EXPLAINER.en)}</p>
         <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
       </details>
     </>
@@ -967,6 +969,7 @@ function ConnectionsFlow(props: { v: View; j: Journey; error?: string; start?: n
         info={t(ROMANCE_INFO[0], ROMANCE_INFO[1])}
       >
         <RomanceFields v={props.v} openTo={p?.romanceOpenTo} on={props.mode === "dating" || props.mode === "dating_only" ? true : undefined} />
+        <p class="muted">{t(ROMANCE_EXPLAINER.th, ROMANCE_EXPLAINER.en)}</p>
         <Toggle name="romanceConsent" label={t("ยินยอมให้เก็บข้อมูลส่วนนี้ (ข้อมูลอ่อนไหวตาม PDPA)", "I consent to this sensitive data being stored (PDPA)")} checked={!!p?.romanceOn} />
       </FlowStep>
       )}

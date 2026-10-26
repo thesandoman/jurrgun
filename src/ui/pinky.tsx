@@ -4,6 +4,7 @@
  * cream only, never coral or orange. It only ever describes the viewer's own
  * tap, or a Pinky that is already mutual.
  */
+import { FIRST_DATE_LINE } from "../content/dating";
 import type { PinkyState } from "../services/pinky";
 
 type T = (th: string, en: string) => string;
@@ -50,6 +51,12 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
               </button>
             </form>
           </div>
+          {/* Safety at the moment it matters (owner card C3): one quiet line, no extra tap. */}
+          <p class="pinky-safety">
+            {t(FIRST_DATE_LINE.th, FIRST_DATE_LINE.en)}{" "}
+            <a href="/safety#plan">{t("แชร์แผนนัด", "Share your plan")}</a> ·{" "}
+            <a href="/learn/date-responsibly">{t("เดตอย่างปลอดภัย", "Date safely")}</a>
+          </p>
           <p class="pinky-note">{t("ถ้ากลับไปเป็นเพื่อน จะไม่มีใครได้รับแจ้ง", "Going back to friends doesn't notify anyone.")}</p>
         </>
       ) : state.mine ? (

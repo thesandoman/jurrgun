@@ -6,6 +6,21 @@
 export type Text = { th: string; en: string };
 const t = (en: string, th: string): Text => ({ en, th });
 
+/**
+ * The 💘 explainer (owner card C3, 2026-10-26). It is the PDPA consent screen
+ * when 💘 is switched on: shown with the consent tick, never as an extra step.
+ */
+export const ROMANCE_EXPLAINER: Text = t(
+  "With 💘 on, we use your single status and who you're open to only for 💘 events and Pinky. Staff and partners never see it. Turn it off any time and it's deleted.",
+  "เปิด 💘 แล้ว เราใช้สถานะโสดและเพศที่คุณสนใจ เฉพาะกับกิจกรรม 💘 และเกี่ยวก้อย ทีมงานและพาร์ทเนอร์ไม่เห็น ปิดได้ทุกเมื่อ แล้วข้อมูลจะถูกลบ",
+);
+
+/** The safety line at a mutual Pinky (owner card C3, 2026-10-26). */
+export const FIRST_DATE_LINE: Text = t(
+  "First date? Meet somewhere public and tell someone you trust your plan.",
+  "เดตแรกใช่ไหม? นัดเจอที่สาธารณะ และบอกแผนให้คนที่ไว้ใจรู้",
+);
+
 export const MODES = ["friends", "dating", "dating_only"] as const;
 export type Mode = (typeof MODES)[number];
 export const isMode = (x: string): x is Mode => (MODES as readonly string[]).includes(x);

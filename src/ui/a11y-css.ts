@@ -738,6 +738,8 @@ main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
 .pinky-sub{margin:2px 0 0;color:var(--ink-2)}
 .pinky-state{margin:12px 0 0}
 .pinky-note{margin:8px 0 0;font-size:.9rem;color:var(--ink-2)}
+.pinky-safety{margin:12px 0 0;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--love) 25%,transparent);font-size:.92rem;color:var(--ink)}
+.pinky-safety a{color:var(--love-ink);font-weight:600}
 .pinky-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .pinky-actions form{margin:0}
 .pinky .btn{min-height:44px}

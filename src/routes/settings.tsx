@@ -22,7 +22,7 @@ import { reflectionsFromForm } from "../content/reflections";
 import { syncQuizChange } from "./pulse";
 import { DatingPrefSteps, prefsFromBody } from "./onboarding";
 import { Flow } from "../ui/flow";
-import { cleanPrefs, EXIT_REASONS } from "../content/dating";
+import { cleanPrefs, EXIT_REASONS, ROMANCE_EXPLAINER } from "../content/dating";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -293,10 +293,8 @@ settingsRoutes.get("/settings", async (c) => {
           }
           consent={{
             t,
-            lead: t(
-              "เปิดแล้ว คุณจะเลือก 'เปิดใจมากกว่าเพื่อน' กับคนที่เจอได้ และจะรู้ผลก็ต่อเมื่ออีกฝ่ายเลือกเหมือนกัน สถานะของคุณจะเป็น 'โสด' ข้อมูลเรื่องเดตเป็นความลับ ทีมงานดูไม่ได้ และถูกลบทันทีเมื่อปิด",
-              "Once on, you can choose 'open to something more' with people you meet, and you only find out if it's mutual. Your status becomes Single. Dating details stay private, staff can't see them, and they're deleted the moment you switch off.",
-            ),
+            // The owner's 💘 explainer is the consent screen itself (card C3).
+            lead: t(ROMANCE_EXPLAINER.th, ROMANCE_EXPLAINER.en),
             tick: t("ฉันโสด และยินยอมให้เก็บข้อมูลเรื่องเดตของฉัน (ข้อมูลอ่อนไหวตาม PDPA)", "I'm single, and I agree to my dating details being stored (sensitive data under PDPA)"),
             go: t("💘 เปิดเลย", "💘 Switch it on"),
           }}
