@@ -360,7 +360,7 @@ const GAP = 8;
 const isShown = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
 const hits = (a, b) => a.width > 0 && b.width > 0 && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const px = (v) => Math.ceil(v) + "px";
-const credit = () => document.querySelector(".fullmap .maplibregl-ctrl-bottom-right");
+const credit = () => document.querySelector(".fullmap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib") || document.querySelector(".fullmap .maplibregl-ctrl-bottom-right");
 /** The sheet where it rests (its handle, or the open list), ignoring a drag or spring in progress. */
 function sheetBox() {
   const r = sheetEl.getBoundingClientRect();
@@ -413,6 +413,8 @@ function watchChrome() {
 }
 addEventListener("resize", queueChrome);
 sheetEl?.addEventListener("toggle", queueChrome);
+// Nothing coming up opens the sheet on its empty state, except on a short landscape screen, where it would cover the map tools.
+if (sheetEl?.open && matchMedia("(max-height: 480px)").matches) sheetEl.open = false;
 
 /**
  * The Key can be moved by dragging its header (mouse, touch or pen), with the
@@ -677,8 +679,10 @@ body.fullmap-body{--z-map:0;--z-key:4;--z-rail:5;--z-chips:6;--z-top:8;--z-panel
 .fullmap:has(.svm-sheet:not([hidden])) .svm-key{visibility:hidden}
 @media (max-width:899.98px){.fullmap:has(.svm-sheet:not([hidden])) .fd-rail{visibility:hidden}}
 /* The map credit sits on its own line just above the sheet, clear of the rail and the Key. */
-.fullmap .maplibregl-ctrl-bottom-right{bottom:calc(var(--tab-h) + var(--sheet-cur) + 4px);right:var(--edge-r);max-width:calc(100% - var(--edge-l) - var(--edge-r))}
-.fullmap .maplibregl-ctrl-bottom-right .maplibregl-ctrl{margin:0}
+/* (MapLibre gives the credit a 10px margin of its own, so the box sits 10px further out.) */
+.fullmap .maplibregl-ctrl-bottom-right{bottom:calc(var(--tab-h) + var(--sheet-cur) - 6px);right:calc(var(--edge-r) - 10px);max-width:calc(100% - var(--edge-l) - var(--edge-r) + 20px)}
+/* The credit's (i) button is stretched to 44px tall by the app's summary rule: one icon, centred, not two stacked. */
+.fullmap .maplibregl-ctrl-attrib-button{background-repeat:no-repeat;background-position:center}
 /* floating header */
 .fd-rail-btn.fd-pulse{color:var(--brand)}
 .fd-top{position:fixed;z-index:var(--z-top);top:calc(var(--tk-h) + var(--gap) + var(--safe-t));left:var(--edge-l);right:var(--edge-r);height:var(--top-h);display:flex;gap:8px;align-items:center;min-width:0}
@@ -748,6 +752,8 @@ body.fullmap-body .tabbar{z-index:var(--z-tab)}
   .fd-filters-body{right:auto;width:420px}
   .fd-sheet{left:12px;right:auto;width:400px;bottom:calc(var(--tab-h) + 12px);border-radius:18px;border:1px solid var(--line)}
   .fd-sheet-body{max-height:calc(100dvh - 300px - var(--tab-h))}
+  /* The side panel is one ticket wide: the laptop two-column list (alive.ts) squeezed the tickets here. */
+  .fullmap .fd-sheet-body.discover-list{grid-template-columns:minmax(0,1fr);gap:12px}
   /* Laptops: the key and a tapped pin's card sit in the left column, above the events list. */
   .fullmap .svm-key{left:max(12px,calc(var(--safe-l) + 12px));bottom:calc(var(--tab-h) + var(--sheet-h) + var(--credit-h) + 24px)}
   .fullmap .svm-sheet{left:12px!important;right:auto!important;top:auto!important;width:400px;max-height:calc(100dvh - var(--tk-h) - var(--top-h) - 220px)}
