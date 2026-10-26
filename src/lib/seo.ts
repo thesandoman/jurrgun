@@ -144,7 +144,7 @@ export function sitemapXml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
 }
 
-/** https://llmstxt.org: a short, factual map of the public site for answer engines. */
+/** llmstxt.org format: a short, factual map of the public site for answer engines. */
 export function llmsTxt(): string {
   const topics = TOPICS.filter((x) => !DATING_LED.has(x.slug));
   return [
