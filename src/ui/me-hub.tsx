@@ -11,18 +11,21 @@ import { interestOpt } from "../content/profile";
 import type { Lang } from "../lib/i18n";
 import type { View } from "./kit";
 import { SectionHead, SubLabel } from "./section-head";
+import { AvatarStack } from "./visual";
 
 export type MeStep = { done: boolean; label: string; href: string };
 export type MeLink = { href: string; emoji: string; title: string; hint: string; tint: Tint; group?: string };
 export type Tint = "green" | "lime" | "teal" | "mint" | "sky" | "sun";
 
 /**
- * The one line at the top of Me (mobile card 6): "อยู่กับเจอกันตั้งแต่ ต.ค. 2568 · โต๊ะประจำ 3 โต๊ะ" /
- * "With Jurrgun since Oct 2025 · 3 Regular Tables". Thai months are short and years Buddhist Era
- * (the th-TH calendar), in Bangkok time. No Regular Tables: the clause is left out, never a zero.
+ * The one line at the top of Me (mobile card 6): "อารีย์ · อยู่กับเจอกันตั้งแต่ ต.ค. 2568 · โต๊ะประจำ 3 โต๊ะ" /
+ * "Ari · With Jurrgun since Oct 2025 · 3 Regular Tables". The district comes first, by its display
+ * name, and is left out when unset. Thai months are short and years Buddhist Era (the th-TH
+ * calendar), in Bangkok time. No Regular Tables: the clause is left out, never a zero.
  */
-export function meLine(lang: Lang, since: Date | null, tables: number): string | null {
+export function meLine(lang: Lang, since: Date | null, tables: number, district?: string | null): string | null {
   const parts: string[] = [];
+  if (district) parts.push(district);
   if (since) {
     const month = new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { month: "short", year: "numeric", timeZone: "Asia/Bangkok" }).format(since);
     parts.push(lang === "en" ? `With Jurrgun since ${month}` : `อยู่กับเจอกันตั้งแต่ ${month}`);
@@ -34,7 +37,11 @@ export function meLine(lang: Lang, since: Date | null, tables: number): string |
 export function MeHub(props: {
   v: View;
   nickname: string;
-  /** meLine(): since when, and how many Regular Tables. The counts live on My month in people. */
+  /** The member's photo, or null for the coloured initial. Decorative: the greeting beside it has the name. */
+  photo: string | null;
+  /** The member's account id, which seeds the initial's colour as on My people and Chats. */
+  seed: string;
+  /** meLine(): the district, since when, and how many Regular Tables. The counts live on My month in people. */
   line: string | null;
   interests: string[];
   /** The next table, or a way to find one. */
@@ -61,6 +68,14 @@ export function MeHub(props: {
       {/* Mobile card 6: no centred hero and no number tiles. One left-aligned line, then the next table;
           the counts moved to My month in people (/me/month). */}
       <header class="me-head">
+        {/* Decorative: the greeting beside it says the name. The same 40px avatar as Chats and My people. */}
+        {props.photo ? (
+          <img class="me-av" src={props.photo} alt="" width={40} height={40} />
+        ) : (
+          <span class="me-av" aria-hidden="true">
+            <AvatarStack items={[{ label: props.nickname, seed: props.seed }]} size={40} />
+          </span>
+        )}
         <h1 class="me-hi">{t(`หวัดดี ${props.nickname}`, `Hey ${props.nickname}`)}</h1>
         {/* Each clause stays whole on a narrow phone ("โต๊ะประจำ 2 โต๊ะ" never splits), yet can still wrap at large text. */}
         {props.line ? (

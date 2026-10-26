@@ -39,7 +39,7 @@ import { NOTICE_CHANGES, NOTICE_DATE } from "../../content/privacy";
 import { Sheet } from "../../ui/sheet";
 import { settingsRoutes } from "./app";
 import { DISTRICT_ALERT_ON, districtName, optInText } from "../../domain/district-alert";
-import { me, romanceOffPatch, withdrawRomanceChoices } from "./shared";
+import { me, photoSrc, romanceOffPatch, withdrawRomanceChoices } from "./shared";
 import type { C } from "./shared";
 
 // ------------------------------------------------------------------ hub --
@@ -53,8 +53,10 @@ settingsRoutes.get("/settings", async (c) => {
   const now = new Date();
   // The counts (events, people, coming up) moved to My month in people (mobile card 6); Me keeps one line.
   // Every read here is independent, so all go in one wave (owner card D3: the dating mode used to wait for the rest).
-  const [termsOk, vibe, tables, [nextUp], notifYes, [dating]] = await Promise.all([
+  const [termsOk, photo, vibe, tables, [nextUp], notifYes, [dating]] = await Promise.all([
     acceptedTerms(db, user.account.id),
+    // The small avatar beside Me's line.
+    photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
     // People can sit at several Regular Tables; the count is in Me's one line.
     myTables(db, user.account.id),
@@ -170,7 +172,9 @@ settingsRoutes.get("/settings", async (c) => {
     <MeHub
       v={v}
       nickname={p.nickname}
-      line={meLine(lang, created ?? null, tables.length)}
+      photo={photo}
+      seed={user.account.id}
+      line={meLine(lang, created ?? null, tables.length, districtName(p.district, lang))}
       ask={
         // Members who joined before the Terms box, or before the Terms last changed: one small card,
         // never a lock. It goes once they agree (a "terms" row with the current version).

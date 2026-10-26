@@ -1391,4 +1391,9 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 .month-sofar a.fact:hover .big-n{text-decoration:underline;text-underline-offset:3px}
 /* Chats: an unread row ends in the card 5 dot, no number; the count is in the row's name for screen readers. */
 .chat-list a>.unread-dot.chat-dot{flex:none;align-self:center;margin-left:auto}
+/* Me: a small 40px avatar beside the greeting and the line (decorative, the name is beside it). */
+.me .me-head{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:12px;align-items:center}
+.me .me-head>.me-av{grid-row:1/span 2;width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center}
+.me .me-head>.me-av .av{border:0;box-shadow:none}
+.me .me-head>:not(.me-av){grid-column:2;min-width:0}
 `);
