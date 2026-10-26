@@ -4,12 +4,19 @@
  * choice in social_connection_choices for an event both checked in to, and a
  * Pinky is a mutual connection at level "romance".
  *
- * It unlocks only when all of these hold:
+ * The same row for everyone (owner card C2, 2026-10-26): with 💘 on, the row
+ * shows on the card of every person you met at a table, while that table's
+ * People I Met window is open. It never depends on the other person, so its
+ * presence says nothing about whether they're single, have 💘 on, or are open
+ * to you. A tap gets exactly the same answer whatever their status. A tap is
+ * an ordinary People I Met choice, so it expires when that window closes
+ * (retention deletes it).
+ *
+ * Every rule about the other person is checked silently, only at unlock:
  *  - both tapped (each one's choice for that event is "romance");
- *  - both have 💘 on: dating mode "dating" or "dating_only" AND romance mode
- *    eligible (single, romance on), so switching 💘 off always ends it;
- *  - each is open to the other (romanceCompatible, the same rule as romantic
- *    choices after an event, women-only included);
+ *  - both have 💘 on (romanceEligible: single and romance mode on, the same
+ *    test 💘 events and People I Met use), so switching 💘 off always ends it;
+ *  - each is open to the other (romanceCompatible, women-only included);
  *  - neither blocks the other;
  *  - both checked in to that event.
  *
@@ -17,27 +24,25 @@
  * person. Stepping back removes your tap without telling anyone.
  *
  * Bangkok Buddy stays friends only: a buddy pairing is never an event here.
- *
- * Why not buddy.ts's romanceUnlocked: it gates on finished buddy quests,
- * which Pinky doesn't have. datingFit ranks private preferences for the
- * buddy deck; it is a ranking, not consent, so two people who both chose
- * each other are not overruled by it.
  */
 import { romanceCompatible, romanceEligible, type RomanceSide } from "./rules";
 
-/** Dating modes (social_dating_intents.mode) that count as 💘 on. */
-export const PINKY_MODES: readonly string[] = ["dating", "dating_only"];
+export type PinkySide = RomanceSide & { relationship: string; romanceOn: boolean };
 
-export type PinkySide = RomanceSide & { relationship: string; romanceOn: boolean; datingMode: string | null | undefined };
-
-/** 💘 on, for Pinky: dating mode on and romance mode eligible. */
-export function pinkyOn(p: PinkySide): boolean {
-  return !!p.datingMode && PINKY_MODES.includes(p.datingMode) && romanceEligible(p);
+/** 💘 on, for Pinky: the one test used everywhere (single and romance mode on). */
+export function pinkyOn(p: { relationship: string; romanceOn: boolean }): boolean {
+  return romanceEligible(p);
 }
 
-/** Whether the Pinky row may be shown on `them`'s card to `me` (never says anything about taps). */
-export function pinkyOffered(me: PinkySide, them: PinkySide, met: boolean, blocked: boolean): boolean {
-  return met && !blocked && pinkyOn(me) && romanceEligible(them) && romanceCompatible(me, them);
+/**
+ * Whether the Pinky row shows on someone's card. It depends only on the
+ * viewer and the table they shared, never on the other person's status: a
+ * mutual Pinky keeps showing; otherwise the viewer needs 💘 on and an open
+ * People I Met window.
+ */
+export function pinkyOffered(me: { relationship: string; romanceOn: boolean }, p: { met: boolean; blocked: boolean; windowOpen: boolean; mutual: boolean }): boolean {
+  if (!p.met || p.blocked || !pinkyOn(me)) return false;
+  return p.mutual || p.windowOpen;
 }
 
 /** Every rule for a mutual Pinky. */

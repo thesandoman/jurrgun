@@ -7,30 +7,23 @@
  *    tap never leaks: the tapper sees "your pinky is out" whether or not the
  *    other person did anything, until it is mutual.
  *  - Nothing here writes to the audit log (staff never see romance data).
- *  - Stepping back tells nobody. Ending a Pinky turns it back into friends.
+ *  - Stepping back tells nobody and withdraws the tap. Ending a Pinky turns it back into friends.
  */
-import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { batch, type getDb } from "../db";
-import { pinkyOffered, pinkyUnlocked, type PinkySide } from "../domain/pinky";
+import { pinkyOffered, pinkyOn, pinkyUnlocked } from "../domain/pinky";
 import { peopleWindow } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { notify } from "../lib/records";
-import { blocks, connectionChoices, connections, datingIntents, events, profiles, registrations, type Profile } from "../schema";
+import { blocks, connectionChoices, connections, events, profiles, registrations, type Profile } from "../schema";
 
 type Db = ReturnType<typeof getDb>;
 type Env = Parameters<typeof batch>[0];
 
-export type PinkyState = { eventId: string; mine: boolean; mutual: boolean; connectionId: string | null };
+export type PinkyState = { eventId: string; mine: boolean; mutual: boolean; connectionId: string | null; open: boolean };
 
 const pair = (x: string, y: string): [string, string] => (x < y ? [x, y] : [y, x]);
-
-async function modeOf(db: Db, ids: string[]): Promise<Map<string, string>> {
-  const rows = await db.select({ id: datingIntents.accountId, mode: datingIntents.mode }).from(datingIntents).where(inArray(datingIntents.accountId, ids)).limit(ids.length);
-  return new Map(rows.map((r) => [r.id, r.mode]));
-}
-
-const side = (p: Profile, mode: string | undefined): PinkySide => ({ ...p, datingMode: mode ?? null });
 
 /** The newest event both checked in to (they met there), or null. */
 async function sharedEvent(db: Db, me: string, other: string): Promise<{ id: string; endsAt: Date } | null> {
@@ -55,18 +48,6 @@ async function blockedEitherWay(db: Db, x: string, y: string): Promise<boolean> 
   return rows.length > 0;
 }
 
-type Ctx = { event: { id: string; endsAt: Date }; mePro: Profile; themPro: Profile; modes: Map<string, string>; blocked: boolean };
-
-/** Everything the rules need, or null when the Pinky row isn't offered at all. */
-async function load(db: Db, me: Profile, otherId: string): Promise<Ctx | null> {
-  if (otherId === me.accountId) return null;
-  const [them] = await db.select().from(profiles).where(eq(profiles.accountId, otherId)).limit(1);
-  if (!them) return null;
-  const [event, blocked, modes] = await Promise.all([sharedEvent(db, me.accountId, otherId), blockedEitherWay(db, me.accountId, otherId), modeOf(db, [me.accountId, otherId])]);
-  if (!pinkyOffered(side(me, modes.get(me.accountId)), side(them, modes.get(otherId)), !!event, blocked)) return null;
-  return { event: event!, mePro: me, themPro: them, modes, blocked };
-}
-
 async function myChoice(db: Db, eventId: string, from: string, to: string) {
   const [row] = await db
     .select({ id: connectionChoices.id, choice: connectionChoices.choice })
@@ -82,36 +63,55 @@ async function pinkyConnection(db: Db, eventId: string, x: string, y: string) {
   return row ?? null;
 }
 
+type Ctx = { event: { id: string; endsAt: Date }; open: boolean; mutual: boolean; conn: Awaited<ReturnType<typeof pinkyConnection>> };
+
+/**
+ * Everything about the table we shared, or null when the row isn't offered.
+ * Nothing here reads the other person's profile: whether the row shows never
+ * depends on them (owner card C2).
+ */
+async function load(db: Db, me: Profile, otherId: string): Promise<Ctx | null> {
+  if (otherId === me.accountId || !pinkyOn(me)) return null;
+  const [event, blocked] = await Promise.all([sharedEvent(db, me.accountId, otherId), blockedEitherWay(db, me.accountId, otherId)]);
+  if (!event) return null;
+  const conn = await pinkyConnection(db, event.id, me.accountId, otherId);
+  const mutual = !!conn && !conn.removedAt && conn.level === "romance";
+  const open = peopleWindow(event.endsAt) === "open";
+  if (!pinkyOffered(me, { met: true, blocked, windowOpen: open, mutual })) return null;
+  return { event, open, mutual, conn };
+}
+
 /** What `me` may see on `otherId`'s card: my own tap and a mutual Pinky, nothing about theirs. Null: no row. */
 export async function pinkyState(db: Db, me: Profile, otherId: string): Promise<PinkyState | null> {
   const ctx = await load(db, me, otherId);
   if (!ctx) return null;
-  const [mine, conn] = await Promise.all([myChoice(db, ctx.event.id, me.accountId, otherId), pinkyConnection(db, ctx.event.id, me.accountId, otherId)]);
-  const mutual = !!conn && !conn.removedAt && conn.level === "romance";
-  return { eventId: ctx.event.id, mine: mine?.choice === "romance", mutual, connectionId: conn && !conn.removedAt ? conn.id : null };
+  const mine = await myChoice(db, ctx.event.id, me.accountId, otherId);
+  return { eventId: ctx.event.id, mine: mine?.choice === "romance", mutual: ctx.mutual, connectionId: ctx.conn && !ctx.conn.removedAt ? ctx.conn.id : null, open: ctx.open };
 }
 
 /**
- * Hook my pinky. Unlocks a Pinky when they did too and every rule holds.
- * Returns false when the row isn't offered (the caller answers the same way
- * whatever the other person did).
+ * Hook my pinky. It is stored whatever the other person's status, and the
+ * caller answers the same way every time: only a mutual Pinky ever changes
+ * anything they can see. It unlocks when they tapped too and every rule
+ * holds. Their profile is read only here, to decide that.
  */
-export async function tapPinky(env: Env, db: Db, me: Profile, otherId: string): Promise<boolean> {
+export async function tapPinky(env: Env, db: Db, me: Profile, otherId: string): Promise<void> {
   const ctx = await load(db, me, otherId);
-  if (!ctx) return false;
+  if (!ctx || !ctx.open || ctx.mutual) return;
   const eventId = ctx.event.id;
   await db
     .insert(connectionChoices)
     .values({ id: newId(), eventId, fromAccount: me.accountId, toAccount: otherId, choice: "romance" })
     .onConflictDoUpdate({ target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount], set: { choice: "romance" } });
-  const [theirs, conn] = await Promise.all([myChoice(db, eventId, otherId, me.accountId), pinkyConnection(db, eventId, me.accountId, otherId)]);
+  const [[them], theirs] = await Promise.all([db.select().from(profiles).where(eq(profiles.accountId, otherId)).limit(1), myChoice(db, eventId, otherId, me.accountId)]);
+  if (!them) return;
   const unlocked = pinkyUnlocked({
     taps: [true, theirs?.choice === "romance"],
-    sides: [side(ctx.mePro, ctx.modes.get(me.accountId)), side(ctx.themPro, ctx.modes.get(otherId))],
-    blocked: ctx.blocked,
+    sides: [me, them],
+    blocked: false,
     bothCheckedIn: true,
   });
-  if (!unlocked || (conn && !conn.removedAt && conn.level === "romance")) return true;
+  if (!unlocked) return;
   const [a, b] = pair(me.accountId, otherId);
   // Neutral words: a phone's lock screen never says "date".
   const th = "มีเรื่องดี ๆ รอคุณอยู่ที่คนรู้จัก";
@@ -124,37 +124,31 @@ export async function tapPinky(env: Env, db: Db, me: Profile, otherId: string): 
     notify(db, me.accountId, "connection", th, en, `/people/${otherId}`),
     notify(db, otherId, "connection", th, en, `/people/${me.accountId}`),
   ]);
-  return true;
 }
 
 /**
- * Step back: my tap goes, quietly. If we were a Pinky, it turns back into
- * friends. My choice becomes "friend" when we're connected or People I Met is
- * still open (the same as switching 💘 off), and is removed otherwise.
+ * Step back: my tap is withdrawn, quietly (deleted, the same as switching 💘
+ * off: never a "friend" pick I didn't make). If we were a Pinky, it turns
+ * back into friends.
  */
 export async function stepBack(env: Env, db: Db, me: Profile, otherId: string): Promise<void> {
   const event = await sharedEvent(db, me.accountId, otherId);
   if (!event) return;
   const [mine, conn] = await Promise.all([myChoice(db, event.id, me.accountId, otherId), pinkyConnection(db, event.id, me.accountId, otherId)]);
-  if (mine?.choice !== "romance" && !(conn && !conn.removedAt && conn.level === "romance")) return;
-  const connected = !!conn && !conn.removedAt;
-  const keep = connected || peopleWindow(event.endsAt) === "open";
   const writes: { toSQL(): { sql: string; params: unknown[] } }[] = [];
-  if (mine?.choice === "romance") {
-    writes.push(keep ? db.update(connectionChoices).set({ choice: "friend" }).where(eq(connectionChoices.id, mine.id)) : db.delete(connectionChoices).where(eq(connectionChoices.id, mine.id)));
-  }
+  if (mine?.choice === "romance") writes.push(db.delete(connectionChoices).where(eq(connectionChoices.id, mine.id)));
   if (conn && !conn.removedAt && conn.level === "romance") writes.push(db.update(connections).set({ level: "friend" }).where(eq(connections.id, conn.id)));
   if (writes.length) await batch(env, writes);
 }
 
 /**
- * 💘 switched off: every tap I made becomes "friend" and every Pinky I'm in
- * goes back to friends, silently. (Pending People I Met choices are handled
- * the same way by settings.)
+ * 💘 switched off (owner card, 2026-10-26): every tap I made is withdrawn,
+ * not turned into a "friend" pick I never made, and every Pinky I'm in goes
+ * back to friends, silently.
  */
 export function endPinkies(db: Db, accountId: string) {
   return [
-    db.update(connectionChoices).set({ choice: "friend" }).where(and(eq(connectionChoices.fromAccount, accountId), eq(connectionChoices.choice, "romance"))),
+    db.delete(connectionChoices).where(and(eq(connectionChoices.fromAccount, accountId), eq(connectionChoices.choice, "romance"))),
     db
       .update(connections)
       .set({ level: "friend" })

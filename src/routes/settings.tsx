@@ -1396,9 +1396,7 @@ settingsRoutes.post("/settings/connections", async (c) => {
   if (p.romanceOn && !result.patch.romanceOn) queries.push(withdrawRomanceChoices(db, user.account.id), ...endPinkies(db, user.account.id));
   // R3: relationship status and the private gender carry their own consent rows.
   queries.push(...(await privateFieldConsents(db, user.account.id, { relationship: result.patch.relationship, gender: result.patch.gender })));
-  if (result.patch.relationship !== p.relationship) {
-    queries.push(audit(db, user.account.id, "profile.private_updated", { type: "account", id: user.account.id }));
-  }
+  // No audit row for a relationship change: its time would sit next to the 💘 switch in a log staff read (owner, 2026-10-26).
   await batch(c.env, queries);
   return c.redirect("/settings/connections?notice=saved");
 });
@@ -1451,7 +1449,8 @@ async function romanceQuick(c: C, on: boolean) {
   const pending = pendingDatingIntent(c, db, id);
   if (pending) queries.push(pending);
   // Becoming Single here gives a relationship status: R3 records that consent too.
-  if (toSingle) queries.push(audit(db, id, "profile.private_updated", { type: "account", id }), ...(await privateFieldConsents(db, id, { relationship: "single" })));
+  // No audit row: staff would see its time next to the 💘 switch (owner, 2026-10-26). The consent row stays.
+  if (toSingle) queries.push(...(await privateFieldConsents(db, id, { relationship: "single" })));
   await batch(c.env, queries);
   return c.redirect("/settings?notice=romance_on");
 }
@@ -1472,15 +1471,14 @@ function romanceOffPatch(p: Profile): Partial<typeof profiles.$inferInsert> {
 }
 
 /**
- * PRD §4.4: pending romantic choices are withdrawn (they count as "friend",
- * exactly what resolveMutual does for an ineligible person). Choices whose
- * People I Met window (72h) is still open are the only pending ones.
+ * PRD §4.4: pending romantic choices are withdrawn. Owner, 2026-10-26: they
+ * are deleted, not turned into a "friend" pick the member never made. Choices
+ * whose People I Met window (72h) is still open are the only pending ones.
  */
 function withdrawRomanceChoices(db: ReturnType<typeof getDb>, accountId: string) {
   const openSince = new Date(Date.now() - 72 * 3_600_000);
   return db
-    .update(connectionChoices)
-    .set({ choice: "friend" })
+    .delete(connectionChoices)
     .where(
       and(
         eq(connectionChoices.fromAccount, accountId),

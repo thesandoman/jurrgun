@@ -8,8 +8,8 @@ import { describe, expect, it } from "vitest";
 import { and, eq, or } from "drizzle-orm";
 import { HAS_DB, createMember, db, req, type Member } from "./helpers";
 import { newId, randomToken } from "../src/lib/crypto";
-import { auditLog, blocks, connectionChoices, connections, datingIntents, events, notifications, registrations } from "../src/schema";
-import { pinkyOn, pinkyUnlocked, type PinkySide } from "../src/domain/pinky";
+import { auditLog, blocks, connectionChoices, connections, datingIntents, events, notifications, profiles, registrations } from "../src/schema";
+import { pinkyOffered, pinkyOn, pinkyUnlocked, type PinkySide } from "../src/domain/pinky";
 
 const HOUR = 3_600_000;
 const en = (m: Member) => `${m.cookie}; lang=en`;
@@ -54,37 +54,46 @@ async function between(ev: string, x: Member, y: Member) {
 const notesOf = (m: Member) => db().select().from(notifications).where(eq(notifications.accountId, m.id));
 
 describe("Pinky rules (pure)", () => {
-  const on: PinkySide = { relationship: "single", romanceOn: true, genderIdentity: "woman", romanceOpenTo: "everyone", datingMode: "dating" };
-  const other: PinkySide = { ...on, genderIdentity: "man", datingMode: "dating_only" };
+  const on: PinkySide = { relationship: "single", romanceOn: true, genderIdentity: "woman", romanceOpenTo: "everyone" };
+  const other: PinkySide = { ...on, genderIdentity: "man" };
   it("needs both taps, both 💘 on, no block, both checked in and a fit", () => {
     const base = { taps: [true, true] as [boolean, boolean], sides: [on, other] as [PinkySide, PinkySide], blocked: false, bothCheckedIn: true };
     expect(pinkyUnlocked(base)).toBe(true);
     expect(pinkyUnlocked({ ...base, taps: [true, false] })).toBe(false);
     expect(pinkyUnlocked({ ...base, blocked: true })).toBe(false);
     expect(pinkyUnlocked({ ...base, bothCheckedIn: false })).toBe(false);
-    expect(pinkyUnlocked({ ...base, sides: [on, { ...other, datingMode: "friends" }] })).toBe(false);
     expect(pinkyUnlocked({ ...base, sides: [on, { ...other, romanceOn: false }] })).toBe(false);
     expect(pinkyUnlocked({ ...base, sides: [on, { ...other, relationship: "married" }] })).toBe(false);
     expect(pinkyUnlocked({ ...base, sides: [{ ...on, romanceOpenTo: ["woman"] }, other] })).toBe(false);
-    expect(pinkyOn({ ...on, datingMode: null })).toBe(false);
+    expect(pinkyOn({ ...on, romanceOn: false })).toBe(false);
+  });
+
+  it("the row depends only on the viewer and the table, never on the other person", () => {
+    const base = { met: true, blocked: false, windowOpen: true, mutual: false };
+    expect(pinkyOffered(on, base)).toBe(true);
+    expect(pinkyOffered({ ...on, romanceOn: false }, base)).toBe(false);
+    expect(pinkyOffered(on, { ...base, windowOpen: false })).toBe(false);
+    expect(pinkyOffered(on, { ...base, windowOpen: false, mutual: true })).toBe(true);
+    expect(pinkyOffered(on, { ...base, blocked: true })).toBe(false);
+    expect(pinkyOffered(on, { ...base, met: false })).toBe(false);
   });
 });
 
 describe.skipIf(!HAS_DB)("เกี่ยวก้อย · Pinky", () => {
-  it("shows a quiet row only to members with 💘 on, on the card of someone they met", async () => {
+  it("shows the same quiet row on everyone a 💘 member met, whatever their status", async () => {
     const { a, b, ev } = await pair();
     const friendsOnly = await createMember();
+    // 💘 on with no dating answers saved: one test of 💘 everywhere (owner card C2).
     const heartNoMode = await createMember(heart("man"));
-    await dating(heartNoMode, "friends");
     for (const m of [friendsOnly, heartNoMode]) await attend(ev, m);
     const html = await card(a, b);
     expect(row(html)).toContain("เกี่ยวก้อย · Pinky");
     expect(row(html)).toContain("Hook pinkies to try a date");
     expect(row(html)).toContain('value="tap"');
     expect(row(await card(friendsOnly, b))).toBe("");
-    expect(row(await card(heartNoMode, b))).toBe("");
-    // A 💘 member never sees it on the card of someone who isn't open to dating.
-    expect(row(await card(a, friendsOnly))).toBe("");
+    expect(row(await card(heartNoMode, b))).toContain('value="tap"');
+    // The row on a friends-only member's card is the very same: it says nothing about them.
+    expect(row(await card(a, friendsOnly)).replaceAll(friendsOnly.id, b.id)).toBe(row(html));
     // Tapping without it being offered does nothing.
     await tap(friendsOnly, b);
     expect(await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, friendsOnly.id))).toEqual([]);
@@ -148,16 +157,15 @@ describe.skipIf(!HAS_DB)("เกี่ยวก้อย · Pinky", () => {
     const c = await between(ev, a, b);
     expect(c?.level).toBe("friend");
     expect(c?.removedAt).toBeNull();
-    const [mine] = await db().select().from(connectionChoices).where(and(eq(connectionChoices.eventId, ev), eq(connectionChoices.fromAccount, a.id)));
-    expect(mine.choice).toBe("friend");
+    // My tap is withdrawn, not turned into a friend pick.
+    expect(await db().select().from(connectionChoices).where(and(eq(connectionChoices.eventId, ev), eq(connectionChoices.fromAccount, a.id)))).toEqual([]);
     expect([(await notesOf(a)).length, (await notesOf(b)).length]).toEqual(before);
     expect(row(await card(a, b))).toContain('value="tap"');
     expect(await (await req("/connections", { cookie: en(b) })).text()).not.toContain("tag love\">เกี่ยวก้อย");
   });
 
   it("stepping back from a one-sided tap removes it, so a later tap from them doesn't unlock", async () => {
-    // People I Met has closed and they aren't connected: the tap is simply removed.
-    const { a, b, ev } = await pair({ endedHoursAgo: 100 });
+    const { a, b, ev } = await pair();
     await tap(a, b);
     await tap(a, b, "back");
     expect(await db().select().from(connectionChoices).where(and(eq(connectionChoices.eventId, ev), eq(connectionChoices.fromAccount, a.id)))).toEqual([]);
@@ -167,13 +175,16 @@ describe.skipIf(!HAS_DB)("เกี่ยวก้อย · Pinky", () => {
     expect(row(await card(a, b))).toContain('value="tap"');
   });
 
-  it("never unlocks when the other has 💘 dating mode off, or after a block", async () => {
+  it("never unlocks when the other has 💘 off, answers the tap the same way, and never after a block", async () => {
     const { a, b, ev } = await pair();
-    await dating(b, "friends");
-    // b's romance choice from People I Met, made back when b was dating.
+    // b's romance choice from People I Met, made back when b had 💘 on.
     await db().insert(connectionChoices).values({ id: newId(), eventId: ev, fromAccount: b.id, toAccount: a.id, choice: "romance" });
+    await db().update(profiles).set({ romanceOn: false }).where(eq(profiles.accountId, b.id));
     expect(row(await card(b, a))).toBe("");
-    await tap(a, b);
+    const res = await tap(a, b);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe(`/people/${b.id}#pinky`);
+    expect(row(await card(a, b))).toContain("Your pinky is out");
     expect(await between(ev, a, b)).toBeNull();
     expect(await notesOf(a)).toEqual([]);
 
@@ -200,17 +211,39 @@ describe.skipIf(!HAS_DB)("เกี่ยวก้อย · Pinky", () => {
     expect(await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, a.id))).toEqual([]);
   });
 
-  it("switching 💘 off ends every Pinky and withdraws every tap, silently", async () => {
+  it("once People I Met closes, there's no row and no tap, but a Pinky stays", async () => {
     const { a, b, ev } = await pair({ endedHoursAgo: 100 });
+    expect(row(await card(a, b))).toBe("");
+    await tap(a, b);
+    expect(await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, a.id))).toEqual([]);
+    const [x, y] = a.id < b.id ? [a.id, b.id] : [b.id, a.id];
+    await db().insert(connections).values({ id: newId(), aAccount: x, bAccount: y, level: "romance", eventId: ev });
+    expect(row(await card(a, b))).toContain("both hooked pinkies");
+  });
+
+  it("switching 💘 off ends every Pinky and withdraws every tap, silently", async () => {
+    const { a, b, ev } = await pair();
     await tap(a, b);
     await tap(b, a);
     const notes = (await notesOf(b)).length;
     const off = await req("/settings/quick", { cookie: a.cookie, form: { key: "romance", on: "0" } });
     expect(off.status).toBe(302);
     expect((await between(ev, a, b))?.level).toBe("friend");
-    const mine = await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, a.id));
-    expect(mine.map((r) => r.choice)).toEqual(["friend"]);
+    // Withdrawn, not turned into a "friend" pick a never made.
+    expect(await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, a.id))).toEqual([]);
     expect((await notesOf(b)).length).toBe(notes);
     expect(row(await card(a, b))).toBe("");
+  });
+});
+
+describe.skipIf(!HAS_DB)("the 💘 switch leaves no trace for staff", () => {
+  it("switching 💘 on from prefer-not writes no audit row, only the consent rows", async () => {
+    const m = await createMember({ relationship: "prefer_not" });
+    const r = await req("/settings/quick", { cookie: m.cookie, form: { key: "romance", on: "1", consent: "1" } });
+    expect(r.status).toBe(302);
+    const [p] = await db().select().from(profiles).where(eq(profiles.accountId, m.id));
+    expect(p.relationship).toBe("single");
+    expect(p.romanceOn).toBe(true);
+    expect(await db().select().from(auditLog).where(or(eq(auditLog.actor, m.id), eq(auditLog.targetId, m.id)))).toEqual([]);
   });
 });
