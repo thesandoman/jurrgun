@@ -24,6 +24,12 @@ describe("Field", () => {
   it("has no describedby when there is nothing to describe", () => {
     expect(html(<Field label="Name" name="n" />)).not.toContain("aria-describedby");
   });
+
+  it("opens the number keypad on phones for a number field, unless one is given", () => {
+    expect(html(<Field label="Age" name="age" type="number" />)).toContain('inputmode="numeric"');
+    expect(html(<Field label="Site" name="site" type="url" inputmode="url" />)).toContain('inputmode="url"');
+    expect(html(<Field label="Name" name="n" />)).not.toContain("inputmode");
+  });
 });
 
 describe("TextArea", () => {

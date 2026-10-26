@@ -463,7 +463,7 @@ export function Field(props: {
         autocomplete={props.autocomplete}
         maxlength={props.maxlength}
         pattern={props.pattern}
-        inputmode={props.inputmode}
+        inputmode={props.inputmode ?? (props.type === "number" ? "numeric" : undefined)}
         autocapitalize={props.autocapitalize}
         autocorrect={props.autocorrect}
         spellcheck={props.spellcheck}
