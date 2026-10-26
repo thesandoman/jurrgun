@@ -1393,7 +1393,7 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 .chat-list a>.unread-dot.chat-dot{flex:none;align-self:center;margin-left:auto}
 /* Me: a small 40px avatar beside the greeting and the line (decorative, the name is beside it). */
 .me .me-head{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:12px;align-items:center}
-.me .me-head>.me-av{grid-row:1/span 2;width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center}
+.me .me-head>.me-av{grid-row:1/span 2;align-self:start;margin-top:2px;width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center}
 .me .me-head>.me-av .av{border:0;box-shadow:none}
 .me .me-head>:not(.me-av){grid-column:2;min-width:0}
 /* Tab bar: the label is its own span; it looks as the bare text did (the icon's span rules don't reach it). */
@@ -1405,7 +1405,9 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
    stay as each tab's name, visually hidden; the current tab keeps its label and its column grows to fit. */
 .tabbar{container:tabbar/inline-size}
 @container tabbar (width < 12rem){
-  .tabbar a{min-width:44px}
+  .tabbar a:not(.on){min-width:44px}
+  .tabbar a.on{min-width:min-content}
+  .tabbar a.on>span:first-child{min-width:32px}
   .tabbar a:not(.on)>span.tab-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .tabbar a.on{white-space:normal;padding-inline:6px}
   .tabbar a.on>span.tab-label{text-align:center;line-height:1.15}

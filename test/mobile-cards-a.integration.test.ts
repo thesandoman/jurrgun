@@ -189,7 +189,7 @@ describe.skipIf(!HAS_DB)("card 6: the Me page and My month in people", () => {
     expect(html).not.toContain('class="me-hero"');
     expect(html).not.toContain('class="me-stats"');
     expect(html).not.toContain('class="me-avatar"');
-    expect(html).toMatch(/<p class="me-line"><span>บางรัก<\/span> · <span>อยู่กับเจอกันตั้งแต่ [^<]+ 25\d\d<\/span><\/p>/);
+    expect(html).toMatch(/<p class="me-line"><span>บางรัก ·<\/span> <span>อยู่กับเจอกันตั้งแต่ [^<]+ 25\d\d<\/span><\/p>/);
     expect(html).toContain("ดูโปรไฟล์แบบที่คนอื่นเห็น");
     expect(html).toContain('id="me-type-h"');
     const order = ['class="me-line"', 'class="card me-next"', 'class="me-peek"', 'id="me-type-h"'].map((s) => html.indexOf(s));

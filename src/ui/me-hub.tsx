@@ -80,10 +80,11 @@ export function MeHub(props: {
         {/* Each clause stays whole on a narrow phone ("โต๊ะประจำ 2 โต๊ะ" never splits), yet can still wrap at large text. */}
         {props.line ? (
           <p class="me-line">
-            {props.line.split(" · ").map((part, i) => (
+            {/* The separator rides at the end of the part before it, so a "·" never sits alone on a line at large text. */}
+            {props.line.split(" · ").map((part, i, all) => (
               <>
-                {i ? " · " : ""}
-                <span>{part}</span>
+                {i ? " " : ""}
+                <span>{i < all.length - 1 ? `${part} ·` : part}</span>
               </>
             ))}
           </p>

@@ -90,12 +90,12 @@ describe.skipIf(!HAS_DB)("Me page: the avatar, the district and no New to Bangko
     const m = await createMember({ nickname: "Fon", district: "phaya_thai" });
     await db().update(profiles).set({ newcomer: true }).where(eq(profiles.accountId, m.id));
     const th = meHead(await (await req("/settings", { cookie: `${m.cookie}; lang=th` })).text());
-    expect(th).toMatch(/<p class="me-line"><span>พญาไท<\/span> · <span>อยู่กับเจอกันตั้งแต่ [^<]+ 25\d\d<\/span><\/p>/);
+    expect(th).toMatch(/<p class="me-line"><span>พญาไท ·<\/span> <span>อยู่กับเจอกันตั้งแต่ [^<]+ 25\d\d<\/span><\/p>/);
     // No photo: the coloured initial, hidden from screen readers (the greeting says the name).
     expect(th).toMatch(/<span class="me-av" aria-hidden="true"><span class="avstack" style="--av:40px">/);
     expect(th.indexOf('class="me-av"')).toBeLessThan(th.indexOf('class="me-hi"'));
     const en = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
-    expect(meHead(en)).toContain("<span>Phaya Thai</span> · <span>With Jurrgun since");
+    expect(meHead(en)).toContain("<span>Phaya Thai ·</span> <span>With Jurrgun since");
     expect(en).not.toContain("New to Bangkok");
     expect(en).not.toContain('class="me-sticker"');
     expect(th).not.toContain("มาใหม่ในกรุงเทพ");
@@ -135,7 +135,9 @@ describe("tab bar above 150% text: icons only", () => {
     expect(block).toContain("clip-path:inset(50%)");
     expect(block).not.toContain("display:none");
     expect(block).not.toMatch(/\.tabbar a\.on>span\.tab-label\{[^}]*(position:absolute|clip)/);
-    expect(block).toContain(".tabbar a{min-width:44px}");
+    expect(block).toContain(".tabbar a:not(.on){min-width:44px}");
+    // The current tab's column grows to its label (an icon of 32px plus 6px padding a side keeps it at 44px+).
+    expect(block).toContain(".tabbar a.on{min-width:min-content}");
   });
 });
 
