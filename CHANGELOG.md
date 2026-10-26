@@ -381,7 +381,7 @@ tests, CI, tooling)
 
 ---
 
-## [0.12.0] - 2026-10-17 → 10-18 · Editing your profile (current)
+## [0.12.0] - 2026-10-17 → 10-18 · Editing your profile
 
 ### Features
 - **Edit in place** on my profile: each section has a ✏️ that opens a sheet with only that section's fields [6158523]
@@ -401,6 +401,29 @@ tests, CI, tooling)
 
 ---
 
+## [0.13.0] - 2026-10-20 · Outside events, partners and City Pulse (current)
+
+### Features
+- **Go-together tables for outside events**: Discover cards say where the ticket comes from and where the table meets; the event page shows the meeting time, the show's own time and place, and a Ticket on <source> button. Everyone buys their own ticket there [a611abf]
+- **Outside events in**: hosts paste an event link and the form fills itself from the page's own event description (robots.txt honoured, never for platforms whose terms we couldn't confirm); admins add calendar feeds read once a day into a host inbox [c7a1280]
+- **Verified partners**: organisations apply, a moderator verifies them, and they get a partner area with Jurrgun-issued keys (hashed, revocable), booking counts only and an API for go-together events with a named host [c7a1280]
+- **Calendar feeds out**: a private, resettable calendar link per member, and a public iCal and JSON-LD feed of public events (never 💘 ones) [c7a1280]
+- **Health and public-sector partners**: set up by an admin only. Health events are free with no ticket link. Private talks have no attendee list and take anonymous questions; partners see numbers only from 10 people up [573cd91]
+- **Collab events**: a partner can invite up to 2 co-hosts; the event shows once each has answered and names every partner [573cd91]
+- **Entry rules**: alcohol served (then 20+) and smoke-free labels with filters, Open entry with Join a group, organiser approval (Requested until the host answers), join-code groups, things to bring, and a short disclaimer ticked before booking [573cd91]
+- **City Pulse home**: a City Pulse button in the top bar opens its own home: this week's questions one at a time (at most 3 a week, no counts or streaks), what the city heard (shares from 10 answers up), a staff note on what changed, Bangkok now (heat, rain, PM2.5), your own answers with Take back, and What should the city ask? [aa71ae2]
+- After an event, members with research consent get 2 optional place questions [aa71ae2]
+
+### Legal & privacy
+- Owner decisions D45 to D66 recorded: outside sources and their terms, partner verification, the 20+ alcohol rule, no vaping, cannabis or other drugs in the code of conduct, women and non-binary only events need a woman or non-binary host [f715693] [4046f9d] [7ecfd3e] [573cd91]
+- City Pulse research tables hold no person and follow the 24-month research retention; the privacy notice lists them [aa71ae2]
+
+### Platform
+- Migrations 0025 (outside events), 0026 (partners, collab and entry rules) and 0027 (City Pulse home), each shipped alone before its code [959a964] [ef2ad5e] [93f9ba9]
+- Mastermind becomes a user-level local plugin; jurrgun-ui stays a project skill [188a456] [1f40967]
+
+---
+
 [0.0.1]: https://github.com/thesandoman/jurrgun/compare/29cf49a...85e6dc7
 [0.1.0]: https://github.com/thesandoman/jurrgun/compare/85e6dc7...1ccb922
 [0.2.0]: https://github.com/thesandoman/jurrgun/compare/1ccb922...673bc4e
@@ -414,6 +437,7 @@ tests, CI, tooling)
 [0.10.0]: https://github.com/thesandoman/jurrgun/compare/0fd9bfe...bc3a86f
 [0.11.0]: https://github.com/thesandoman/jurrgun/compare/bc3a86f...c31fc18
 [0.12.0]: https://github.com/thesandoman/jurrgun/compare/c31fc18...31493aa
+[0.13.0]: https://github.com/thesandoman/jurrgun/compare/6fdf581...573cd91
 
 <!-- commit links -->
 [29cf49a]: https://github.com/thesandoman/jurrgun/commit/29cf49a
@@ -720,3 +744,15 @@ tests, CI, tooling)
 [9847942]: https://github.com/thesandoman/jurrgun/commit/9847942
 [b0ec7a5]: https://github.com/thesandoman/jurrgun/commit/b0ec7a5
 [73fe187]: https://github.com/thesandoman/jurrgun/commit/73fe187
+[a611abf]: https://github.com/thesandoman/jurrgun/commit/a611abf
+[c7a1280]: https://github.com/thesandoman/jurrgun/commit/c7a1280
+[573cd91]: https://github.com/thesandoman/jurrgun/commit/573cd91
+[aa71ae2]: https://github.com/thesandoman/jurrgun/commit/aa71ae2
+[f715693]: https://github.com/thesandoman/jurrgun/commit/f715693
+[4046f9d]: https://github.com/thesandoman/jurrgun/commit/4046f9d
+[7ecfd3e]: https://github.com/thesandoman/jurrgun/commit/7ecfd3e
+[959a964]: https://github.com/thesandoman/jurrgun/commit/959a964
+[ef2ad5e]: https://github.com/thesandoman/jurrgun/commit/ef2ad5e
+[93f9ba9]: https://github.com/thesandoman/jurrgun/commit/93f9ba9
+[188a456]: https://github.com/thesandoman/jurrgun/commit/188a456
+[1f40967]: https://github.com/thesandoman/jurrgun/commit/1f40967
