@@ -3,6 +3,7 @@
  * information should be reachable by anyone).
  */
 import { Hono } from "hono";
+import { faqJsonLd } from "../lib/seo";
 import { ABOUT, FAQ, HELPLINES, LAST_CHECKED, LEARN_CARDS, LEARN_GROUPS, REVIEW_NOTE, TOPICS, TYPES_CARD, groupCards, type Block, type LearnCard, type Source, type Topic } from "../content/learn";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
@@ -116,7 +117,7 @@ learnRoutes.get("/faq", (c) => {
   const { t, lang } = view(c);
   return page(
     c,
-    { title: t("คำถามที่พบบ่อย", "FAQ"), tab: "learn" },
+    { title: t("คำถามที่พบบ่อย", "FAQ"), tab: "learn", description: L(lang, ABOUT), jsonLd: [faqJsonLd(lang)] },
     <>
       <h1>{t("คำถามที่พบบ่อย", "Frequently asked questions")}</h1>
       <FaqList lang={lang} />
@@ -227,7 +228,7 @@ learnRoutes.get("/learn/:slug", (c) => {
   const others = TOPICS.filter((x) => x.slug !== topic.slug);
   return page(
     c,
-    { title: L(lang, topic.title), tab: "learn" },
+    { title: L(lang, topic.title), tab: "learn", description: L(lang, topic.summary) },
     <article class="learn">
       <p>
         <a href="/learn">← {t("เรียนรู้", "Learn")}</a>

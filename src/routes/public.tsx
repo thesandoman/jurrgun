@@ -5,12 +5,13 @@ import { FAIR_PROCESS } from "../content/accountability";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
-import { LEARN_CARDS } from "../content/learn";
+import { ABOUT, LEARN_CARDS } from "../content/learn";
 import { L } from "../lib/i18n";
 import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { BRAND, MARK_SVG } from "../ui/brand";
 import { A11yMenu } from "../ui/a11y";
+import { llmsTxt, robotsTxt, siteJsonLd, sitemapXml } from "../lib/seo";
 
 export const publicRoutes = new Hono<AppEnv>();
 
@@ -145,7 +146,7 @@ publicRoutes.get("/intro", (c) => {
   ];
   return page(
     c,
-    { title: t("ยินดีต้อนรับ", "Welcome"), bare: true, fullscreen: true },
+    { title: t("ยินดีต้อนรับ", "Welcome"), bare: true, fullscreen: true, description: L(lang, ABOUT), jsonLd: siteJsonLd(lang) },
     <div class="intro">
       <a class="intro-skip" href={done}>
         {t("ข้าม", "Skip")}
@@ -240,6 +241,12 @@ publicRoutes.get("/code-of-conduct", (c) => {
     </>,
   );
 });
+
+/* Search and answer engines (src/lib/seo.ts). Text only, cached for a day. */
+const TEXT_DAY = { "cache-control": "public, max-age=86400" };
+publicRoutes.get("/robots.txt", (c) => c.text(robotsTxt(new URL(c.req.url).host), 200, TEXT_DAY));
+publicRoutes.get("/sitemap.xml", (c) => c.body(sitemapXml(), 200, { ...TEXT_DAY, "content-type": "application/xml; charset=utf-8" }));
+publicRoutes.get("/llms.txt", (c) => c.text(llmsTxt(), 200, TEXT_DAY));
 
 publicRoutes.get("/manifest.webmanifest", (c) =>
   c.json(

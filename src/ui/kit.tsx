@@ -7,6 +7,7 @@
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
 import type { AppEnv, CurrentUser } from "../lib/env";
+import { headLinks, ldJson, type HeadLinks } from "../lib/seo";
 import { tr, type Lang, type T } from "../lib/i18n";
 import { STYLES } from "./styles";
 import { VISUAL_CSS } from "./visual";
@@ -53,6 +54,10 @@ export type PageOpts = {
   fullscreen?: boolean;
   /** How a shared link to this page looks on LINE, Facebook, X (Open Graph). Defaults to the site card. */
   share?: { image?: AssetPath; title?: string; description?: string };
+  /** The search-result snippet for this page. Defaults to the site line. Facts already on the page only. */
+  description?: string;
+  /** Structured data for this page (src/lib/seo.ts). Facts already on the page only. */
+  jsonLd?: object[];
 };
 
 /**
@@ -117,7 +122,13 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   const notice = noticeKey && NOTICES[noticeKey];
   const errorText = c.req.query("error");
   return c.html(
-    <Layout v={v} opts={opts} origin={new URL(c.req.url).origin} url={new URL(c.req.url).origin + new URL(c.req.url).pathname}>
+    <Layout
+      v={v}
+      opts={opts}
+      origin={new URL(c.req.url).origin}
+      url={new URL(c.req.url).origin + new URL(c.req.url).pathname}
+      seo={headLinks({ host: new URL(c.req.url).host, path: new URL(c.req.url).pathname, explicitLang: c.req.query("lang"), status: opts.status ?? 200 })}
+    >
       {notice ? (
         <Notice kind="ok" class={PARTY.has(noticeKey) ? "toast party" : "toast"}>
           {v.t(notice[0], notice[1])}
@@ -131,7 +142,7 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   );
 }
 
-function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; children: Child }) {
+function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; seo: HeadLinks; children: Child }) {
   const { v, opts } = props;
   const shareTitle = opts.share?.title ?? `Jurrgun (เจอกัน): ${BRAND.tagline.en}`;
   const shareText = opts.share?.description ?? `${BRAND.tagline.th} · Make friends in Bangkok, no endless swiping. ${BRAND.bma.en}.`;
@@ -147,7 +158,11 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; c
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>{`${opts.title} · Jurrgun`}</title>
-        <meta name="description" content={`Jurrgun (เจอกัน): ${BRAND.tagline.th} · ${BRAND.tagline.en} Make friends in Bangkok, no endless swiping.`} />
+        <meta name="description" content={opts.description ?? `Jurrgun (เจอกัน): ${BRAND.tagline.th} · ${BRAND.tagline.en} Make friends in Bangkok, no endless swiping.`} />
+        {props.seo.robots ? <meta name="robots" content={props.seo.robots} /> : null}
+        {props.seo.canonical ? <link rel="canonical" href={props.seo.canonical} /> : null}
+        {props.seo.alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+        {props.seo.robots ? null : (opts.jsonLd ?? []).map((d) => <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(d) }} />)}
         <meta name="theme-color" content="#fff9f0" media="(prefers-color-scheme: light)" data-media="(prefers-color-scheme: light)" data-scheme="light" />
         <meta name="theme-color" content="#0b3520" media="(prefers-color-scheme: dark)" data-media="(prefers-color-scheme: dark)" data-scheme="dark" />
         <meta property="og:type" content="website" />
