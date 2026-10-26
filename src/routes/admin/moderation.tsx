@@ -769,7 +769,8 @@ adminModeration.post("/:id/action", async (c) => {
   await batch(c.env, ops);
   // Owner card B: the photo copy is held only while the report is open.
   if (resolved && isPhotoReport(r)) await dropEvidence(c.env, r.id);
-  // A banned member's seats go to the waitlist.
+  // A banned member's seats go to the waitlist; a suspended member's, for events inside the suspension (owner card D).
   if (target && action === "ban") await releaseUpcomingSeats(c.env, target.id);
+  if (target && until && (action === "suspend" || autoSuspend)) await releaseUpcomingSeats(c.env, target.id, now, { until });
   return c.redirect(`/admin/moderation/${encodeURIComponent(r.id)}?notice=saved`);
 });

@@ -5,14 +5,16 @@
 import { describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { HAS_DB, TEST_PASSWORD, createMember, db, req } from "./helpers";
-import { newId } from "../src/lib/crypto";
+import { newId, randomToken } from "../src/lib/crypto";
 import {
   accounts,
   auditLog,
+  events,
   moderationActions,
   notifications,
   pulseQuestions,
   pulseResponses,
+  registrations,
   reports,
   sessions,
 } from "../src/schema";
@@ -203,6 +205,35 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     const id2 = await report(reporter.id, (await createMember()).id);
     await req(`/admin/moderation/${id2}/action`, { cookie: mod.cookie, form: { action: "dismiss" } });
     expect((await noteFor(reporter.id, "report_closed")).map((n) => n.titleEn)).toContain("We've closed your report: no rule broken. You can still block them.");
+  });
+
+  it("a suspension gives back seats inside it, like an ordinary cancellation, and the waitlist gets them (owner card D)", async () => {
+    const [mod, host, target, waiting] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "host" }), createMember(), createMember()]);
+    const DAY = 86_400_000;
+    const mk = async (inDays: number) => {
+      const id = newId();
+      const startsAt = new Date(Date.now() + inDays * DAY);
+      await db().insert(events).values({ id, title: "Seat test", startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3_600_000), venueName: "Café", district: "bang_rak", capacity: 1, status: "published", createdBy: host.id, hostAccountId: host.id });
+      return id;
+    };
+    const [soon, later] = await Promise.all([mk(3), mk(30)]);
+    await db().insert(registrations).values([
+      { id: newId(), eventId: soon, accountId: target.id, status: "confirmed", passToken: randomToken(16) },
+      { id: newId(), eventId: soon, accountId: waiting.id, status: "waitlisted", passToken: randomToken(16) },
+      { id: newId(), eventId: later, accountId: target.id, status: "confirmed", passToken: randomToken(16) },
+    ]);
+    const before = (await db().select().from(notifications).where(eq(notifications.accountId, host.id))).length;
+    const id = await report((await createMember()).id, target.id);
+    expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "7", note: "Rude at the table", rule: "harassment" } })).status).toBe(302);
+    const regs = await db().select().from(registrations).where(eq(registrations.accountId, target.id));
+    const soonReg = regs.find((r) => r.eventId === soon)!;
+    expect(soonReg.status).toBe("cancelled");
+    expect(soonReg.cancelledAt).not.toBeNull();
+    expect(regs.find((r) => r.eventId === later)!.status).toBe("confirmed");
+    const [w] = await db().select().from(registrations).where(and(eq(registrations.eventId, soon), eq(registrations.accountId, waiting.id)));
+    expect(w.status).not.toBe("waitlisted");
+    // The host hears nothing a normal cancellation wouldn't send.
+    expect((await db().select().from(notifications).where(eq(notifications.accountId, host.id))).length).toBe(before);
   });
 
   it("dismisses a report and 404s an unknown one", async () => {

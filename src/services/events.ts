@@ -145,19 +145,31 @@ export async function refreshWaitlist(env: DatabaseEnv, eventId: string, now = n
  * Give back every upcoming seat and waitlist place this account holds (on
  * deactivation or a ban), then offer the freed seats to the next people
  * waiting. Past events are left alone so attendance history stays intact.
+ *
+ * With `until` (a suspension, owner card D), only events that start before
+ * the suspension ends. Either way it reads exactly like the member cancelling
+ * (status, time, no strike, no note to the host), so the timing doesn't say
+ * anything about why.
  */
-export async function releaseUpcomingSeats(env: DatabaseEnv, accountId: string, now = new Date()): Promise<number> {
+export async function releaseUpcomingSeats(env: DatabaseEnv, accountId: string, now = new Date(), opts: { until?: Date } = {}): Promise<number> {
   const db = getDb(env);
   const held = await db
     .select({ id: registrations.id, eventId: registrations.eventId })
     .from(registrations)
     .innerJoin(events, eq(events.id, registrations.eventId))
-    .where(and(eq(registrations.accountId, accountId), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now)))
+    .where(
+      and(
+        eq(registrations.accountId, accountId),
+        inArray(registrations.status, ["confirmed", "offered", "waitlisted"]),
+        gt(events.startsAt, now),
+        opts.until ? lt(events.startsAt, opts.until) : undefined,
+      ),
+    )
     .limit(500);
   if (held.length === 0) return 0;
   await db
     .update(registrations)
-    .set({ status: "cancelled", offeredUntil: null })
+    .set({ status: "cancelled", cancelledAt: now, offeredUntil: null })
     .where(inArray(registrations.id, held.map((h) => h.id)));
   for (const eventId of new Set(held.map((h) => h.eventId))) await refreshWaitlist(env, eventId, now);
   return held.length;
