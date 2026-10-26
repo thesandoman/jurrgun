@@ -401,7 +401,7 @@ tests, CI, tooling)
 
 ---
 
-## [0.13.0] - 2026-10-20 · Outside events, partners and City Pulse (current)
+## [0.13.0] - 2026-10-20 · Outside events, partners and City Pulse
 
 ### Features
 - **Go-together tables for outside events**: Discover cards say where the ticket comes from and where the table meets; the event page shows the meeting time, the show's own time and place, and a Ticket on <source> button. Everyone buys their own ticket there [a611abf]
@@ -424,6 +424,47 @@ tests, CI, tooling)
 
 ---
 
+## [0.14.0] - 2026-10-26 · Moderation, 💘 privacy, City Pulse for the BMA and a lighter app (current)
+
+### Features
+- **City Pulse for the BMA**: counts rounded to 5, open questions show a daily snapshot, unsorted suggestions wiped 60 days after their month, and a monthly round-up with an audited CSV [9bd7a66] [50e5551] [d27d92b] [e34baca]
+- **Who sees who at an event**: one shared rule decides names, seat codes or counts for staff, hosts and partners. On 💘 events, staff and partners see counts rounded to 5 and hosts see seat codes only [17f5349] [79fbb42]
+- **Pinky**: looks the same on everyone; 💘 off withdraws picks; no re-tap after Back to friends; a first-date safety line and the 💘 consent explainer [4ec6bcd] [741d3b8] [6908f78] [3a4fe05]
+- A 💘 event is never limited to a group, and dating co-hosts can't join a group's event [62b72db]
+- Paused events: a pulled event keeps booked members on a read-only page, with no pass or check-in [95f5870]
+- Discover map: landscape side panel, the Key moves into Filters, chips fade with +N, a live search count, laptops open the list, a Show all pill and a real empty state [e4b685a] [5db6d48] [73405d9] [424dd38] [f2514ba] [5927021] [6585a06] [d303951] [1e078ae] [613ec16] [c7317c9]
+- University search reads from the database [e902c27]
+
+### UX/UI
+- Phones: no page scrolls sideways any more, safe areas around the notch and home indicator, focus never hidden behind the bars, 44px targets, 8px gaps and a number keypad for number fields [6d556c2] [60e33a2] [138e540] [5c441cd] [d8033de] [b0b49a0] [4bb86f9]
+- Chat keeps a refused message; caption and poll fields have labels; buttons say what they send [96c85ac] [4442569] [6313ae1]
+- Dark-mode 💘 love-ink reads red, not pink [44b5bcc]
+
+### Trust & safety
+- Staff powers: only admins grant partner admin or trusted host; reports about staff go to admins; report limits, with alerts for critical reports only [1f864df]
+- Moderators can't dismiss or note reports about themselves or an admin; table moves and +1 links refuse blocked pairs [6c4a63d]
+- Evidence hold: a reported chat photo is kept until the report closes [c678bc9]
+- Outcome notices name the rule; a banned member can ask once for another look; reporters hear the outcome [219822e]
+- A suspension gives back its seats to the waitlist [485e6e3]
+
+### Legal & privacy
+- Privacy notice dated 26 October 2026: members agree to the updated Terms once, on one card that says what changed [6843f07] [32eaa72]
+- A reported member's participation history shows 💘 events as "A private event" to every staff role [b90a693] [c3c8d7d]
+- Audit log kept 2 years; research withdrawal says what it can't reach [c678bc9] [d27d92b]
+
+### Website
+- SEO and AEO basics: robots.txt, sitemap.xml, llms.txt, canonical and th/en hreflang, noindex off the public pages, FAQ and Organization JSON-LD [6603b19] [e730fa4] [c486318] [71aae68]
+- First-touch ?src= capture on /quiz and event pages [459c806]
+
+### Platform
+- Migrations 0028 (empty-district alert) and 0029 (universities), applied in production; a test fails any migration that drops or truncates [c5669db] [e6bbed0] [5a7caf5]
+- University list moves from the Worker bundle to the database: -443 KB raw, 10,270 rows loaded [33adbba] [e902c27] [bb8490e]
+- settings, events and admin/events routes split into folders of smaller modules (pure moves) [028a02e] [b78e3ae] [d67e0f0]
+- The public Bangkok Vibe prototype API is retired [03846b5]
+- Tests: the landing check expects a real 200 from /login [a2b3db6]; a local persona seeder for demos [6ad070a]
+
+---
+
 [0.0.1]: https://github.com/thesandoman/jurrgun/compare/29cf49a...85e6dc7
 [0.1.0]: https://github.com/thesandoman/jurrgun/compare/85e6dc7...1ccb922
 [0.2.0]: https://github.com/thesandoman/jurrgun/compare/1ccb922...673bc4e
@@ -438,6 +479,7 @@ tests, CI, tooling)
 [0.11.0]: https://github.com/thesandoman/jurrgun/compare/bc3a86f...c31fc18
 [0.12.0]: https://github.com/thesandoman/jurrgun/compare/c31fc18...31493aa
 [0.13.0]: https://github.com/thesandoman/jurrgun/compare/6fdf581...573cd91
+[0.14.0]: https://github.com/thesandoman/jurrgun/compare/573cd91...d67e0f0
 
 <!-- commit links -->
 [29cf49a]: https://github.com/thesandoman/jurrgun/commit/29cf49a
@@ -756,3 +798,63 @@ tests, CI, tooling)
 [93f9ba9]: https://github.com/thesandoman/jurrgun/commit/93f9ba9
 [188a456]: https://github.com/thesandoman/jurrgun/commit/188a456
 [1f40967]: https://github.com/thesandoman/jurrgun/commit/1f40967
+[028a02e]: https://github.com/thesandoman/jurrgun/commit/028a02e
+[03846b5]: https://github.com/thesandoman/jurrgun/commit/03846b5
+[138e540]: https://github.com/thesandoman/jurrgun/commit/138e540
+[17f5349]: https://github.com/thesandoman/jurrgun/commit/17f5349
+[1e078ae]: https://github.com/thesandoman/jurrgun/commit/1e078ae
+[1f864df]: https://github.com/thesandoman/jurrgun/commit/1f864df
+[219822e]: https://github.com/thesandoman/jurrgun/commit/219822e
+[32eaa72]: https://github.com/thesandoman/jurrgun/commit/32eaa72
+[33adbba]: https://github.com/thesandoman/jurrgun/commit/33adbba
+[3a4fe05]: https://github.com/thesandoman/jurrgun/commit/3a4fe05
+[424dd38]: https://github.com/thesandoman/jurrgun/commit/424dd38
+[4442569]: https://github.com/thesandoman/jurrgun/commit/4442569
+[44b5bcc]: https://github.com/thesandoman/jurrgun/commit/44b5bcc
+[459c806]: https://github.com/thesandoman/jurrgun/commit/459c806
+[485e6e3]: https://github.com/thesandoman/jurrgun/commit/485e6e3
+[4bb86f9]: https://github.com/thesandoman/jurrgun/commit/4bb86f9
+[4ec6bcd]: https://github.com/thesandoman/jurrgun/commit/4ec6bcd
+[50e5551]: https://github.com/thesandoman/jurrgun/commit/50e5551
+[5927021]: https://github.com/thesandoman/jurrgun/commit/5927021
+[5a7caf5]: https://github.com/thesandoman/jurrgun/commit/5a7caf5
+[5c441cd]: https://github.com/thesandoman/jurrgun/commit/5c441cd
+[5db6d48]: https://github.com/thesandoman/jurrgun/commit/5db6d48
+[60e33a2]: https://github.com/thesandoman/jurrgun/commit/60e33a2
+[613ec16]: https://github.com/thesandoman/jurrgun/commit/613ec16
+[62b72db]: https://github.com/thesandoman/jurrgun/commit/62b72db
+[6313ae1]: https://github.com/thesandoman/jurrgun/commit/6313ae1
+[6585a06]: https://github.com/thesandoman/jurrgun/commit/6585a06
+[6603b19]: https://github.com/thesandoman/jurrgun/commit/6603b19
+[6843f07]: https://github.com/thesandoman/jurrgun/commit/6843f07
+[6908f78]: https://github.com/thesandoman/jurrgun/commit/6908f78
+[6ad070a]: https://github.com/thesandoman/jurrgun/commit/6ad070a
+[6c4a63d]: https://github.com/thesandoman/jurrgun/commit/6c4a63d
+[6d556c2]: https://github.com/thesandoman/jurrgun/commit/6d556c2
+[71aae68]: https://github.com/thesandoman/jurrgun/commit/71aae68
+[73405d9]: https://github.com/thesandoman/jurrgun/commit/73405d9
+[741d3b8]: https://github.com/thesandoman/jurrgun/commit/741d3b8
+[79fbb42]: https://github.com/thesandoman/jurrgun/commit/79fbb42
+[95f5870]: https://github.com/thesandoman/jurrgun/commit/95f5870
+[96c85ac]: https://github.com/thesandoman/jurrgun/commit/96c85ac
+[9bd7a66]: https://github.com/thesandoman/jurrgun/commit/9bd7a66
+[a2b3db6]: https://github.com/thesandoman/jurrgun/commit/a2b3db6
+[b0b49a0]: https://github.com/thesandoman/jurrgun/commit/b0b49a0
+[b78e3ae]: https://github.com/thesandoman/jurrgun/commit/b78e3ae
+[b90a693]: https://github.com/thesandoman/jurrgun/commit/b90a693
+[bb8490e]: https://github.com/thesandoman/jurrgun/commit/bb8490e
+[c3c8d7d]: https://github.com/thesandoman/jurrgun/commit/c3c8d7d
+[c486318]: https://github.com/thesandoman/jurrgun/commit/c486318
+[c5669db]: https://github.com/thesandoman/jurrgun/commit/c5669db
+[c678bc9]: https://github.com/thesandoman/jurrgun/commit/c678bc9
+[c7317c9]: https://github.com/thesandoman/jurrgun/commit/c7317c9
+[d27d92b]: https://github.com/thesandoman/jurrgun/commit/d27d92b
+[d303951]: https://github.com/thesandoman/jurrgun/commit/d303951
+[d67e0f0]: https://github.com/thesandoman/jurrgun/commit/d67e0f0
+[d8033de]: https://github.com/thesandoman/jurrgun/commit/d8033de
+[e34baca]: https://github.com/thesandoman/jurrgun/commit/e34baca
+[e4b685a]: https://github.com/thesandoman/jurrgun/commit/e4b685a
+[e6bbed0]: https://github.com/thesandoman/jurrgun/commit/e6bbed0
+[e730fa4]: https://github.com/thesandoman/jurrgun/commit/e730fa4
+[e902c27]: https://github.com/thesandoman/jurrgun/commit/e902c27
+[f2514ba]: https://github.com/thesandoman/jurrgun/commit/f2514ba
