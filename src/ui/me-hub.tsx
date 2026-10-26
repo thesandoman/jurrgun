@@ -62,7 +62,17 @@ export function MeHub(props: {
           the counts moved to My month in people (/me/month). */}
       <header class="me-head">
         <h1 class="me-hi">{t(`หวัดดี ${props.nickname}`, `Hey ${props.nickname}`)}</h1>
-        {props.line ? <p class="me-line">{props.line}</p> : null}
+        {/* Each clause stays whole on a narrow phone ("โต๊ะประจำ 2 โต๊ะ" never splits), yet can still wrap at large text. */}
+        {props.line ? (
+          <p class="me-line">
+            {props.line.split(" · ").map((part, i) => (
+              <>
+                {i ? " · " : ""}
+                <span>{part}</span>
+              </>
+            ))}
+          </p>
+        ) : null}
       </header>
       {props.next ?? null}
       <a href="/me/profile" class="me-peek">
@@ -169,6 +179,7 @@ const ME_CSS = `
 .me-head{margin:8px 0 12px;text-align:start}
 .me-hi{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
 .me-line{margin:0;color:var(--ink-2);font-size:.95rem;line-height:1.5}
+.me-line>span{display:inline-block}
 .me-peek{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:4px 0 0;font-weight:600;font-size:.92rem;text-decoration:none}
 
 .me-grow{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin:16px 0}

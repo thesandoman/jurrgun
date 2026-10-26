@@ -1351,6 +1351,8 @@ main .host-send .btn{width:auto;margin:0}
 @media (min-width:360px) and (max-width:480px){
   .pulse-btn{min-width:44px;padding:4px 10px;font-size:.8rem}
   .pulse-btn span{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
+  .topbar .pulse-btn{padding-inline:8px}
+  .topbar .proto-chip>summary{padding:0}
 }
 /* Card 1: large text (200%) never pushes the page sideways: the top bar wraps onto a second row instead. */
 @media (max-width:1023.98px){
@@ -1385,6 +1387,6 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 /* Card 6: the counts that left Me sit on My month in people, each one a link to its list. */
 .month-sofar{margin:24px 0}
 .month-sofar h2{margin:0 0 12px}
-.month-sofar a.fact{display:flex;flex-direction:column;min-height:44px;color:var(--ink);text-decoration:none}
+.month-sofar a.fact{min-height:44px;color:var(--ink);text-decoration:none}
 .month-sofar a.fact:hover .big-n{text-decoration:underline;text-underline-offset:3px}
 `);

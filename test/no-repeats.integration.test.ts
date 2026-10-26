@@ -58,7 +58,7 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     }
     await attendedOnce(me.id);
     const hub = await (await req("/settings?lang=en", { cookie: me.cookie })).text();
-    expect(hub).toMatch(/<p class="me-line">With Jurrgun since [A-Z][a-z]{2} \d{4} · 3 Regular Tables<\/p>/);
+    expect(hub).toMatch(/<p class="me-line"><span>With Jurrgun since [A-Z][a-z]{2} \d{4}<\/span> · <span>3 Regular Tables<\/span><\/p>/);
     const prof = await (await req("/me/profile?lang=en", { cookie: me.cookie })).text();
     expect(prof).toContain("Regular at 3 tables");
     for (const n of names) expect(prof).toContain(`<span class="pc-chip">${n}</span>`);
