@@ -665,6 +665,7 @@ body.fullmap-body{--z-map:0;--z-key:4;--z-rail:5;--z-chips:6;--z-top:8;--z-panel
 @supports (height:100dvh){.fullmap .svm-key{max-height:max(44px,calc(100dvh - var(--free-top) - var(--tab-h) - var(--sheet-cur) - var(--credit-h) - 20px))}}
 .fullmap .svm-key.moved{bottom:auto;max-height:none}
 .fullmap .svm-key.off,.fd-rail.off{visibility:hidden}
+.fullmap .svm-key{padding-block:0}.fullmap .svm-key[open]{padding-bottom:6px}
 .fullmap .svm-key summary{display:flex;align-items:center;min-height:44px}
 .fullmap .svm-key-move{display:block;width:100%;min-height:44px;margin:6px 0 2px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
 .fullmap .svm-key summary{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
