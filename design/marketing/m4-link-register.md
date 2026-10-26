@@ -37,7 +37,6 @@ DRAFT, held for the owner's OK. Nothing here is published.
 | `yt-film01` | YouTube, film 01 | `/` | |
 | `yt-film03` | YouTube, film 03 | `/` | |
 | `yt-film06` | YouTube, film 06 | `/` | |
-| `founder-ig` | Owner's own IG post | `/new` | Owner's account: only with their OK |
 | `founder-li` | Owner's LinkedIn post | `/international` | |
 | `creator` | All creator posts (one shared code) | `/new` | Never one code per creator |
 | `poster-new` | QR poster, New to Bangkok | `/new` | |

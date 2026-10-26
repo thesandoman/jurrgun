@@ -21,6 +21,8 @@ describe("robots.txt", () => {
     expect(txt).toContain("Disallow: /admin");
     expect(txt).toContain("Disallow: /chat");
     expect(txt).toContain(`Sitemap: ${LIVE}/sitemap.xml`);
+    expect(txt).toContain("Disallow: /settings");
+    expect(txt).not.toMatch(/Disallow: \/(sw\.js|manifest)/);
   });
 
   it("blocks everything on any other host (staging, dev, previews)", async () => {
@@ -41,7 +43,7 @@ describe("sitemap.xml", () => {
 
   it("never lists member, admin or chat pages, dating-led topics or the planned domain", async () => {
     const xml = await (await get(`${LIVE}/sitemap.xml`)).text();
-    for (const p of ["/events", "/admin", "/chat", "/me/", "/host", "/pulse", "/learn/dating-in-bangkok", "/learn/date-responsibly"]) expect(xml).not.toContain(`${LIVE}${p}<`);
+    for (const p of ["/settings", "/api/", "/events", "/admin", "/chat", "/me/", "/host", "/pulse", "/learn/dating-in-bangkok", "/learn/date-responsibly"]) expect(xml).not.toContain(`${LIVE}${p}<`);
     expect(xml).not.toContain(BRAND.plannedDomain);
   });
 });

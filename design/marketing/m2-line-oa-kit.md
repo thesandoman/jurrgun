@@ -70,8 +70,10 @@ Rules: no countdowns, no "last chance", no streaks, at most one broadcast a week
 | Platform | 1st | 2nd | 3rd |
 |---|---|---|---|
 | LINE OA | @jurrgun (premium ID, paid) | @jurrgunbkk (premium ID) | free basic ID (random, like @123abcd) |
-| Instagram | @jurrgun | @jurrgun.bkk | @jurrgun_th |
+| Instagram | @jurrgun (a new, separate brand account) | @jurrgun.bkk | @jurrgun_th |
 | TikTok | @jurrgun | @jurrgunbkk | @jurrgun.th |
 | Facebook page | /jurrgun | /jurrgunbkk | /jurrgun.th |
+
+**Instagram (owner, 2026-10-26):** Jurrgun gets its own new @jurrgun account, and creating it still needs the owner's OK. The owner's personal account @sandosit is left out of everything: no posts, no metrics, no founder post.
 
 A free LINE OA gets a random basic ID. A readable ID like @jurrgun is a paid premium ID. **Owner question (through Main):** reserve the handles now, before a launch date, so nobody else takes them?

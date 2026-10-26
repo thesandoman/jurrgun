@@ -101,6 +101,7 @@ export function headLinks(opts: { host: string | undefined | null; path: string;
   return { robots: null, canonical: at(lang), alternates };
 }
 
+/** /sw.js and /manifest.webmanifest stay crawlable: Web Push and reminders need the service worker. */
 export function robotsTxt(host: string | undefined | null): string {
   if (!isLiveHost(host)) return "User-agent: *\nDisallow: /\n";
   return [
@@ -114,6 +115,7 @@ export function robotsTxt(host: string | undefined | null): string {
     "Disallow: /invite/",
     "Disallow: /me/",
     "Disallow: /notifications",
+    "Disallow: /settings",
     "",
     `Sitemap: ${SITE_ORIGIN}/sitemap.xml`,
     "",
