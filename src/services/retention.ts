@@ -443,7 +443,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   }
   if (ids.length) {
     // Their City Pulse and wellbeing answers, as on research withdrawal. Deactivation already
-    // deletes them and cuts the research_id (routes/settings.tsx); this covers any account
+    // deletes them and cuts the research_id (routes/settings/account.tsx); this covers any account
     // that reached deletion still holding one. It must run before the research_id is cleared below.
     const theirRids = db.select({ rid: accounts.researchId }).from(accounts).where(and(inArray(accounts.id, ids), isNotNull(accounts.researchId)));
     writes.push(

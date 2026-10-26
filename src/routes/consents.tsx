@@ -10,7 +10,7 @@
  *                           something more) can be withdrawn here
  *   agreements on record    the Terms and the guide's promise, with dates
  *
- * Switches post to the same handler as the Privacy Center (settings.tsx
+ * Switches post to the same handler as the Privacy Center (settings/privacy.tsx
  * saveConsents), so there is one place that writes consents.
  */
 import { Hono } from "hono";
