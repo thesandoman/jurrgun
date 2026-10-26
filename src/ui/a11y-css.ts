@@ -1396,4 +1396,18 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 .me .me-head>.me-av{grid-row:1/span 2;width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center}
 .me .me-head>.me-av .av{border:0;box-shadow:none}
 .me .me-head>:not(.me-av){grid-column:2;min-width:0}
+/* Tab bar: the label is its own span; it looks as the bare text did (the icon's span rules don't reach it). */
+:is(.tabbar,.top-nav) a>span.tab-label{display:block;height:auto;font-size:inherit;line-height:inherit}
+.top-nav a>span.tab-label{display:inline}
+/* Tab bar above 150% text: icons only. The bar is a container and the query is in rem, which in a container
+   query is the page's real root size, so it follows browser text zoom and the app's own text size alike.
+   12rem of bar is 288px (a 320px phone) at 150%; at 200% it holds up to a 415px phone. The other labels
+   stay as each tab's name, visually hidden; the current tab keeps its label and its column grows to fit. */
+.tabbar{container:tabbar/inline-size}
+@container tabbar (width < 12rem){
+  .tabbar a{min-width:44px}
+  .tabbar a:not(.on)>span.tab-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+  .tabbar a.on{white-space:normal;padding-inline:6px}
+  .tabbar a.on>span.tab-label{text-align:center;line-height:1.15}
+}
 `);

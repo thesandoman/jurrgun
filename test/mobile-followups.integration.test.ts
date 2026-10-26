@@ -10,6 +10,7 @@ import { ENV, HAS_DB, createMember, db, req } from "./helpers";
 import { chatMessages, connections, profiles } from "../src/schema";
 import { newId } from "../src/lib/crypto";
 import { meLine } from "../src/ui/me-hub";
+import { A11Y_CSS } from "../src/ui/a11y-css";
 
 /** Me's header: from the greeting block to its end. */
 function meHead(html: string): string {
@@ -114,5 +115,40 @@ describe.skipIf(!HAS_DB)("Me page: the avatar, the district and no New to Bangko
     const head = meHead(await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text());
     expect(head).toMatch(/<p class="me-line"><span>With Jurrgun since [A-Z][a-z]{2} \d{4}<\/span><\/p>/);
     expect(head).toContain('class="me-av"');
+  });
+});
+
+describe("tab bar above 150% text: icons only", () => {
+  /** The rules inside the tab bar's container query. */
+  const block = (() => {
+    const i = A11Y_CSS.indexOf("@container tabbar (width < 12rem){");
+    return i < 0 ? "" : A11Y_CSS.slice(i, A11Y_CSS.indexOf("\n}", i));
+  })();
+
+  it("the bar is a named container and the query is in rem", () => {
+    expect(A11Y_CSS).toContain(".tabbar{container:tabbar/inline-size}");
+    expect(block).not.toBe("");
+  });
+
+  it("hides every label but the current tab's visually, never with display:none, and keeps 44px targets", () => {
+    expect(block).toContain(".tabbar a:not(.on)>span.tab-label{position:absolute;width:1px;height:1px;");
+    expect(block).toContain("clip-path:inset(50%)");
+    expect(block).not.toContain("display:none");
+    expect(block).not.toMatch(/\.tabbar a\.on>span\.tab-label\{[^}]*(position:absolute|clip)/);
+    expect(block).toContain(".tabbar a{min-width:44px}");
+  });
+});
+
+describe.skipIf(!HAS_DB)("tab bar: each label is the tab's accessible name", () => {
+  it("puts each label in its own span inside the link, not hidden from screen readers", async () => {
+    const m = await createMember();
+    const html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
+    const bar = html.slice(html.indexOf('<nav class="tabbar"'), html.indexOf("</nav>", html.indexOf('<nav class="tabbar"')));
+    for (const label of ["Discover", "Buddy", "My events", "My people", "Me"]) expect(bar).toContain(`<span class="tab-label">${label}</span>`);
+    expect(bar).not.toMatch(/<span class="tab-label"[^>]*aria-hidden/);
+    // The current tab is marked, so the large-text rule keeps its label in sight.
+    expect(bar).toMatch(/<a href="\/settings" class="on" aria-current="page">[\s\S]*?<span class="tab-label">Me<\/span>/);
+    const th = await (await req("/settings", { cookie: `${m.cookie}; lang=th` })).text();
+    expect(th).toContain('<span class="tab-label">นัดของฉัน</span>');
   });
 });

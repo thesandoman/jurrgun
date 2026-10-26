@@ -327,7 +327,8 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
           aria-label={key === "connections" && chats > 0 ? t(`${text} แชตยังไม่ได้อ่าน ${chats}`, `${text}, ${chats} unread ${chats === 1 ? "chat" : "chats"}`) : undefined}
         >
           <span aria-hidden="true">{icon}</span>
-          {text}
+          {/* Its own element so large text can hide it visually and keep it as the tab's name (a11y-css, tab bar at large text). */}
+          <span class="tab-label">{text}</span>
           {key === "connections" ? <UnreadDot n={chats} class="tab-badge" /> : null}
         </a>
       ))}
