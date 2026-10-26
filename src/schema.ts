@@ -40,6 +40,8 @@ export type ProfileBio = {
   educationDetail?: string;
   university?: string;
   universityName?: string;
+  /** Display name of the picked university, stored at save time so a card needs no lookup. */
+  universityLabel?: { en: string; th?: string };
   gradYear?: number;
   residency?: string;
   story?: string;
@@ -767,6 +769,24 @@ export const placeChecks = pgTable(
   },
   (t) => [index("research_place_checks_venue_idx").on(t.venue, t.district)],
 );
+
+/**
+ * Universities for the education picker and "same university" matching
+ * (~10,300 rows, loaded once by POST /api/setup/universities). Reference data,
+ * not about any person; it moved out of the Worker bundle (Core Platform C3,
+ * migration 0029). The id is the same stable id members' bios already store.
+ */
+export const socialUniversities = pgTable("social_universities", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** ISO 3166 country code. */
+  cc: text("cc").notNull(),
+  nameTh: text("name_th"),
+  /** Folded haystack: " name thai-name aliases " (content/universities.ts). */
+  search: text("search").notNull(),
+  /** Folded Thai name, matched anywhere (Thai has no spaces between words). */
+  thFold: text("th_fold"),
+});
 
 /**
  * "What should the city ask?" (D66). No person. The words are read by

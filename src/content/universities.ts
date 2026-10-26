@@ -149,8 +149,13 @@ const fold = (s: string) =>
 
 export const uniId = (name: string, cc: string) => `${cc.toLowerCase()}:${fold(name).replace(/ /g, "-")}`;
 
-const ALL: University[] = (() => {
-  const rows: [string, string][] = [...UNIVERSITY_ROWS, ...THAI_EXTRA.map((n): [string, string] => [n, "TH"])];
+/**
+ * The full list from raw [name, country] rows: Thai additions, Thai names and
+ * aliases folded into each row's search text. Pure, so the one-time database
+ * load (scripts/load-universities.ts) builds exactly the rows search expects.
+ */
+export function buildUniversities(raw: [string, string][]): University[] {
+  const rows: [string, string][] = [...raw, ...THAI_EXTRA.map((n): [string, string] => [n, "TH"])];
   const seen = new Set<string>();
   const out: University[] = [];
   for (const [name, cc] of rows) {
@@ -162,7 +167,9 @@ const ALL: University[] = (() => {
     out.push({ id, name, cc, th, thFold: th ? fold(th) : undefined, search: ` ${fold(name)} ${th ? fold(th) : ""} ${aliases.join(" ")} ` });
   }
   return out;
-})();
+}
+
+const ALL: University[] = buildUniversities(UNIVERSITY_ROWS);
 const BY_ID = new Map(ALL.map((u) => [u.id, u]));
 
 export const universityById = (id: string | undefined | null): University | undefined => (id ? BY_ID.get(id) : undefined);

@@ -8,6 +8,7 @@
  *   svcloud secrets set jurrgun SETUP_KEY <random>
  *   curl -X POST https://…/api/setup/migrate -H "x-setup-key: <random>"
  *   curl -X POST https://…/api/setup/promote -H "x-setup-key: <random>" -d '{"username":"…"}'
+ *   SETUP_URL=https://… SETUP_KEY=<random> npx vite-node scripts/load-universities.ts
  *   svcloud secrets remove jurrgun SETUP_KEY
  */
 import { Hono } from "hono";
@@ -16,7 +17,7 @@ import { getDb, unlockTables } from "../db";
 import type { AppEnv } from "../lib/env";
 import { safeEqual } from "../lib/crypto";
 import { MIGRATIONS } from "../migrations";
-import { accounts } from "../schema";
+import { accounts, socialUniversities } from "../schema";
 import { audit } from "../lib/records";
 
 export const setup = new Hono<AppEnv>();
@@ -93,4 +94,69 @@ setup.post("/promote", async (c) => {
   await db.update(accounts).set({ role: role as (typeof accounts.$inferSelect)["role"] }).where(eq(accounts.id, acct.id));
   await audit(db, "setup", "role.set", { type: "account", id: acct.id }, { role });
   return c.json({ ok: true, username, role });
+});
+
+/** Most rows one /universities call takes (the loader sends batches of 1,000). */
+export const UNIVERSITY_BATCH_MAX = 2000;
+const UNI_ID = /^[a-z]{2}:[\p{L}\p{M}\p{N}-]{1,200}$/u;
+
+type UniRow = typeof socialUniversities.$inferInsert;
+
+/** One loader row, checked; null when anything is off. */
+export function uniRow(v: unknown): UniRow | null {
+  if (!v || typeof v !== "object") return null;
+  const r = v as Record<string, unknown>;
+  const str = (x: unknown, max: number) => (typeof x === "string" && x.length > 0 && x.length <= max ? x : undefined);
+  const opt = (x: unknown, max: number) => (x === undefined || x === null ? null : str(x, max) ?? undefined);
+  const id = str(r.id, 210);
+  const name = str(r.name, 300);
+  const cc = typeof r.cc === "string" && /^[A-Z]{2}$/.test(r.cc) ? r.cc : undefined;
+  const search = str(r.search, 2000);
+  const nameTh = opt(r.nameTh, 300);
+  const thFold = opt(r.thFold, 300);
+  if (!id || !UNI_ID.test(id) || !name || !cc || !search || nameTh === undefined || thFold === undefined) return null;
+  return { id, name, cc, search, nameTh, thFold };
+}
+
+/**
+ * Load (or refresh) the university list into social_universities (Core
+ * Platform C3, migration 0029), then give every bio that picked a university
+ * its display name (bio.universityLabel), so cards never need the list.
+ * Idempotent: rows upsert by id and only bios still missing a label change.
+ * Body: { rows: [{ id, name, cc, nameTh?, search, thFold? }] }; an empty
+ * batch just runs the label fill.
+ */
+setup.post("/universities", async (c) => {
+  const body = await c.req.json<{ rows?: unknown }>().catch(() => null);
+  if (!body || !Array.isArray(body.rows) || body.rows.length > UNIVERSITY_BATCH_MAX) {
+    return c.json({ error: `rows must be an array of at most ${UNIVERSITY_BATCH_MAX}` }, 400);
+  }
+  const rows = body.rows.map(uniRow);
+  const bad = rows.findIndex((r) => r === null);
+  if (bad >= 0) return c.json({ error: "bad row", index: bad }, 400);
+  const db = getDb(c.env);
+  if (rows.length > 0) {
+    await db
+      .insert(socialUniversities)
+      .values(rows as UniRow[])
+      .onConflictDoUpdate({
+        target: socialUniversities.id,
+        set: {
+          name: sql`excluded.name`,
+          cc: sql`excluded.cc`,
+          nameTh: sql`excluded.name_th`,
+          search: sql`excluded.search`,
+          thFold: sql`excluded.th_fold`,
+        },
+      });
+  }
+  const labelled = await db.execute(sql`
+    UPDATE social_profiles p
+       SET bio = p.bio || jsonb_build_object('universityLabel',
+             jsonb_strip_nulls(jsonb_build_object('en', u.name, 'th', u.name_th)))
+      FROM social_universities u
+     WHERE p.bio->>'university' = u.id
+       AND NOT (p.bio ? 'universityLabel')`);
+  const [{ n }] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM social_universities`)) as unknown as { n: number }[];
+  return c.json({ upserted: rows.length, labelled: (labelled as unknown as { count?: number }).count ?? null, total: n });
 });

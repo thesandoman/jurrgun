@@ -1319,6 +1319,8 @@ export type Bio = {
   /** A university id from src/content/universities.ts, or the name as typed when it isn't in the list. */
   university?: string;
   universityName?: string;
+  /** Display name of the picked university, stored at save time (no lookup needed to show it). */
+  universityLabel?: { en: string; th?: string };
   gradYear?: number;
   /** RESIDENCY value, from sign-up (editable in My Bangkok). */
   residency?: string;
@@ -1459,6 +1461,8 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.educationDetail)) out.educationDetail = s(b.educationDetail);
   if (s(b.university)) out.university = s(b.university);
   if (s(b.universityName)) out.universityName = s(b.universityName);
+  const ul = b.universityLabel as { en?: unknown; th?: unknown } | undefined;
+  if (ul && typeof ul === "object" && typeof ul.en === "string") out.universityLabel = { en: ul.en, ...(typeof ul.th === "string" ? { th: ul.th } : {}) };
   if (typeof b.gradYear === "number" && Number.isInteger(b.gradYear)) out.gradYear = b.gradYear;
   if (s(b.residency)) out.residency = s(b.residency);
   if (s(b.story)) out.story = s(b.story);
