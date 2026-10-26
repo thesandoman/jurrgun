@@ -40,7 +40,7 @@ DRAFT, held for the owner's OK. Nothing here is published.
 - **Asset:** one existing type share card (Branding's set); no score, no percentage
 - **Hook:** คุณเป็นคนกรุงเทพฯ แบบไหน? / Which kind of Bangkok person are you?
 - **Caption:** ควิซสั้น ๆ 16 ข้อ ผลเป็นแค่จุดเริ่มต้น ไม่ใช่ป้ายติดตัว เราใช้ช่วยจัดโต๊ะให้คละคน / A short 16-question quiz. The result is a starting point, not a label. It helps us mix your table.
-- **CTA:** ทำควิซ หาโต๊ะแรก / Take the quiz to your first table (`ig-bio`)
+- **CTA:** ทำควิซ หาโต๊ะแรก / Take the quiz to your first table (`ig-bio`, the bio link; for a story link use `/quiz?src=ig-bio`)
 
 ### 5 · Regular Tables
 - **Asset:** `jurrgun-03-regular-tables.mp4` (1:17); for IG, a 20 s chapter cut from it (needs Films & Media)

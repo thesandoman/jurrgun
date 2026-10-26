@@ -7,7 +7,8 @@ DRAFT, held for the owner's OK. Nothing here is published.
 
 ## How codes work (from `src/lib/source.ts`)
 
-- Add `?src=<code>` to a **landing**: `/`, `/new`, `/international`, `/signup` or `/types/<slug>`. A code on any other path (for example `/quiz` or `/events/...`) is **not recorded**, so every link below points to a landing.
+- Add `?src=<code>` to a page that records it: `/`, `/new`, `/international`, `/signup`, `/types/<slug>`, and since 459c806 `/quiz` and `/events/<id>` (kept through the sign-in redirect). `/events` (Discover) and `/quiz/result` don't record it.
+- A single table can be shared as `/events/<id>?src=<channel code>`. The code still names the channel, never the event or a person.
 - Codes are lower case `a-z`, `0-9`, `-` and `_`, at most 32 characters. Anything else becomes `_`. A run of 6 or more digits is dropped, so codes never carry dates or numbers like `20261107`.
 - The first code wins for 30 days. City Insight shows sign-ups and first RSVPs by code, only as totals of 10 or more.
 - **One code per channel, film cut or poster. Never per person.** Creators share one code (`creator`), not one each.
@@ -21,7 +22,7 @@ DRAFT, held for the owner's OK. Nothing here is published.
 | `line-rich-tables` | LINE OA rich menu: Tables this week | `/new` | |
 | `line-rich-new` | LINE OA rich menu: New to Bangkok | `/new` | |
 | `line-rich-intl` | LINE OA rich menu: From abroad | `/international` | |
-| `line-rich-quiz` | LINE OA rich menu: Take the quiz | `/new` | `/quiz` isn't a landing, so go via `/new` |
+| `line-rich-quiz` | LINE OA rich menu: Take the quiz | `/quiz` | |
 | `line-greeting` | LINE OA greeting message | `/new` | |
 | `line-bc-eve` | LINE broadcast, launch eve (L-1) | `/new` | |
 | `line-bc-reminder` | LINE broadcast, day-before reminder | `/new` | |
