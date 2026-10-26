@@ -24,6 +24,7 @@ import { A11yMenu } from "./a11y";
 import type { Lang, T } from "../lib/i18n";
 import type { Precision } from "../lib/places";
 import { BKK_CENTER, BKK_PAN_LIMIT } from "../lib/places";
+import { needsConsentText, optedInText, optInText } from "../domain/district-alert";
 import { SV_MAP_VERSION } from "../vendor/sv-map.generated";
 
 export type MapPoint = {
@@ -112,8 +113,34 @@ export function sheetCopy(n: { total: number; week: number; open: number; filter
   };
 }
 
+/**
+ * The empty-district alert's place under "Suggest an event" (owner card 7),
+ * which stays the primary action. Off: a secondary button that posts the
+ * opt-in (no script). On: one calm line instead. No yes to notifications: a
+ * short link to Settings, never a silent yes.
+ */
+export type DistrictAlertState = { state: "off" | "on" | "consent"; district: string; settingsHref: string };
+
+export function DistrictAlertOptIn(props: { t: T; alert: DistrictAlertState }) {
+  const { t, alert } = props;
+  if (alert.state === "on") return <p class="fd-alert-on">{optedInText(alert.district, t)}</p>;
+  if (alert.state === "consent")
+    return (
+      <a class="fd-alert-link" href={alert.settingsHref}>
+        {needsConsentText(alert.district, t)}
+      </a>
+    );
+  return (
+    <form method="post" action="/events/district-alert" class="fd-alert">
+      <button type="submit" class="btn ghost">
+        {optInText(alert.district, t)}
+      </button>
+    </form>
+  );
+}
+
 /** The sheet's body when nothing is coming up: say so kindly, and offer one thing to do. */
-export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string }) {
+export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string; alert?: DistrictAlertState | null }) {
   const { t } = props;
   return props.filtered ? (
     <div class="fd-empty">
@@ -128,6 +155,7 @@ export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string 
       <a class="btn primary" href="/host/new">
         {t("เสนอกิจกรรม", "Suggest an event")}
       </a>
+      {props.alert ? <DistrictAlertOptIn t={t} alert={props.alert} /> : null}
     </div>
   );
 }

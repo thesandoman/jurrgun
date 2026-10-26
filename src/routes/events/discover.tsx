@@ -10,18 +10,22 @@ import { cleanBio } from "../../content/profile";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Child } from "hono/jsx";
 import { and, asc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
-import { getDb } from "../../db";
+import { batch, getDb } from "../../db";
 import { ageOn, romanceEligible } from "../../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values, districtsAZ } from "../../lib/constants";
 import type { AppEnv, CurrentUser } from "../../lib/env";
 import { fmtDate, fmtParts, type Lang, type T } from "../../lib/i18n";
 import { eventPlace } from "../../lib/places";
 import { requireMember } from "../../lib/session";
-import { events, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
-import { Button, Card, Empty, LinkButton, page, Select, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
+import { events, profiles, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
+import { Button, Card, Empty, LinkButton, page, safeNext, Select, str, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
 import { FullDiscover, NoEventsYet, sheetCopy, type MapChip, type MapPoint } from "../../ui/discover-map";
 import { collabNamesFor } from "../../services/collabs";
 import { listableBase } from "../../services/events";
+import { hasConsent, NOTIFICATIONS_CONSENT } from "../../services/consent";
+import { vapidKeys } from "../../services/push";
+import { DISTRICT_ALERT_ON, districtName } from "../../domain/district-alert";
+import { audit } from "../../lib/records";
 import { eventRoutes } from "./app";
 import {
   ACTIVE,
@@ -303,6 +307,16 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
 
   if (mapView) {
+    // The empty-district alert (owner card 7) sits under "Suggest an event" when nothing is coming up.
+    const alert =
+      list.length === 0 && !filtered && districtName(user.profile.district, lang)
+        ? {
+            district: user.profile.district,
+            // Without a yes to notifications the alert is off whatever the flag says: point to Settings.
+            state: !(await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT)) ? ("consent" as const) : user.profile.districtAlertOptIn ? ("on" as const) : ("off" as const),
+            settingsHref: vapidKeys(c.env) ? "/settings#push" : "/settings/consents",
+          }
+        : null;
     const week = list.filter((e) => e.startsAt.getTime() < now.getTime() + 7 * 86_400_000);
     const open = week.filter((e) => (taken.get(e.id) ?? 0) < e.capacity).length;
     const status = sheetCopy({ total: list.length, week: week.length, open, filtered }, t);
@@ -326,7 +340,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
             {/* The quiz card used to ride in the ticker; it sits after the third event, as in the list view. */}
             {list.length === 0 ? (
               <>
-                <NoEventsYet t={t} filtered={filtered} clearHref="/events" />
+                <NoEventsYet t={t} filtered={filtered} clearHref="/events" alert={alert} />
                 {quizHint}
               </>
             ) : (
@@ -428,6 +442,34 @@ eventRoutes.get("/events", requireMember, async (c) => {
 eventRoutes.post("/events/for-you/dismiss", requireMember, (c) => {
   setCookie(c, FOR_YOU_COOKIE, "hide", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax", httpOnly: true });
   return c.redirect("/events?view=list");
+});
+
+/**
+ * The empty-district alert on (owner card 7): only with a yes to
+ * notifications (no row means no, and this never says yes for the member),
+ * only for one of Bangkok's districts. The audit row's time is when the
+ * member opted in: the weekly job counts events published after it.
+ */
+eventRoutes.post("/events/district-alert", requireMember, async (c) => {
+  const user = me(c);
+  const db = getDb(c.env);
+  if (!districtName(user.profile.district, "en")) return c.redirect("/events");
+  if (!(await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT))) return c.redirect(vapidKeys(c.env) ? "/settings#push" : "/settings/consents");
+  if (!user.profile.districtAlertOptIn) {
+    await batch(c.env, [
+      db.update(profiles).set({ districtAlertOptIn: true, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id)),
+      audit(db, user.account.id, DISTRICT_ALERT_ON, { type: "account", id: user.account.id }),
+    ]);
+  }
+  return c.redirect(safeNext(str((await c.req.parseBody()).back), "/events"));
+});
+
+/** The alert off: one tap, from the alert itself or Settings. A POST, never a GET. */
+eventRoutes.post("/events/district-alert/off", requireMember, async (c) => {
+  const user = me(c);
+  await getDb(c.env).update(profiles).set({ districtAlertOptIn: false, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+  const back = safeNext(str((await c.req.parseBody()).back), "/notifications");
+  return c.redirect(`${back}${back.includes("?") ? "&" : "?"}notice=district_alert_off`);
 });
 
 function quizHintCard(t: T) {

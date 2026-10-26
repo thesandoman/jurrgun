@@ -9,7 +9,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
-import { ENV, HAS_DB, createMember, db } from "./helpers";
+import { ENV, HAS_DB, createMember, db, req } from "./helpers";
 import { auditLog, blocks, consents, events, notifications, profiles } from "../src/schema";
 import { newId } from "../src/lib/crypto";
 import { runDistrictAlerts } from "../src/services/clock";
@@ -202,5 +202,50 @@ describe.skipIf(!HAS_DB)("weekly district alert job", () => {
     expect(await alerts(plain.id)).toEqual([]);
     // 💘 on: the dating event is theirs to see.
     expect((await alerts(dater.id)).length).toBe(1);
+  });
+});
+
+describe.skipIf(!HAS_DB)("district alert opt-in and off", () => {
+  const flag = async (id: string) => (await db().select({ on: profiles.districtAlertOptIn }).from(profiles).where(eq(profiles.accountId, id)).limit(1))[0].on;
+  const optIns = (id: string) => db().select().from(auditLog).where(and(eq(auditLog.actor, id), eq(auditLog.action, DISTRICT_ALERT_ON))).limit(5);
+
+  it("opting in needs a yes to notifications, and never says yes itself", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    await db().insert(consents).values({ id: newId(), accountId: m.id, category: "notifications", granted: false, version: "test", createdAt: new Date(Date.now() + 5_000) });
+    const res = await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toMatch(/^\/settings/);
+    expect(await flag(m.id)).toBe(false);
+    expect(await optIns(m.id)).toEqual([]);
+    const said = await db().select().from(consents).where(and(eq(consents.accountId, m.id), eq(consents.category, "notifications"))).limit(5);
+    expect(said.filter((c) => c.granted).length).toBe(1); // only createMember's original yes, no new one
+  });
+
+  it("opts in with consent, records when, and a second tap changes nothing", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    const res = await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/events");
+    expect(await flag(m.id)).toBe(true);
+    expect((await optIns(m.id)).length).toBe(1);
+    await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    expect((await optIns(m.id)).length).toBe(1);
+  });
+
+  it("one tap off is a POST; a GET changes nothing; signed-out posts go nowhere", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    expect((await req("/events/district-alert/off", { cookie: m.cookie })).status).toBe(404);
+    expect(await flag(m.id)).toBe(true);
+    const res = await req("/events/district-alert/off", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/notifications?notice=district_alert_off");
+    expect(await flag(m.id)).toBe(false);
+    const anon = await req("/events/district-alert", { method: "POST", form: { back: "" } });
+    expect(anon.status).toBe(302);
+    expect(anon.headers.get("location")).not.toBe("/events");
   });
 });

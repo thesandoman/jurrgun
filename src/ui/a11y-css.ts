@@ -1271,4 +1271,12 @@ main .pc-name>a{display:inline-block;min-width:44px}
 /* Chat: the photo caption and the poll fields have visible labels above them, not only a placeholder. */
 .chat-field{display:grid;gap:4px;flex:1 1 100%;font-weight:600;font-size:.94rem}
 .chat-field input{font-weight:400}
+/* Empty-district alert (owner card 7): under "Suggest an event", secondary and calm. Full tap targets, Thai may wrap. */
+.fd-alert{margin:0}
+.fd-alert .btn{min-height:44px;white-space:normal;text-align:center}
+.fd-alert-on{margin:0;color:var(--ink-2);font-size:.92rem;max-width:36ch;line-height:1.5}
+.fd-alert-link{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;color:var(--brand);font-size:.92rem;text-align:center}
+/* The alert's one-tap off in the notifications list, and the Settings switch's own row. */
+.notif-off{margin:0;padding:0 12px 8px}
+.notif-off .btn{min-height:44px}
 `);
