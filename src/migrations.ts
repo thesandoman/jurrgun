@@ -362,5 +362,12 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE INDEX \"research_place_checks_venue_idx\" ON \"research_place_checks\" (\"venue\",\"district\");",
       "CREATE INDEX \"research_pulse_suggestions_status_idx\" ON \"research_pulse_suggestions\" (\"status\",\"month\");"
     ]
+  },
+  {
+    "id": "0028_district_alert",
+    "statements": [
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"district_alert_opt_in\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"social_profiles\" ADD COLUMN \"district_alert_last_sent_at\" timestamp with time zone;"
+    ]
   }
 ];

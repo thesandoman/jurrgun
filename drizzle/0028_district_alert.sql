@@ -1,0 +1,2 @@
+ALTER TABLE "social_profiles" ADD COLUMN "district_alert_opt_in" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "social_profiles" ADD COLUMN "district_alert_last_sent_at" timestamp with time zone;
