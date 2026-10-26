@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { readFileSync } from "node:fs";
-import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, LAPTOP_OPEN_JS, LAPTOP_OPEN_MQ, NoEventsYet, SEARCH_COUNT_JS, SIDE_PANEL_MQ, moreChipsWords, searchCountWords, sheetCopy } from "../src/ui/discover-map";
+import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, LAPTOP_OPEN_JS, LAPTOP_OPEN_MQ, NoEventsYet, SEARCH_COUNT_JS, SIDE_PANEL_MQ, moreChipsWords, searchCountWords, sheetCopy, showAllWord } from "../src/ui/discover-map";
 
 const en = tr("en");
 const th = tr("th");
@@ -184,6 +184,25 @@ describe("Discover map list on arrival", () => {
     const at = html.indexOf(LAPTOP_OPEN_JS);
     expect(at).toBeGreaterThan(html.indexOf('id="discover-sheet"'));
     expect(at).toBeLessThan(html.indexOf('type="module"'));
+  });
+});
+
+describe("Discover map Show all pill", () => {
+  it("reads ดูทุกจุด in Thai (ดูทั้งหมด is the notifications' See all) and Show all in English", () => {
+    expect(showAllWord(th)).toBe("ดูทุกจุด");
+    expect(showAllWord(en)).toBe("Show all");
+    const html = page(th);
+    expect(html).toMatch(/<button type="button" class="fd-showall" id="fd-showall" hidden="">ดูทุกจุด<\/button>/);
+    expect(html.slice(html.indexOf('id="fd-showall"'), html.indexOf("</button>", html.indexOf('id="fd-showall"')))).not.toContain("ดูทั้งหมด");
+  });
+
+  it("appears only after the member moves the map, and fits back to every pin", () => {
+    expect(FULLMAP_JS).toContain("const byHand = (e) => { if (e && e.originalEvent) showPill(); };");
+    expect(FULLMAP_JS).toContain('for (const ev of ["movestart", "zoomstart", "rotatestart", "pitchstart"]) map.on(ev, byHand);');
+    expect(FULLMAP_JS).toMatch(/pillEl\?\.addEventListener\("click", \(\) => \{\n  refit\(lastShown\);\n  hidePill\(\);/);
+    // A 44px target on the shared stacking scale, with calm motion.
+    expect(FULLMAP_CSS).toMatch(/\.fd-showall\{position:fixed;z-index:var\(--z-pill\);[^}]*min-height:44px;/);
+    expect(FULLMAP_CSS).toContain("@media (prefers-reduced-motion:reduce){.fd-showall{transition:none}}");
   });
 });
 

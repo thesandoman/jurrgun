@@ -203,6 +203,11 @@ export const LAPTOP_OPEN_MQ = "(min-width: 1024px) and (min-height: 600px)";
 /** Runs right after the panel is parsed, so it opens before the first paint rather than jumping open later. */
 export const LAPTOP_OPEN_JS = `try{if(matchMedia("${LAPTOP_OPEN_MQ}").matches)document.getElementById("discover-sheet").open=true}catch(e){}`;
 
+/** The Show all pill. ดูทุกจุด ("see every spot"): ดูทั้งหมด is kept for the notifications' See all. */
+export function showAllWord(t: T): string {
+  return t("ดูทุกจุด", "Show all");
+}
+
 /** JSON for a <script type="application/json"> block, safe against </script>. */
 function scriptJson(x: unknown): string {
   return JSON.stringify(x).replace(/</g, "\\u003c");
@@ -332,6 +337,11 @@ export function FullDiscover(props: {
         </button>
       </nav>
 
+      {/* Back to every pin, once you have panned or zoomed away yourself (owner card 6). */}
+      <button type="button" class="fd-showall" id="fd-showall" hidden>
+        {showAllWord(t)}
+      </button>
+
       {/* The events sheet over the map */}
       {/* With nothing coming up, the sheet starts open on its empty state, so the next step is one tap away. */}
       <details class="fd-sheet" id="discover-sheet" open={props.status.empty ? true : undefined}>
@@ -383,11 +393,54 @@ async function start() {
     center: cfg.center, panLimit: cfg.panLimit, basemap: style === "auto" ? document.documentElement.dataset.theme || "auto" : style, skipHref: "#discover-sheet",
     extraChips: [{ ...cfg.free, test: (p) => p.free }],
     // sv-map fits the pins to the whole box; refit around the floating controls.
-    onFilter: (shown) => setTimeout(() => refit(shown), 0),
+    onFilter: (shown) => { lastShown = shown; hidePill(); setTimeout(() => refit(shown), 0); },
   });
+  watchMoves();
   watchChips();
   watchChrome();
   refit(visible(), true);
+}
+
+/*
+ * The Show all pill (owner card 6) appears only once the member pans, zooms or
+ * turns the map themselves: MapLibre marks those moves with the input event
+ * (originalEvent), while our own fits, a tapped pin and Locate have none.
+ * Tapping it fits the map back to every pin on show and puts it away.
+ */
+let lastShown = visible();
+const pillEl = document.getElementById("fd-showall");
+function hidePill() { if (pillEl) pillEl.hidden = true; }
+function showPill() {
+  if (!pillEl || !pillEl.hidden || !lastShown.length) return;
+  pillEl.hidden = false;
+  placePill();
+}
+function watchMoves() {
+  hidePill();
+  const map = api?.map;
+  if (!map) return;
+  const byHand = (e) => { if (e && e.originalEvent) showPill(); };
+  for (const ev of ["movestart", "zoomstart", "rotatestart", "pitchstart"]) map.on(ev, byHand);
+}
+pillEl?.addEventListener("click", () => {
+  refit(lastShown);
+  hidePill();
+  // The pill is gone: keep the keyboard on the map rather than dropping it to the page.
+  try { api?.map?.getCanvas().focus({ preventScroll: true }); } catch {}
+});
+/** Under the chips, centred in the map that is left: clear of an open side panel and of the rail. */
+function placePill() {
+  if (!pillEl || pillEl.hidden) return;
+  const top = Math.ceil(chromeTop() + GAP);
+  const w = pillEl.offsetWidth, h = pillEl.offsetHeight;
+  let l = GAP, r = innerWidth - GAP;
+  const across = (b) => b.width > 0 && b.top < top + h && b.bottom > top;
+  const sb = sheetBox();
+  if (across(sb) && sb.left < innerWidth / 2) l = Math.max(l, sb.right + GAP);
+  if (isShown(railEl) && !railEl.classList.contains("off")) { const rr = railEl.getBoundingClientRect(); if (across(rr)) r = Math.min(r, rr.left - GAP); }
+  const x = Math.round(Math.min(Math.max(l, (l + r) / 2 - w / 2), Math.max(l, r - w)));
+  pillEl.style.left = x + "px";
+  pillEl.style.top = top + "px";
 }
 
 /*
@@ -509,6 +562,7 @@ function layoutChrome() {
     const railFits = () => { const r = railEl.getBoundingClientRect(); return r.top >= top - 0.5 && !hits(r, sheetBox()); };
     if (!railFits()) { railEl.classList.add("row"); if (!railFits()) railEl.classList.add("off"); }
   }
+  placePill();
 }
 let chromeQueued = false;
 const queueChrome = () => { if (chromeQueued) return; chromeQueued = true; requestAnimationFrame(() => { chromeQueued = false; layoutChrome(); }); };
@@ -696,6 +750,11 @@ body.fullmap-body{--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-pane
 .fullmap .svm-chip.on:not([data-chip=""])::before{content:"✓";content:"✓" / "";font-weight:700}
 .fd-more{position:fixed;z-index:var(--z-chips);min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.88rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
 .fd-more[hidden]{display:none}
+/* Show all: placed by the page script under the chips, in the free part of the map. */
+.fd-showall{position:fixed;z-index:var(--z-pill);top:var(--free-top);left:50%;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.92rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow);transition:opacity .2s ease}
+.fd-showall[hidden]{display:none}
+@starting-style{.fd-showall{opacity:0}}
+@media (prefers-reduced-motion:reduce){.fd-showall{transition:none}}
 .fullmap .svm-sheet{z-index:var(--z-card);bottom:calc(var(--tab-h) + 8px)!important}
 .fd-rail.off{visibility:hidden}
 /* A tapped pin's card gets its column to itself: on phones the rail steps aside (it is back as soon as the card closes). */
