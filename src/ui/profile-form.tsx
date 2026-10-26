@@ -30,7 +30,6 @@ import {
   type Prompt,
 } from "../content/profile";
 import type { View } from "./kit";
-import { universityById, universityName } from "../content/universities";
 import { PE_JS } from "./profile-edit-js";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
@@ -238,8 +237,8 @@ export function OccupationPicker(props: { v: View; value?: string; other?: strin
 export function EducationPicker(props: { v: View; bio: Bio }) {
   const { t, lang } = props.v;
   const b = props.bio;
-  const uni = universityById(b.university);
-  const uniText = uni ? universityName(uni, lang) : (b.universityName ?? "");
+  const label = b.university ? b.universityLabel : undefined;
+  const uniText = label ? (lang === "th" && label.th ? label.th : label.en) : (b.universityName ?? "");
   return (
     <div class="edu">
       <div class="field">

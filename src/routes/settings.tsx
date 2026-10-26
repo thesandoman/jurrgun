@@ -16,6 +16,8 @@
  *   POST /settings/password
  *   POST /settings/badge            show / hide the Registered Resident badge (verified only)
  */
+import { NO_LOOKUP, type UniversityLookup } from "../content/universities";
+import { educationLookup } from "../services/universities";
 import { endPinkies } from "../services/pinky";
 import { canBeWomenOnly, canSwitchToSingle, DEFAULT_RHYTHM, isPaused, PAUSE_WEEKS, RHYTHMS, romanceEligible } from "../domain/rules";
 import { reflectionsFromForm } from "../content/reflections";
@@ -736,7 +738,8 @@ type Draft = {
 };
 type Fail = { error: string; errorField?: string };
 /** What every section reads: the stored profile and my prompt decks. */
-type EditCtx = { t: T; p: Profile; stored: Bio; deck: string[]; datingDeck: string[] };
+/** `uni`: the posted university, resolved before the (synchronous) appliers run. */
+type EditCtx = { t: T; p: Profile; stored: Bio; deck: string[]; datingDeck: string[]; uni: UniversityLookup };
 type Applier = (body: Body, d: Draft, x: EditCtx) => Fail | null;
 
 const fileOf = (raw: unknown): File | null => {
@@ -750,7 +753,7 @@ const postedFiles = (body: Body) => Object.entries(body).some(([k, v]) => (k ===
 const oneOf = (v: string, list: { value: string }[]) => (list.some((x) => x.value === v) ? v : undefined);
 const pickAll = (body: Body, key: string, allowed: string[]) => [...new Set(list(body[key]).filter((x) => allowed.includes(x)))];
 
-function editCtx(c: C): EditCtx {
+function editCtx(c: C, uni: UniversityLookup = NO_LOOKUP): EditCtx {
   const user = me(c);
   const p = user.profile!;
   const stored = cleanBio(p.bio);
@@ -761,8 +764,12 @@ function editCtx(c: C): EditCtx {
     deck: currentDeck(user.account.id, stored),
     // Dating prompts exist only while romance mode is on.
     datingDeck: romanceEligible(p) ? currentDatingDeck(user.account.id, stored) : [],
+    uni,
   };
 }
+
+/** Resolve the posted university for parseEducation (one or two small reads). */
+const uniFor = (c: C, body: Body) => educationLookup(c.env, { university: str(body.university), universityName: str(body.universityName) });
 
 const newDraft = (x: EditCtx): Draft => ({ vals: profileVals(x.p), mainFile: null, removePhoto: false, pending: [], dropKeys: [] });
 
@@ -908,7 +915,7 @@ const APPLY: Record<(typeof SECTIONS)[number], Applier> = {
     Object.assign(
       bio,
       parseOccupation(str(body.occupation), str(body.occupationOther)),
-      parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }),
+      parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }, undefined, x.uni),
     );
     bio.learning = str(body.learning);
     if (bio.learning.length > LEARNING_MAX) return { error: x.t(`"กำลังเรียนรู้" ยาวได้ไม่เกิน ${LEARNING_MAX} ตัวอักษร`, `"Currently learning" can be at most ${LEARNING_MAX} characters.`), errorField: "learning" };
@@ -995,7 +1002,7 @@ function sectionScope(name: SectionName, x: Pick<EditCtx, "deck" | "datingDeck">
     case "bangkok":
       return s([], ["story", "bkkTime", "hometown", "guide", "residency", "reflections"]);
     case "work":
-      return s([], ["occupation", "occupationOther", "education", "educationDetail", "university", "universityName", "gradYear", "learning"]);
+      return s([], ["occupation", "occupationOther", "education", "educationDetail", "university", "universityName", "universityLabel", "gradYear", "learning"]);
     case "meet":
       return s(["socialStyles"], ["energy", "weekend", "pay", "bill", "travel", "diet", "spice", "pets", "punctual", "budget", "activities", "meals", "groupSize", "times", "access"]);
     case "prompts":
@@ -1011,8 +1018,8 @@ function sectionScope(name: SectionName, x: Pick<EditCtx, "deck" | "datingDeck">
 type Parsed = { ok: false; vals: ProfileVals; error: string; errorField?: string; section: SectionName | "all" } | { ok: true; draft: Draft; scope: Scope | "all" };
 
 /** Read and validate the whole profile form (the all-in-one post). Touches nothing. */
-function parseProfileForm(c: C, body: Body): Parsed {
-  const x = editCtx(c);
+function parseProfileForm(c: C, body: Body, uni: UniversityLookup): Parsed {
+  const x = editCtx(c, uni);
   const d = newDraft(x);
   const errs = new Map<string, Fail>();
   // Every section is read first, so whatever error comes back, everything typed is still in the form.
@@ -1037,8 +1044,8 @@ function parseProfileForm(c: C, body: Body): Parsed {
 }
 
 /** Read and validate one section. Null when there is no such section for me (a prompt not in my decks, or dating prompts without 💘). */
-function parseSection(c: C, name: SectionName, body: Body): Parsed | null {
-  const x = editCtx(c);
+function parseSection(c: C, name: SectionName, body: Body, uni: UniversityLookup): Parsed | null {
+  const x = editCtx(c, uni);
   const d = newDraft(x);
   const one = promptOf(name);
   let e: Fail | null;
@@ -1183,7 +1190,7 @@ async function saveLinks(c: C, links: { values: Record<string, string | null>; o
 
 settingsRoutes.post("/settings/profile", async (c) => {
   const body = (await c.req.parseBody({ all: true })) as Body;
-  const parsed = parseProfileForm(c, body);
+  const parsed = parseProfileForm(c, body, await uniFor(c, body));
   if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, errorSection: "all", status: 400, filesLost: postedFiles(body) });
   const err = await saveProfile(c, parsed);
   if (err) return renderProfileForm(c, parsed.draft.vals, { error: err, errorSection: "all", status: 400, filesLost: postedFiles(body) });
@@ -1244,7 +1251,7 @@ settingsRoutes.post("/settings/profile/section/:name", async (c) => {
   if (!isSectionName(name)) return c.notFound();
   const body = (await c.req.parseBody({ all: true })) as Body;
   const back = str(body.back) === "card" ? "card" : "edit";
-  const parsed = parseSection(c, name, body);
+  const parsed = parseSection(c, name, body, await uniFor(c, body));
   if (!parsed) return c.notFound();
   const lost = postedFiles(body);
   const refuse = (vals: ProfileVals, error: string, errorField?: string) =>
@@ -1266,7 +1273,7 @@ settingsRoutes.post("/settings/profile/section/:name", async (c) => {
  */
 settingsRoutes.post("/settings/profile/preview", async (c) => {
   const body = (await c.req.parseBody({ all: true })) as Body;
-  const x = editCtx(c);
+  const x = editCtx(c, await uniFor(c, body));
   const d = newDraft(x);
   // Problems don't stop a preview: it shows what was typed, as far as it can be read.
   for (const n of APPLY_ORDER) if (n !== "dating-prompts" || x.datingDeck.length) APPLY[n](body, d, x);
@@ -1299,13 +1306,13 @@ settingsRoutes.post("/settings/prompts/shuffle", async (c) => {
   const id = str(body.promptId);
   const dating = isDatingPrompt(id);
   if ("nickname" in body) {
-    const parsed = parseProfileForm(c, body);
+    const parsed = parseProfileForm(c, body, await uniFor(c, body));
     if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, errorSection: "all", status: 400, filesLost: postedFiles(body) });
     const err = await saveProfile(c, parsed);
     if (err) return renderProfileForm(c, parsed.draft.vals, { error: err, errorSection: "all", status: 400, filesLost: postedFiles(body) });
   } else if ("back" in body) {
     const section: SectionName = dating ? "dating-prompts" : "prompts";
-    const parsed = parseSection(c, section, body);
+    const parsed = parseSection(c, section, body, await uniFor(c, body));
     if (!parsed) return c.text("Unknown prompt", 400);
     if (!parsed.ok) return renderProfileForm(c, parsed.vals, { error: parsed.error, errorField: parsed.errorField, errorSection: section, status: 400, filesLost: postedFiles(body) });
     const err = await saveProfile(c, parsed);

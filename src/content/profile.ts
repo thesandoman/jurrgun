@@ -13,7 +13,7 @@
 import { createRng, shuffle } from "../vibe/rng";
 import { cleanReflections, type Reflections } from "./reflections";
 import { cleanStyle, type StyleCard } from "../vibe/styles";
-import { universityById, universityByName, universityName } from "./universities";
+import { NO_LOOKUP, universityLabel, type UniversityLookup } from "./universities";
 
 export type L2 = { th: string; en: string };
 export type Opt = { value: string; th: string; en: string; emoji: string };
@@ -805,8 +805,9 @@ export const sameUniversity = (a: Bio, b: Bio) => {
 /** One line for the profile card: degree · university · class of · field. Null when nothing is set. */
 export function educationLabel(bio: Bio, lang: "th" | "en", now = new Date()): { emoji: string; text: string } | null {
   const ed = EDUCATION.find((x) => x.value === bio.education);
-  const uni = universityById(bio.university);
-  const uniText = uni ? universityName(uni, lang) : bio.universityName;
+  // The picked university's name is stored with the bio (universityLabel), so no lookup is needed here.
+  const label = bio.university ? bio.universityLabel : undefined;
+  const uniText = label ? (lang === "th" && label.th ? label.th : label.en) : bio.universityName;
   const year = bio.gradYear
     ? bio.gradYear > now.getUTCFullYear()
       ? lang === "en" ? `graduating ${bio.gradYear}` : `จะจบปี ${bio.gradYear}`
@@ -821,21 +822,28 @@ export function educationLabel(bio: Bio, lang: "th" | "en", now = new Date()): {
  * Read the education fields off a form. The university comes as a picked id
  * (from search) or as typed text; typed text that exactly names a known
  * university is resolved to it, so it still matches. Unknown values clear.
+ * `unis` is the posted university resolved beforehand (services/universities.ts
+ * educationLookup); without it nothing resolves and a pick is kept as typed text.
  */
-export function parseEducation(f: { level: string; detail: string; university?: string; universityName?: string; gradYear?: string }, now = new Date()): Pick<Bio, "education" | "educationDetail" | "university" | "universityName" | "gradYear"> {
+export function parseEducation(
+  f: { level: string; detail: string; university?: string; universityName?: string; gradYear?: string },
+  now = new Date(),
+  unis: UniversityLookup = NO_LOOKUP,
+): Pick<Bio, "education" | "educationDetail" | "university" | "universityName" | "universityLabel" | "gradYear"> {
   const detail = f.detail.trim().slice(0, EDUCATION_DETAIL_MAX);
   const typed = (f.universityName ?? "").trim().replace(/\s+/g, " ").slice(0, UNIVERSITY_NAME_MAX);
-  const picked = universityById(f.university);
+  const picked = unis.byId(f.university);
   // Picked from search, unless they then typed something else in the box.
   // Long names are cut to the box's length, so compare like with like.
   const cut = (n?: string) => (n ?? "").replace(/\s+/g, " ").slice(0, UNIVERSITY_NAME_MAX);
-  const known = picked && (!typed || typed === cut(picked.name) || typed === cut(picked.th)) ? picked : typed ? universityByName(typed) : undefined;
+  const known = picked && (!typed || typed === cut(picked.name) || typed === cut(picked.th)) ? picked : typed ? unis.byName(typed) : undefined;
   const year = Number(f.gradYear);
   return {
     education: EDUCATION.some((x) => x.value === f.level) ? f.level : undefined,
     educationDetail: detail || undefined,
     university: known?.id,
     universityName: known ? undefined : typed || undefined,
+    universityLabel: known ? universityLabel(known) : undefined,
     gradYear: Number.isInteger(year) && year >= GRAD_YEAR_MIN && year <= now.getUTCFullYear() + 8 ? year : undefined,
   };
 }

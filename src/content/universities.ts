@@ -1,6 +1,7 @@
 /**
  * Universities worldwide, for the education picker and "same university"
- * matching. About 10,000 names (src/content/universities.generated.ts) plus
+ * matching. About 10,000 names (scripts/data/universities.json, loaded into
+ * the social_universities table; see services/universities.ts) plus
  * Thai universities the open list misses, Thai-language names and the
  * abbreviations people actually type (KMITL, ABAC, MUIC…).
  *
@@ -9,9 +10,10 @@
  * ("th:chulalongkorn-university"), so two members match exactly even if one
  * searched in Thai and the other in English.
  *
- * Pure module: no database, no Hono.
+ * Pure module: no database, no Hono. The list itself is not bundled (Core
+ * Platform C3): services/universities.ts reads candidates from the database
+ * and ranks them with searchIn() below.
  */
-import { UNIVERSITY_ROWS } from "./universities.generated";
 
 /** Thai universities missing from the open list. */
 const THAI_EXTRA = [
@@ -137,7 +139,7 @@ export type University = { id: string; name: string; cc: string; th?: string; se
  * and tone marks are combining marks (\p{M}) and must stay: NFD (not NFKD,
  * which splits ำ) and keeping \p{M} leaves Thai words whole.
  */
-const fold = (s: string) =>
+export const fold = (s: string) =>
   s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -169,40 +171,65 @@ export function buildUniversities(raw: [string, string][]): University[] {
   return out;
 }
 
-const ALL: University[] = buildUniversities(UNIVERSITY_ROWS);
-const BY_ID = new Map(ALL.map((u) => [u.id, u]));
-
-export const universityById = (id: string | undefined | null): University | undefined => (id ? BY_ID.get(id) : undefined);
-
 /** The name to show: Thai when the reader reads Thai and we have one. */
 export const universityName = (u: University, lang: "th" | "en") => (lang === "th" && u.th ? u.th : u.name);
 
-/** Exact name (either language) → university, for forms posted without JS. */
-export function universityByName(name: string): University | undefined {
-  const f = fold(name);
-  if (!f) return undefined;
-  return ALL.find((u) => fold(u.name) === f || (u.th && fold(u.th) === f));
-}
+/** The stored display name for a bio (bio.universityLabel). */
+export const universityLabel = (u: University): { en: string; th?: string } => (u.th ? { en: u.name, th: u.th } : { en: u.name });
+
+/** Does this university's search text match every word of the query? */
+const matches = (u: University, words: string[]) =>
+  // Thai is written without spaces between words, so Thai text may match anywhere in the Thai name.
+  words.every((w) => u.search.includes(` ${w}`) || (u.thFold && u.thFold.includes(w)));
+
+/** English names whose alias is exactly this query ("kmitl" -> King Mongkut's...), so search can always fetch them. */
+export const aliasTargets = (q: string): string[] => {
+  const whole = fold(q);
+  return whole ? Object.entries(ALIASES).filter(([, as]) => as.some((a) => fold(a) === whole)).map(([name]) => name) : [];
+};
 
 /**
- * Top matches for what someone typed. Every word must start a word of the
- * name (or match a Thai name or alias). Bangkok first: Thai universities rank
- * above others, then whole-name prefixes, then shorter names.
+ * Top matches for what someone typed, from a list of candidates. Every word
+ * must start a word of the name (or match a Thai name or alias). Bangkok
+ * first: Thai universities rank above others, then whole-name prefixes, then
+ * shorter names.
  */
-export function searchUniversities(q: string, limit = 8): University[] {
+export function searchIn(list: Iterable<University>, q: string, limit = 8): University[] {
   const words = fold(q).split(" ").filter(Boolean);
   if (words.length === 0) return [];
+  const whole = fold(q);
   const scored: [number, University][] = [];
-  for (const u of ALL) {
-    // Thai is written without spaces between words, so Thai text may match anywhere in the Thai name.
-    if (!words.every((w) => u.search.includes(` ${w}`) || (u.thFold && u.thFold.includes(w)))) continue;
+  for (const u of list) {
+    if (!matches(u, words)) continue;
     let score = 0;
     if (u.cc === "TH") score += 3;
-    const whole = fold(q);
     if (fold(u.name).startsWith(whole) || (u.thFold ?? "").includes(whole)) score += 2;
     if ((ALIASES[u.name] ?? []).some((a) => fold(a) === whole)) score += 5;
     scored.push([score, u]);
   }
-  scored.sort((a, b) => b[0] - a[0] || a[1].name.length - b[1].name.length);
+  // Ties break by name, then id, in code-unit order: the database path (services/universities.ts) orders the same way.
+  const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
+  scored.sort((a, b) => b[0] - a[0] || a[1].name.length - b[1].name.length || cmp(a[1].name, b[1].name) || cmp(a[1].id, b[1].id));
   return scored.slice(0, limit).map(([, u]) => u);
+}
+
+/** Exact name (either language) -> university, from candidates. */
+export function nameIn(list: Iterable<University>, name: string): University | undefined {
+  const f = fold(name);
+  if (!f) return undefined;
+  for (const u of list) if (fold(u.name) === f || (u.th && fold(u.th) === f)) return u;
+  return undefined;
+}
+
+/**
+ * What parseEducation needs to know about the posted university, resolved
+ * beforehand (services/universities.ts educationLookup) so parsing stays pure.
+ */
+export type UniversityLookup = { byId: (id: string | undefined) => University | undefined; byName: (name: string) => University | undefined };
+export const NO_LOOKUP: UniversityLookup = { byId: () => undefined, byName: () => undefined };
+
+/** A lookup over an in-memory list (tests and scripts). */
+export function memoryLookup(list: University[]): UniversityLookup {
+  const byId = new Map(list.map((u) => [u.id, u]));
+  return { byId: (id) => (id ? byId.get(id) : undefined), byName: (name) => nameIn(list, name) };
 }

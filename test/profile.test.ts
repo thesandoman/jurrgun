@@ -38,7 +38,13 @@ import {
   type Prompt,
 } from "../src/content/profile";
 import { INTERESTS } from "../src/lib/constants";
-import { searchUniversities } from "../src/content/universities";
+import { readFileSync } from "node:fs";
+import { buildUniversities, memoryLookup, searchIn, universityLabel } from "../src/content/universities";
+
+// The full list, in memory, ranked by the same searchIn() the database path uses (services/universities.ts).
+const UNIS = buildUniversities(JSON.parse(readFileSync("scripts/data/universities.json", "utf8")) as [string, string][]);
+const searchUniversities = (q: string, limit?: number) => searchIn(UNIS, q, limit);
+const LOOKUP = memoryLookup(UNIS);
 
 const bilingual = (x: { th: string; en: string }) => x.th.trim().length > 0 && x.en.trim().length > 0;
 const kindOf = (id: string) => promptById(id)!.kind;
@@ -95,28 +101,29 @@ describe("education", () => {
   it("keeps a listed degree, a known university by id, a year in range and the field", () => {
     for (const o of EDUCATION) expect(bilingual(o)).toBe(true);
     const chula = searchUniversities("chula")[0];
-    expect(parseEducation({ level: "beng", detail: " Computer engineering ", university: chula.id, universityName: chula.name, gradYear: "2019" }, now)).toEqual({
+    expect(parseEducation({ level: "beng", detail: " Computer engineering ", university: chula.id, universityName: chula.name, gradYear: "2019" }, now, LOOKUP)).toEqual({
       education: "beng",
       educationDetail: "Computer engineering",
       university: chula.id,
       universityName: undefined,
+      universityLabel: { en: "Chulalongkorn University", th: "จุฬาลงกรณ์มหาวิทยาลัย" },
       gradYear: 2019,
     });
   });
 
   it("resolves a typed name to the known university, keeps unknown names as typed, drops bad values", () => {
-    expect(parseEducation({ level: "", detail: "", universityName: "mahidol university" }, now).university).toBe(searchUniversities("mahidol")[0].id);
-    const typed = parseEducation({ level: "wizardry", detail: "", universityName: "Hogwarts", gradYear: "1066" }, now);
+    expect(parseEducation({ level: "", detail: "", universityName: "mahidol university" }, now, LOOKUP).university).toBe(searchUniversities("mahidol")[0].id);
+    const typed = parseEducation({ level: "wizardry", detail: "", universityName: "Hogwarts", gradYear: "1066" }, now, LOOKUP);
     expect(typed).toMatchObject({ education: undefined, university: undefined, universityName: "Hogwarts", gradYear: undefined });
     // A picked id, then the box retyped: the typed text wins.
     const chula = searchUniversities("chula")[0];
-    expect(parseEducation({ level: "", detail: "", university: chula.id, universityName: "Hogwarts" }, now).universityName).toBe("Hogwarts");
+    expect(parseEducation({ level: "", detail: "", university: chula.id, universityName: "Hogwarts" }, now, LOOKUP).universityName).toBe("Hogwarts");
   });
 
   it("writes one line, and says 'graduating' for a future year", () => {
     const chula = searchUniversities("chula")[0];
-    expect(educationLabel({ education: "beng", university: chula.id, gradYear: 2019, educationDetail: "CompE" }, "en", now)!.text).toBe("B.Eng. (Engineering) · Chulalongkorn University · class of 2019 · CompE");
-    expect(educationLabel({ university: chula.id }, "th", now)!.text).toBe("จุฬาลงกรณ์มหาวิทยาลัย");
+    expect(educationLabel({ education: "beng", university: chula.id, universityLabel: universityLabel(chula), gradYear: 2019, educationDetail: "CompE" }, "en", now)!.text).toBe("B.Eng. (Engineering) · Chulalongkorn University · class of 2019 · CompE");
+    expect(educationLabel({ university: chula.id, universityLabel: universityLabel(chula) }, "th", now)!.text).toBe("จุฬาลงกรณ์มหาวิทยาลัย");
     expect(educationLabel({ universityName: "Hogwarts", gradYear: 2029 }, "en", now)!.text).toBe("Hogwarts · graduating 2029");
     expect(educationLabel({}, "en", now)).toBeNull();
   });
@@ -152,7 +159,7 @@ describe("university search", () => {
   it("keeps a picked university whose name is longer than the box", () => {
     const long = searchUniversities("evangelische fachhochschule berlin sozialarbeit")[0];
     expect(long.name.length).toBeGreaterThan(80);
-    expect(parseEducation({ level: "", detail: "", university: long.id, universityName: long.name.slice(0, 80) }).university).toBe(long.id);
+    expect(parseEducation({ level: "", detail: "", university: long.id, universityName: long.name.slice(0, 80) }, undefined, LOOKUP).university).toBe(long.id);
   });
 
   it("covers the world and stays small", () => {

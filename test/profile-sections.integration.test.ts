@@ -110,7 +110,7 @@ const OWNS: Record<string, { cols: string[]; bio: string[]; answers?: string[]; 
   here: { cols: ["intents", "socialStyles"], bio: [] },
   comm: { cols: [], bio: ["comm"] },
   bangkok: { cols: [], bio: ["story", "bkkTime", "hometown", "guide", "residency", "reflections"] },
-  work: { cols: [], bio: ["occupation", "occupationOther", "education", "educationDetail", "university", "universityName", "gradYear", "learning"] },
+  work: { cols: [], bio: ["occupation", "occupationOther", "education", "educationDetail", "university", "universityName", "universityLabel", "gradYear", "learning"] },
   meet: { cols: ["socialStyles"], bio: ["energy", "weekend", "pay", "bill", "travel", "diet", "spice", "pets", "punctual", "budget", "activities", "meals", "groupSize", "times", "access"] },
   prompts: { cols: [], bio: ["deck"], answers: [TEXT.id, CHOICE.id] },
   [`prompt-${TEXT.id}`]: { cols: [], bio: ["deck"], answers: [TEXT.id] },

@@ -16,6 +16,7 @@
  * The about-you questions (languages, interests, how you like to meet...) come
  * after the first RSVP as "Help your table get to know you" (/onboarding/you).
  */
+import { educationLookup } from "../services/universities";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, desc, eq } from "drizzle-orm";
@@ -742,7 +743,7 @@ onboarding.post("/you", async (c) => {
       pronouns,
       showPronouns: !!pronouns && str(body.showPronouns) === "1",
       intents: [...(intents.length ? intents : ["friends"]), ...keepRomance],
-      bio: { ...cleanBio(user.profile.bio), comm, groupSize, times, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }), ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)) },
+      bio: { ...cleanBio(user.profile.bio), comm, groupSize, times, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }, undefined, await educationLookup(c.env, { university: str(body.university), universityName: str(body.universityName) })), ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)) },
       updatedAt: new Date(),
     })
     .where(eq(profiles.accountId, user.account.id));
