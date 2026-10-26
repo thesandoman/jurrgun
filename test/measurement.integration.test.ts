@@ -211,6 +211,7 @@ describe.skipIf(!HAS_DB)("north star trend", () => {
     const a = await (await req("/admin?lang=en", { cookie: admin.cookie })).text();
     expect(a).toContain('id="north-star-trend"');
     expect((a.match(/data-week-start=/g) ?? []).length).toBe(8);
+    expect(a).toContain("Not suppressed, staff only.");
     const v = await (await req("/admin?lang=en", { cookie: viewer.cookie })).text();
     expect(v).toContain('id="north-star-trend"');
     expect(v).toContain("Weeks under 10 people");

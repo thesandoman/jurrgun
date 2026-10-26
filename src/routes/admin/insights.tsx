@@ -13,9 +13,10 @@
  */
 import { EXIT_REASONS } from "../../content/dating";
 import { Hono } from "hono";
-import { asc, and, eq, gte, inArray, sql, type SQL } from "drizzle-orm";
+import { asc, and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
-import { K_THRESHOLD, safeCount } from "../../domain/rules";
+import { K_THRESHOLD, roundedCount, roundedPct, safeCount } from "../../domain/rules";
+import { bkkDayStart } from "../../domain/pulse-heard";
 import { DISTRICTS, label } from "../../lib/constants";
 import type { AppEnv } from "../../lib/env";
 import { requireRole } from "../../lib/session";
@@ -284,7 +285,8 @@ adminInsights.get("/", async (c) => {
     ? await db
         .select({ q: pulseResponses.questionId, v: answerExpr, n: sql<number>`count(*)`.mapWith(Number) })
         .from(pulseResponses)
-        .where(inArray(pulseResponses.questionId, barrierQs.map((q) => q.id)))
+        // A daily snapshot, never live: these questions are open, and a refresh after one answer would show it (C1).
+        .where(and(inArray(pulseResponses.questionId, barrierQs.map((q) => q.id)), lt(pulseResponses.createdAt, bkkDayStart(new Date()))))
         .groupBy(pulseResponses.questionId, answerExpr)
         .limit(1000)
     : [];
@@ -678,19 +680,21 @@ adminInsights.get("/", async (c) => {
         barrierQs.map((q) => {
           const m = barrierMap.get(q.id) ?? new Map<string, number>();
           const total = [...m.values()].reduce((a, b) => a + b, 0);
-          const totalSafe = safeCount(total);
+          const totalSafe = roundedCount(total);
           const rows = q.options
             .map((o) => ({ o, n: m.get(o.value) ?? 0 }))
-            .sort((a, b) => (safeCount(b.n) ?? -1) - (safeCount(a.n) ?? -1));
+            .sort((a, b) => (roundedCount(b.n) ?? -1) - (roundedCount(a.n) ?? -1));
           return (
             <Card>
               <h3>{lang === "en" ? q.promptEn : q.promptTh}</h3>
               <p class="muted">
                 {t("ผู้ตอบ", "Respondents")}: {totalSafe === null ? "<10" : totalSafe}
+                {" · "}
+                {t("ปัดเป็นหลัก 5 นับถึง 00:00 น. วันนี้", "rounded to 5, counted up to 00:00 today")}
               </p>
               {rows.map(({ o, n }) => {
-                const s = safeCount(n);
-                const p = s !== null && totalSafe !== null ? Math.round((s / totalSafe) * 100) : null;
+                const s = roundedCount(n);
+                const p = roundedPct(n, total);
                 return (
                   <div style="margin:6px 0">
                     <div class="spread">

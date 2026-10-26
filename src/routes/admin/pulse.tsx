@@ -5,7 +5,8 @@
  *   GET  /new, POST /new   create
  *   GET  /:id/edit, POST   edit (+ mobile card preview)
  *   POST /:id/status       quick activate / pause / archive
- *   GET  /:id/results      aggregated results, k ≥ 10 on every cell (PRD §12.5)
+ *   GET  /:id/results      aggregated results, k ≥ 10 on every cell (PRD §12.5),
+ *                          shown counts rounded to 5 (C1); open questions as a daily snapshot
  *   GET  /:id/export.csv   the same aggregates as CSV
  *
  * Results are computed in SQL from research_pulse_responses and never joined
@@ -16,7 +17,8 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { batch, getDb } from "../../db";
-import { safeCount } from "../../domain/rules";
+import { roundedCount, roundedPct, safeCount } from "../../domain/rules";
+import { bkkDayStart, bkkMonth } from "../../domain/pulse-heard";
 import { DISTRICTS, label, districtsAZ } from "../../lib/constants";
 import { newId } from "../../lib/crypto";
 import type { AppEnv } from "../../lib/env";
@@ -315,7 +317,7 @@ adminPulse.get("/", async (c) => {
             </thead>
             <tbody>
               {qs.map((q) => {
-                const n = safeCount(countOf.get(q.id) ?? 0);
+                const n = roundedCount(countOf.get(q.id) ?? 0);
                 return (
                   <tr>
                     <td>
@@ -468,7 +470,14 @@ type Results = {
   overall: Cell;
   byDistrict: Map<string, Cell>;
   byAge: Map<string, Cell>;
+  /** Open questions: answers up to this moment only (Bangkok midnight). Null once closed. */
+  asOf: Date | null;
 };
+
+/** Closed the same way members' "what the city heard" reads it: archived, or past its end. */
+export function isClosed(q: Pick<Question, "status" | "activeTo">, now = new Date()): boolean {
+  return q.status === "archived" || (q.activeTo !== null && q.activeTo.getTime() <= now.getTime());
+}
 
 const cell = (): Cell => ({ n: 0, counts: new Map(), sum: 0 });
 
@@ -477,13 +486,18 @@ function cols(r: unknown): unknown[] {
   return Array.isArray(r) ? r : Object.values(r as Record<string, unknown>);
 }
 
-async function aggregate(c: Context<AppEnv>, q: Question): Promise<Results> {
+async function aggregate(c: Context<AppEnv>, q: Question, now = new Date()): Promise<Results> {
   const db = getDb(c.env);
+  // While a question is open the BMA sees a daily snapshot, never a live count:
+  // refreshing after one person answers would otherwise show their answer (C1).
+  const asOf = isClosed(q, now) ? null : bkkDayStart(now);
+  const before = asOf ? sql`and created_at < ${asOf}` : sql``;
+  const beforeR = asOf ? sql`and r.created_at < ${asOf}` : sql``;
   // Respondents per (district, age band): one response per research id per question.
   const totalsQ = db.execute(sql`
     select district, age_band, count(*) as n
     from research_pulse_responses
-    where question_id = ${q.id}
+    where question_id = ${q.id} ${before}
     group by district, age_band
     limit 1000`);
   // Answer values are [a-z0-9_] (or 1–5), so stripping JSON punctuation and
@@ -496,12 +510,12 @@ async function aggregate(c: Context<AppEnv>, q: Question): Promise<Results> {
           select e.v, r.district, r.age_band, count(*) as n
           from research_pulse_responses r
           cross join lateral unnest(string_to_array(translate(r.answer::text, '"\\[] ', ''), ',')) as e(v)
-          where r.question_id = ${q.id}
+          where r.question_id = ${q.id} ${beforeR}
           group by e.v, r.district, r.age_band
           limit 10000`);
   const [totals, vals] = (await Promise.all([totalsQ, valuesQ])) as [unknown[], unknown[]];
 
-  const res: Results = { q, options: answerOptions(q), overall: cell(), byDistrict: new Map(), byAge: new Map() };
+  const res: Results = { q, options: answerOptions(q), overall: cell(), byDistrict: new Map(), byAge: new Map(), asOf };
   const at = (m: Map<string, Cell>, k: string) => {
     let x = m.get(k);
     if (!x) m.set(k, (x = cell()));
@@ -560,18 +574,29 @@ export function segmentRows(m: Map<string, Cell>, labelOf: (k: string) => string
   return rows;
 }
 
-const show = (n: number) => {
-  const s = safeCount(n);
+/** A count as shown: "<10" under k, otherwise rounded to the nearest 5. */
+export const show = (n: number) => {
+  const s = roundedCount(n);
   return s === null ? "<10" : String(s);
 };
-const mean = (x: Cell) => (safeCount(x.n) === null || x.n === 0 ? "<10" : (x.sum / x.n).toFixed(2));
+
+/**
+ * The mean of a scale group, or "-" when it would give a hidden cell away:
+ * mean × n minus the shown counts leaves the "<10" ones, so any group with a
+ * cell from 1 to 9 shows no mean (C1).
+ */
+export const mean = (x: Cell, hidden = "-") => {
+  if (safeCount(x.n) === null || x.n === 0) return "<10";
+  for (const k of x.counts.values()) if (k > 0 && safeCount(k) === null) return hidden;
+  return (x.sum / x.n).toFixed(2);
+};
 
 /** Columns for the segment tables: every option, or the top 8 overall when there are many. */
 function segmentColumns(r: Results): Opt[] {
   if (r.options.length <= 8) return r.options;
   return r.options
     .slice()
-    .sort((a, b) => (safeCount(r.overall.counts.get(b.value) ?? 0) ?? -1) - (safeCount(r.overall.counts.get(a.value) ?? 0) ?? -1))
+    .sort((a, b) => (roundedCount(r.overall.counts.get(b.value) ?? 0) ?? -1) - (roundedCount(r.overall.counts.get(a.value) ?? 0) ?? -1))
     .slice(0, 8);
 }
 
@@ -584,7 +609,7 @@ adminPulse.get("/:id/results", async (c) => {
   const q = await loadQuestion(c);
   if (!q) return c.text("Not found", 404);
   const r = await aggregate(c, q);
-  const n = safeCount(r.overall.n);
+  const n = roundedCount(r.overall.n);
   const otherLabel = t("อื่น ๆ (รวมกลุ่มที่มีไม่ถึง 10 คน)", "Other (groups under 10, combined)");
   const dRows = segmentRows(r.byDistrict, districtLabel(lang), otherLabel);
   const aRows = segmentRows(r.byAge, (k) => (k === "unknown" ? t("ไม่ระบุ", "Unknown") : k), otherLabel);
@@ -646,10 +671,18 @@ adminPulse.get("/:id/results", async (c) => {
       </p>
       <Notice kind="info">
         {t(
-          "แสดงเฉพาะผลรวม ช่องที่มีน้อยกว่า 10 คนจะแสดงเป็น \"<10\" และกลุ่มที่มีไม่ถึง 10 คนจะรวมไว้ใน \"อื่น ๆ\"",
-          "Aggregates only. Any cell under 10 shows as \"<10\"; segments under 10 are merged into \"Other\".",
+          "แสดงเฉพาะผลรวม ตัวเลขปัดเป็นหลัก 5 ที่ใกล้ที่สุด ช่องที่มีน้อยกว่า 10 คนจะแสดงเป็น \"<10\" กลุ่มที่มีไม่ถึง 10 คนจะรวมไว้ใน \"อื่น ๆ\" และไม่แสดงค่าเฉลี่ย (-) ถ้ามีช่องที่ซ่อนอยู่",
+          "Aggregates only. Counts are rounded to the nearest 5. Any cell under 10 shows as \"<10\"; segments under 10 are merged into \"Other\"; a mean shows as \"-\" when a cell is hidden.",
         )}
       </Notice>
+      {r.asOf ? (
+        <Notice kind="info">
+          {t(
+            `คำถามนี้ยังเปิดอยู่ ผลนี้นับถึง 00:00 น. วันนี้ (เวลากรุงเทพฯ) และอัปเดตวันละครั้ง ผลเต็มแสดงเมื่อปิดคำถาม`,
+            `This question is still open. These results count answers up to 00:00 today, Bangkok time, and update once a day. Full results show once it closes.`,
+          )}
+        </Notice>
+      ) : null}
 
       {q.kind === "text" ? (
         <Card>
@@ -686,8 +719,9 @@ adminPulse.get("/:id/results", async (c) => {
               </thead>
               <tbody>
                 {r.options.map((o) => {
-                  const k = safeCount(r.overall.counts.get(o.value) ?? 0);
-                  const pct = k !== null && n !== null ? Math.round((k / n) * 100) : null;
+                  const raw = r.overall.counts.get(o.value) ?? 0;
+                  const k = roundedCount(raw);
+                  const pct = roundedPct(raw, r.overall.n);
                   return (
                     <tr>
                       <td>{optLabel(o)}</td>
@@ -771,15 +805,21 @@ adminPulse.post("/:id/heard", async (c) => {
 
 // --------------------------------------- place checks and topics (D66) --
 
-/** Venue totals from after-table place checks: only places with 10+ answers, any cell under 10 shown as "<10". */
+/**
+ * Venue totals from after-table place checks: only places with 10+ answers,
+ * any cell under 10 shown as "<10", every count rounded to 5, and only months
+ * that have ended, so a refresh after one table's feedback shows nothing new (C1).
+ */
 adminPulse.get("/places", async (c) => {
   const { t, lang } = view(c);
   const db = getDb(c.env);
+  const thisMonth = bkkMonth(new Date());
   const rows = (await db.execute(sql`
     select venue, district, count(*) as n,
       count(*) filter (where reach = 'easy') as easy, count(*) filter (where reach = 'hard') as hard,
       count(*) filter (where comfort = 'yes') as cyes, count(*) filter (where comfort = 'no') as cno
     from research_place_checks
+    where month < ${thisMonth}
     group by venue, district
     having count(*) >= 10
     order by count(*) desc
@@ -795,8 +835,8 @@ adminPulse.get("/places", async (c) => {
       <h1>{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</h1>
       <p class="muted">
         {t(
-          "คำตอบเก็บกับชื่อสถานที่ เขต และเดือนเท่านั้น ไม่มีรหัสหรือบัญชี แสดงเฉพาะสถานที่ที่มีคำตอบอย่างน้อย 10 ข้อ",
-          "Stored with the place, district and month only: no code, no account. Only places with 10 or more answers are listed.",
+          "คำตอบเก็บกับชื่อสถานที่ เขต และเดือนเท่านั้น ไม่มีรหัสหรือบัญชี แสดงเฉพาะสถานที่ที่มีคำตอบอย่างน้อย 10 ข้อ ตัวเลขปัดเป็นหลัก 5 และคำตอบของเดือนนี้จะแสดงเมื่อสิ้นเดือน",
+          "Stored with the place, district and month only: no code, no account. Only places with 10 or more answers are listed, counts are rounded to the nearest 5, and this month's answers show once the month ends.",
         )}
       </p>
       {vals.length === 0 ? (
@@ -846,7 +886,10 @@ adminPulse.get("/topics", async (c) => {
     .where(eq(pulseSuggestions.status, "sorted"))
     .groupBy(pulseSuggestions.topic)
     .limit(100);
-  const shown = rows.filter((r) => r.topic && safeCount(r.n) !== null).sort((a, b) => b.n - a.n);
+  const shown = rows
+    .filter((r) => r.topic && safeCount(r.n) !== null)
+    .map((r) => ({ topic: r.topic, n: roundedCount(r.n)! }))
+    .sort((a, b) => b.n - a.n || a.topic!.localeCompare(b.topic!));
   return page(
     c,
     { title: t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked"), admin: true },
@@ -857,8 +900,8 @@ adminPulse.get("/topics", async (c) => {
       <h1>{t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked")}</h1>
       <p class="muted">
         {t(
-          "ทีมดูแลอ่านคำถามที่สมาชิกส่งมา จัดเป็นหัวข้อ แล้วลบข้อความทิ้ง หน้านี้แสดงเฉพาะจำนวนต่อหัวข้อที่มีอย่างน้อย 10",
-          "Moderators read members' suggested questions, sort them into topics and delete the words. This page shows counts per topic, 10 or more only.",
+          "ทีมดูแลอ่านคำถามที่สมาชิกส่งมา จัดเป็นหัวข้อ แล้วลบข้อความทิ้ง หน้านี้แสดงเฉพาะจำนวนต่อหัวข้อที่มีอย่างน้อย 10 ปัดเป็นหลัก 5",
+          "Moderators read members' suggested questions, sort them into topics and delete the words. This page shows counts per topic, 10 or more only, rounded to the nearest 5.",
         )}
       </p>
       {shown.length === 0 ? (
@@ -902,9 +945,10 @@ adminPulse.get("/:id/export.csv", async (c) => {
   const emit = (scope: string, group: string, x: Cell) => {
     lines.push([scope, group, "_respondents", "Respondents", show(x.n)]);
     if (q.kind === "text") return;
-    if (q.kind === "scale") lines.push([scope, group, "_mean", "Mean", mean(x)]);
+    if (q.kind === "scale") lines.push([scope, group, "_mean", "Mean", mean(x, "hidden")]);
     for (const o of r.options) lines.push([scope, group, o.value, o.en, show(x.counts.get(o.value) ?? 0)]);
   };
+  if (r.asOf) lines.push(["meta", "all", "_snapshot", "Open question: answers up to (UTC)", r.asOf.toISOString()]);
   emit("overall", "all", r.overall);
   const otherLabel = "other_under_10_combined";
   for (const row of segmentRows(r.byDistrict, (k) => k, otherLabel)) emit("district", row.key === "other" ? otherLabel : row.key, row.cell);

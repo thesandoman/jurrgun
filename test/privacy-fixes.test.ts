@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { segmentRows } from "../src/routes/admin/pulse";
-import { ageOn } from "../src/domain/rules";
+import { ageOn, roundedCount, roundedPct } from "../src/domain/rules";
+import { bkkDayStart } from "../src/domain/pulse-heard";
 
 const cellOf = (n: number, yes: number) => ({ n, sum: 0, counts: new Map([["yes", yes], ["no", n - yes]]) });
 
@@ -34,5 +35,25 @@ describe("ageOn", () => {
     // 1 Jan 2026, 02:00 in Bangkok = 31 Dec 2025, 19:00 UTC: already the 18th birthday.
     expect(ageOn("2008-01-01", new Date("2025-12-31T19:00:00Z"))).toBe(18);
     expect(ageOn("2008-01-01", new Date("2025-12-31T16:59:00Z"))).toBe(17);
+  });
+});
+
+describe("rounded counts (C1)", () => {
+  it("hides under 10 and rounds the rest to the nearest 5", () => {
+    expect(roundedCount(0)).toBeNull();
+    expect(roundedCount(9)).toBeNull();
+    expect([10, 12, 13, 17, 18, 102].map((n) => roundedCount(n))).toEqual([10, 10, 15, 15, 20, 100]);
+  });
+
+  it("works percentages out from the rounded counts", () => {
+    expect(roundedPct(12, 15)).toBe(67); // 10 of 15
+    expect(roundedPct(3, 15)).toBeNull();
+    expect(roundedPct(12, 9)).toBeNull();
+  });
+
+  it("puts the daily snapshot at 00:00 Bangkok", () => {
+    // 26 Oct 2026, 01:30 in Bangkok = 25 Oct 18:30 UTC; the day started at 25 Oct 17:00 UTC.
+    expect(bkkDayStart(new Date("2026-10-25T18:30:00Z")).toISOString()).toBe("2026-10-25T17:00:00.000Z");
+    expect(bkkDayStart(new Date("2026-10-25T16:59:00Z")).toISOString()).toBe("2026-10-24T17:00:00.000Z");
   });
 });

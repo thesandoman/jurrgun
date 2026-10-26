@@ -213,4 +213,23 @@ describe.skipIf(!HAS_DB)("City Pulse home", () => {
     await req(`/events/${ev2}/feedback`, { cookie: off.cookie, form: { ...base, placeReach: "easy" } });
     expect(await db().select().from(placeChecks).where(eq(placeChecks.venue, `${venue} 2`))).toHaveLength(0);
   });
+
+  it("shows the BMA place totals only for months that have ended, rounded to 5", async () => {
+    const venue = `Round Park ${newId().slice(0, 8)}`;
+    const row = (month: string, reach: string) => ({ id: newId(), venue, district: "dusit", reach, comfort: "yes", month });
+    await db().insert(placeChecks).values([
+      ...Array.from({ length: 12 }, () => row("2026-01", "easy")),
+      ...Array.from({ length: 2 }, () => row("2026-01", "hard")),
+      ...Array.from({ length: 20 }, () => row(bkkMonth(new Date()), "easy")),
+    ]);
+    const admin = await createMember({ role: "bma_admin" });
+    const html = await (await req("/admin/pulse/places?lang=en", { cookie: admin.cookie })).text();
+    const tr = html.match(new RegExp(`<tr><td>${venue}</td>[\\s\\S]*?</tr>`))?.[0] ?? "";
+    // 14 from January only (this month's 20 wait): 14 → 15, easy 12 → 10, hard 2 hidden.
+    expect(tr).toContain("<td>15</td>");
+    expect(tr).toContain("<td>10</td>");
+    expect(tr).toContain("<td>&lt;10</td>");
+    expect(tr).not.toContain("<td>14</td>");
+    expect(tr).not.toContain("<td>12</td>");
+  });
 });

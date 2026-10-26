@@ -30,6 +30,12 @@ export function bkkWeekStart(now: Date): Date {
   return new Date(mid - 7 * 3_600_000);
 }
 
+/** 00:00 today in Bangkok (UTC+7, no DST): the BMA's daily snapshot of open questions (C1). */
+export function bkkDayStart(now: Date): Date {
+  const local = new Date(now.getTime() + 7 * 3_600_000);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - 7 * 3_600_000);
+}
+
 /** The Monday that starts this Bangkok week, as YYYY-MM-DD: the key for once-a-week limits. */
 export function bkkWeekKey(now: Date): string {
   return new Date(bkkWeekStart(now).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);

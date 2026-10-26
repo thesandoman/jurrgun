@@ -214,6 +214,9 @@ describe.skipIf(!HAS_DB)("user lookup", () => {
   });
 });
 
+/** Answers given before today in Bangkok, so an open question's daily snapshot counts them. */
+const YESTERDAY = () => new Date(Date.now() - 30 * 3_600_000);
+
 describe.skipIf(!HAS_DB)("City Pulse manager", () => {
   const base = {
     promptTh: "อะไรทำให้คุณไม่ออกไปพบผู้คน",
@@ -253,23 +256,28 @@ describe.skipIf(!HAS_DB)("City Pulse manager", () => {
     for (let i = 0; i < 15; i++) {
       const rid = newId();
       researchIds.push(rid);
-      rows.push({ id: newId(), questionId: qid, researchId: rid, answer: i < 12 ? "cost" : "time", district: "bang_rak", ageBand: "25-29" });
+      rows.push({ id: newId(), questionId: qid, researchId: rid, answer: i < 12 ? "cost" : "time", district: "bang_rak", ageBand: "25-29", createdAt: YESTERDAY() });
     }
     await db().insert(pulseResponses).values(rows);
 
     const res = await req(`/admin/pulse/${qid}/results`, { cookie: `${admin.cookie}; lang=en` });
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("<td>12</td>");
+    // Rounded to 5 (C1): 12 shows as 10, so 15 − 10 doesn't give the hidden 3 away.
+    expect(html).toContain("<td>10</td>");
+    expect(html).not.toContain("<td>12</td>");
     expect(html).toContain("<td>&lt;10</td>");
     expect(html).not.toContain("<td>3</td>");
+    expect(html).toContain("rounded to the nearest 5");
+    expect(html).toContain("still open");
     for (const rid of researchIds) expect(html).not.toContain(rid);
 
     const csv = await req(`/admin/pulse/${qid}/export.csv`, { cookie: admin.cookie });
     expect(csv.status).toBe(200);
     expect(csv.headers.get("content-type")).toContain("text/csv");
     const text = await csv.text();
-    expect(text).toContain("overall,all,cost,Cost,12");
+    expect(text).toContain("overall,all,cost,Cost,10");
+    expect(text).toContain("meta,all,_snapshot");
     expect(text).toContain("overall,all,time,No time,<10");
     expect(text).not.toMatch(/,3\r?\n/);
     for (const rid of researchIds) expect(text).not.toContain(rid);
@@ -287,12 +295,13 @@ describe.skipIf(!HAS_DB)("City Pulse manager", () => {
       answer: `secret phrase ${i} zebra`,
       district: "dusit",
       ageBand: "30-34",
+      createdAt: YESTERDAY(),
     }));
     await db().insert(pulseResponses).values(rows);
     const res = await req(`/admin/pulse/${qid}/results`, { cookie: admin.cookie });
     const html = await res.text();
     expect(html).not.toContain("zebra");
-    expect(html).toContain(">11<");
+    expect(html).toContain(">10<");
     const csv = await (await req(`/admin/pulse/${qid}/export.csv`, { cookie: admin.cookie })).text();
     expect(csv).not.toContain("zebra");
   });
@@ -303,22 +312,47 @@ describe.skipIf(!HAS_DB)("City Pulse manager", () => {
     const scale = await req("/admin/pulse/new", { cookie: admin.cookie, form: { ...base, kind: "scale", options: "" } });
     const mid = decodeURIComponent(multi.headers.get("location")!.split("/")[3]);
     const sid = decodeURIComponent(scale.headers.get("location")!.split("/")[3]);
-    const row = (questionId: string, answer: string | string[] | number) => ({ id: newId(), questionId, researchId: newId(), answer, district: "dusit", ageBand: "35-44" });
+    const row = (questionId: string, answer: string | string[] | number) => ({ id: newId(), questionId, researchId: newId(), answer, district: "dusit", ageBand: "35-44", createdAt: YESTERDAY() });
     await db().insert(pulseResponses).values([
       ...Array.from({ length: 11 }, () => row(mid, ["cost", "time"])),
       row(mid, ["far"]),
       ...Array.from({ length: 10 }, () => row(sid, 4)),
     ]);
     const m = await (await req(`/admin/pulse/${mid}/export.csv`, { cookie: admin.cookie })).text();
-    expect(m).toContain("overall,all,_respondents,Respondents,12");
-    expect(m).toContain("overall,all,cost,Cost,11");
-    expect(m).toContain("overall,all,time,No time,11");
+    expect(m).toContain("overall,all,_respondents,Respondents,10");
+    expect(m).toContain("overall,all,cost,Cost,10");
+    expect(m).toContain("overall,all,time,No time,10");
     expect(m).toContain("overall,all,far,Too far,<10");
-    expect(m).toContain("district,dusit,cost,Cost,11");
+    expect(m).toContain("district,dusit,cost,Cost,10");
     const sc = await (await req(`/admin/pulse/${sid}/export.csv`, { cookie: admin.cookie })).text();
     expect(sc).toContain("overall,all,_mean,Mean,4.00");
     expect(sc).toContain("overall,all,4,4,10");
     expect(sc).toContain("overall,all,5,5,<10");
+  });
+
+  it("hides a scale mean when a cell is hidden, since mean × n would give it away", async () => {
+    const admin = await createMember({ role: "bma_admin" });
+    const scale = await req("/admin/pulse/new", { cookie: admin.cookie, form: { ...base, kind: "scale", options: "" } });
+    const sid = decodeURIComponent(scale.headers.get("location")!.split("/")[3]);
+    const row = (answer: number) => ({ id: newId(), questionId: sid, researchId: newId(), answer, district: "dusit", ageBand: "35-44", createdAt: YESTERDAY() });
+    await db().insert(pulseResponses).values([...Array.from({ length: 12 }, () => row(4)), row(1)]);
+    const sc = await (await req(`/admin/pulse/${sid}/export.csv`, { cookie: admin.cookie })).text();
+    expect(sc).toContain("overall,all,_mean,Mean,hidden");
+    expect(sc).toContain("overall,all,1,1,<10");
+  });
+
+  it("shows an open question as of 00:00 Bangkok, and everything once it closes", async () => {
+    const admin = await createMember({ role: "bma_admin" });
+    const ok = await req("/admin/pulse/new", { cookie: admin.cookie, form: { ...base, options: "cost|ค่าใช้จ่าย|Cost\ntime|ไม่มีเวลา|No time" } });
+    const qid = decodeURIComponent(ok.headers.get("location")!.split("/")[3]);
+    const row = (createdAt?: Date) => ({ id: newId(), questionId: qid, researchId: newId(), answer: "cost", district: "dusit", ageBand: "35-44", ...(createdAt ? { createdAt } : {}) });
+    await db().insert(pulseResponses).values([...Array.from({ length: 10 }, () => row(YESTERDAY())), ...Array.from({ length: 5 }, () => row())]);
+    const open = await (await req(`/admin/pulse/${qid}/export.csv`, { cookie: admin.cookie })).text();
+    expect(open).toContain("overall,all,_respondents,Respondents,10");
+    await db().update(pulseQuestions).set({ status: "archived" }).where(eq(pulseQuestions.id, qid));
+    const closed = await (await req(`/admin/pulse/${qid}/export.csv`, { cookie: admin.cookie })).text();
+    expect(closed).toContain("overall,all,_respondents,Respondents,15");
+    expect(closed).not.toContain("_snapshot");
   });
 
   it("is closed to moderators", async () => {

@@ -313,6 +313,27 @@ export function safeCount(n: number, k: number = K_THRESHOLD): number | null {
   return n >= k ? n : null;
 }
 
+/** Counts the BMA sees are rounded to the nearest ROUND_TO (owner C1, 2026-10-26). */
+export const ROUND_TO = 5;
+
+/**
+ * A research count as the BMA sees it: null under k, otherwise rounded to the
+ * nearest 5. Rounding every shown cell (totals included) stops the hidden
+ * "<10" cells being worked out by subtraction: row total minus the other
+ * options, a column's districts against the overall, or a mean times n.
+ */
+export function roundedCount(n: number, k: number = K_THRESHOLD): number | null {
+  if (safeCount(n, k) === null) return null;
+  return Math.max(k, Math.round(n / ROUND_TO) * ROUND_TO);
+}
+
+/** A whole-number percentage worked out from rounded counts, or null when either is hidden. */
+export function roundedPct(k: number, n: number): number | null {
+  const rk = roundedCount(k);
+  const rn = roundedCount(n);
+  return rk === null || rn === null || rn === 0 ? null : Math.min(100, Math.round((rk / rn) * 100));
+}
+
 // -------------------------------------------------------------- input --
 
 export const USERNAME_RE = /^[a-z0-9_.]{3,30}$/;

@@ -157,7 +157,9 @@ function TrendCard(props: { weeks: WeekCount[]; suppress: boolean; t: (th: strin
                 "แต่ละแถวคือ 7 วัน นับสมาชิกที่เช็กอินและได้นั่งกับคนที่เคยเจอกันที่ Jurrgun มาก่อน",
                 "Each row is 7 days: members who checked in and sat with someone they had met at Jurrgun before.",
               )}
-              {suppress ? t(` สัปดาห์ที่น้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10"`, ` Weeks under ${K_THRESHOLD} people show as "<10".`) : null}
+              {suppress
+                ? t(` สัปดาห์ที่น้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10"`, ` Weeks under ${K_THRESHOLD} people show as "<10".`)
+                : t(" ไม่ได้ซ่อนตัวเลข สำหรับเจ้าหน้าที่เท่านั้น", " Not suppressed, staff only.")}
             </caption>
             <thead>
               <tr>
