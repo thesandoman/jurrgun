@@ -109,7 +109,7 @@ import {
   safeNext,
   PULSE_ICON,
 } from "../ui/kit";
-import { FullDiscover, type MapChip, type MapPoint } from "../ui/discover-map";
+import { FullDiscover, NoEventsYet, sheetCopy, type MapChip, type MapPoint } from "../ui/discover-map";
 import { canView, isReviewer, ownsEvent, PAUSED_LINE } from "../domain/hosting";
 import { notifyHostRunningLate } from "../services/eta-notice";
 import { eventAnnouncements } from "../services/announcements";
@@ -738,15 +738,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
   if (mapView) {
     const week = list.filter((e) => e.startsAt.getTime() < now.getTime() + 7 * 86_400_000);
     const open = week.filter((e) => (taken.get(e.id) ?? 0) < e.capacity).length;
-    const status = week.length
-      ? {
-          ok: true,
-          title: t(`✓ ${week.length} กิจกรรมสัปดาห์นี้ · ${open} ยังมีที่ว่าง`, `✓ ${week.length} event${week.length === 1 ? "" : "s"} this week · ${open} with spots left`),
-        }
-      : {
-          ok: false,
-          title: t("ยังไม่มีกิจกรรมสัปดาห์นี้ · แตะดูทั้งหมด", "No events this week yet · tap to see all"),
-        };
+    const status = sheetCopy({ total: list.length, week: week.length, open, filtered }, t);
     return page(
       c,
       { title: t("ค้นหากิจกรรม", "Discover"), tab: "events", fullscreen: true },
@@ -765,10 +757,16 @@ eventRoutes.get("/events", requireMember, async (c) => {
           <>
             {unplacedNote}
             {/* The quiz card used to ride in the ticker; it sits after the third event, as in the list view. */}
-            {cardList(quizHint)}
+            {list.length === 0 ? (
+              <>
+                <NoEventsYet t={t} filtered={filtered} clearHref="/events" />
+                {quizHint}
+              </>
+            ) : (
+              cardList(quizHint)
+            )}
           </>
         }
-        count={list.length}
         listHref={listHref}
         langHref={`/lang/${lang === "th" ? "en" : "th"}?back=${encodeURIComponent(mapHref)}`}
         hasQuests={list.some((e) => e.tags.includes("city_quest"))}

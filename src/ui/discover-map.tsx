@@ -79,6 +79,59 @@ export function svmPoint(p: MapPoint, t: T) {
   };
 }
 
+/**
+ * What the events sheet's handle says. Never a contradiction like "tap to see
+ * all" over "All 0 events": with nothing upcoming the sheet opens on a helpful
+ * empty state instead, and a quiet week points at the events further ahead.
+ */
+export type SheetCopy = {
+  ok: boolean;
+  title: string;
+  /** The second line ("All N events · tap for the list"), or null when it would repeat the title. */
+  sub: string | null;
+  /** "none": nothing upcoming at all; "filtered": nothing matches the filters. */
+  empty: "none" | "filtered" | null;
+};
+export function sheetCopy(n: { total: number; week: number; open: number; filtered: boolean }, t: T): SheetCopy {
+  if (n.total === 0)
+    return n.filtered
+      ? { ok: false, title: t("ไม่พบกิจกรรมที่ตรงกับตัวกรอง", "No events match these filters"), sub: null, empty: "filtered" }
+      : { ok: false, title: t("ยังไม่มีกิจกรรมเร็ว ๆ นี้", "No events coming up yet"), sub: null, empty: "none" };
+  if (n.week === 0)
+    return {
+      ok: false,
+      title: t(`ไม่มีกิจกรรมสัปดาห์นี้ · ดูอีก ${n.total} กิจกรรมที่จะมาถึง`, `No events this week · see the ${n.total} coming up later`),
+      sub: null,
+      empty: null,
+    };
+  return {
+    ok: true,
+    title: t(`✓ ${n.week} กิจกรรมสัปดาห์นี้ · ${n.open} ยังมีที่ว่าง`, `✓ ${n.week} event${n.week === 1 ? "" : "s"} this week · ${n.open} with spots left`),
+    sub: t(`ทั้งหมด ${n.total} กิจกรรม · แตะเพื่อดูรายการ`, `All ${n.total} event${n.total === 1 ? "" : "s"} · tap for the list`),
+    empty: null,
+  };
+}
+
+/** The sheet's body when nothing is coming up: say so kindly, and offer one thing to do. */
+export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string }) {
+  const { t } = props;
+  return props.filtered ? (
+    <div class="fd-empty">
+      <p>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ ลองล้างตัวกรองดูนะ", "No events match these filters yet. Try clearing them.")}</p>
+      <a class="btn ghost" href={props.clearHref}>
+        {t("ล้างตัวกรอง", "Clear filters")}
+      </a>
+    </div>
+  ) : (
+    <div class="fd-empty">
+      <p>{t("ยังไม่มีใครนัดกันช่วงนี้ เริ่มโต๊ะแรกเองได้ หรือแวะมาดูใหม่เร็ว ๆ นี้", "Nobody has planned anything yet. Start the first table yourself, or check back soon.")}</p>
+      <a class="btn" href="/host/new">
+        {t("เสนอกิจกรรม", "Suggest an event")}
+      </a>
+    </div>
+  );
+}
+
 /** JSON for a <script type="application/json"> block, safe against </script>. */
 function scriptJson(x: unknown): string {
   return JSON.stringify(x).replace(/</g, "\\u003c");
@@ -89,14 +142,13 @@ export function FullDiscover(props: {
   lang: Lang;
   points: MapPoint[];
   chips: MapChip[];
-  status: { title: string; ok: boolean };
+  status: SheetCopy;
   search: string;
   filtered: boolean;
   /** The filter form (same as the list view's). */
   filters: Child;
   /** Event cards for the list sheet. */
   list: Child;
-  count: number;
   listHref: string;
   langHref: string;
   /** Show the "Quests" button only when City Quests are on screen. */
@@ -215,13 +267,12 @@ export function FullDiscover(props: {
       </nav>
 
       {/* The events sheet over the map */}
-      <details class="fd-sheet" id="discover-sheet">
+      {/* With nothing coming up, the sheet starts open on its empty state, so the next step is one tap away. */}
+      <details class="fd-sheet" id="discover-sheet" open={props.status.empty ? true : undefined}>
         <summary>
           <span class="fd-grab" aria-hidden="true" />
           <span class={`fd-handle-title ${props.status.ok ? "ok" : ""}`} id="fd-status">{props.status.title}</span>
-          <small class="fd-handle-sub">
-            ☰ {t(`ทั้งหมด ${props.count} กิจกรรม · แตะเพื่อดูรายการ`, `All ${props.count} events · tap for the list`)}
-          </small>
+          {props.status.sub ? <small class="fd-handle-sub">☰ {props.status.sub}</small> : null}
         </summary>
         <section id="discover-list" class="discover-list fd-sheet-body" aria-label={t("รายการกิจกรรม", "Event list")}>
           <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>
@@ -511,6 +562,10 @@ html.a11y-contrast .fd-sheet{background:var(--surface);backdrop-filter:none;-web
 .fd-handle-sub{font-size:.8rem;font-weight:600;color:var(--ink-2);text-align:center}
 .fd-sheet-body{max-height:58dvh;overflow:auto;padding:0 14px 14px;overscroll-behavior:contain}
 .fd-sheet-links{margin:0 0 4px;text-align:right;font-size:.85rem}
+/* Nothing coming up: one kind line and one action, centred under the handle. */
+.fd-empty{display:grid;justify-items:center;gap:12px;padding:4px 8px 12px;text-align:center}
+.fd-empty p{margin:0;color:var(--ink-2);max-width:36ch;line-height:1.5}
+.fd-empty .btn{min-height:44px}
 /* tab bar floats over the map */
 body.fullmap-body .tabbar{z-index:11}
 @media (min-width:900px){
