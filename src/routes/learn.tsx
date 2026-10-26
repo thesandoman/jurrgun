@@ -177,7 +177,7 @@ learnRoutes.get("/learn/bangkok-types", (c) => {
     { title: L(lang, TYPES_CARD.title), tab: "learn" },
     <article class="learn">
       <p>
-        <a href="/learn">← {t("เรียนรู้", "Learn")}</a>
+        <a href="/learn" class="back-link">← {t("เรียนรู้", "Learn")}</a>
       </p>
       <h1>
         <span aria-hidden="true">{TYPES_CARD.icon}</span> {L(lang, TYPES_CARD.title)}
@@ -231,7 +231,7 @@ learnRoutes.get("/learn/:slug", (c) => {
     { title: L(lang, topic.title), tab: "learn", description: L(lang, topic.summary) },
     <article class="learn">
       <p>
-        <a href="/learn">← {t("เรียนรู้", "Learn")}</a>
+        <a href="/learn" class="back-link">← {t("เรียนรู้", "Learn")}</a>
       </p>
       <h1>
         <span aria-hidden="true">{topic.icon}</span> {L(lang, topic.title)}

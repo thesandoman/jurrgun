@@ -798,7 +798,7 @@ buddyRoutes.get("/buddy/passport", requireMember, async (c) => {
     { title: v.t("พาสปอร์ตกรุงเทพฯ", "Bangkok Passport"), tab: "buddy" },
     <>
       <p>
-        <a href="/buddy">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
+        <a href="/buddy" class="back-link">← {v.t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</a>
       </p>
       <Passport v={v} stamped={new Set(stamps.map((s) => s.district))} badges={badges} wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
     </>,
@@ -1109,7 +1109,7 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
     { title: t("คนที่อาจเป็นบัดดี้", "Possible buddies"), tab: "buddy" },
     <>
       <p class="spread">
-        <a href="/buddy">← {t("บัดดี้", "Buddy")}</a>
+        <a href="/buddy" class="back-link">← {t("บัดดี้", "Buddy")}</a>
         {card ? <small class="muted">{t(`${st.used + 1} จาก ${DECK_PER_DAY} วันนี้`, `${st.used + 1} of ${DECK_PER_DAY} today`)}</small> : null}
       </p>
       <h1>{t("ดูคนที่อาจเป็นบัดดี้", "Meet possible buddies")}</h1>

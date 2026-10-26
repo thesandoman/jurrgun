@@ -1173,7 +1173,7 @@ quizRoutes.get("/types/:slug", async (c) => {
     },
     <>
       <p>
-        <a href="/types">← {t("ทุกไทป์", "All types")}</a>
+        <a href="/types" class="back-link">← {t("ทุกไทป์", "All types")}</a>
       </p>
       <div class="type-hero">
         <span class="type-emoji" aria-hidden="true">{a.emoji}</span>

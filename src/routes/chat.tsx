@@ -490,7 +490,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
     { title: t("แชต", "Chat"), tab: "connections", status },
     <>
       <p class="spread">
-        <a href="/chat">← {t("แชต", "Chats")}</a>
+        <a href="/chat" class="back-link">← {t("แชต", "Chats")}</a>
         {/* Group chats: the name is the heading below, so this link names the page it goes to (it showed the name twice). */}
         <a href={th.back}>{isCircle ? (key.startsWith("table:") ? t("หน้าโต๊ะ", "Table page") : t("หน้ากิจกรรม", "Event page")) : L(lang, th.title)}</a>
       </p>

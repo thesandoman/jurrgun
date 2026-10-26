@@ -66,7 +66,7 @@ tableRoutes.get("/tables", async (c) => {
     { title: t("โต๊ะประจำของฉัน", "My Regular Tables"), tab: "connections" },
     <>
       <p>
-        <a href="/connections">← {t("คนรู้จัก", "My people")}</a>
+        <a href="/connections" class="back-link">← {t("คนรู้จัก", "My people")}</a>
       </p>
       <h1>👥 {t("โต๊ะประจำของฉัน", "My Regular Tables")}</h1>
       <p class="muted">{t("กลุ่มเล็ก ๆ ที่นัดเจอกันบ่อย ๆ มีเจ้าภาพโต๊ะคอยชวน", "Small groups that keep meeting, with a Table Host who brings everyone together.")}</p>
@@ -171,7 +171,7 @@ tableRoutes.get("/tables/:id", async (c) => {
   const head = (
     <>
       <p>
-        <a href="/tables">← {t("โต๊ะประจำของฉัน", "My Regular Tables")}</a>
+        <a href="/tables" class="back-link">← {t("โต๊ะประจำของฉัน", "My Regular Tables")}</a>
       </p>
       <p class="eyebrow">👥 {t("โต๊ะประจำ", "Regular Table")}</p>
       <h1>{table.name}</h1>

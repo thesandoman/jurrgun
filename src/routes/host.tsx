@@ -294,7 +294,7 @@ hostRoutes.get("/host", async (c) => {
     { title: t("จัดกิจกรรม", "Host an event"), tab: "me" },
     <>
       <p>
-        <a href="/settings">← {t("ฉัน", "Me")}</a>
+        <a href="/settings" class="back-link">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("จัดกิจกรรมของคุณเอง", "Host your own event")}</h1>
       <p class="chips2">
@@ -611,7 +611,7 @@ const formPage = async (c: C, props: Parameters<typeof ProposalForm>[0], status?
     { title: props.v.t("เสนอกิจกรรม", "Propose an event"), tab: "me", status },
     <>
       <p>
-        <a href="/host">← {props.v.t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
+        <a href="/host" class="back-link">← {props.v.t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
       </p>
       <h1>{props.editing ? props.v.t("แก้ไขกิจกรรม", "Edit your event") : props.v.t("เสนอกิจกรรม", "Propose an event")}</h1>
       <ProposalForm {...props} talk={talk} />
@@ -709,7 +709,7 @@ hostRoutes.get("/host/inbox", async (c) => {
     { title: t("กิจกรรมที่รอโต๊ะ", "Events waiting for a table"), tab: "me" },
     <>
       <p>
-        <a href="/host">← {t("จัดกิจกรรม", "Host an event")}</a>
+        <a href="/host" class="back-link">← {t("จัดกิจกรรม", "Host an event")}</a>
       </p>
       <h1>{t("กิจกรรมที่รอโต๊ะ", "Events waiting for a table")}</h1>
       <p class="muted">

@@ -120,7 +120,7 @@ consentRoutes.get("/settings/consents", requireMember, async (c) => {
     { title: t("ความยินยอมของฉัน", "My consents"), tab: "me" },
     <div class="consent-centre">
       <p>
-        <a href="/settings">← {t("ฉัน", "Me")}</a>
+        <a href="/settings" class="back-link">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("ความยินยอมของฉัน", "My consents")}</h1>
       <p class="muted">{t("ทุกครั้งที่เปลี่ยน เราบันทึกไว้พร้อมวันที่", "Every change is kept with its date.")}</p>

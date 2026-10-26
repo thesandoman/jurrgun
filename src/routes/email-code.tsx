@@ -199,7 +199,7 @@ async function SettingsEmailPage(c: C, opts: { value?: string; error?: string; d
     { title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), tab: "me", status: opts.status },
     <>
       <p>
-        <a href="/settings">← {t("ฉัน", "Me")}</a>
+        <a href="/settings" class="back-link">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email")}</h1>
       {opts.done === "linked" ? <Notice kind="ok">{t("ผูกอีเมลแล้ว ครั้งหน้าเข้าสู่ระบบด้วยรหัสได้เลย", "Email linked. Next time you can sign in with a code.")}</Notice> : null}
@@ -236,7 +236,7 @@ function SettingsCodePage(c: C, opts: { email: string; error?: string; status?: 
     { title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), tab: "me", status: opts.status },
     <>
       <p>
-        <a href="/settings/email">← {t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email")}</a>
+        <a href="/settings/email" class="back-link">← {t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email")}</a>
       </p>
       <h1>{t("ยืนยันอีเมล", "Confirm your email")}</h1>
       <Notice kind="info">{t("เราส่งรหัส 6 หลักไปที่อีเมลนี้แล้ว", "We've sent a 6-digit code to this email.")}</Notice>

@@ -1253,4 +1253,11 @@ html{scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}
 input[type=time]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--field-line);border-radius:14px;padding:8px 12px;min-height:44px;max-width:100%}
 input[type=time]:focus{background:var(--surface);border-color:var(--brand)}
 .safe-arrival label{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+/* 44px targets: "← back" links, a section's Edit or All types link, Show password, switch rows,
+   and links that stand alone on their line. */
+a.back-link,main p>a[href="/settings"]:first-child:not(.btn){display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+.sec-head>a{min-width:44px;justify-content:flex-end}
+.pw-toggle{min-height:44px}
+main .toggle{min-height:44px}main .toggle:not(:has(small)){align-items:center}
+.cp-sanroo>a:only-child,main p.muted>a[href="/partner/apply"]:only-child{display:inline-flex;align-items:center;min-height:44px}
 `);

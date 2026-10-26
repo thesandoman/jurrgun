@@ -72,7 +72,7 @@ hostInsightRoutes.get("/host/insights", async (c) => {
     { title: t("ผลลัพธ์กิจกรรมของฉัน", "How my events went"), tab: "me" },
     <>
       <p class="spread">
-        <a href="/host">← {t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
+        <a href="/host" class="back-link">← {t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
         <a href="/host/ideas">💡 {t("ไอเดียจัดกิจกรรม", "Ideas")}</a>
       </p>
       <h1>📈 {t("ผลลัพธ์กิจกรรมของฉัน", "How my events went")}</h1>
@@ -154,7 +154,7 @@ hostInsightRoutes.get("/host/ideas", async (c) => {
     { title: t("ไอเดียจัดกิจกรรม", "Ideas for hosts"), tab: "me" },
     <>
       <p class="spread">
-        <a href="/host">← {t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
+        <a href="/host" class="back-link">← {t("กิจกรรมที่ฉันจัด", "My hosted events")}</a>
         <a href="/host/insights">📈 {t("ผลลัพธ์", "How it went")}</a>
       </p>
       <h1>💡 {t("คนอยากทำอะไร แต่ยังหาไม่เจอ", "What people want and can't find yet")}</h1>

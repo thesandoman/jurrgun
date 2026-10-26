@@ -99,7 +99,7 @@ calendarRoutes.get("/settings/calendar", async (c) => {
     { title: t("ปฏิทินของฉัน", "My calendar"), tab: "me" },
     <>
       <p>
-        <a href="/settings">← {t("ฉัน", "Me")}</a>
+        <a href="/settings" class="back-link">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("ปฏิทินของฉัน", "My calendar")}</h1>
       <p class="muted">
