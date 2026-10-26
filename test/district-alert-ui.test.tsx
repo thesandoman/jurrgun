@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { NoEventsYet } from "../src/ui/discover-map";
 import { alertFitsView } from "../src/domain/district-alert";
+import { CONSENT_CATEGORIES } from "../src/content/privacy";
 
 const en = tr("en");
 const th = tr("th");
@@ -83,5 +84,14 @@ describe("district alert in the filtered empty state", () => {
     expect(html).toContain('href="/settings#push"');
     expect(html).toContain("Turn on notifications in Settings to hear about events in Bang Rak");
     expect(html).not.toContain("<form");
+  });
+});
+
+describe("the privacy notice names the alert (owner-approved legal edit)", () => {
+  it("the notifications line adds the weekly district note, in both languages, with no dashes", () => {
+    const hint = CONSENT_CATEGORIES.find((c) => c.key === "notifications")!.hint;
+    expect(hint.en).toBe("Reminders before events and when a spot opens, and, if you turn it on, a weekly note when something opens in your district.");
+    expect(hint.th).toBe("เตือนก่อนกิจกรรมและเมื่อมีที่ว่าง และหากคุณเปิดไว้ จะมีข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ");
+    expect(`${hint.th} ${hint.en}`).not.toMatch(/[–—]/);
   });
 });

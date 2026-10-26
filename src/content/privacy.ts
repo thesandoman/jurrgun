@@ -436,7 +436,10 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     key: "notifications",
     control: "toggle",
     title: { th: "แจ้งเตือนกิจกรรม", en: "Event reminders" },
-    hint: { th: "เตือนก่อนกิจกรรมและเมื่อมีที่ว่าง", en: "Reminders before events and when a spot opens." },
+    hint: {
+      th: "เตือนก่อนกิจกรรมและเมื่อมีที่ว่าง และหากคุณเปิดไว้ จะมีข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ",
+      en: "Reminders before events and when a spot opens, and, if you turn it on, a weekly note when something opens in your district.",
+    },
     withdraw: { th: "ถ้าปิด เราจะไม่ส่งการเตือนเหล่านี้", en: "If you turn it off, we don't send these reminders." },
   },
   {
