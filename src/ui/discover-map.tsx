@@ -119,7 +119,7 @@ export function sheetCopy(n: { total: number; week: number; open: number; filter
  * opt-in (no script). On: one calm line instead. No yes to notifications: a
  * short link to Settings, never a silent yes.
  */
-export type DistrictAlertState = { state: "off" | "on" | "consent"; district: string; settingsHref: string };
+export type DistrictAlertState = { state: "off" | "on" | "consent"; district: string; settingsHref: string; back?: string };
 
 export function DistrictAlertOptIn(props: { t: T; alert: DistrictAlertState }) {
   const { t, alert } = props;
@@ -132,6 +132,7 @@ export function DistrictAlertOptIn(props: { t: T; alert: DistrictAlertState }) {
     );
   return (
     <form method="post" action="/events/district-alert" class="fd-alert">
+      {alert.back ? <input type="hidden" name="back" value={alert.back} /> : null}
       <button type="submit" class="btn ghost">
         {optInText(alert.district, t)}
       </button>
@@ -139,7 +140,11 @@ export function DistrictAlertOptIn(props: { t: T; alert: DistrictAlertState }) {
   );
 }
 
-/** The sheet's body when nothing is coming up: say so kindly, and offer one thing to do. */
+/**
+ * The sheet's body when nothing is coming up: say so kindly, and offer one
+ * thing to do. The route passes `alert` only where the alert can cover what
+ * the member sees: unfiltered, or filtered to their own district.
+ */
 export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string; alert?: DistrictAlertState | null }) {
   const { t } = props;
   return props.filtered ? (
@@ -148,6 +153,7 @@ export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string;
       <a class="btn ghost" href={props.clearHref}>
         {t("ล้างตัวกรอง", "Clear filters")}
       </a>
+      {props.alert ? <DistrictAlertOptIn t={t} alert={props.alert} /> : null}
     </div>
   ) : (
     <div class="fd-empty">

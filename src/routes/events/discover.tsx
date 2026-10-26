@@ -19,12 +19,12 @@ import { eventPlace } from "../../lib/places";
 import { requireMember } from "../../lib/session";
 import { events, profiles, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, safeNext, Select, str, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
-import { FullDiscover, NoEventsYet, sheetCopy, type MapChip, type MapPoint } from "../../ui/discover-map";
+import { DistrictAlertOptIn, FullDiscover, NoEventsYet, sheetCopy, type DistrictAlertState, type MapChip, type MapPoint } from "../../ui/discover-map";
 import { collabNamesFor } from "../../services/collabs";
 import { listableBase } from "../../services/events";
 import { hasConsent, NOTIFICATIONS_CONSENT } from "../../services/consent";
 import { vapidKeys } from "../../services/push";
-import { DISTRICT_ALERT_ON, districtName } from "../../domain/district-alert";
+import { alertFitsView, DISTRICT_ALERT_ON, districtName } from "../../domain/district-alert";
 import { audit } from "../../lib/records";
 import { eventRoutes } from "./app";
 import {
@@ -279,6 +279,19 @@ eventRoutes.get("/events", requireMember, async (c) => {
         {t(`มี ${unplaced} กิจกรรมที่ยังไม่ได้ปักหมุดบนแผนที่ แต่ดูได้ในรายการนี้`, `${unplaced} event${unplaced === 1 ? " isn't" : "s aren't"} on the map yet, but ${unplaced === 1 ? "it's" : "they're"} in this list`)}
       </p>
     ) : null;
+  // The empty-district alert (owner card 7) when nothing is coming up: unfiltered, or filtered to the
+  // member's own district. The alert only covers social_profiles.district, so another district gets none.
+  const alert: DistrictAlertState | null =
+    list.length === 0 && alertFitsView({ ownDistrict: user.profile.district, filtered, filterDistrict: q.district })
+      ? {
+          district: user.profile.district,
+          // Without a yes to notifications the alert is off whatever the flag says: point to Settings.
+          state: !(await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT)) ? "consent" : user.profile.districtAlertOptIn ? "on" : "off",
+          settingsHref: vapidKeys(c.env) ? "/settings#push" : "/settings/consents",
+          // A filtered view comes back to the same filters once the alert is on.
+          back: filtered ? (mapView ? mapHref : listHref) : undefined,
+        }
+      : null;
   // The events, with `extra` (the For you and quiz cards) after the third one, so events come first.
   const cardList = (extra?: Child) => {
     if (rest.length === 0 && above.size) return extra;
@@ -286,6 +299,12 @@ eventRoutes.get("/events", requireMember, async (c) => {
       return (
         <>
           <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ แวะมาดูใหม่นะ", "No events match these filters yet. Check back soon.")}</Empty>
+          {/* The list view's filtered empty state: the same opt-in, when filtered to the member's own district. */}
+          {!mapView && filtered && alert ? (
+            <div class="empty-alert">
+              <DistrictAlertOptIn t={t} alert={alert} />
+            </div>
+          ) : null}
           {extra}
         </>
       );
@@ -307,16 +326,6 @@ eventRoutes.get("/events", requireMember, async (c) => {
   const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
 
   if (mapView) {
-    // The empty-district alert (owner card 7) sits under "Suggest an event" when nothing is coming up.
-    const alert =
-      list.length === 0 && !filtered && districtName(user.profile.district, lang)
-        ? {
-            district: user.profile.district,
-            // Without a yes to notifications the alert is off whatever the flag says: point to Settings.
-            state: !(await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT)) ? ("consent" as const) : user.profile.districtAlertOptIn ? ("on" as const) : ("off" as const),
-            settingsHref: vapidKeys(c.env) ? "/settings#push" : "/settings/consents",
-          }
-        : null;
     const week = list.filter((e) => e.startsAt.getTime() < now.getTime() + 7 * 86_400_000);
     const open = week.filter((e) => (taken.get(e.id) ?? 0) < e.capacity).length;
     const status = sheetCopy({ total: list.length, week: week.length, open, filtered }, t);

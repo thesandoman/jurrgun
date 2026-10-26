@@ -304,3 +304,42 @@ describe.skipIf(!HAS_DB)("district alert switch in Settings", () => {
     expect(await flag(m.id)).toBe(false);
   });
 });
+
+describe.skipIf(!HAS_DB)("district alert on Discover's filtered empty state", () => {
+  // A search nothing matches, so the filtered view is empty whatever other tests leave behind.
+  const none = `zz-no-match-${newId().slice(0, 8)}`;
+  const discover = async (cookie: string, query: string) => (await req(`/events?${query}&q=${none}`, { cookie: `${cookie}; lang=en` })).text();
+
+  it("filtered to your own district: offered on the map and in the list, and comes back to the same filters", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    for (const view of ["map", "list"]) {
+      const html = await discover(m.cookie, `view=${view}&district=bang_rak`);
+      expect(html).toContain('action="/events/district-alert"');
+      expect(html).toContain("Tell me when an event opens in Bang Rak");
+    }
+    const html = await discover(m.cookie, "view=map&district=bang_rak");
+    const back = html.match(/name="back" value="([^"]+)"/)?.[1].replace(/&amp;/g, "&") ?? "";
+    expect(back).toContain("district=bang_rak");
+    const res = await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back } });
+    expect(res.headers.get("location")).toBe(back);
+    expect(await discover(m.cookie, "view=list&district=bang_rak")).toContain("We&#39;ll tell you when an event opens in Bang Rak, at most once a week.");
+  });
+
+  it("filtered to another district, or without a district: no offer", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    for (const query of ["view=map&district=pathum_wan", "view=list&district=pathum_wan", "view=map"]) {
+      expect(await discover(m.cookie, query)).not.toContain("/events/district-alert");
+    }
+  });
+
+  it("filtered to your own district without a yes to notifications: the Settings link only", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    await db().insert(consents).values({ id: newId(), accountId: m.id, category: "notifications", granted: false, version: "test", createdAt: new Date(Date.now() + 5_000) });
+    const html = await discover(m.cookie, "view=map&district=bang_rak");
+    expect(html).toContain("Turn on notifications in Settings to hear about events in Bang Rak");
+    expect(html).not.toContain('action="/events/district-alert"');
+  });
+});

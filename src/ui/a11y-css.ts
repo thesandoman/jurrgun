@@ -1299,4 +1299,6 @@ main .pc-name>a{display:inline-block;min-width:44px}
 .disc-picks{container:ev-picks/inline-size}
 @container ev-item (max-width:17rem){.ev-item>.card.ev-card,.ev-item>.card.ev-card.feat{-webkit-mask:none;mask:none}}
 @container ev-picks (max-width:17rem){.disc-picks>.card.ev-card,.disc-picks>.card.ev-card.feat{-webkit-mask:none;mask:none}}
+/* The district alert under the list view's filtered empty line, centred like it (owner card 7 follow-up). */
+.empty-alert{display:grid;justify-items:center;margin:-12px 0 24px;text-align:center}
 `);

@@ -29,6 +29,17 @@ export function districtName(district: string, lang: Lang): string | null {
   return values(DISTRICTS).includes(district) ? label(DISTRICTS, district, lang) : null;
 }
 
+/**
+ * Whether Discover's empty state offers the opt-in: the member has one of
+ * Bangkok's districts, and the view is unfiltered or filtered to that same
+ * district. The alert only ever covers the member's own district, so a filter
+ * on another district gets no offer.
+ */
+export function alertFitsView(v: { ownDistrict: string; filtered: boolean; filterDistrict: string }): boolean {
+  if (!districtName(v.ownDistrict, "en")) return false;
+  return !v.filtered || v.filterDistrict === v.ownDistrict;
+}
+
 type T = (th: string, en: string) => string;
 
 /** The opt-in: "แจ้งฉันเมื่อมีกิจกรรมเปิดในเขตบางรัก / Tell me when an event opens in Bang Rak". */

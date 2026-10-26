@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { NoEventsYet } from "../src/ui/discover-map";
+import { alertFitsView } from "../src/domain/district-alert";
 
 const en = tr("en");
 const th = tr("th");
@@ -36,10 +37,51 @@ describe("district alert in the empty state", () => {
     expect(html).not.toContain("<form");
   });
 
-  it("not on a filtered empty state, and no dashes", () => {
-    expect(String(<NoEventsYet t={en} filtered clearHref="/events" alert={at("off")} />)).not.toContain("district-alert");
+  it("no dashes", () => {
     for (const s of ["off", "on", "consent"] as const) {
-      expect(String(<NoEventsYet t={th} filtered={false} clearHref="/events" alert={at(s)} />)).not.toMatch(/[–—]/);
+      for (const filtered of [false, true]) {
+        expect(String(<NoEventsYet t={th} filtered={filtered} clearHref="/events" alert={at(s)} />)).not.toMatch(/[–—]/);
+      }
     }
+  });
+});
+
+describe("district alert in the filtered empty state", () => {
+  const back = "/events?district=bang_rak&view=map";
+  const filteredAt = (state: "off" | "on" | "consent") => ({ ...at(state), back });
+
+  it("filtered to your own district: offered, after Clear filters", () => {
+    expect(alertFitsView({ ownDistrict: "bang_rak", filtered: true, filterDistrict: "bang_rak" })).toBe(true);
+    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={filteredAt("off")} />);
+    expect(html).toContain('<form method="post" action="/events/district-alert"');
+    expect(html).toContain("Tell me when an event opens in Bang Rak");
+    expect(html.indexOf("Clear filters")).toBeLessThan(html.indexOf("/events/district-alert"));
+    // Back to the same filters once it's on.
+    expect(html).toContain('name="back" value="/events?district=bang_rak&amp;view=map"');
+    expect(html).not.toContain("<script");
+  });
+
+  it("filtered to your own district, already on: the same calm line", () => {
+    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={filteredAt("on")} />);
+    expect(html).toContain("We&#39;ll tell you when an event opens in Bang Rak, at most once a week.");
+    expect(html).not.toContain("<form");
+  });
+
+  it("filtered to another district, or filtered without a district: no offer, the alert can't cover it", () => {
+    expect(alertFitsView({ ownDistrict: "bang_rak", filtered: true, filterDistrict: "pathum_wan" })).toBe(false);
+    expect(alertFitsView({ ownDistrict: "bang_rak", filtered: true, filterDistrict: "" })).toBe(false);
+    expect(alertFitsView({ ownDistrict: "", filtered: true, filterDistrict: "" })).toBe(false);
+    expect(alertFitsView({ ownDistrict: "bang_rak", filtered: false, filterDistrict: "" })).toBe(true);
+    // The route then passes no alert: Clear filters alone.
+    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={null} />);
+    expect(html).toContain("Clear filters");
+    expect(html).not.toContain("district-alert");
+  });
+
+  it("filtered, no yes to notifications: the link to Settings, never a form that says yes", () => {
+    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={filteredAt("consent")} />);
+    expect(html).toContain('href="/settings#push"');
+    expect(html).toContain("Turn on notifications in Settings to hear about events in Bang Rak");
+    expect(html).not.toContain("<form");
   });
 });
