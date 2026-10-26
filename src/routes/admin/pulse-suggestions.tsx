@@ -17,6 +17,7 @@ import type { AppEnv } from "../../lib/env";
 import { audit } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { pulseSuggestions } from "../../schema";
+import { daysUntilWipe } from "../../services/retention";
 import { SUGGEST_TOPICS } from "../../content/pulse";
 import { Button, Empty, page, Select, str, view } from "../../ui/kit";
 
@@ -29,6 +30,7 @@ adminPulseSuggestions.use("*", async (c, next) => {
 
 adminPulseSuggestions.get("/", async (c) => {
   const { t, lang } = view(c);
+  const now = new Date();
   const rows = await getDb(c.env)
     .select()
     .from(pulseSuggestions)
@@ -53,6 +55,11 @@ adminPulseSuggestions.get("/", async (c) => {
           {rows.map((r) => (
             <li class="card">
               <p style="margin-top:0">{r.body}</p>
+              <p class="muted" style="margin:0 0 8px">
+                <small>
+                  {((d) => (d === 0 ? t("ลบในรอบถัดไป", "Wipes at the next cleanup") : t(`ลบใน ${d} วัน ถ้ายังไม่ได้จัด`, `Wipes in ${d} day${d === 1 ? "" : "s"} if not sorted`)))(daysUntilWipe(r.month, now))}
+                </small>
+              </p>
               <form method="post" action={`/admin/pulse-suggestions/${encodeURIComponent(r.id)}`} class="row" style="align-items:end;flex-wrap:wrap">
                 <Select label={t("หัวข้อ", "Topic")} name="topic" options={SUGGEST_TOPICS} lang={lang} blank={t("เลือกหัวข้อ", "Choose a topic")} />
                 <Button name="do" value="sort">{t("จัดหัวข้อแล้วลบข้อความ", "Sort and delete the words")}</Button>

@@ -130,6 +130,12 @@ export const RETENTION: RetentionItem[] = [
     code: "RESEARCH_RETENTION_DAYS",
   },
   {
+    what: { th: "คำถามที่คุณเสนอซึ่งยังไม่มีใครจัดหัวข้อ", en: "Suggested questions no moderator has sorted yet" },
+    keep: { th: "ลบทั้งข้อความและรายการ เมื่อเดือนที่ส่งผ่านไปแล้ว", en: "the words and the entry are deleted once the month you sent it in has been over for" },
+    period: { n: 60, unit: "days" },
+    code: "SUGGESTION_RETENTION_DAYS",
+  },
+  {
     what: { th: "การแจ้งเตือนที่อ่านแล้ว", en: "Notifications you've read" },
     keep: { th: "ลบหลัง", en: "deleted after" },
     period: { n: 90, unit: "days" },

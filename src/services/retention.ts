@@ -29,6 +29,8 @@
  *   audit log                 1 year (R6)
  *   City Pulse and wellbeing  24 months after the answer (research code rows;
  *                             place checks and suggestions by their month)
+ *   unsorted suggestions      60 days after their month (C2), and the
+ *                             once-a-week suggestion flag once its week is over
  *   research ids              cut, with every answer under them, from any
  *                             account whose newest research answer isn't yes
  *                             (a research_id exists only with research consent)
@@ -63,6 +65,7 @@
 import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
+import { bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
 import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
 import { deleteObject, type StorageEnv } from "../storage";
@@ -129,11 +132,30 @@ import {
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
+/** Unsorted suggestions from months before this one (YYYY-MM) are due: their month ended 60+ days ago. */
+export function unsortedCutoffMonth(now: Date): string {
+  return bkkMonth(new Date(now.getTime() - SUGGESTION_RETENTION_DAYS * DAY));
+}
+
+/** Whole days until an unsorted suggestion from `month` (YYYY-MM) is wiped, never below 0. */
+export function daysUntilWipe(month: string, now: Date): number {
+  const [y, m] = month.split("-").map(Number);
+  // First instant of the next month in Bangkok, plus the retention period.
+  const due = Date.UTC(y, m, 1) - 7 * HOUR + SUGGESTION_RETENTION_DAYS * DAY;
+  return Math.max(0, Math.ceil((due - now.getTime()) / DAY));
+}
+
 export const SIGNAL_RETENTION_DAYS = 7;
 export const DEACTIVATED_RETENTION_DAYS = 30;
 export const LOGIN_ATTEMPT_RETENTION_HOURS = 24;
 export const CHECKIN_RETENTION_DAYS = 365;
 export const RESEARCH_RETENTION_DAYS = 730;
+/**
+ * Suggested City Pulse questions no moderator has sorted: words and row are
+ * deleted this long after their month ends (owner C2, 26 Oct 2026), so free
+ * text never waits out the 24-month research period.
+ */
+export const SUGGESTION_RETENTION_DAYS = 60;
 /** Chat messages are kept this long, then deleted (reported ones stay in the report's details). */
 export const CHAT_RETENTION_DAYS = 180;
 /** Host announcements are deleted this long after their event ends (owner, 17 Oct 2026). */
@@ -323,6 +345,20 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     db.delete(pulseSuggestions).where(lt(pulseSuggestions.month, researchMonth)).returning({ id: pulseSuggestions.id }),
   ]);
 
+  // Unsorted suggestions (C2): a month's rows go once that month ended SUGGESTION_RETENTION_DAYS ago.
+  // Months before the one holding (now - 60 days) are those whose last day is at least 60 days back.
+  const unsortedOld = await db
+    .delete(pulseSuggestions)
+    .where(and(eq(pulseSuggestions.status, "new"), lt(pulseSuggestions.month, unsortedCutoffMonth(now))))
+    .returning({ id: pulseSuggestions.id });
+  // The once-a-week suggestion flag only needs this week; an older week says nothing useful, so it goes.
+  // bio can be stored double-encoded (a jsonb string holding the object), so read it either way.
+  const bio = sql`(case jsonb_typeof(${profiles.bio}) when 'string' then (${profiles.bio} #>> '{}')::jsonb else ${profiles.bio} end)`;
+  await db
+    .update(profiles)
+    .set({ bio: sql`${bio} - 'pulseSuggestWeek'` })
+    .where(sql`${bio}->>'pulseSuggestWeek' < ${bkkWeekKey(now)}`);
+
   // Anonymous questions at a private talk go 30 days after it (D52). Kept out of the batch above, whose results are read by position.
   await db.delete(talkQuestions).where(inArray(talkQuestions.eventId, endedBefore(new Date(now.getTime() - 30 * DAY))));
   const counts: RetentionCounts = {
@@ -332,7 +368,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     loginAttemptsDeleted: attempts.length,
     loginCodesDeleted: codesOld.length,
     checkInsAggregated: checkIns.length,
-    researchAnswersDeleted: pulseOld.length + wellOld.length + placesOld.length + suggestionsOld.length,
+    researchAnswersDeleted: pulseOld.length + wellOld.length + placesOld.length + suggestionsOld.length + unsortedOld.length,
     researchLinksCut: unconsented.length,
     readNotificationsDeleted: readOld.length,
     unreadNotificationsDeleted: unreadOld.length,
