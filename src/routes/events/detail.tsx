@@ -37,6 +37,7 @@ import { eventRoutes } from "./app";
 import {
   ACTIVE,
   Cover,
+  coverEmoji,
   DAY,
   HelloBox,
   Seats,
@@ -398,9 +399,12 @@ export async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) 
       <DayStatusLine t={t} lang={lang} shown={dayStatus} class="ev-phone" />
       {hello ? <HelloBox t={t} lang={lang} event={event} mine={reg!.helloLine} lines={hello} /> : null}
       {dayOfControls("ev-phone")}
-      <Cover e={event} src={cover} class="ev-scene" />
-      <Card class="ev-sheet">
-        <p class="eyebrow">{eyebrow(event, t, lang)}</p>
+      {/* Owner card 7 (2026-10-26): no empty tinted band above the title; an uploaded photo still shows. */}
+      {cover ? <Cover e={event} src={cover} class="ev-scene" /> : null}
+      <Card class={cover ? "ev-sheet" : "ev-sheet ev-flat"}>
+        <p class="eyebrow">
+          <span class="ev-emoji" aria-hidden="true">{coverEmoji(event)}</span> {eyebrow(event, t, lang)}
+        </p>
         <h1>{title(event, lang)}</h1>
         <StatusStrip {...stripProps} class="ev-phone" />
         <AnnouncementList t={t} lang={lang} items={anns} />

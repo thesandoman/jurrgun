@@ -1319,4 +1319,8 @@ main .pc-name>a{display:inline-block;min-width:44px}
 @media (min-width:761px){#sticky-rsvp{display:none}body:has(#sticky-rsvp) main.wrap{padding-bottom:36px}}
 @media (min-width:1024px){body:has(#sticky-rsvp) main.wrap{padding-bottom:56px}}
 @media (prefers-reduced-motion:reduce){.sticky-cta,.sticky-cta.rsvp-bar{transition:none}}
+/* Event page (owner card 7): with no photo there is no band above the title, so the sheet sits in the page
+   like any card; the category emoji leads the line above the title. */
+main .card.ev-sheet.ev-flat{margin-top:0;border-radius:var(--radius)}
+.ev-sheet .ev-emoji{font-size:1.1em;line-height:1}
 `);
