@@ -73,6 +73,25 @@ describe.skipIf(!HAS_DB)("no repeats, round two", () => {
     expect(html).toContain("⭐ Your pick");
   });
 
+  it("keeps the pick tag on a picked event that reaches Top 10 this week", async () => {
+    // Alone in its own corner of the database: only a 100+ member can see an event for ages 100 to 120,
+    // so it is this member's only candidate and lands in "Top 1 this week" (nobody holds a seat, so it
+    // is not one of the popular picks), which takes it out of the main list.
+    const m = await createMember({ birthDate: "1920-01-01" });
+    const id = newId();
+    const startsAt = new Date(Date.now() + 2 * 86_400_000);
+    await db().insert(events).values({ id, title: `Centenarian walk ${id.slice(0, 4)}`, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3600_000), venueName: "Cafe", district: "bang_rak", capacity: 10, status: "published", createdBy: "t", ageMin: 100, ageMax: 120 });
+    await db().insert(weeklyPlans).values({ id: newId(), accountId: m.id, week: weekKey(new Date()), picks: [{ kind: "event", ref: id, reasons: [] }] });
+    for (const lang of ["en", "th"] as const) {
+      const html = await (await req(`/events?view=list&lang=${lang}`, { cookie: m.cookie })).text();
+      const start = html.indexOf('<section class="disc-top"');
+      expect(start).toBeGreaterThan(-1);
+      const topWeek = html.slice(start, html.indexOf("</section>", start));
+      expect(topWeek).toContain(`href="/events/${id}"`);
+      expect(topWeek).toContain(lang === "en" ? '<span class="tag ok">⭐ Your pick</span>' : '<span class="tag ok">⭐ เลือกให้คุณ</span>');
+    }
+  });
+
   it("the counts on My month in people open Upcoming and Past, and Learn lists each source once", async () => {
     const m = await createMember();
     await attendedOnce(m.id); // the counts show from a first event (they moved from Me, mobile card 6)

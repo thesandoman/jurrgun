@@ -18,7 +18,7 @@ import { fmtDate, fmtParts, type Lang, type T } from "../../lib/i18n";
 import { eventPlace } from "../../lib/places";
 import { requireMember } from "../../lib/session";
 import { events, profiles, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
-import { Button, Card, Empty, LinkButton, page, safeNext, Select, str, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
+import { Button, Card, Empty, LinkButton, page, safeNext, Select, str, Tag, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
 import { DistrictAlertOptIn, FullDiscover, NoEventsYet, sheetCopy, type DistrictAlertState, type MapChip, type MapPoint } from "../../ui/discover-map";
 import { collabNamesFor } from "../../services/collabs";
 import { listableBase } from "../../services/events";
@@ -130,8 +130,12 @@ async function discoverPicks(env: AppEnv["Bindings"], db: Db, user: CurrentUser 
   return { picks, week, taken, covers };
 }
 
-/** "10 อันดับสัปดาห์นี้ / Top 10 this week": one plain numbered row per event, no card, no score. */
-function TopWeek(props: { list: Event[]; taken: Map<string, number>; v: View }) {
+/**
+ * "10 อันดับสัปดาห์นี้ / Top 10 this week": one plain numbered row per event, no card, no score.
+ * `picked`: this week's plan picks. An event shown here leaves the main list, so it carries the
+ * same "⭐ Your pick" tag as a card would, or the tag would silently disappear for popular picks.
+ */
+function TopWeek(props: { list: Event[]; taken: Map<string, number>; v: View; picked: Set<string> }) {
   const { t, lang } = props.v;
   return (
     <ol class="top-week" role="list">
@@ -141,7 +145,15 @@ function TopWeek(props: { list: Event[]; taken: Map<string, number>; v: View }) 
         return (
           <li>
             <a href={`/events/${e.id}`}>
-              <span class="tw-title">{title(e, lang)}</span>
+              <span class="tw-title">
+                {title(e, lang)}
+                {props.picked.has(e.id) ? (
+                  <>
+                    {" "}
+                    <Tag tone="ok">⭐ {t("เลือกให้คุณ", "Your pick")}</Tag>
+                  </>
+                ) : null}
+              </span>
               <small>
                 {p.weekday} {p.day} · {p.time} · {label(DISTRICTS, e.district, lang)} · {left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full")}
               </small>
@@ -398,7 +410,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       {top?.week.length ? (
         <section class="disc-top" aria-labelledby="disc-top-h">
           <h2 id="disc-top-h">{t(`${top.week.length} อันดับสัปดาห์นี้`, `Top ${top.week.length} this week`)}</h2>
-          <TopWeek list={top.week} taken={top.taken} v={v} />
+          <TopWeek list={top.week} taken={top.taken} v={v} picked={picked} />
         </section>
       ) : null}
       <div class="disc">
