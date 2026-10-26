@@ -250,6 +250,29 @@ describe.skipIf(!HAS_DB)("district alert opt-in and off", () => {
   });
 });
 
+describe.skipIf(!HAS_DB)("the alert's one-tap off in the notifications list", () => {
+  it("renders a POST button under the alert while it is on, in the page and the bell", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    await db().insert(notifications).values({ id: newId(), accountId: m.id, kind: KIND_DISTRICT_ALERT, titleTh: alertText("bang_rak", "th"), titleEn: alertText("bang_rak", "en"), link: alertLink("bang_rak", "2026-10-26") });
+    const page = await (await req("/notifications", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(page).toContain("Something new opened in Bang Rak");
+    expect(page).toContain('<form method="post" action="/events/district-alert/off"');
+    expect(page).toContain("Turn this alert off");
+    const thai = await (await req("/notifications", { cookie: `${m.cookie}; lang=th` })).text();
+    expect(thai).toContain("ปิดการแจ้งเตือนนี้");
+    const panel = await (await req("/notifications/panel", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(panel).toContain('action="/events/district-alert/off"');
+    // Off: the alert stays in the list, the button goes.
+    await req("/events/district-alert/off", { cookie: m.cookie, method: "POST", form: { back: "" } });
+    const after = await (await req("/notifications?notice=district_alert_off", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(after).toContain("Something new opened in Bang Rak");
+    expect(after).toContain("District alert turned off");
+    expect(after).not.toContain("/events/district-alert/off");
+  });
+});
+
 describe.skipIf(!HAS_DB)("district alert switch in Settings", () => {
   const flag = async (id: string) => (await db().select({ on: profiles.districtAlertOptIn }).from(profiles).where(eq(profiles.accountId, id)).limit(1))[0].on;
   const settings = async (cookie: string) => (await req("/settings", { cookie: `${cookie}; lang=en` })).text();

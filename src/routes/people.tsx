@@ -64,7 +64,8 @@ import {
 } from "../schema";
 import { ARCHETYPES, displayName as typeName, matchLabel, MATCH_LABELS, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
 import { Button, Card, Choices, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view, safeNext, type View } from "../ui/kit";
-import { NotifItems } from "../ui/notif-menu";
+import { DistrictAlertOff, NotifItems } from "../ui/notif-menu";
+import { KIND_DISTRICT_ALERT } from "../domain/district-alert";
 import { ChatsLink, NewBadge } from "../ui/unread";
 import { ChatRow, chatRows, type ChatRowData } from "./chat";
 import { CHAT_KIND } from "../domain/chat";
@@ -1390,7 +1391,7 @@ peopleRoutes.get("/notifications/panel", requireMember, async (c) => {
     await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.accountId, me), inArray(notifications.id, shown)));
   }
   c.header("cache-control", "no-store");
-  return c.html(<NotifItems t={t} lang={lang} rows={rows} />);
+  return c.html(<NotifItems t={t} lang={lang} rows={rows} alertOn={!!c.var.user!.profile?.districtAlertOptIn} />);
 });
 
 peopleRoutes.get("/notifications", requireMember, async (c) => {
@@ -1406,6 +1407,7 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
   // They are read now: the bell on this page shows no badge (it was counted before this request marked them).
   c.var.user!.unread = 0;
   const push = vapidKeys(c.env);
+  const alertOn = !!c.var.user!.profile?.districtAlertOptIn;
   return page(
     c,
     { title: t("การแจ้งเตือน", "Notifications") },
@@ -1444,6 +1446,7 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
                     ) : (
                       <div>{body}</div>
                     )}
+                    {n.kind === KIND_DISTRICT_ALERT && alertOn ? <DistrictAlertOff t={t} /> : null}
                   </li>
                 );
               })}

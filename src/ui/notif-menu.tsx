@@ -11,6 +11,7 @@ import type { Lang } from "../lib/i18n";
 import { fmtDate } from "../lib/i18n";
 import { safeNext } from "./kit";
 import { NewBadge, UnreadDot, unreadLabel } from "./unread";
+import { ALERT_OFF, KIND_DISTRICT_ALERT } from "../domain/district-alert";
 
 type T = (th: string, en: string) => string;
 type Notification = typeof notifications.$inferSelect;
@@ -37,8 +38,23 @@ export function NotifMenu(props: { t: T; unread: number }) {
   );
 }
 
-/** The list inside the dropdown (returned by /notifications/panel). */
-export function NotifItems(props: { t: T; lang: Lang; rows: Notification[] }) {
+/**
+ * The empty-district alert's one-tap off (owner card 7): a POST from the
+ * list, never a GET with side effects. Shown under the alert while it is on.
+ */
+export function DistrictAlertOff(props: { t: T }) {
+  return (
+    <form method="post" action="/events/district-alert/off" class="notif-off">
+      <input type="hidden" name="back" value="/notifications" />
+      <button type="submit" class="btn ghost">
+        {props.t(ALERT_OFF.th, ALERT_OFF.en)}
+      </button>
+    </form>
+  );
+}
+
+/** The list inside the dropdown (returned by /notifications/panel). `alertOn`: the district alert is still on. */
+export function NotifItems(props: { t: T; lang: Lang; rows: Notification[]; alertOn?: boolean }) {
   const { t, lang, rows } = props;
   if (rows.length === 0) return <p class="muted notif-empty">{t("ยังไม่มีการแจ้งเตือน", "No notifications yet.")}</p>;
   return (
@@ -54,7 +70,12 @@ export function NotifItems(props: { t: T; lang: Lang; rows: Notification[] }) {
             </small>
           </>
         );
-        return <li class={n.readAt ? undefined : "unread"}>{href ? <a href={href}>{inner}</a> : <div>{inner}</div>}</li>;
+        return (
+          <li class={n.readAt ? undefined : "unread"}>
+            {href ? <a href={href}>{inner}</a> : <div>{inner}</div>}
+            {n.kind === KIND_DISTRICT_ALERT && props.alertOn ? <DistrictAlertOff t={t} /> : null}
+          </li>
+        );
       })}
     </ul>
   );
