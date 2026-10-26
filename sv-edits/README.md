@@ -13,4 +13,6 @@ Built 16 Oct 2026 with the SV Edits skill (photo 0.5.0, vector 0.5.0) and SV Ble
 
 Scripts: `guide.py` builds the brand guide; `jurrgun-scenes.py` builds the MRT, highway and bus shelter scenes; `relight.py` makes morning and night copies of an SV Blender scene; `place.py` places designs onto a rendered scene as a layered PSD; `render-relit.sh` and `render-queue4.sh` are the render runs used.
 
+26 Oct 2026 refresh to the 17 Oct palette (Branding signed off): the headline line "แล้วเจอกันนะ" is teal-200 `#8ff2ea` instead of mango, the poster's disc is sky-100 `#e3f2fc`, its screen is the current Discover view and its label reads "ข้อมูลตัวอย่างสมมติ · Fictional demo data"; the six morning scenes carry the new designs. `collage.py` rebuilds `scenes-collage-morning.png` from them (ffmpeg, 3 x 2, 2944x1128).
+
 Not committed: the Blender scene files and render passes (`scenes*/`), the BMA font files (`fonts/`, ask the owner), and the zip. Fonts: Sao Chingcha (headings) and Anuphan (body), from the BMA.
