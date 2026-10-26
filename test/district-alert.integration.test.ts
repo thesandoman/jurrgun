@@ -249,3 +249,35 @@ describe.skipIf(!HAS_DB)("district alert opt-in and off", () => {
     expect(anon.headers.get("location")).not.toBe("/events");
   });
 });
+
+describe.skipIf(!HAS_DB)("district alert switch in Settings", () => {
+  const flag = async (id: string) => (await db().select({ on: profiles.districtAlertOptIn }).from(profiles).where(eq(profiles.accountId, id)).limit(1))[0].on;
+  const settings = async (cookie: string) => (await req("/settings", { cookie: `${cookie}; lang=en` })).text();
+
+  it("shows while notifications are on, and switches on and off", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    const before = await settings(m.cookie);
+    expect(before).toContain('name="key" value="districtAlert"');
+    expect(before).toContain("Tell me when an event opens in Bang Rak");
+    const on = await req("/settings/quick", { cookie: m.cookie, form: { key: "districtAlert", on: "1" } });
+    expect(on.status).toBe(302);
+    expect(await flag(m.id)).toBe(true);
+    const opted = await db().select().from(auditLog).where(and(eq(auditLog.actor, m.id), eq(auditLog.action, DISTRICT_ALERT_ON))).limit(5);
+    expect(opted.length).toBe(1);
+    const form = (html: string) => html.slice(html.indexOf('value="districtAlert"')).split("</form>")[0];
+    expect(form(before)).toContain('aria-pressed="false"');
+    expect(form(await settings(m.cookie))).toContain('aria-pressed="true"');
+    await req("/settings/quick", { cookie: m.cookie, form: { key: "districtAlert", on: "0" } });
+    expect(await flag(m.id)).toBe(false);
+  });
+
+  it("is hidden without a yes to notifications, and can't be switched on then", async () => {
+    const m = await createMember({ district: "bang_rak" });
+    made.push(m.id);
+    await db().insert(consents).values({ id: newId(), accountId: m.id, category: "notifications", granted: false, version: "test", createdAt: new Date(Date.now() + 5_000) });
+    expect(await settings(m.cookie)).not.toContain('value="districtAlert"');
+    await req("/settings/quick", { cookie: m.cookie, form: { key: "districtAlert", on: "1" } });
+    expect(await flag(m.id)).toBe(false);
+  });
+});

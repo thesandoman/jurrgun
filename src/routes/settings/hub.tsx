@@ -38,6 +38,7 @@ import { fmtDate, L, type T } from "../../lib/i18n";
 import { NOTICE_CHANGES, NOTICE_DATE } from "../../content/privacy";
 import { Sheet } from "../../ui/sheet";
 import { settingsRoutes } from "./app";
+import { DISTRICT_ALERT_ON, districtName, optInText } from "../../domain/district-alert";
 import { me, photoSrc, romanceOffPatch, withdrawRomanceChoices } from "./shared";
 import type { C } from "./shared";
 
@@ -50,7 +51,7 @@ settingsRoutes.get("/settings", async (c) => {
   const p = user.profile!;
   const db = getDb(c.env);
   const now = new Date();
-  const [termsOk, src, vibe, [been], [upcoming], [circle], tables, [nextUp]] = await Promise.all([
+  const [termsOk, src, vibe, [been], [upcoming], [circle], tables, [nextUp], notifYes] = await Promise.all([
     acceptedTerms(db, user.account.id),
     photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
@@ -76,6 +77,7 @@ settingsRoutes.get("/settings", async (c) => {
       .where(and(eq(registrations.accountId, user.account.id), eq(registrations.status, "confirmed"), gt(events.startsAt, now), ne(events.status, "cancelled")))
       .orderBy(asc(events.startsAt))
       .limit(1),
+    hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT),
   ]);
   const [dating] = await db.select({ mode: datingIntents.mode }).from(datingIntents).where(eq(datingIntents.accountId, user.account.id)).limit(1);
   const dates = dating?.mode === "dating" || dating?.mode === "dating_only";
@@ -161,6 +163,16 @@ settingsRoutes.get("/settings", async (c) => {
         />
       )}
       {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} /> : null}
+      {/* The empty-district alert (owner card 7): shown while notifications are on; off with them, whatever the switch says. */}
+      {notifYes && districtName(p.district, lang) ? (
+        <QuickSwitch
+          k="districtAlert"
+          on={p.districtAlertOptIn}
+          emoji="📍"
+          title={optInText(p.district, t)}
+          hint={t("สัปดาห์ละไม่เกินครั้งเดียว ปิดได้ทุกเมื่อ", "At most once a week. Turn it off any time.")}
+        />
+      ) : null}
       {canBeWomenOnly(p.gender) ? <QuickSwitch k="womenOnly" on={p.womenOnly} emoji="🌸" title={t("เฉพาะผู้หญิงและนอนไบนารี", "Women & non-binary only")} hint={t("บัดดี้ การ์ด แมตช์ และแชต", "Buddies, deck, matches and chats")} /> : null}
       </div>
     </section>
@@ -399,6 +411,18 @@ settingsRoutes.post("/settings/quick", async (c) => {
   if (str(body.key) === "romance") {
     if (on && str(body.consent) !== "1") return c.redirect("/settings#quick");
     return romanceQuick(c, on);
+  }
+  // The empty-district alert (owner card 7): on only with a yes to notifications; the audit row is the opt-in time.
+  if (str(body.key) === "districtAlert") {
+    const db = getDb(c.env);
+    if (!on) await db.update(profiles).set({ districtAlertOptIn: false, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+    else if (!p.districtAlertOptIn && districtName(p.district, "en") && (await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT))) {
+      await batch(c.env, [
+        db.update(profiles).set({ districtAlertOptIn: true, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id)),
+        audit(db, user.account.id, DISTRICT_ALERT_ON, { type: "account", id: user.account.id }),
+      ]);
+    }
+    return c.redirect("/settings?notice=saved#quick");
   }
   const set: Partial<typeof profiles.$inferInsert> = {};
   switch (str(body.key)) {
