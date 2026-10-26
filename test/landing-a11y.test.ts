@@ -32,7 +32,10 @@ describe("intro", () => {
 describe("inline scripts", () => {
   it("never glue two IIFEs together (the second would be called on the first's result)", async () => {
     for (const path of ["/", "/intro", "/login"]) {
-      const html = await (await app.request(path, seen)).text();
+      // /login reads the sign-in providers from env: pass one, or it answers with the error page.
+      const res = await app.request(path, seen, { NO_EXTERNAL: "1" });
+      expect(res.status, path).toBe(200);
+      const html = await res.text();
       expect(html, path).not.toMatch(/\}\)\(\)\(function/);
     }
   });
