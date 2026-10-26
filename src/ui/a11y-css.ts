@@ -1282,4 +1282,21 @@ main .pc-name>a{display:inline-block;min-width:44px}
 /* My events, nothing booked: "See all events" was a 30px target 4px under the last card (mobile audit). */
 .me-all{margin:12px 0 0}
 .me-all a{display:inline-flex;align-items:center;min-height:44px}
+/* Ticket cards reflow (owner, UI/UX mobile card 8; WCAG 1.4.4 and 1.4.10): the card measures its own
+   width in rem, so large text (200% zoom or a big phone text size) counts as narrow too. When it is
+   narrow the stub becomes a band on top, date first, and the title gets the full width to wrap
+   instead of being cut. The notches give way to a dashed line under the band. */
+.card.ev-card{container-type:inline-size}
+.ev-card h3{overflow-wrap:break-word}
+@container (max-width:17rem){
+  .ev-card .event-cover,.ev-card .ev-body{grid-column:1/-1}
+  .ev-card .event-cover,.ev-card.feat .event-cover{min-height:0;flex-direction:row-reverse;justify-content:flex-end;align-items:center;gap:10px;padding:10px 14px}
+  .ev-card .ev-date{display:flex;align-items:baseline;gap:6px}
+  .ev-card .ev-body,.ev-card.feat .ev-body{padding:12px 14px}
+  .ev-card .ev-body::before{left:14px;right:14px;top:0;bottom:auto;border-left:0;border-top:2px dashed color-mix(in srgb,var(--ink-3) 35%,transparent)}
+}
+.ev-item{container:ev-item/inline-size}
+.disc-picks{container:ev-picks/inline-size}
+@container ev-item (max-width:17rem){.ev-item>.card.ev-card,.ev-item>.card.ev-card.feat{-webkit-mask:none;mask:none}}
+@container ev-picks (max-width:17rem){.disc-picks>.card.ev-card,.disc-picks>.card.ev-card.feat{-webkit-mask:none;mask:none}}
 `);
