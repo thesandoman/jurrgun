@@ -1212,4 +1212,20 @@ a.nowrap{white-space:nowrap}
 .cp-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-height:44px;margin:0 0 8px;color:var(--ink-3);font-size:.9rem;text-decoration:none}
 .cp-line b{color:var(--brand)}
 .cp-line:hover b{text-decoration:underline}
+/* ---- Phones, 2026-10-26 ---- */
+/* Top bar fits 360 to 480px with no sideways scroll: the logo alone stands for the name, City Pulse
+   keeps its icon (its name stays for screen readers), and every control is 44px wide, 8px apart. */
+@media (max-width:480px){
+  .topbar:has(.pulse-btn){gap:8px}
+  .topbar:has(.pulse-btn) .brand small{display:none}
+  .topbar .brand{min-width:44px;justify-content:center}
+  .topbar .top-actions{gap:8px}
+  .topbar .top-actions>a.chip{min-width:44px;justify-content:center}
+}
+@media (max-width:420px){
+  .pulse-btn{min-width:44px;justify-content:center;padding:4px 12px}
+  .pulse-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+/* Under 360px (320 included) the controls wrap onto a second row instead of pushing the page sideways. */
+@media (max-width:359.98px){.topbar{flex-wrap:wrap;row-gap:4px}.topbar .top-actions{margin-left:auto}}
 `);
