@@ -8,8 +8,10 @@
  * so ideas can be ranked by what both people already said (services/pinky-plans.ts).
  * The reason is never shown.
  *
- * Before launch, each place needs a real-place check (opening days, the pier,
- * whether it still runs). Bilingual, gender neutral, no em or en dashes.
+ * Real-place check: City Pulse & Research, 2026-10-26 (sources in the shared
+ * notes, pinky-date-ideas-place-check-2026-10-26.md). Hours come mostly from
+ * travel guides, so recheck before big changes. Bilingual, gender neutral, no
+ * em or en dashes.
  */
 export type Text = { th: string; en: string };
 const t = (en: string, th: string): Text => ({ en, th });
@@ -54,8 +56,8 @@ export const DATE_IDEAS: DateIdea[] = [
     place: t("Bangkok Art and Culture Centre (BACC)", "หอศิลปวัฒนธรรมแห่งกรุงเทพมหานคร (BACC)"),
     when: t("An afternoon, Tuesday to Sunday", "ช่วงบ่าย วันอังคารถึงอาทิตย์"),
     why: t(
-      "Free, cool, and every floor gives you something to react to. If it goes well, there's coffee downstairs.",
-      "เข้าฟรี เย็นสบาย และทุกชั้นมีงานให้ชวนกันคุยต่อ ถ้าคุยกันถูกคอ ชั้นล่างมีกาแฟรออยู่",
+      "Free, cool, and every floor gives you something to react to. If it goes well, find a coffee nearby after.",
+      "เข้าฟรี เย็นสบาย และทุกชั้นมีงานให้ชวนกันคุยต่อ ถ้าคุยกันถูกคอ ค่อยหากาแฟแถวนั้นนั่งต่อ",
     ),
   },
   {
@@ -63,7 +65,7 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "museum",
     district: "phra_nakhon",
     place: t("Museum Siam", "มิวเซียมสยาม"),
-    when: t("A late morning", "ช่วงสาย ๆ"),
+    when: t("A late morning, not Monday", "ช่วงสาย ๆ (ปิดวันจันทร์)"),
     why: t(
       "A museum you're meant to touch and play with, so laughing together comes easily. The river is a short walk away after.",
       "พิพิธภัณฑ์ที่ให้ลองจับลองเล่น หัวเราะด้วยกันได้ง่าย ออกมาแล้วเดินไปริมน้ำต่อได้ไม่ไกล",
@@ -74,7 +76,7 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "coffee",
     district: "samphanthawong",
     place: t("Talat Noi", "ตลาดน้อย"),
-    when: t("A weekend morning", "เช้าวันหยุด"),
+    when: t("A weekend morning, after 10", "สายวันหยุด หลังสิบโมง"),
     why: t(
       "Old shophouses, painted walls and riverside cafés hidden down the lanes. Get a little lost on purpose.",
       "ตึกแถวเก่า ผนังที่มีภาพวาด และคาเฟ่ริมน้ำที่ซ่อนอยู่ในซอย ลองหลงทางด้วยกันแบบตั้งใจ",
@@ -85,7 +87,7 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "street_food",
     district: "samphanthawong",
     place: t("Yaowarat Road", "ถนนเยาวราช"),
-    when: t("After dark", "หลังฟ้ามืด"),
+    when: t("After dark (some stalls rest on Mondays)", "หลังฟ้ามืด (บางร้านหยุดวันจันทร์)"),
     why: t(
       "Share three small dishes from three stalls instead of one big meal. Walking between them does half the talking for you.",
       "แบ่งกันกินสามร้านสามจานเล็ก แทนมื้อใหญ่มื้อเดียว เดินจากร้านไปร้าน แล้วเรื่องคุยจะมาเอง",
@@ -116,12 +118,12 @@ export const DATE_IDEAS: DateIdea[] = [
   {
     key: "express_boat",
     kind: "activity",
-    district: "bang_rak",
+    district: "sathon",
     place: t("Chao Phraya Express Boat from Sathorn pier", "เรือด่วนเจ้าพระยา จากท่าสาทร"),
-    when: t("Golden hour", "ช่วงแดดทองก่อนตะวันตก"),
+    when: t("A weekday at golden hour (last boat around 6 pm)", "วันธรรมดา ช่วงแดดทอง (เรือเที่ยวสุดท้ายราวหกโมงเย็น)"),
     why: t(
-      "Ride the orange-flag boat upriver for a few stops. It's cheap and breezy, and the city looks its best from the water.",
-      "นั่งเรือธงส้มทวนน้ำขึ้นไปสักสองสามท่า ค่าเรือไม่แพง ลมเย็น และกรุงเทพฯ สวยที่สุดเมื่อมองจากแม่น้ำ",
+      "Ride the orange-flag boat upriver for a few stops. It's cheap and breezy, and the city looks its best from the water. At weekends the yellow flag runs instead.",
+      "นั่งเรือธงส้มทวนน้ำขึ้นไปสักสองสามท่า ค่าเรือไม่แพง ลมเย็น และกรุงเทพฯ สวยที่สุดเมื่อมองจากแม่น้ำ วันหยุดจะเป็นเรือธงเหลืองแทน",
     ),
   },
   {
@@ -147,17 +149,6 @@ export const DATE_IDEAS: DateIdea[] = [
     ),
   },
   {
-    key: "swan_boats",
-    kind: "activity",
-    district: "pathum_wan",
-    place: t("Pedal boats on Lumphini lake", "เรือถีบในสวนลุมพินี"),
-    when: t("A morning before it's hot", "ช่วงเช้าก่อนแดดแรง"),
-    why: t(
-      "Hard to take yourselves too seriously while pedalling a swan. Twenty minutes is enough, and then you've got a story.",
-      "นั่งถีบเรือหงส์ด้วยกันแล้ว จะทำตัวขรึมก็ยาก ยี่สิบนาทีก็พอ แล้วจะมีเรื่องเล่าต่อ",
-    ),
-  },
-  {
     key: "chula_park",
     kind: "walk",
     district: "pathum_wan",
@@ -173,7 +164,7 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "museum",
     district: "bang_rak",
     place: t("Galleries along Charoen Krung", "แกลเลอรีย่านเจริญกรุง"),
-    when: t("Late afternoon", "บ่ายแก่ ๆ"),
+    when: t("Late afternoon, not Monday", "บ่ายแก่ ๆ (หลายที่ปิดวันจันทร์)"),
     why: t(
       "Small galleries along the old road, most of them free. Let whoever spots the strangest poster choose where you go in.",
       "แกลเลอรีเล็ก ๆ ตลอดถนนเก่า ส่วนใหญ่เข้าฟรี ใครเจอโปสเตอร์แปลกที่สุดก่อน คนนั้นได้เลือกว่าจะเข้าร้านไหน",
@@ -195,7 +186,7 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "street_food",
     district: "pom_prap",
     place: t("Nang Loeng Market", "ตลาดนางเลิ้ง"),
-    when: t("Lunch on a weekday", "มื้อกลางวันวันธรรมดา"),
+    when: t("Lunch, before 1 pm", "มื้อกลางวัน ก่อนบ่ายโมง"),
     why: t(
       "One of the city's oldest markets, still full of old-style sweets. Go hungry and let the vendors choose for you.",
       "ตลาดเก่าแก่ที่สุดแห่งหนึ่งของเมือง ยังมีขนมแบบโบราณให้เลือกเพียบ ไปตอนท้องว่าง แล้วให้แม่ค้าช่วยเลือกให้",
@@ -217,10 +208,10 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "walk",
     district: "bangkok_yai",
     place: t("Wat Arun riverside", "ริมน้ำวัดอรุณ"),
-    when: t("Early morning, before the crowds", "เช้า ๆ ก่อนคนเยอะ"),
+    when: t("Around 8 am, as it opens", "ราวแปดโมงเช้า ตอนวัดเพิ่งเปิด"),
     why: t(
-      "Cross on the ferry while it's quiet. The temple glows while the light is low, and you'll have the riverside nearly to yourselves.",
-      "นั่งเรือข้ามไปตอนยังเงียบ ๆ วัดจะดูเรืองแสงตอนแดดยังอ่อน และริมน้ำแทบจะเป็นของคุณสองคน",
+      "Go early, while it's still quiet. The temple glows while the light is low, and the riverside is calmer before the day gets going.",
+      "ไปแต่เช้าตอนยังเงียบ ๆ วัดจะดูเรืองแสงตอนแดดยังอ่อน และริมน้ำยังสงบก่อนวันจะเริ่มวุ่น",
     ),
   },
 ];
