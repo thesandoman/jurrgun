@@ -410,7 +410,11 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     control: "toggle",
     title: RESEARCH_TITLE,
     hint: RESEARCH_HINT,
-    withdraw: { th: "ถ้าปิด เราลบคำตอบเดิมของคุณ และจะไม่ถามคำถามเหล่านี้อีก", en: "If you turn it off, we delete your past answers and stop asking these questions." },
+    // Owner C3 (26 Oct 2026): place checks and suggestions carry no name or code, so withdrawal can't reach them.
+    withdraw: {
+      th: "ถ้าปิด เราลบคำตอบ City Pulse และแบบสอบถามเดิมของคุณ และจะไม่ถามคำถามเหล่านี้อีก เช็กสถานที่และคำถามที่คุณเสนอไม่มีชื่อหรือรหัสติดไว้ เราจึงหาของคุณเพื่อลบไม่ได้ ระบบจะลบเองตามกำหนด",
+      en: "If you turn it off, we delete your past City Pulse and wellbeing answers and stop asking these questions. Place checks and suggested questions have no name or code on them, so we can't find yours to delete. They're deleted on schedule.",
+    },
   },
   {
     key: "notifications",

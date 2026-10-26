@@ -105,7 +105,8 @@ describe.skipIf(!HAS_DB)("the consent centre", () => {
     expect(html).toMatch(/Acknowledged \d{1,2} [A-Z][a-z]{2} \d{4}/);
     expect(html).toMatch(/Agreed \d{1,2} [A-Z][a-z]{2} \d{4} · Version of 16 October 2026/);
     // Each switch says what switching it off does.
-    expect(html).toContain("If you turn it off, we delete your past answers");
+    expect(html).toContain("If you turn it off, we delete your past City Pulse and wellbeing answers");
+    expect(html).toContain("so we can&#39;t find yours to delete");
     const th = await (await req("/settings/consents", { cookie: `${m.cookie}; lang=th` })).text();
     expect(th).toContain("จำเป็นต่อการให้บริการ (ไม่ใช่การขอความยินยอม)");
     expect(th).not.toContain("ไม่ระบุตัวตน");
