@@ -465,6 +465,30 @@ function GoTogetherCard(props: { v: View; d: ProposalInput; inbox: InboxItem | n
   );
 }
 
+/**
+ * The event form's Send (owner card 3, 2026-10-26). When the browser refuses the
+ * form (a required field is empty, a number is out of range), each failing field
+ * gets its error in words under it, and the first one is scrolled to and focused.
+ * Without JS the browser's own check and the server's error list still work.
+ * While the on-screen keyboard is up the form is marked is-typing, so the sticky
+ * Send bar steps back into the page.
+ */
+const HOST_FORM_JS = `(function(){var f=document.currentScript&&document.currentScript.closest("form[data-first-error]");if(!f||f._fe)return;f._fe=1;
+var due=false;
+function say(el){if(el.validity.valueMissing)return el.tagName==="SELECT"?f.dataset.pick:f.dataset.miss;return el.validationMessage}
+function show(el){if(!el.id)return;var id=el.id+"-verr",s=document.getElementById(id);
+if(!s){s=document.createElement("small");s.className="field-err";s.id=id;(el.closest(".field")||el.parentNode).appendChild(s);
+var d=(el.getAttribute("aria-describedby")||"").split(" ").filter(Boolean);d.push(id);el.setAttribute("aria-describedby",d.join(" "))}
+s.textContent="";var i=document.createElement("span");i.setAttribute("aria-hidden","true");i.textContent="⚠ ";s.appendChild(i);s.appendChild(document.createTextNode(say(el)));el.setAttribute("aria-invalid","true")}
+function go(el){var d=el.closest("details");if(d)d.open=true;el.focus({preventScroll:true});
+el.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
+f.addEventListener("invalid",function(e){e.preventDefault();show(e.target);if(due)return;due=true;
+setTimeout(function(){due=false;var first=[].filter.call(f.elements,function(x){return x.willValidate&&!x.checkValidity()})[0];if(first)go(first)},0)},true);
+function clear(e){var el=e.target;if(!el||!el.id||!el.checkValidity||!el.checkValidity())return;var s=document.getElementById(el.id+"-verr");if(!s)return;s.remove();
+el.setAttribute("aria-describedby",(el.getAttribute("aria-describedby")||"").split(" ").filter(function(x){return x&&x!==s.id}).join(" "));el.removeAttribute("aria-invalid")}
+f.addEventListener("input",clear);f.addEventListener("change",clear);
+var vv=window.visualViewport;if(vv)vv.addEventListener("resize",function(){f.classList.toggle("is-typing",vv.height<window.innerHeight*0.75)})})()`;
+
 function ProposalForm(props: {
   v: View;
   d: ProposalInput;
@@ -488,7 +512,14 @@ function ProposalForm(props: {
     { value: "private", th: "ส่วนตัว: เฉพาะคนที่มีลิงก์", en: "Private: only people with the link" },
   ];
   return (
-    <form method="post" action={props.action}>
+    <form
+      method="post"
+      action={props.action}
+      class="host-form"
+      data-first-error
+      data-miss={t("กรอกช่องนี้ก่อนส่ง", "Fill this in before sending.")}
+      data-pick={t("เลือกก่อนส่ง", "Choose one before sending.")}
+    >
       {props.errors?.length ? (
         <Notice kind="error">
           <ul>
@@ -594,12 +625,15 @@ function ProposalForm(props: {
       <p class="muted">
         {t("เมื่อกดส่ง ถือว่าคุณยืนยันว่าจะดูแลผู้เข้าร่วมตาม", "By sending this you agree to look after your guests in line with the")} <a href="/code-of-conduct">{t("หลักปฏิบัติของชุมชน", "code of conduct")}</a>.
       </p>
-      <div class="row end">
+      {/* Owner card 3 (2026-10-26): on phones and tablets Cancel and Send stay in reach in edit profile's sticky
+          save bar (pf-save), which steps back into the page while a field is being typed in. */}
+      <div class="row end pf-save host-send">
         <LinkButton href="/host" kind="ghost">
           {t("ยกเลิก", "Cancel")}
         </LinkButton>
         <Button>{props.direct ? t("เผยแพร่", "Publish") : props.editing ? t("ส่งให้ตรวจอีกครั้ง", "Send for review again") : t("ส่งให้ทีมงานตรวจ", "Send for review")}</Button>
       </div>
+      <script dangerouslySetInnerHTML={{ __html: HOST_FORM_JS }} />
     </form>
   );
 }

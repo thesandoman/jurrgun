@@ -1323,4 +1323,17 @@ main .pc-name>a{display:inline-block;min-width:44px}
    like any card; the category emoji leads the line above the title. */
 main .card.ev-sheet.ev-flat{margin-top:0;border-radius:var(--radius)}
 .ev-sheet .ev-emoji{font-size:1.1em;line-height:1}
+/* Host's event form (owner card 3): Cancel and Send in edit profile's save bar, sticky on phones and tablets
+   (the tab bar steps aside for it), back in the page while a field is typed in. Focused fields and the
+   first error land clear of it (2.4.11). Laptops keep the plain row at the end of the form. */
+main .host-send{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:12px}
+main .host-send .btn{width:auto;margin:0}
+@media (max-width:1023.98px){
+  main .pf-save.host-send{position:sticky;bottom:0;z-index:3;flex-wrap:nowrap}
+  main .host-send .btn{flex:1 1 auto}
+  main .host-send .btn.ghost{flex:0 1 auto}
+  main form.host-form:is(.is-typing,:has(:is(input:not([type=checkbox],[type=radio],[type=range],[type=file],[type=hidden],[type=submit],[type=button]),textarea):focus)) .host-send{position:static}
+  html:has(main .host-send){scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+}
+@media (min-width:1024px){main .pf-save.host-send{position:static;margin:24px 0 0;padding:0;border:0;background:none;box-shadow:none}}
 `);
