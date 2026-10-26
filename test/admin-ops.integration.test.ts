@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { HAS_DB, createMember, db, req } from "./helpers";
+import { HAS_DB, TEST_PASSWORD, createMember, db, req } from "./helpers";
 import { newId } from "../src/lib/crypto";
 import {
   accounts,
@@ -159,6 +159,50 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     expect((await db().select().from(accounts).where(eq(accounts.id, peer.id)))[0].status).toBe("active");
     expect(await (await req("/admin/moderation", { cookie: admin.cookie })).text()).toContain(`/admin/moderation/${id}`);
     expect((await req(`/admin/moderation/${id}/action`, { cookie: admin.cookie, form: { action: "warning", note: "Be kind" } })).status).toBe(302);
+  });
+
+  it("tells members and reporters the outcome once, naming the rule, and lets a banned member ask us to look again (owner card C)", async () => {
+    const [mod, other, reporter, target] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "moderator" }), createMember(), createMember()]);
+    const noteFor = async (who: string, kind: string) => db().select().from(notifications).where(and(eq(notifications.accountId, who), eq(notifications.kind, kind)));
+
+    // A note closes nothing, so the reporter hears nothing yet.
+    const id = await report(reporter.id, target.id, { details: "He kept messaging me" });
+    await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "note", note: "Looking" } });
+    expect(await noteFor(reporter.id, "report_closed")).toHaveLength(0);
+    await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "ban", note: "Repeated", rule: "harassment" } });
+    const [closed] = await noteFor(reporter.id, "report_closed");
+    expect(closed.titleEn).toBe("We've closed your report: action taken. You can still block them.");
+    const banNote = (await noteFor(target.id, "moderation")).find((n) => n.titleEn.includes("closed for good"))!;
+    expect(banNote.titleEn).toBe('Your account is closed for good for breaking "Harassment". If you think we got this wrong, ask us to look again.');
+    expect(banNote.titleEn).not.toContain("messaging");
+
+    // The blocked sign-in screen: the rule, and a one-time "ask us to look again".
+    const screen = await req("/login", { cookie: "lang=en", form: { username: target.username, password: TEST_PASSWORD } });
+    expect(screen.status).toBe(403);
+    const html = await screen.text();
+    expect(html).toContain("closed for good for breaking &quot;Harassment&quot;");
+    const token = /name="token" value="([^"]+)"/.exec(html)![1];
+    const sent = await req("/login/look-again", { cookie: "lang=en", form: { token, words: "It was a misunderstanding" } });
+    expect(await sent.text()).toContain("Someone on the team will take another look");
+    // The token is used up, and it never signs anyone in.
+    expect((await req("/login/look-again", { form: { token } })).status).toBe(400);
+    expect((await req("/me/events", { cookie: `bkk_sid=${token}` })).status).toBe(302);
+    const [ask] = await db().select().from(reports).where(and(eq(reports.reporter, target.id), eq(reports.targetAccount, target.id)));
+    expect(ask.details).toContain("It was a misunderstanding");
+    // Once per ban.
+    const again = await req("/login", { cookie: "lang=en", form: { username: target.username, password: TEST_PASSWORD } });
+    const token2 = /name="token" value="([^"]+)"/.exec(await again.text())![1];
+    expect(await (await req("/login/look-again", { cookie: "lang=en", form: { token: token2 } })).text()).toContain("already have your request");
+
+    // Lifting it: the member hears once; the member's own request sends no "report closed".
+    await req(`/admin/moderation/${ask.id}/action`, { cookie: other.cookie, form: { action: "lift" } });
+    expect((await noteFor(target.id, "moderation")).some((n) => n.titleEn.startsWith("We've lifted the restriction"))).toBe(true);
+    expect(await noteFor(target.id, "report_closed")).toHaveLength(0);
+
+    // Dismissed: "no rule broken".
+    const id2 = await report(reporter.id, (await createMember()).id);
+    await req(`/admin/moderation/${id2}/action`, { cookie: mod.cookie, form: { action: "dismiss" } });
+    expect((await noteFor(reporter.id, "report_closed")).map((n) => n.titleEn)).toContain("We've closed your report: no rule broken. You can still block them.");
   });
 
   it("dismisses a report and 404s an unknown one", async () => {

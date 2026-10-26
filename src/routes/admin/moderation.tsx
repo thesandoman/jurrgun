@@ -32,6 +32,7 @@ import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
 import { moderatorVisible, STAFF_TARGET_ROLES } from "../../services/report-intake";
 import { dropEvidence, evidenceKey, isPhotoReport } from "../../services/evidence";
+import { banCopy, isLookAgain, LIFT_COPY, reporterCopy, suspendCopy } from "../../services/outcomes";
 import { getObject, getObjectUrl } from "../../storage";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
 
@@ -514,6 +515,14 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
         {target?.role === "moderator" ? (
           <Notice kind="info">{t("รายงานนี้เกี่ยวกับผู้ดูแล มีแค่แอดมินที่เห็น", "This report is about a moderator. Only admins see it.")}</Notice>
         ) : null}
+        {isLookAgain(r) ? (
+          <Notice kind="info">
+            {t(
+              "สมาชิกขอให้ทบทวนการแบน ให้คนที่ไม่ได้เป็นคนแบนเป็นคนตัดสิน ยกเลิกการแบนถ้าตัดสินผิด หรือปิดรายงานถ้ายังยืนตามเดิม",
+              "The member asks us to look again at their ban. Someone other than the person who banned them should decide: lift it if we got it wrong, or close this if the ban stands.",
+            )}
+          </Notice>
+        ) : null}
         {selfTarget ? (
           <Notice kind="warn">{t("รายงานนี้เกี่ยวกับบัญชีของคุณ ให้ผู้ดูแลคนอื่นจัดการ", "This report is about your account. Another moderator has to handle it.")}</Notice>
         ) : null}
@@ -701,21 +710,19 @@ adminModeration.post("/:id/action", async (c) => {
     if (action === "suspend") {
       ops.push(db.update(accounts).set({ status: "suspended", suspendedUntil: until }).where(eq(accounts.id, target.id)));
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
-      ops.push(
-        notify(
-          db,
-          target.id,
-          "moderation",
-          `บัญชีของคุณถูกระงับชั่วคราวถึง ${fmtDay(until!, "th")} เนื่องจากละเมิดหลักปฏิบัติของชุมชน`,
-          `Your account is suspended until ${fmtDay(until!, "en")} for breaking the code of conduct`,
-          "/code-of-conduct",
-        ),
-      );
+      const [th, en] = suspendCopy(until!, rule);
+      ops.push(notify(db, target.id, "moderation", th, en, "/code-of-conduct"));
     } else if (action === "ban") {
       ops.push(db.update(accounts).set({ status: "banned", suspendedUntil: null }).where(eq(accounts.id, target.id)));
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
+      // Owner card C: they also see this on the blocked sign-in screen, with "ask us to look again".
+      const [th, en] = banCopy(rule);
+      ops.push(notify(db, target.id, "moderation", th, en, "/login"));
     } else if (action === "lift") {
       ops.push(db.update(accounts).set({ status: "active", suspendedUntil: null }).where(eq(accounts.id, target.id)));
+      // Any one-time "look again" token goes too, so nothing left over can sign in.
+      ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
+      ops.push(notify(db, target.id, "moderation", LIFT_COPY[0], LIFT_COPY[1], "/events"));
     } else if (action === "warning" && autoSuspend) {
       ops.push(db.update(accounts).set({ status: "suspended", suspendedUntil: until }).where(eq(accounts.id, target.id)));
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
@@ -724,8 +731,8 @@ adminModeration.post("/:id/action", async (c) => {
           db,
           target.id,
           "moderation",
-          `คุณได้รับคำเตือนครบ ${FLAGS_TO_REMOVE} ครั้ง บัญชีจึงถูกระงับถึง ${fmtDay(until!, "th")}`,
-          `You've reached ${FLAGS_TO_REMOVE} flags, so your account is suspended until ${fmtDay(until!, "en")}`,
+          suspendCopy(until!, null)[0],
+          suspendCopy(until!, null)[1],
           "/code-of-conduct",
         ),
       );
@@ -741,6 +748,13 @@ adminModeration.post("/:id/action", async (c) => {
         ),
       );
     }
+  }
+  // Owner card C: the reporter hears once when their report closes, never about the other person.
+  // A member's own "look again" request is answered by the lift notice (or nothing), not this.
+  const closing = resolved && r.status !== "actioned" && r.status !== "dismissed" && (action === "dismiss" || action === "warning" || action === "suspend" || action === "ban");
+  if (closing && r.reporter !== r.targetAccount) {
+    const [th, en] = reporterCopy(action !== "dismiss");
+    ops.push(notify(db, r.reporter, "report_closed", th, en, "/connections"));
   }
   ops.push(
     audit(db, me.id, `moderation.${action}`, { type: "report", id: r.id }, {

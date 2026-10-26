@@ -16,7 +16,8 @@ import { accounts, loginAttempts, type Account } from "../schema";
 import { emailEnabled } from "../services/email-code";
 import { signupSource } from "../lib/source";
 import { enabledProviders, SocialSignIn } from "./oauth";
-import { Button, Card, Field, Notice, page, safeNext, str, view, type View } from "../ui/kit";
+import { Button, Card, Field, Notice, page, safeNext, str, TextArea, view, type View } from "../ui/kit";
+import { banCopy, fileLookAgain, latestBanRule, LOOK_AGAIN_MAX, lookAgainToken } from "../services/outcomes";
 import { termsRow } from "../services/consent";
 import { TermsAgree } from "./policies";
 
@@ -305,6 +306,7 @@ export async function signIn(c: Context<AppEnv>, acct: Account, next: string, fa
       return fail(t(`บัญชีนี้ถูกระงับถึง ${fmtDay(acct.suspendedUntil, lang)}`, `This account is suspended until ${fmtDay(acct.suspendedUntil, lang)}.`), 403);
     }
     if (acct.status === "deactivated") return fail(t("บัญชีนี้ถูกปิดแล้ว", "This account was deactivated."), 403);
+    if (acct.status === "banned") return bannedScreen(c, acct.id);
     return fail(t("บัญชีนี้ถูกแบนแล้ว", "This account has been banned."), 403);
   }
   if (acct.status === "suspended") {
@@ -315,6 +317,64 @@ export async function signIn(c: Context<AppEnv>, acct: Account, next: string, fa
   await startSession(c, acct.id);
   return c.redirect(next || "/events");
 }
+
+/**
+ * The blocked sign-in screen for a ban (owner card C): which rule, and "ask us
+ * to look again". Shown only after the member proved who they are.
+ */
+async function bannedScreen(c: Context<AppEnv>, accountId: string): Promise<Response> {
+  const { t } = view(c);
+  const db = getDb(c.env);
+  const [th, en] = banCopy(await latestBanRule(db, accountId));
+  const token = await lookAgainToken(db, accountId);
+  return page(
+    c,
+    { title: t("บัญชีถูกปิด", "Account closed"), status: 403 },
+    <>
+      <h1>{t("บัญชีถูกปิด", "Account closed")}</h1>
+      <Notice kind="warn">{t(th, en)}</Notice>
+      <Card>
+        <form method="post" action="/login/look-again">
+          <input type="hidden" name="token" value={token} />
+          <TextArea
+            label={t("อยากบอกอะไรเราไหม (ไม่บังคับ)", "Anything you'd like us to know? (optional)")}
+            name="words"
+            rows={3}
+            maxlength={LOOK_AGAIN_MAX}
+            hint={t("ทีมงานคนอื่นจะดูอีกครั้ง ส่งได้ครั้งเดียว", "Someone else on the team takes a fresh look. You can ask once.")}
+          />
+          <Button>{t("ขอให้ทบทวน", "Ask us to look again")}</Button>
+        </form>
+      </Card>
+    </>,
+  );
+}
+
+authRoutes.post("/login/look-again", async (c) => {
+  const { t } = view(c);
+  const body = await c.req.parseBody();
+  const db = getDb(c.env);
+  const result = await fileLookAgain(db, str(body.token), str(body.words), async (id) => {
+    const [a] = await db.select({ status: accounts.status }).from(accounts).where(eq(accounts.id, id)).limit(1);
+    return a?.status === "banned";
+  });
+  const text: Record<typeof result, [string, string]> = {
+    sent: ["ส่งคำขอแล้ว ทีมงานอีกคนจะดูอีกครั้ง ถ้าเรายกเลิกการปิดบัญชี คุณจะเข้าสู่ระบบได้อีก", "Sent. Someone on the team will take another look. If we lift it, you'll be able to sign in again."],
+    already: ["เราได้รับคำขอทบทวนของคุณแล้ว", "We already have your request to look again."],
+    expired: ["หน้านี้หมดเวลาแล้ว ลองเข้าสู่ระบบอีกครั้ง", "This page timed out. Sign in again to ask."],
+  };
+  return page(
+    c,
+    { title: t("บัญชีถูกปิด", "Account closed"), status: result === "expired" ? 400 : 200 },
+    <>
+      <h1>{t("บัญชีถูกปิด", "Account closed")}</h1>
+      <Notice kind={result === "expired" ? "error" : "ok"}>{t(text[result][0], text[result][1])}</Notice>
+      <p>
+        <a href="/login">{t("กลับไปหน้าเข้าสู่ระบบ", "Back to sign in")}</a>
+      </p>
+    </>,
+  );
+});
 
 authRoutes.post("/logout", async (c) => {
   await endSession(c);
