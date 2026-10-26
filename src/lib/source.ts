@@ -1,7 +1,9 @@
 /**
  * Placement tracking (admin only): which link first brought someone in.
  *
- * A public landing (/, /new, /international, /types/:slug, /signup) opened with
+ * A public landing (/, /new, /international, /types/:slug, /signup, /quiz) or
+ * an event page (/events/:id, even when it sends a signed-out visitor to sign
+ * in first) opened with
  * `?src=` (or `utm_source`, with `utm_campaign` appended) remembers that value
  * in a first-touch cookie for 30 days. At sign-up it is copied onto
  * identity_accounts.signup_source. City Insight shows sign-ups and first RSVPs
@@ -20,7 +22,7 @@ export const SOURCE_MAX_AGE = 30 * 86_400;
 const PART_MAX = 32;
 
 /** Paths whose query may carry a placement source. */
-const LANDING = /^\/(?:new|international|signup|types\/[^/]+)?\/?$/;
+const LANDING = /^\/(?:new|international|signup|quiz|types\/[^/]+|events\/[^/]+)?\/?$/;
 
 function slug(raw: string | undefined | null): string {
   if (!raw) return "";

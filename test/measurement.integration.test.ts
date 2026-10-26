@@ -301,6 +301,11 @@ describe.skipIf(!HAS_DB)("placement capture", () => {
     // Other landings, including one that redirects.
     expect(srcCookie(await req("/international?src=expat_fb"))).toBe("expat_fb");
     expect(srcCookie(await req("/signup?src=bts_poster"))).toBe("bts_poster");
+    // The quiz and event links Marketing shares record it too, even when an event page sends a signed-out visitor to sign in.
+    expect(srcCookie(await req("/quiz?src=line_quiz_tile"))).toBe("line_quiz_tile");
+    expect(srcCookie(await req("/events/abc123?src=fb_event"))).toBe("fb_event");
+    expect(srcCookie(await req("/events?src=x"))).toBeNull();
+    expect(srcCookie(await req("/quiz/result?src=x"))).toBeNull();
     // Not a landing, or nothing usable.
     expect(srcCookie(await req("/privacy?src=x"))).toBeNull();
     expect(srcCookie(await req("/?src=0812345678"))).toBeNull();
