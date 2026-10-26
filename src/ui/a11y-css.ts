@@ -1260,4 +1260,12 @@ a.back-link,main p>a[href="/settings"]:first-child:not(.btn){display:inline-flex
 .pw-toggle{min-height:44px}
 main .toggle{min-height:44px}main .toggle:not(:has(small)){align-items:center}
 .cp-sanroo>a:only-child,main p.muted>a[href="/partner/apply"]:only-child{display:inline-flex;align-items:center;min-height:44px}
+/* At least 8px between neighbouring targets: chip rows of buttons or links (thank-you starters,
+   the host's shortcuts), the language switch on Me, and a link that stands alone above a button. */
+.chips2:has(>a,>button){gap:8px}
+main .me-lang{gap:8px}
+a.solo-link{display:inline-flex;align-items:center;min-height:44px}
+p:has(>a.solo-link:only-child){margin-bottom:12px}
+/* A short name on a person card (Oil, Joe) is still a 44px-wide target. */
+main .pc-name>a{display:inline-block;min-width:44px}
 `);

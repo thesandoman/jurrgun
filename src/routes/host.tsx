@@ -314,7 +314,7 @@ hostRoutes.get("/host", async (c) => {
       {c.req.query("notice") === "table_sent" ? <Notice kind="ok">{t("ส่งให้คนในโต๊ะประจำแล้ว", "Sent to your Regular Table.")}</Notice> : null}
       {table ? (
         <p>
-          <a href={`/tables/${table.id}`}>👥 {t(`โต๊ะประจำของคุณ: ${table.name}`, `Your Regular Table: ${table.name}`)}</a>
+          <a href={`/tables/${table.id}`} class="solo-link">👥 {t(`โต๊ะประจำของคุณ: ${table.name}`, `Your Regular Table: ${table.name}`)}</a>
         </p>
       ) : null}
       <p>
