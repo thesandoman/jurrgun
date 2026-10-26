@@ -195,7 +195,7 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
               ))}
             </fieldset>
             <p class="muted">{t("แผน ไอเดีย และแชตของเกี่ยวก้อยนี้จะถูกลบทั้งหมด", "The plan, ideas and chat of this Pinky are all deleted.")}</p>
-            <p class="muted">{t("ข้อความที่ถูกรายงานจะเก็บไว้จนกว่าจะตรวจเสร็จ", "Reported messages are kept until the review ends.")}</p>
+            <p class="muted">{t("ถ้ามีรายงานที่ยังตรวจอยู่ แชตจะเก็บไว้จนกว่าจะตรวจเสร็จ", "If there's an open report, the chat is kept until the review ends.")}</p>
             <Button kind="danger">{t("จบอย่างใจดี", "End kindly")}</Button>
           </form>
         </details>
@@ -323,7 +323,8 @@ pinkyRoutes.post("/pinky/:id/resume", requireMember, async (c) => {
 /**
  * End kindly (either person, paused or not): back to friends, both taps
  * cleared, no new tap on this pairing, and the Pinky, its plan and the
- * Pinky-period chat deleted (reported messages stay until the review ends).
+ * Pinky-period chat deleted. If either has an open report about the other, the
+ * whole period's chat is held until the review ends (Trust & Operations).
  * Then the gentle preset goes as an ordinary chat message, with the usual
  * neutral "New message" notification.
  */
@@ -341,7 +342,7 @@ pinkyRoutes.post("/pinky/:id/end", requireMember, async (c) => {
       .insert(connectionChoices)
       .values({ id: newId(), eventId: endedKey(p.sourceKey), fromAccount: mine, toAccount: them, choice: "none" })
       .onConflictDoNothing({ target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount] }),
-    ...endPinkyOnConnection(db, p.connectionId),
+    ...endPinkyOnConnection(db, p.connectionId, now),
     db
       .update(connections)
       .set({ level: p.source === "buddy" ? "activity" : "friend" })
@@ -351,7 +352,8 @@ pinkyRoutes.post("/pinky/:id/end", requireMember, async (c) => {
   if (th) {
     const [{ locale } = { locale: "th" }] = await db.select({ locale: profiles.locale }).from(profiles).where(eq(profiles.accountId, mine)).limit(1);
     await batch(c.env, [
-      db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: mine, body: locale === "en" ? message.en : message.th, createdAt: now }),
+      // Just after the Pinky's end time, so a held period never includes this message.
+      db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: mine, body: locale === "en" ? message.en : message.th, createdAt: new Date(now.getTime() + 1000) }),
       db.insert(notifications).values({ id: newId(), accountId: them, kind: CHAT_KIND, titleTh: "มีข้อความใหม่", titleEn: "New message", link: `/chat/conn:${p.connectionId}`, createdAt: notifyAt(now) }),
     ]);
   }

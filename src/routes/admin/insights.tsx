@@ -443,11 +443,21 @@ adminInsights.get("/", async (c) => {
   const sourceLabel = (s: string) => (s === NO_SOURCE ? t("ไม่มีแหล่งที่มา (เข้าตรง)", "No source (direct)") : s === OTHER_SOURCES ? t("อื่น ๆ (แต่ละแหล่งน้อยกว่า 10 คน)", "Other (each under 10)") : s);
 
   // Healthy connections: chat, safety checks, weekly plans and mutual meet feedback.
+  // Pinky Plans (3 Wise Men condition): a pair's messages during their Pinky are never counted in the chat total.
   const winTs = sql`created_at >= ${since}::timestamptz and created_at < ${until}::timestamptz`;
   const [chatRow, safeRow, planRow, skipRows, meetRow, heardRow, pitchRow, gradRow] = await Promise.all([
     db.execute(sql`select count(*), sum(case when money_flag then 1 else 0 end),
       (select count(*) from social_reports where target_message is not null and ${winTs})
-      from social_chat_messages where ${winTs}`),
+      from social_chat_messages m where ${winTs}
+        and not exists (
+          select 1 from social_pinkies p
+          where m.sender in (p.a_account, p.b_account)
+            and m.created_at >= p.created_at and m.created_at <= coalesce(p.ended_at, now())
+            and (
+              m.thread in (select 'conn:' || c.id from social_connections c where c.a_account = p.a_account and c.b_account = p.b_account)
+              or m.thread in (select 'buddy:' || b.id from social_buddy_matches b where (b.a_account = p.a_account and b.b_account = p.b_account) or (b.a_account = p.b_account and b.b_account = p.a_account))
+            )
+        )`),
     db.execute(sql`select count(*), sum(case when answer = 'help' then 1 else 0 end), sum(case when answer is not null then 1 else 0 end)
       from social_safe_arrivals where ${winTs}`),
     db.execute(sql`select count(*), sum(case when status = 'accepted' then 1 else 0 end), sum(case when status = 'skipped' then 1 else 0 end)

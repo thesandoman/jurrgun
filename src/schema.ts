@@ -1547,10 +1547,12 @@ export const pinkies = pgTable(
     sourceKey: text("source_key").notNull(),
     /** The romance connection this Pinky lives on; changed together with it. */
     connectionId: text("connection_id").notNull(),
-    /** active | paused */
+    /** active | paused | held (ended while a report between them is open: its chat waits for the review) */
     state: text("state").notNull().default("active"),
     pausedBy: text("paused_by"),
     pausedAt: ts("paused_at"),
+    /** When a held Pinky ended: the end of the Pinky period whose chat is deleted once the reports close. */
+    endedAt: ts("ended_at"),
     createdAt: created(),
   },
   (t) => [

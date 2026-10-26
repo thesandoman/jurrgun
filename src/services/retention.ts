@@ -67,7 +67,7 @@ import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
 import { BUDDY_PINKY_DAYS, ENDED_PREFIX } from "../domain/pinky";
 import { bkkDayStart, bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
-import { endPinkiesOf } from "./pinky-plans";
+import { endPinkiesOf, releaseHeldPinkies } from "./pinky-plans";
 import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
 import { deleteObject, type StorageEnv } from "../storage";
@@ -281,6 +281,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .where(and(sql`${connections.eventId} like 'buddy:%'`, isNotNull(connections.removedAt), lt(connections.removedAt, buddyCutoff)))
     .returning({ id: connections.id });
 
+  // Pinky Plans: a Pinky ended during an open report kept its chat for the review; once the reports close, it goes.
+  await releaseHeldPinkies(db);
   // Pinky Plans: the daily idea count is only needed for today (Bangkok time).
   await db.delete(pinkyIdeaViews).where(lt(pinkyIdeaViews.day, new Date(bkkDayStart(now).getTime() + 7 * HOUR).toISOString().slice(0, 10)));
 

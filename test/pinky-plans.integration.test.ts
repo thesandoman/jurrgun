@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { HAS_DB, createMember, db, req, type Member } from "./helpers";
+import { HAS_DB, createMember, db, ENV, req, type Member } from "./helpers";
+import { runRetention } from "../src/services/retention";
 import { newId, randomToken } from "../src/lib/crypto";
 import { chatMessages, connectionChoices, connections, events, pinkies, pinkyPlans, registrations, reports } from "../src/schema";
 
@@ -115,10 +116,11 @@ describe.skipIf(!HAS_DB)("Pinky Plans", () => {
     const reported = newId();
     await db().insert(chatMessages).values([
       { id: before, thread, sender: a.id, body: "before", createdAt: new Date(p.createdAt.getTime() - HOUR) },
-      { id: during, thread, sender: b.id, body: "during", createdAt: new Date(p.createdAt.getTime() + 1000) },
-      { id: reported, thread, sender: b.id, body: "reported one", createdAt: new Date(p.createdAt.getTime() + 2000) },
+      { id: during, thread, sender: b.id, body: "during", createdAt: new Date(p.createdAt.getTime() + 1) },
+      { id: reported, thread, sender: b.id, body: "reported one", createdAt: new Date(p.createdAt.getTime() + 1) },
     ]);
-    await db().insert(reports).values({ id: newId(), reporter: a.id, targetAccount: b.id, targetMessage: reported, reason: "harassment", details: "Chat message: reported one" });
+    // A report on one message, already closed: that message stays, the rest of the period goes now.
+    await db().insert(reports).values({ id: newId(), reporter: a.id, targetAccount: b.id, targetMessage: reported, reason: "harassment", details: "Chat message: reported one", status: "dismissed" });
     await post(a, `/pinky/${p.id}/note`, { note: "secret plan" });
     await post(a, `/pinky/${p.id}/end`, { message: "thanks" });
     const left = (await db().select().from(chatMessages).where(eq(chatMessages.thread, thread))).map((m) => m.body);
@@ -133,6 +135,27 @@ describe.skipIf(!HAS_DB)("Pinky Plans", () => {
     expect(await db().select().from(connectionChoices).where(and(eq(connectionChoices.eventId, ev), eq(connectionChoices.choice, "romance")))).toEqual([]);
     const card = await (await req(`/people/${b.id}`, { cookie: en(a) })).text();
     expect(card).not.toContain('<section class="pinky"');
+  });
+
+  it("with an open report between them, End kindly holds the whole Pinky-period chat until the review ends", async () => {
+    const { a, b, p } = await pinkyPair();
+    const thread = `conn:${p.connectionId}`;
+    await db().insert(chatMessages).values({ id: newId(), thread, sender: b.id, body: "context", createdAt: new Date(p.createdAt.getTime() + 1) });
+    const rid = newId();
+    await db().insert(reports).values({ id: rid, reporter: a.id, targetAccount: b.id, reason: "harassment", details: "profile" });
+    await post(b, `/pinky/${p.id}/end`, { message: "not_ready" });
+    expect((await db().select().from(chatMessages).where(eq(chatMessages.thread, thread))).map((m) => m.body)).toContain("context");
+    const [held] = await db().select().from(pinkies).where(eq(pinkies.id, p.id));
+    expect(held.state).toBe("held");
+    expect(held.endedAt).toBeTruthy();
+    expect((await space(a, p.id)).status).toBe(404);
+    // The review ends: retention deletes the held chat and the row, and keeps what came after.
+    await db().update(reports).set({ status: "dismissed" }).where(eq(reports.id, rid));
+    await runRetention(ENV);
+    const left = (await db().select().from(chatMessages).where(eq(chatMessages.thread, thread))).map((m) => m.body);
+    expect(left).not.toContain("context");
+    expect(left.some((m) => /not ready|ยังไม่พร้อม/.test(m))).toBe(true);
+    expect(await db().select().from(pinkies).where(eq(pinkies.id, p.id))).toEqual([]);
   });
 
   it("switching 💘 off, or a block, deletes the Pinky with its plan", async () => {
