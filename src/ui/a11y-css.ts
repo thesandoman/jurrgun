@@ -1268,4 +1268,7 @@ a.solo-link{display:inline-flex;align-items:center;min-height:44px}
 p:has(>a.solo-link:only-child){margin-bottom:12px}
 /* A short name on a person card (Oil, Joe) is still a 44px-wide target. */
 main .pc-name>a{display:inline-block;min-width:44px}
+/* Chat: the photo caption and the poll fields have visible labels above them, not only a placeholder. */
+.chat-field{display:grid;gap:4px;flex:1 1 100%;font-weight:600;font-size:.94rem}
+.chat-field input{font-weight:400}
 `);

@@ -414,7 +414,10 @@ function CircleExtras(props: { v: View; k: string; met: boolean; draft?: Draft }
             📷 {t("แชร์รูปจากวันนี้", "Share a photo from today")}
             <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required />
           </label>
-          <input type="text" name="caption" maxlength={140} value={props.draft?.caption ?? ""} placeholder={t("คำบรรยาย (ไม่บังคับ)", "Caption (optional)")} aria-label={t("คำบรรยาย", "Caption")} />
+          <label class="chat-field">
+            {t("คำบรรยาย (ไม่บังคับ)", "Caption (optional)")}
+            <input type="text" name="caption" maxlength={140} value={props.draft?.caption ?? ""} />
+          </label>
           <Button kind="ghost">{t("ส่งรูป", "Send photo")}</Button>
         </form>
       ) : (
@@ -423,9 +426,15 @@ function CircleExtras(props: { v: View; k: string; met: boolean; draft?: Draft }
       <details class="how chat-poll-new" open={props.draft?.question !== undefined}>
         <summary>📊 {t("สร้างโพล", "Start a poll")}</summary>
         <form method="post" action={`/chat/${props.k}/poll`}>
-          <input type="text" name="question" maxlength={120} required value={props.draft?.question ?? ""} placeholder={t("เช่น วันไหนดี?", "e.g. Which Sunday works?")} aria-label={t("คำถาม", "Question")} />
+          <label class="chat-field">
+            {t("คำถาม", "Question")}
+            <input type="text" name="question" maxlength={120} required value={props.draft?.question ?? ""} placeholder={t("เช่น วันไหนดี?", "e.g. Which Sunday works?")} />
+          </label>
           {Array.from({ length: POLL_MAX }, (_, i) => (
-            <input type="text" name="options" maxlength={60} required={i < 2} value={props.draft?.options?.[i] ?? ""} placeholder={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} aria-label={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} />
+            <label class="chat-field">
+              {t(`ตัวเลือก ${i + 1}${i < 2 ? "" : " (ไม่บังคับ)"}`, `Option ${i + 1}${i < 2 ? "" : " (optional)"}`)}
+              <input type="text" name="options" maxlength={60} required={i < 2} value={props.draft?.options?.[i] ?? ""} />
+            </label>
           ))}
           <Button kind="ghost">{t("ส่งโพล", "Post poll")}</Button>
         </form>
