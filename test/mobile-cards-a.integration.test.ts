@@ -13,6 +13,8 @@ import { tr } from "../src/lib/i18n";
 import { bangkokDay, eventIdOfLink, urgentForToday } from "../src/domain/digest";
 import { bellLabel } from "../src/ui/notif-menu";
 import { meLine } from "../src/ui/me-hub";
+import { DayStatusLine } from "../src/ui/day-of";
+import { DAY_STATUSES, DAY_STATUS_TEXT } from "../src/domain/day-of";
 
 /** A published event starting at `startsAt`; returns its id. */
 async function eventAt(startsAt: Date): Promise<string> {
@@ -205,5 +207,37 @@ describe.skipIf(!HAS_DB)("card 6: the Me page and My month in people", () => {
     expect(html).toMatch(/<a class="fact" href="\/me\/events#past"><b aria-hidden="true">🎉<\/b><span class="big-n">1<\/span><small>Events attended<\/small><\/a>/);
     expect(html).toMatch(/<a class="fact" href="\/connections"><b aria-hidden="true">🤝<\/b><span class="big-n">0<\/span><small>My people<\/small><\/a>/);
     expect(html).toMatch(/<a class="fact" href="\/me\/events#upcoming"><b aria-hidden="true">🗓️<\/b><span class="big-n">0<\/span><small>Coming up<\/small><\/a>/);
+  });
+});
+
+describe("card 9: the day-of status line says its status in words", () => {
+  const words: Record<string, [string, string]> = {
+    on_time: ["ตรงเวลา", "On time"],
+    running_late: ["ช้ากว่ากำหนด", "late"],
+    moved: ["ย้ายจุดนัดพบ", "moved"],
+    cancelled: ["งด", "Called off"],
+  };
+
+  it("covers every status there is", () => {
+    expect([...DAY_STATUSES].sort()).toEqual(Object.keys(words).sort());
+  });
+
+  for (const status of DAY_STATUSES) {
+    it(`${status}: Thai and English words in the line, beside the coloured edge`, () => {
+      const at = new Date("2026-10-26T11:05:00Z");
+      for (const lang of ["th", "en"] as const) {
+        const html = String(DayStatusLine({ t: tr(lang), lang, shown: { status, note: null, at } }));
+        expect(html).toContain(`class="day-status ds-${status}"`);
+        const text = html.replace(/<[^>]*>/g, "");
+        expect(text).toContain(words[status]![lang === "th" ? 0 : 1]);
+        // The status is the bold words, not only the edge colour.
+        expect(html).toMatch(new RegExp(`<b>${lang === "th" ? DAY_STATUS_TEXT[status].th : DAY_STATUS_TEXT[status].en}</b>`));
+      }
+    });
+  }
+
+  it("keeps the coloured left edge", () => {
+    expect(A11Y_CSS).toContain("border-left:4px solid var(--brand)");
+    expect(A11Y_CSS).toContain(".day-status.ds-running_late,.day-status.ds-moved{border-left-color:var(--warn)");
   });
 });

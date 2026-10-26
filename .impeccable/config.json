@@ -27,6 +27,15 @@
         ],
         "createdAt": "2026-10-19T09:15:09.366Z",
         "reason": "Owner-set brand palette (PRODUCT.md D3: green, cream and mango); cream is the brand ground"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/ui/a11y-css.ts"
+        ],
+        "createdAt": "2026-10-26T07:27:32.557Z",
+        "reason": "Owner approved 2026-10-26 (mobile card 9 via Main): day-status edge echoes a status that is always stated in words"
       }
     ]
   }
