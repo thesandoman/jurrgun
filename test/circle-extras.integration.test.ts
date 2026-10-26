@@ -32,6 +32,21 @@ async function hangout(host: Member, guests: Member[], started: boolean) {
 }
 
 describe.skipIf(!HAS_DB)("circle chat extras", () => {
+  it("a refused send keeps what was typed: the message, and an unfinished poll stays open with its words", async () => {
+    const [host, a] = await Promise.all([createMember(), createMember()]);
+    const key = await hangout(host, [a], false);
+    const msg = await req(`/chat/${key}`, { cookie: `${a.cookie}; lang=en`, form: { body: "Call me on 081 234 5678 before Sunday" } });
+    expect(msg.status).toBe(400);
+    const html = await msg.text();
+    expect(html).toMatch(/<textarea name="body"[^>]*>\s*Call me on 081 234 5678 before Sunday/);
+    const poll = await req(`/chat/${key}/poll`, { cookie: `${host.cookie}; lang=en`, form: { question: "Which Sunday?", options: ["18th", "", ""] } });
+    expect(poll.status).toBe(400);
+    const p = await poll.text();
+    expect(p).toMatch(/<details class="how chat-poll-new" open/);
+    expect(p).toContain('value="Which Sunday?"');
+    expect(p).toContain('value="18th"');
+  });
+
   it("polls: post, vote, change vote; totals only; outsiders get 404", async () => {
     const [host, a, b, outsider] = await Promise.all([createMember(), createMember(), createMember(), createMember()]);
     const key = await hangout(host, [a, b], false);

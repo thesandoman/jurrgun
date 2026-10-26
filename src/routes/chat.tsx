@@ -401,7 +401,10 @@ function Poll(props: { v: View; k: string; m: Msg; votes: { accountId: string; o
 }
 
 /** Circle chats: share a photo from the day, or start a quick poll. */
-function CircleExtras(props: { v: View; k: string; met: boolean }) {
+/** What the member typed when a send was refused: it comes back into the same field. */
+type Draft = { body?: string; caption?: string; question?: string; options?: string[] };
+
+function CircleExtras(props: { v: View; k: string; met: boolean; draft?: Draft }) {
   const { t } = props.v;
   return (
     <div class="chat-extras">
@@ -411,18 +414,18 @@ function CircleExtras(props: { v: View; k: string; met: boolean }) {
             📷 {t("แชร์รูปจากวันนี้", "Share a photo from today")}
             <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required />
           </label>
-          <input type="text" name="caption" maxlength={140} placeholder={t("คำบรรยาย (ไม่บังคับ)", "Caption (optional)")} aria-label={t("คำบรรยาย", "Caption")} />
+          <input type="text" name="caption" maxlength={140} value={props.draft?.caption ?? ""} placeholder={t("คำบรรยาย (ไม่บังคับ)", "Caption (optional)")} aria-label={t("คำบรรยาย", "Caption")} />
           <Button kind="ghost">{t("ส่งรูป", "Send photo")}</Button>
         </form>
       ) : (
         <p class="muted">📷 {t("แชร์รูปได้เมื่อแฮงเอาต์เริ่มแล้ว", "Photos open once the hangout starts.")}</p>
       )}
-      <details class="how chat-poll-new">
+      <details class="how chat-poll-new" open={props.draft?.question !== undefined}>
         <summary>📊 {t("สร้างโพล", "Start a poll")}</summary>
         <form method="post" action={`/chat/${props.k}/poll`}>
-          <input type="text" name="question" maxlength={120} required placeholder={t("เช่น วันไหนดี?", "e.g. Which Sunday works?")} aria-label={t("คำถาม", "Question")} />
+          <input type="text" name="question" maxlength={120} required value={props.draft?.question ?? ""} placeholder={t("เช่น วันไหนดี?", "e.g. Which Sunday works?")} aria-label={t("คำถาม", "Question")} />
           {Array.from({ length: POLL_MAX }, (_, i) => (
-            <input type="text" name="options" maxlength={60} required={i < 2} placeholder={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} aria-label={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} />
+            <input type="text" name="options" maxlength={60} required={i < 2} value={props.draft?.options?.[i] ?? ""} placeholder={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} aria-label={t(`ตัวเลือก ${i + 1}`, `Option ${i + 1}`)} />
           ))}
           <Button kind="ghost">{t("ส่งโพล", "Post poll")}</Button>
         </form>
@@ -439,7 +442,7 @@ function starters(key: string, now: Date) {
   return [0, 1, 2].map((i) => text[(h + i * 7) % text.length]);
 }
 
-async function renderThread(c: C, key: string, error?: { th: string; en: string }, status: 200 | 400 = 200) {
+async function renderThread(c: C, key: string, error?: { th: string; en: string }, status: 200 | 400 = 200, draft?: Draft) {
   const v: View = view(c);
   const { t, lang } = v;
   const db = getDb(c.env);
@@ -571,7 +574,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
             triggerLabel={isCircle ? t("เพิ่มรูป โพล หรือคำถามชวนคุย", "Add a photo, poll or icebreaker") : t("คำถามชวนคุย", "Icebreakers")}
             align="start"
           >
-            {isCircle ? <CircleExtras v={v} k={key} met={th.met} /> : null}
+            {isCircle ? <CircleExtras v={v} k={key} met={th.met} draft={draft} /> : null}
             {ice ? (
               // A hangout's group chat, in the days before and on the day: the event's curated icebreakers, one tap sends one.
               <details class="how chat-ice" open>
@@ -614,7 +617,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
             {error ? <Notice kind="warn">{L(lang, error)}</Notice> : null}
             {/* ?say= prefills a suggested first line (e.g. from "Invite to a table"); the member still decides to send it. */}
             <textarea name="body" rows={1} maxlength={500} required aria-label={t("ข้อความ", "Message")} placeholder={t("พิมพ์ข้อความ…", "Write a message…")}>
-              {(c.req.query("say") ?? "").slice(0, 200)}
+              {draft?.body ?? (c.req.query("say") ?? "").slice(0, 200)}
             </textarea>
             <Button>{t("ส่ง", "Send")}</Button>
           </form>
@@ -661,14 +664,15 @@ chatRoutes.post("/chat/:thread", async (c) => {
     db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.sender, me), gte(chatMessages.createdAt, dayStart))).limit(500),
     db.select({ id: chatMessages.id }).from(chatMessages).where(and(eq(chatMessages.thread, th.key), eq(chatMessages.sender, me))).limit(200),
   ]);
-  const res = checkMessage(str((await c.req.parseBody()).body), {
+  const typed = str((await c.req.parseBody()).body);
+  const res = checkMessage(typed, {
     met: th.met,
     open: th.open,
     sentToday: mineToday.length,
     sentTodayAll: mineAllToday.length,
     sentInThread: mineInThread.length,
   });
-  if (!res.ok) return renderThread(c, key, REASON_TEXT[res.reason], 400);
+  if (!res.ok) return renderThread(c, key, REASON_TEXT[res.reason], 400, { body: typed.slice(0, 2000) });
   await db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: me, body: res.body, moneyFlag: res.moneyFlag, createdAt: now });
   // One waiting notification per thread per person; it appears after quiet hours.
   const others = th.members.filter((x) => x !== me);
@@ -720,7 +724,7 @@ chatRoutes.post("/chat/:thread/photo", async (c) => {
     .where(and(eq(chatMessages.thread, th.key), eq(chatMessages.sender, me), eq(chatMessages.kind, "photo"), gte(chatMessages.createdAt, new Date(now.getTime() - DAY))))
     .limit(50);
   const res = checkPhoto(file ? { type: file.type, size: file.size } : null, { kind: parseThread(key)!.kind, met: th.met, open: th.open, sentToday: sent.length });
-  if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400);
+  if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400, { caption: str(body.caption).slice(0, 140) });
   const photoKey = `chat/${key.replace(":", "-")}/${crypto.randomUUID()}`;
   await putObject(c.env, photoKey, await file!.arrayBuffer(), { contentType: file!.type });
   const caption = str(body.caption).replace(/\s+/g, " ").trim().slice(0, 140);
@@ -754,7 +758,7 @@ chatRoutes.post("/chat/:thread/poll", async (c) => {
   const body = await c.req.parseBody({ all: true });
   const opts = (Array.isArray(body.options) ? body.options : [body.options]).map((x) => str(x));
   const res = checkPoll(str(body.question), opts, { kind: parseThread(key)!.kind, open: th.open });
-  if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400);
+  if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400, { question: str(body.question).slice(0, 200), options: opts.slice(0, POLL_MAX).map((o) => o.slice(0, 100)) });
   await db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: me, body: res.question, kind: "poll", pollOptions: res.options });
   await ping(c, key);
   return c.redirect(`/chat/${key}#msgs`);
