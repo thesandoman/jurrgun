@@ -1077,7 +1077,7 @@ onboarding.get("/wellbeing", async (c) => {
     { title: TITLE, bare: true },
     <Flow
       v={v}
-      submit={t("ส่งคำตอบ", "Submit")}
+      submit={t("ส่งคำตอบ", "Send answers")}
       journey={journeyFor(c, "wellbeing")}
       extra={
         <button type="submit" class="skip" name="skip" value="1" formnovalidate>

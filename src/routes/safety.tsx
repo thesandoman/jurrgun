@@ -134,7 +134,7 @@ export function SafeArrivalForm(props: { v: View; context: string }) {
         🏠 {t("ถามฉันว่าถึงบ้านปลอดภัยไหม ตอน", "Ask me if I'm home safe at")}{" "}
         <input type="time" name="back" required value="21:00" />
       </label>
-      <Button kind="ghost">{t("ตั้งเวลา", "Set")}</Button>
+      <Button kind="ghost">{t("ตั้งเวลาถามฉัน", "Set the time")}</Button>
     </form>
   );
 }

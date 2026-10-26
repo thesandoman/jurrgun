@@ -1202,7 +1202,7 @@ buddyRoutes.get("/buddy/quest/:qid/feedback", requireMember, async (c) => {
           <Choices legend={t("รู้สึกปลอดภัยแค่ไหน (1-5)", "How safe did you feel? (1-5)")} name="feltSafe" type="radio" options={FIVE} values={prev?.feltSafe ? [String(prev.feltSafe)] : []} lang={lang} required />
           <Choices legend={t("รู้สึกว่ามีคนฟังคุณแค่ไหน (1-5)", "Did you feel heard? (1-5)")} name="feltHeard" type="radio" options={FIVE} values={prev?.feltHeard ? [String(prev.feltHeard)] : []} lang={lang} />
           <Choices legend={t("อยากเจอกันอีกไหม", "Would you meet again?")} name="again" type="radio" options={YN} values={yn(prev?.wouldMeetAgain)} lang={lang} required />
-          <Button>{t("ส่ง", "Send")}</Button>
+          <Button>{t("ส่งคำตอบ", "Send answers")}</Button>
         </form>
       </Card>
     </>,

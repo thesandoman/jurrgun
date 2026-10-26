@@ -350,7 +350,7 @@ function QuestionForm(props: { v: View; q: Question }) {
   return (
     <form method="post" action={`/pulse/${encodeURIComponent(q.id)}`} class="cp-q">
       {input}
-      <Button>{t("ส่งคำตอบ", "Submit")}</Button>
+      <Button>{t("ส่งคำตอบ", "Send my answer")}</Button>
     </form>
   );
 }
@@ -365,7 +365,7 @@ function FollowupCard(props: { v: View }) {
         {UCLA3.map(([th, en], i) => (
           <Choices legend={t(th, en)} name={`q${i + 1}`} options={UCLA_SCALE} lang={lang} type="radio" required />
         ))}
-        <Button>{t("ส่งคำตอบ", "Submit")}</Button>
+        <Button>{t("ส่งคำตอบ", "Send answers")}</Button>
       </form>
     </Card>
   );

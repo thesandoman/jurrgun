@@ -930,7 +930,7 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
                   ))}
                 </p>
                 <Field label={t("ข้อความ (ส่วนตัว)", "Your note (private)")} name="body" maxlength={THANKS_MAX} required />
-                <Button kind="ghost">{t("ส่ง", "Send")}</Button>
+                <Button kind="ghost">{t("ส่งคำขอบคุณ", "Send thanks")}</Button>
               </form>
             </details>
           )}
