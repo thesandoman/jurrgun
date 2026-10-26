@@ -160,6 +160,29 @@ export function PinLegend(props: { t: T }) {
  */
 export const SIDE_PANEL_MQ = "(min-width: 900px), (max-height: 480px) and (orientation: landscape)";
 
+/** The "+N" chip's spoken label, with {n} for the number: the full phrase, never just "+3". */
+export function moreChipsWords(t: T): string {
+  return t("อีก {n} หมวด", "{n} more");
+}
+
+/**
+ * The chips row, as plain browser JavaScript (inlined into the page script
+ * and unit-tested on its own).
+ *   chipOrder: chip values with the selected ones first, the rest as they were,
+ *     so a selected chip is never the one hidden under the fade.
+ *   hiddenPast: how many chips end past the visible edge (rights = each chip's right edge).
+ *   moreLabel: the "+N" chip's spoken label from its words.
+ */
+export const CHIPS_JS = `function chipOrder(values, on) {
+  return [...values.filter((v) => on.includes(v)), ...values.filter((v) => !on.includes(v))];
+}
+function hiddenPast(rights, edge) {
+  return rights.filter((r) => r > edge).length;
+}
+function moreLabel(n, words) {
+  return String(words || "{n}").replace("{n}", String(n));
+}`;
+
 /** JSON for a <script type="application/json"> block, safe against </script>. */
 function scriptJson(x: unknown): string {
   return JSON.stringify(x).replace(/</g, "\\u003c");
@@ -196,6 +219,7 @@ export function FullDiscover(props: {
       dark: t("แผนที่มืด", "Dark map"),
       streets: t("แผนที่ถนน", "Street map"),
       noMatch: t("ไม่พบกิจกรรมที่ค้นหา", "No events match your search"),
+      moreChips: moreChipsWords(t),
     },
   };
   return (
@@ -339,8 +363,74 @@ async function start() {
     // sv-map fits the pins to the whole box; refit around the floating controls.
     onFilter: (shown) => setTimeout(() => refit(shown), 0),
   });
+  watchChips();
   watchChrome();
   refit(visible(), true);
+}
+
+/*
+ * The chips row (owner card 2). When the chips don't fit, the right edge fades
+ * and a "+N" chip says how many are past it and opens Filters, where every
+ * category is. A selected chip moves to the front, so the fade never hides it.
+ */
+${CHIPS_JS}
+let chipsMO = null, chipsQueued = false;
+const moreBtn = document.createElement("button");
+moreBtn.type = "button";
+moreBtn.className = "fd-more";
+moreBtn.hidden = true;
+moreBtn.setAttribute("aria-controls", "fd-filters");
+moreBtn.addEventListener("click", () => {
+  const f = document.getElementById("fd-filters");
+  if (!f) return;
+  f.open = true;
+  (f.querySelector('select[name="tag"]') || f.querySelector("summary"))?.focus();
+});
+const queueChips = () => { if (chipsQueued) return; chipsQueued = true; requestAnimationFrame(() => { chipsQueued = false; layoutChips(); }); };
+function orderChips(bar) {
+  const chips = Array.from(bar.querySelectorAll(".svm-chip"));
+  const want = chipOrder(chips.map((c) => c.dataset.chip), chips.filter((c) => c.classList.contains("on") && c.dataset.chip).map((c) => c.dataset.chip));
+  if (want.every((v, i) => chips[i].dataset.chip === v)) return;
+  bar.prepend(...want.map((v) => chips.find((c) => c.dataset.chip === v)));
+  bar.scrollLeft = 0;
+}
+function layoutChips() {
+  const bar = document.querySelector(".fullmap .svm-chips");
+  if (!bar || bar.hidden) { moreBtn.hidden = true; return; }
+  const chips = Array.from(bar.querySelectorAll(".svm-chip"));
+  const cs = getComputedStyle(bar);
+  const padL = parseFloat(cs.paddingLeft) || 0;
+  const gap = parseFloat(cs.columnGap) || 0;
+  // Whether the chips fit is measured from their widths, not the scroll position, so scrolling never flips it.
+  const need = chips.reduce((a, c) => a + c.offsetWidth, 0) + gap * Math.max(0, chips.length - 1);
+  const over = chips.length > 0 && need > bar.clientWidth - padL * 2 + 0.5;
+  bar.classList.toggle("over", over);
+  if (!over) { moreBtn.hidden = true; bar.classList.remove("end"); return; }
+  moreBtn.hidden = false;
+  const r = bar.getBoundingClientRect();
+  const first = chips[0].getBoundingClientRect();
+  const left = Math.round(r.right - padL - moreBtn.offsetWidth);
+  moreBtn.style.left = left + "px";
+  moreBtn.style.top = Math.round(first.top + (first.height - moreBtn.offsetHeight) / 2) + "px";
+  bar.style.setProperty("--more-r", Math.ceil(r.right - left + 6) + "px");
+  // A chip that runs into the fade can't be read: it counts as hidden.
+  const n = hiddenPast(chips.map((c) => c.getBoundingClientRect().right), left - 14);
+  bar.classList.toggle("end", n === 0);
+  moreBtn.hidden = n === 0;
+  moreBtn.textContent = "+" + n;
+  moreBtn.setAttribute("aria-label", moreLabel(n, cfg.words.moreChips));
+}
+function watchChips() {
+  chipsMO?.disconnect();
+  const bar = document.querySelector(".fullmap .svm-chips");
+  if (!bar) return;
+  bar.after(moreBtn);
+  orderChips(bar);
+  // sv-map redraws the chips on every tap: put the selected one first again, then count.
+  chipsMO = new MutationObserver(() => { orderChips(bar); queueChips(); });
+  chipsMO.observe(bar, { childList: true });
+  bar.addEventListener("scroll", queueChips, { passive: true });
+  layoutChips();
 }
 
 /*
@@ -380,6 +470,7 @@ function chromeTop() {
 }
 function layoutChrome() {
   if (!root || !sheetEl) return;
+  layoutChips();
   root.style.setProperty("--tab-h", px(Math.max(0, innerHeight - tabTop()) + GAP));
   const handle = sheetEl.querySelector("summary").offsetHeight;
   root.style.setProperty("--sheet-h", px(handle));
@@ -555,6 +646,12 @@ body.fullmap-body{--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-pane
 .fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right{display:none}
 .fullmap .svm-chips{position:fixed;z-index:var(--z-chips);left:0;right:0;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2 + 8px + var(--safe-t));padding:0 max(12px,calc(var(--safe-r) + 12px)) 4px max(12px,calc(var(--safe-l) + 12px))}
 .fullmap .svm-chip{box-shadow:var(--shadow)}
+/* Chips that don't fit: the row fades out before the "+N" chip, which opens Filters (owner card 2). */
+.fullmap .svm-chips.over{padding-right:var(--more-r,72px)}
+.fullmap .svm-chips.over:not(.end){-webkit-mask-image:linear-gradient(to right,#000 calc(100% - var(--more-r,72px) - 40px),transparent calc(100% - var(--more-r,72px) + 4px));mask-image:linear-gradient(to right,#000 calc(100% - var(--more-r,72px) - 40px),transparent calc(100% - var(--more-r,72px) + 4px))}
+.fullmap .svm-chip.on:not([data-chip=""])::before{content:"✓";content:"✓" / "";font-weight:700}
+.fd-more{position:fixed;z-index:var(--z-chips);min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.88rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+.fd-more[hidden]{display:none}
 .fullmap .svm-sheet{z-index:var(--z-card);bottom:calc(var(--tab-h) + 8px)!important}
 .fd-rail.off{visibility:hidden}
 /* A tapped pin's card gets its column to itself: on phones the rail steps aside (it is back as soon as the card closes). */

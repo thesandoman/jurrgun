@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { readFileSync } from "node:fs";
-import { FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, SIDE_PANEL_MQ, sheetCopy } from "../src/ui/discover-map";
+import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, SIDE_PANEL_MQ, moreChipsWords, sheetCopy } from "../src/ui/discover-map";
 
 const en = tr("en");
 const th = tr("th");
@@ -89,6 +89,45 @@ describe("Discover map Key", () => {
     // A district-level pin still explains itself on its card.
     expect(page(en)).toContain("District area: address on the event page");
     expect(FULLMAP_CSS).toContain(".fullmap .svm-note::before{");
+  });
+});
+
+// The chips row's helpers, run as the browser runs them.
+const chipFns = new Function(`${CHIPS_JS}; return { chipOrder, hiddenPast, moreLabel };`)() as {
+  chipOrder: (values: string[], on: string[]) => string[];
+  hiddenPast: (rights: number[], edge: number) => number;
+  moreLabel: (n: number, words: string) => string;
+};
+
+describe("Discover map chips row", () => {
+  it("the +N chip speaks the full phrase, Thai first, not '+3'", () => {
+    expect(moreChipsWords(th)).toBe("อีก {n} หมวด");
+    expect(chipFns.moreLabel(3, moreChipsWords(th))).toBe("อีก 3 หมวด");
+    expect(chipFns.moreLabel(3, moreChipsWords(en))).toBe("3 more");
+    expect(chipFns.moreLabel(3, moreChipsWords(en))).not.toBe("+3");
+    // The page hands the words to its script, and the script sets the label from them.
+    expect(page(th)).toContain('"moreChips":"อีก {n} หมวด"');
+    expect(FULLMAP_JS).toContain('moreBtn.setAttribute("aria-label", moreLabel(n, cfg.words.moreChips))');
+    expect(FULLMAP_JS).toContain('moreBtn.textContent = "+" + n');
+  });
+
+  it("puts selected chips first and keeps the rest in their order", () => {
+    const all = ["", "food", "walk", "art", "music", "free"];
+    expect(chipFns.chipOrder(all, ["music"])).toEqual(["music", "", "food", "walk", "art", "free"]);
+    expect(chipFns.chipOrder(all, ["free", "walk"])).toEqual(["walk", "free", "", "food", "art", "music"]);
+    expect(chipFns.chipOrder(all, [])).toEqual(all);
+  });
+
+  it("counts the chips that end past the visible edge", () => {
+    expect(chipFns.hiddenPast([80, 160, 240, 330, 420], 300)).toBe(2);
+    expect(chipFns.hiddenPast([80, 160], 300)).toBe(0);
+  });
+
+  it("fades the row's right edge only while chips are hidden there, and the +N opens Filters", () => {
+    expect(FULLMAP_CSS).toContain(".fullmap .svm-chips.over:not(.end){-webkit-mask-image:linear-gradient(to right");
+    expect(FULLMAP_CSS).toMatch(/\.fd-more\{position:fixed;z-index:var\(--z-chips\);min-width:44px;min-height:44px;/);
+    expect(FULLMAP_JS).toContain('f.open = true;');
+    expect(FULLMAP_JS).toContain('bar.addEventListener("scroll", queueChips, { passive: true })');
   });
 });
 
