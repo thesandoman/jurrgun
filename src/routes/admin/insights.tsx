@@ -443,21 +443,28 @@ adminInsights.get("/", async (c) => {
   const sourceLabel = (s: string) => (s === NO_SOURCE ? t("ไม่มีแหล่งที่มา (เข้าตรง)", "No source (direct)") : s === OTHER_SOURCES ? t("อื่น ๆ (แต่ละแหล่งน้อยกว่า 10 คน)", "Other (each under 10)") : s);
 
   // Healthy connections: chat, safety checks, weekly plans and mutual meet feedback.
-  // Pinky Plans (3 Wise Men condition): a pair's messages during their Pinky are never counted in the chat total.
+  // Pinky Plans (3 Wise Men condition): a pair's messages during their Pinky are left out of the chat
+  // total, its money-flag count AND the chat reports, so "reports per 1,000 messages" stays one
+  // definition (City Pulse & Research). The pair is matched in both orders. No Pinky-only count is shown.
   const winTs = sql`created_at >= ${since}::timestamptz and created_at < ${until}::timestamptz`;
   const [chatRow, safeRow, planRow, skipRows, meetRow, heardRow, pitchRow, gradRow] = await Promise.all([
-    db.execute(sql`select count(*), sum(case when money_flag then 1 else 0 end),
-      (select count(*) from social_reports where target_message is not null and ${winTs})
-      from social_chat_messages m where ${winTs}
-        and not exists (
-          select 1 from social_pinkies p
-          where m.sender in (p.a_account, p.b_account)
-            and m.created_at >= p.created_at and m.created_at <= coalesce(p.ended_at, now())
-            and (
-              m.thread in (select 'conn:' || c.id from social_connections c where c.a_account = p.a_account and c.b_account = p.b_account)
-              or m.thread in (select 'buddy:' || b.id from social_buddy_matches b where (b.a_account = p.a_account and b.b_account = p.b_account) or (b.a_account = p.b_account and b.b_account = p.a_account))
-            )
-        )`),
+    db.execute(sql`with pinky_msgs as (
+        select m.id from social_chat_messages m
+        join social_pinkies p
+          on m.sender in (p.a_account, p.b_account)
+         and m.created_at >= p.created_at and m.created_at <= coalesce(p.ended_at, now())
+        where m.thread in (
+            select 'conn:' || c.id from social_connections c
+            where (c.a_account = p.a_account and c.b_account = p.b_account) or (c.a_account = p.b_account and c.b_account = p.a_account)
+          )
+          or m.thread in (
+            select 'buddy:' || b.id from social_buddy_matches b
+            where (b.a_account = p.a_account and b.b_account = p.b_account) or (b.a_account = p.b_account and b.b_account = p.a_account)
+          )
+      )
+      select count(*), sum(case when money_flag then 1 else 0 end),
+      (select count(*) from social_reports where target_message is not null and ${winTs} and target_message not in (select id from pinky_msgs))
+      from social_chat_messages where ${winTs} and id not in (select id from pinky_msgs)`),
     db.execute(sql`select count(*), sum(case when answer = 'help' then 1 else 0 end), sum(case when answer is not null then 1 else 0 end)
       from social_safe_arrivals where ${winTs}`),
     db.execute(sql`select count(*), sum(case when status = 'accepted' then 1 else 0 end), sum(case when status = 'skipped' then 1 else 0 end)
