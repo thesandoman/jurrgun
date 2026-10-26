@@ -1382,4 +1382,9 @@ html.a11y-touch{--tap:56px;--tap-primary:56px}
 .notif-today{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-family:var(--sub);font-size:.75rem;font-weight:800;line-height:1.3;white-space:nowrap}
 @media (forced-colors:active){.notif-today{border:1px solid CanvasText}}
 a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:middle}
+/* Card 6: the counts that left Me sit on My month in people, each one a link to its list. */
+.month-sofar{margin:24px 0}
+.month-sofar h2{margin:0 0 12px}
+.month-sofar a.fact{display:flex;flex-direction:column;min-height:44px;color:var(--ink);text-decoration:none}
+.month-sofar a.fact:hover .big-n{text-decoration:underline;text-underline-offset:3px}
 `);

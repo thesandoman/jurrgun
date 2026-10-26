@@ -36,8 +36,8 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     expect(prof.indexOf("Night food crawl")).toBeGreaterThan(0);
     expect(prof.indexOf("Night food crawl")).toBeLessThan(prof.indexOf("Board games night"));
     expect(html).not.toContain("nothing yet");
-    // Me counts people, not meetings.
-    expect(await (await req("/settings?lang=en", { cookie: me.cookie })).text()).toMatch(/<a href="\/connections" class="me-stat[^"]*"><span[^>]*>🤝<\/span><b>1<\/b>/);
+    // My month in people counts people, not meetings (the count moved there from Me, mobile card 6).
+    expect(await (await req("/me/month?lang=en", { cookie: me.cookie })).text()).toMatch(/<a class="fact" href="\/connections"><b aria-hidden="true">🤝<\/b><span class="big-n">1<\/span>/);
     const id = html.match(/action="\/connections\/([^/]+)\/remove"/)![1];
     await req(`/connections/${id}/remove`, { cookie: me.cookie, method: "POST", form: { go: "1" } });
     const left = await db()
@@ -58,7 +58,7 @@ describe.skipIf(!HAS_DB)("no repeats", () => {
     }
     await attendedOnce(me.id);
     const hub = await (await req("/settings?lang=en", { cookie: me.cookie })).text();
-    expect(hub).toMatch(/<a href="\/tables" class="me-stat[^"]*"><span[^>]*>🪑<\/span><b>3<\/b><small>Tables<\/small>/);
+    expect(hub).toMatch(/<p class="me-line">With Jurrgun since [A-Z][a-z]{2} \d{4} · 3 Regular Tables<\/p>/);
     const prof = await (await req("/me/profile?lang=en", { cookie: me.cookie })).text();
     expect(prof).toContain("Regular at 3 tables");
     for (const n of names) expect(prof).toContain(`<span class="pc-chip">${n}</span>`);

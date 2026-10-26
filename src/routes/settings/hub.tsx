@@ -6,12 +6,12 @@ import { endPinkies } from "../../services/pinky";
 import { canBeWomenOnly, canSwitchToSingle, isPaused, romanceEligible } from "../../domain/rules";
 import { ROMANCE_EXPLAINER } from "../../content/dating";
 import { canHost } from "../../domain/hosting";
-import { and, asc, count, countDistinct, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ne } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { isPasswordless } from "../../domain/rules";
 import { DISTRICTS, label } from "../../lib/constants";
 import { cleanBio, currentDatingDeck, isDatingPrompt } from "../../content/profile";
-import { MeHub, type MeStep } from "../../ui/me-hub";
+import { MeHub, meLine, type MeStep } from "../../ui/me-hub";
 import { SubLabel } from "../../ui/section-head";
 import { newId } from "../../lib/crypto";
 import { allowedEndpoint } from "../../lib/webpush";
@@ -19,7 +19,7 @@ import { vapidKeys } from "../../services/push";
 import { PushSwitch } from "../../ui/push-switch";
 import { emailEnabled } from "../../services/email-code";
 import { audit } from "../../lib/records";
-import { connections, datingIntents, consents, events, pushSubscriptions, profiles, registrations } from "../../schema";
+import { datingIntents, consents, events, pushSubscriptions, profiles, registrations } from "../../schema";
 import { page, str, view } from "../../ui/kit";
 import { myTables } from "../../services/regular-tables";
 import { CONSENT_VERSION, dropPendingDating, pendingDatingIntent } from "../onboarding";
@@ -39,7 +39,7 @@ import { NOTICE_CHANGES, NOTICE_DATE } from "../../content/privacy";
 import { Sheet } from "../../ui/sheet";
 import { settingsRoutes } from "./app";
 import { DISTRICT_ALERT_ON, districtName, optInText } from "../../domain/district-alert";
-import { me, photoSrc, romanceOffPatch, withdrawRomanceChoices } from "./shared";
+import { me, romanceOffPatch, withdrawRomanceChoices } from "./shared";
 import type { C } from "./shared";
 
 // ------------------------------------------------------------------ hub --
@@ -51,24 +51,12 @@ settingsRoutes.get("/settings", async (c) => {
   const p = user.profile!;
   const db = getDb(c.env);
   const now = new Date();
+  // The counts (events, people, coming up) moved to My month in people (mobile card 6); Me keeps one line.
   // Every read here is independent, so all go in one wave (owner card D3: the dating mode used to wait for the rest).
-  const [termsOk, src, vibe, [been], [upcoming], [circle], tables, [nextUp], notifYes, [dating]] = await Promise.all([
+  const [termsOk, vibe, tables, [nextUp], notifYes, [dating]] = await Promise.all([
     acceptedTerms(db, user.account.id),
-    photoSrc(c, p.photoKey),
     loadVibe(c.env, user.account.id),
-    db.select({ n: count() }).from(registrations).where(and(eq(registrations.accountId, user.account.id), isNotNull(registrations.checkedInAt))),
-    db
-      .select({ n: count() })
-      .from(registrations)
-      .innerJoin(events, eq(events.id, registrations.eventId))
-      .where(and(eq(registrations.accountId, user.account.id), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now), ne(events.status, "cancelled"))),
-    // A crew = the people I met at one event; the circle is all of them.
-    db
-      // People, not meetings: someone met at three events is one person (as on My people).
-      .select({ n: countDistinct(sql`case when ${connections.aAccount} = ${user.account.id} then ${connections.bAccount} else ${connections.aAccount} end`), crews: countDistinct(connections.eventId) })
-      .from(connections)
-      .where(and(or(eq(connections.aAccount, user.account.id), eq(connections.bAccount, user.account.id)), isNull(connections.removedAt))),
-    // People can sit at several regular tables; the count gets its own tile.
+    // People can sit at several Regular Tables; the count is in Me's one line.
     myTables(db, user.account.id),
     // The next table I'm seated at: Me leads with it (owner, Phase 2).
     db
@@ -83,7 +71,6 @@ settingsRoutes.get("/settings", async (c) => {
   ]);
   const dates = dating?.mode === "dating" || dating?.mode === "dating_only";
   const vibeKey = vibe && isArchetype(vibe.archetype) ? vibe.archetype : null;
-  const crews = Number(circle?.crews ?? 0);
   const bio = cleanBio(p.bio);
   const steps: MeStep[] = [
     { done: !!p.photoKey, label: t("ใส่รูป", "Add a photo"), href: "/settings/profile#photo" },
@@ -99,7 +86,6 @@ settingsRoutes.get("/settings", async (c) => {
       : []),
   ];
   const created = user.account.createdAt;
-  const memberSince = created ? created.toLocaleDateString(lang === "en" ? "en-GB" : "th-TH", { month: "short", year: "numeric" }) : null;
   const typeCard =
     vibe && vibeKey ? (
       // A link to the type only: showing it at Tables and retaking the quiz live on /quiz/result (owner, C1).
@@ -184,10 +170,7 @@ settingsRoutes.get("/settings", async (c) => {
     <MeHub
       v={v}
       nickname={p.nickname}
-      photo={src}
-      place={[label(DISTRICTS, p.district, lang), p.showPronouns && p.pronouns ? p.pronouns : ""].filter(Boolean).join(" · ")}
-      memberSince={memberSince}
-      newcomer={p.newcomer}
+      line={meLine(lang, created ?? null, tables.length)}
       ask={
         // Members who joined before the Terms box, or before the Terms last changed: one small card,
         // never a lock. It goes once they agree (a "terms" row with the current version).
@@ -239,27 +222,13 @@ settingsRoutes.get("/settings", async (c) => {
         ) : (
           <a class="card me-next" href="/events">
             <small>{t("โต๊ะถัดไป", "Your next table")}</small>
-            <span>{t("ยังไม่มีนัด", "Nothing booked yet.")}</span>
+            <span>{t("ยังไม่มี", "None yet")}</span>
             <b class="me-next-go">
-              {t("หาโต๊ะสัปดาห์นี้", "Find a table this week")} <span aria-hidden="true">→</span>
+              {t("หาสักโต๊ะ", "Find one")} <span aria-hidden="true">→</span>
             </b>
           </a>
         )
       }
-      // No tiles until a first check-in or a first person in My people (owner card).
-      stats={Number(been?.n ?? 0) + Number(circle?.n ?? 0) === 0 ? [] : [
-        { emoji: "🎉", n: Number(been?.n ?? 0), label: t("กิจกรรมที่ไป", "Events attended"), href: "/me/events#past", tint: "green" },
-        {
-          emoji: "🤝",
-          n: Number(circle?.n ?? 0),
-          label: t("คนรู้จักของฉัน", "My people"),
-          sub: crews > 0 ? t(`จาก ${crews} กิจกรรม`, `met at ${crews} ${crews === 1 ? "event" : "events"}`) : undefined,
-          href: "/connections",
-          tint: "teal",
-        },
-        { emoji: "🪑", n: tables.length, label: t("โต๊ะประจำ", tables.length === 1 ? "Table" : "Tables"), href: "/tables", tint: "sky" },
-        { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events#upcoming", tint: "lime" },
-      ]}
       steps={steps}
       type={typeCard}
       typeLink={vibeKey ? { href: "/types", label: t("ทุกไทป์", "All types") } : undefined}

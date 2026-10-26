@@ -93,21 +93,21 @@ describe.skipIf(!HAS_DB)("settings", () => {
       { id: newId(), ...pair(me.id, b.id), level: "friend", eventId: ev1 },
       { id: newId(), ...pair(me.id, c.id), level: "activity", eventId: ev2 },
     ]);
-    const html = await (await req("/settings", { cookie: `${me.cookie}; lang=en` })).text();
-    // The number tiles under the photo and name (owner): people, not meetings.
-    expect(html).toMatch(/<a href="\/connections" class="me-stat[^"]*"><span[^>]*>🤝<\/span><b>3<\/b>/);
+    // The counts live on My month in people (mobile card 6): people, not meetings, and the events they came from.
+    const html = await (await req("/me/month", { cookie: `${me.cookie}; lang=en` })).text();
+    expect(html).toMatch(/<a class="fact" href="\/connections"><b aria-hidden="true">🤝<\/b><span class="big-n">3<\/span><small>My people<\/small><small class="muted">met at 2 events<\/small><\/a>/);
   });
 
   it("shows my numbers and nudges what my profile is missing", async () => {
     const m = await createMember({ nickname: "Nudge" });
     let html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain("Hey Nudge");
-    // No row of zeros before a first event (owner card).
+    // No number tiles on Me (mobile card 6).
     expect(html).not.toContain(`class="me-stats"`);
     expect(html).not.toContain("You&#39;ve been to");
     expect(html).toContain("Your next table");
-    // Nothing booked: the action line is the link, with an arrow (owner card).
-    expect(html).toMatch(/<a class="card me-next" href="\/events">[\s\S]*?Nothing booked yet\.[\s\S]*?<b class="me-next-go">Find a table this week <span aria-hidden="true">→<\/span><\/b>/);
+    // Nothing booked: "None yet", and the action line is the link, with an arrow (owner card).
+    expect(html).toMatch(/<a class="card me-next" href="\/events">[\s\S]*?None yet[\s\S]*?<b class="me-next-go">Find one <span aria-hidden="true">→<\/span><\/b>/);
     expect(html).not.toMatch(/\d+% there/);
     const left = (h: string) => Number(/Help your table get to know you: (\d+) things? left/.exec(h)?.[1]);
     const before = left(html);
@@ -116,9 +116,9 @@ describe.skipIf(!HAS_DB)("settings", () => {
     html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
     expect(left(html) || 0).toBeLessThan(before);
     await attendedOnce(m.id);
-    html = await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text();
-    expect(html).toContain(`class="me-stats"`);
-    expect(html).toMatch(/🎉<\/span><b>1<\/b><small>Events attended<\/small>/);
+    html = await (await req("/me/month", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain("Since you joined");
+    expect(html).toMatch(/🎉<\/b><span class="big-n">1<\/span><small>Events attended<\/small>/);
   });
 
   it("edits the profile and validates input", async () => {

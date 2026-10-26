@@ -11,7 +11,7 @@
  * kept, so it doesn't reshuffle every time the page loads.
  */
 import { Hono, type Context } from "hono";
-import { and, count, desc, eq, gt, gte, inArray, isNull, lt, ne, or } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { weekKey } from "../domain/buddy";
 import { freshWeek, isSkipReason, pickPlan, SKIP_REASONS, type PlanEvent } from "../domain/plan";
@@ -437,7 +437,8 @@ planRoutes.get("/me/month", requireMember, async (c) => {
   const db = getDb(c.env);
   const me = c.var.user!.account.id;
   const since = new Date(Date.now() - 30 * DAY);
-  const [went, conns, shared, stamps] = await Promise.all([
+  const now = new Date();
+  const [went, conns, shared, stamps, [been], [people], [upcoming]] = await Promise.all([
     db
       .select({ district: events.district })
       .from(registrations)
@@ -451,7 +452,27 @@ planRoutes.get("/me/month", requireMember, async (c) => {
       .limit(200),
     db.select({ id: contactShares.id }).from(contactShares).where(and(eq(contactShares.accountId, me), gte(contactShares.createdAt, since))).limit(200),
     db.select({ district: passportStamps.district }).from(passportStamps).where(and(eq(passportStamps.accountId, me), gte(passportStamps.createdAt, since))).limit(60),
+    // Since joining (moved here from Me's tiles, mobile card 6): events been to, people, and what's coming up.
+    db.select({ n: count() }).from(registrations).where(and(eq(registrations.accountId, me), isNotNull(registrations.checkedInAt))),
+    // People, not meetings: someone met at three events is one person (as on My people). A crew is one event's people.
+    db
+      .select({ n: countDistinct(sql`case when ${connections.aAccount} = ${me} then ${connections.bAccount} else ${connections.aAccount} end`), crews: countDistinct(connections.eventId) })
+      .from(connections)
+      .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), isNull(connections.removedAt))),
+    db
+      .select({ n: count() })
+      .from(registrations)
+      .innerJoin(events, eq(events.id, registrations.eventId))
+      .where(and(eq(registrations.accountId, me), inArray(registrations.status, ["confirmed", "offered", "waitlisted"]), gt(events.startsAt, now), ne(events.status, "cancelled"))),
   ]);
+  const beenN = Number(been?.n ?? 0);
+  const peopleN = Number(people?.n ?? 0);
+  const crews = Number(people?.crews ?? 0);
+  const soFar: { emoji: string; n: number; label: string; sub?: string; href: string }[] = [
+    { emoji: "🎉", n: beenN, label: t("กิจกรรมที่ไป", "Events attended"), href: "/me/events#past" },
+    { emoji: "🤝", n: peopleN, label: t("คนรู้จักของฉัน", "My people"), sub: crews > 0 ? t(`จาก ${crews} กิจกรรม`, `met at ${crews} ${crews === 1 ? "event" : "events"}`) : undefined, href: "/connections" },
+    { emoji: "🗓️", n: Number(upcoming?.n ?? 0), label: t("ที่จะไป", "Coming up"), href: "/me/events#upcoming" },
+  ];
   const places = [...new Set([...went.map((x) => x.district), ...stamps.map((x) => x.district)])];
   const tiles: [string, number, string][] = [
     ["🍽️", went.length, t("โต๊ะที่ได้ไปนั่ง", "Tables you sat at")],
@@ -480,6 +501,22 @@ planRoutes.get("/me/month", requireMember, async (c) => {
             <span>📍 {label(DISTRICTS, d, lang)}</span>
           ))}
         </p>
+      ) : null}
+      {/* Since joining. None until a first check-in or a first person (owner card): a row of zeros reads as a score on day one. */}
+      {beenN + peopleN > 0 ? (
+        <section class="month-sofar" aria-labelledby="month-sofar-h">
+          <h2 id="month-sofar-h">{t("ตั้งแต่เริ่มใช้เจอกัน", "Since you joined")}</h2>
+          <div class="stats month">
+            {soFar.map((s) => (
+              <a class="fact" href={s.href}>
+                <b aria-hidden="true">{s.emoji}</b>
+                <span class="big-n">{s.n}</span>
+                <small>{s.label}</small>
+                {s.sub ? <small class="muted">{s.sub}</small> : null}
+              </a>
+            ))}
+          </div>
+        </section>
       ) : null}
       <Card class="hint">
         <strong>{went.length === 0 ? t("เดือนหน้าลองสักโต๊ะไหม?", "Try one table next month?") : t("เยี่ยมเลย ใช้ชีวิตนอกจอต่อไปนะ", "Lovely. Keep living off-screen.")}</strong>

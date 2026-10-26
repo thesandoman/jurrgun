@@ -73,10 +73,10 @@ describe.skipIf(!HAS_DB)("no repeats, round two", () => {
     expect(html).toContain("⭐ Your pick");
   });
 
-  it("Me tiles open Upcoming and Past, and Learn lists each source once", async () => {
+  it("the counts on My month in people open Upcoming and Past, and Learn lists each source once", async () => {
     const m = await createMember();
-    await attendedOnce(m.id); // the tiles show from a first event
-    const hub = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
+    await attendedOnce(m.id); // the counts show from a first event (they moved from Me, mobile card 6)
+    const hub = await (await req("/me/month?lang=en", { cookie: m.cookie })).text();
     expect(hub).toContain('href="/me/events#past"');
     expect(hub).toContain('href="/me/events#upcoming"');
     const mine = await (await req("/me/events?lang=en", { cookie: m.cookie })).text();

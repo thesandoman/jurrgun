@@ -66,7 +66,7 @@ describe.skipIf(!HAS_DB)("finalize review: pages", () => {
     await attendedOnce(m.id);
     const me = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
     expect(me).not.toMatch(/class="me-(stat|row) tint-/);
-    expect(me).toMatch(/class="me-stat-emoji tint-/);
+    expect(me).not.toContain('class="me-stats"');
     expect(me).toMatch(/class="me-bubble tint-/);
     expect(me).toContain('href="/quiz/result" class="teaser"');
     expect(me).not.toContain("Show my type to people at my Tables");
@@ -87,10 +87,10 @@ describe.skipIf(!HAS_DB)("finalize review: pages", () => {
     html = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
     expect(html).toContain("Still new to Bangkok?");
     expect(html).not.toContain("Help your table get to know you");
-    // The tiles, then the next table, then the one prompt.
+    // The one line, then the next table, then the one prompt (mobile card 6).
     await attendedOnce(m.id);
     html = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
-    const order = ['class="me-stats"', "Your next table", "Still new to Bangkok?"].map((s) => html.indexOf(s));
+    const order = ['class="me-line"', "Your next table", "Still new to Bangkok?"].map((s) => html.indexOf(s));
     expect(order[0]).toBeGreaterThan(-1);
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });

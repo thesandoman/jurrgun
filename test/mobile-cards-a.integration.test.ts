@@ -5,13 +5,14 @@
  */
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { HAS_DB, createMember, db, req } from "./helpers";
+import { HAS_DB, attendedOnce, createMember, db, req } from "./helpers";
 import { events, notifications, profiles } from "../src/schema";
 import { A11Y_CSS } from "../src/ui/a11y-css";
 import { newId } from "../src/lib/crypto";
 import { tr } from "../src/lib/i18n";
 import { bangkokDay, eventIdOfLink, urgentForToday } from "../src/domain/digest";
 import { bellLabel } from "../src/ui/notif-menu";
+import { meLine } from "../src/ui/me-hub";
 
 /** A published event starting at `startsAt`; returns its id. */
 async function eventAt(startsAt: Date): Promise<string> {
@@ -152,5 +153,57 @@ describe.skipIf(!HAS_DB)("card 5: the bell on a page", () => {
     const html = bell(await (await req("/settings", { cookie: `${m.cookie}; lang=en` })).text());
     expect(html).toContain("notif-dot");
     expect(html).not.toContain("notif-today");
+  });
+});
+
+describe("card 6: Me's one line", () => {
+  // 5 October 2025, 10:00 in Bangkok.
+  const since = new Date("2025-10-05T03:00:00Z");
+
+  it("gives the Thai short month and the Buddhist Era year, and the English month and year", () => {
+    expect(meLine("th", since, 3)).toBe("อยู่กับเจอกันตั้งแต่ ต.ค. 2568 · โต๊ะประจำ 3 โต๊ะ");
+    expect(meLine("en", since, 3)).toBe("With Jurrgun since Oct 2025 · 3 Regular Tables");
+  });
+
+  it("uses Bangkok time for the month", () => {
+    // 31 October 2025, 18:00 UTC is already 1 November in Bangkok.
+    expect(meLine("en", new Date("2025-10-31T18:00:00Z"), 0)).toBe("With Jurrgun since Nov 2025");
+  });
+
+  it("leaves the tables out at 0 and says one Regular Table in the singular", () => {
+    expect(meLine("th", since, 0)).toBe("อยู่กับเจอกันตั้งแต่ ต.ค. 2568");
+    expect(meLine("en", since, 0)).toBe("With Jurrgun since Oct 2025");
+    expect(meLine("th", since, 1)).toBe("อยู่กับเจอกันตั้งแต่ ต.ค. 2568 · โต๊ะประจำ 1 โต๊ะ");
+    expect(meLine("en", since, 1)).toBe("With Jurrgun since Oct 2025 · 1 Regular Table");
+    expect(meLine("en", null, 0)).toBeNull();
+  });
+});
+
+describe.skipIf(!HAS_DB)("card 6: the Me page and My month in people", () => {
+  it("Me: the line, then the next table, the profile peek and the Bangkok Type; no hero and no tiles", async () => {
+    const m = await createMember({ nickname: "Mint" });
+    await attendedOnce(m.id);
+    const html = await (await req("/settings", { cookie: `${m.cookie}; lang=th` })).text();
+    expect(html).not.toContain('class="me-hero"');
+    expect(html).not.toContain('class="me-stats"');
+    expect(html).not.toContain('class="me-avatar"');
+    expect(html).toMatch(/<p class="me-line">อยู่กับเจอกันตั้งแต่ [^<]+ 25\d\d<\/p>/);
+    expect(html).toContain("ดูโปรไฟล์แบบที่คนอื่นเห็น");
+    expect(html).toContain('id="me-type-h"');
+    const order = ['class="me-line"', 'class="card me-next"', 'class="me-peek"', 'id="me-type-h"'].map((s) => html.indexOf(s));
+    expect(order[0]).toBeGreaterThan(-1);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it("My month in people holds the counts that left Me, and none before a first outing", async () => {
+    const m = await createMember();
+    let html = await (await req("/me/month", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).not.toContain("Since you joined");
+    await attendedOnce(m.id);
+    html = await (await req("/me/month", { cookie: `${m.cookie}; lang=en` })).text();
+    expect(html).toContain('<h2 id="month-sofar-h">Since you joined</h2>');
+    expect(html).toMatch(/<a class="fact" href="\/me\/events#past"><b aria-hidden="true">🎉<\/b><span class="big-n">1<\/span><small>Events attended<\/small><\/a>/);
+    expect(html).toMatch(/<a class="fact" href="\/connections"><b aria-hidden="true">🤝<\/b><span class="big-n">0<\/span><small>My people<\/small><\/a>/);
+    expect(html).toMatch(/<a class="fact" href="\/me\/events#upcoming"><b aria-hidden="true">🗓️<\/b><span class="big-n">0<\/span><small>Coming up<\/small><\/a>/);
   });
 });
