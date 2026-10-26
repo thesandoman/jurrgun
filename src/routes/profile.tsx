@@ -15,7 +15,7 @@
  * Mounted at "/", so middleware is attached per route, never with use("*").
  */
 import { Hono, type Context } from "hono";
-import { and, desc, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { cleanBio, currentDatingDeck, currentDeck, universityKey, withoutDating } from "../content/profile";
 import type { AppEnv } from "../lib/env";
@@ -175,20 +175,27 @@ function Together(props: { v: ReturnType<typeof view>; mine: keyof typeof ARCHET
   );
 }
 
-/** Events where the two of you chose each other (moved here from the My people card, B1), newest first. */
-async function whereWeMet(db: Db, me: string, them: string) {
-  return db
-    .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt })
+/**
+ * Where the two of you chose each other (moved here from the My people card,
+ * B1), newest first: events, and Bangkok Buddy pairings (connections keyed
+ * "buddy:<matchId>", which have no event row, so the join is a left join).
+ */
+async function whereWeMet(db: Db, me: string, them: string): Promise<{ id: string | null; title: string | null; titleEn: string | null; startsAt: Date; buddy: boolean }[]> {
+  const rows = await db
+    .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, key: connections.eventId, createdAt: connections.createdAt })
     .from(connections)
-    .innerJoin(events, eq(events.id, connections.eventId))
+    .leftJoin(events, eq(events.id, connections.eventId))
     .where(
       and(
         isNull(connections.removedAt),
         or(and(eq(connections.aAccount, me), eq(connections.bAccount, them)), and(eq(connections.aAccount, them), eq(connections.bAccount, me))),
       ),
     )
-    .orderBy(desc(events.startsAt))
+    .orderBy(desc(sql`coalesce(${events.startsAt}, ${connections.createdAt})`))
     .limit(20);
+  return rows
+    .filter((r) => r.id || r.key.startsWith("buddy:"))
+    .map((r) => ({ id: r.id, title: r.title, titleEn: r.titleEn, startsAt: r.startsAt ?? r.createdAt, buddy: !r.id }));
 }
 
 async function renderCard(c: Ctx, target: { account: Account; profile: Profile }, self: boolean) {
@@ -269,7 +276,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
           <ul>
             {metAt.map((e) => (
               <li>
-                <a href={`/events/${e.id}`}>{v.lang === "en" ? e.titleEn || e.title : e.title}</a>
+                {e.buddy ? <a href="/buddy">🤝 {t("บัดดี้บางกอก", "Bangkok Buddy")}</a> : <a href={`/events/${e.id}`}>{v.lang === "en" ? e.titleEn || e.title : e.title}</a>}
                 <small class="muted">{fmtDay(e.startsAt, v.lang)}</small>
               </li>
             ))}
@@ -355,7 +362,9 @@ profileRoutes.post("/people/:accountId/pinky", requireMember, async (c) => {
   if (!target) return c.notFound();
   const action = str((await c.req.parseBody()).action);
   if (action === "tap") await tapPinky(c.env, db, me.profile!, id);
-  else if (action === "back") await stepBack(c.env, db, me.profile!, id);
+  else if (action === "back" && (await stepBack(c.env, db, me.profile!, id)) === "friends") {
+    return c.redirect(`/people/${encodeURIComponent(id)}?notice=back_to_friends`);
+  }
   return c.redirect(`/people/${encodeURIComponent(id)}#pinky`);
 });
 

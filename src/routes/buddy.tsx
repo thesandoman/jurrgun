@@ -14,10 +14,12 @@
  *   GET  /buddy/passport           your 50-district passport
  *
  * Hard rules, the same as People I Met:
- *  - Bangkok Buddy is friends only for now (owner, Phase 2A). Older opt-ins
- *    stored as "open" or "dating" still load, and count as friends: they
- *    don't steer matching and never unlock romance. A mutual
- *    "เกี่ยวก้อย · Pinky" mode will come later as its own feature.
+ *  - Matching is friends first (owner, Phase 2A). Older opt-ins stored as
+ *    "open" or "dating" still load and count as friends: they don't steer
+ *    matching and never unlock romance on their own. Romance between buddies
+ *    is only ever buddy-to-partner Pinky (owner card C4): 💘 on for both,
+ *    2 finished quests and a mutual private tap (domain/buddy.ts
+ *    romanceUnlocked, services/pinky.ts).
  *  - No messaging: once both say "meet", the pair becomes a connection in My
  *    Bangkok circle, where contact sharing, reporting and blocking already live.
  *  - Blocked either way, outside each other's age range or with no shared
@@ -65,6 +67,7 @@ import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View }
 import { AvatarStack, Bento, Big, Pill, PostcardFan, Stamps, Tile, artFor } from "../ui/visual";
 import type { Child } from "hono/jsx";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
+import { withdrawBuddyTap } from "../services/pinky";
 import { consentsFor, PERSONALIZATION_CONSENT } from "../services/consent";
 
 export const buddyRoutes = new Hono<AppEnv>();
@@ -79,8 +82,8 @@ const INTENT_OPTS = [
 ] satisfies { value: (typeof BUDDY_INTENTS)[number]; th: string; en: string }[];
 
 /**
- * What a stored intent means today: friends only. "open" and "dating" rows
- * from before Phase 2A read as "friends"; nothing romantic follows from them.
+ * What a stored intent means for matching: "open" and "dating" rows from
+ * before Phase 2A read as "friends". Romance comes only from 💘 and Pinky.
  */
 const friendlyIntent = (x: string | undefined): "friends" | "activity" => (x === "activity" ? "activity" : "friends");
 
@@ -181,10 +184,10 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
  * active onboarded account with a Bangkok Type), with what they told us:
  * blocks, past buddies and their deck picks.
  *
- * Friends only for now: a stored "open" or "dating" intent no longer limits
- * who someone is paired with, and private dating prefs don't score pairs
- * (PoolMember.datesWith and datingPrefs stay unset). A mutual
- * "เกี่ยวก้อย · Pinky" mode will come later and decide that on its own.
+ * Friends first: a stored "open" or "dating" intent doesn't limit who
+ * someone is paired with, and private dating prefs don't score pairs
+ * (PoolMember.datesWith and datingPrefs stay unset). Buddy-to-partner Pinky
+ * (owner card C4) decides romance on its own, after the pairing.
  */
 async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
   const optins = await db.select().from(buddyOptins).where(eq(buddyOptins.active, true)).orderBy(desc(buddyOptins.updatedAt)).limit(POOL_LIMIT);
@@ -900,6 +903,8 @@ buddyRoutes.post("/buddy/:id/end", requireMember, async (c) => {
   const close = (reason: string, th: string, en: string) =>
     batch(c.env, [
       db.update(buddyMatches).set({ state: "ended", endedBy: me, endReason: reason, endedAt: now }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "active"))),
+      // Wrapping up withdraws my own Pinky tap on this buddy (owner, C4 panel).
+      withdrawBuddyTap(db, m.id, me),
       notify(db, them, "buddy_ended", th, en, "/buddy"),
       audit(db, me, "buddy.end"),
     ]);
@@ -914,6 +919,8 @@ buddyRoutes.post("/buddy/:id/end", requireMember, async (c) => {
   }
   await batch(c.env, [
     db.update(buddyMatches).set({ endRequestedBy: me, endRequestedAt: now, endNote: note }).where(and(eq(buddyMatches.id, m.id), eq(buddyMatches.state, "active"), isNull(buddyMatches.endRequestedBy))),
+    // Asking to wrap up withdraws my own Pinky tap on this buddy (owner, C4 panel).
+    withdrawBuddyTap(db, m.id, me),
     notify(
       db,
       them,
@@ -971,9 +978,8 @@ buddyRoutes.post("/buddy/:id/quest", requireMember, async (c) => {
       .onConflictDoNothing({ target: [passportStamps.accountId, passportStamps.district] }),
     notify(db, them, "buddy_stamp", "ได้แสตมป์เขตใหม่ในพาสปอร์ตแล้ว", "New district stamped in your passport", "/buddy/passport"),
   ];
-  // Friends only for now: a buddy pairing stays a friendship, even when both
-  // stored "open to more" before Phase 2A. domain/buddy.ts romanceUnlocked
-  // is kept for the mutual "เกี่ยวก้อย · Pinky" mode that will come later.
+  // A finished quest never unlocks romance by itself: only buddy-to-partner
+  // Pinky does, with 💘 on for both and a mutual tap (domain/buddy.ts romanceUnlocked).
   await batch(c.env, writes);
   return c.redirect("/buddy?notice=stamped");
 });

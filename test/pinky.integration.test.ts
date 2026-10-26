@@ -157,8 +157,8 @@ describe.skipIf(!HAS_DB)("เกี่ยวก้อย · Pinky", () => {
     const c = await between(ev, a, b);
     expect(c?.level).toBe("friend");
     expect(c?.removedAt).toBeNull();
-    // My tap is withdrawn, not turned into a friend pick.
-    expect(await db().select().from(connectionChoices).where(and(eq(connectionChoices.eventId, ev), eq(connectionChoices.fromAccount, a.id)))).toEqual([]);
+    // Both taps are cleared, not turned into friend picks (C4 panel).
+    expect(await db().select().from(connectionChoices).where(eq(connectionChoices.eventId, ev))).toEqual([]);
     expect([(await notesOf(a)).length, (await notesOf(b)).length]).toEqual(before);
     expect(row(await card(a, b))).toContain('value="tap"');
     expect(await (await req("/connections", { cookie: en(b) })).text()).not.toContain("tag love\">เกี่ยวก้อย");

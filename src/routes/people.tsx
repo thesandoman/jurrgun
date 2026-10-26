@@ -72,6 +72,7 @@ import { KIND_DIGEST, isDigest } from "../domain/digest";
 import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
+import { withdrawPairTaps } from "../services/pinky";
 import { SeeAgainCard } from "../ui/see-again";
 import { Sheet } from "../ui/sheet";
 import { visibleLinks, type ShownLink } from "../services/profile-links";
@@ -1361,6 +1362,8 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
           or(and(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, other)), and(eq(buddyMatches.aAccount, other), eq(buddyMatches.bAccount, me))),
         ),
       ),
+    // A block withdraws both people's Pinky taps on each other, at tables and as buddies (owner, C4 panel).
+    withdrawPairTaps(db, me, other),
     // Privacy R9: the audit log never says who was blocked.
     audit(db, me, "block.create"),
   ]);

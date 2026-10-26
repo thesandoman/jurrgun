@@ -81,6 +81,7 @@ const NOTICES: Record<string, [string, string]> = {
   checked_in: ["เช็กอินสำเร็จ", "Checked in"],
   choices_saved: ["บันทึกแล้ว เราจะบอกก็ต่อเมื่อเลือกกันทั้งสองคน", "Saved, you'll only hear if it's mutual"],
   reported: ["ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ", "Report received, our team will review it"],
+  back_to_friends: ["กลับมาเป็นเพื่อนกันแล้ว ไม่มีใครผิดนะ", "You're back to friends. Nobody did anything wrong."],
   report_limit: ["ตอนนี้ส่งรายงานเพิ่มไม่ได้ ทีมงานกำลังดูรายงานที่คุณส่งมา คุณบล็อกเขาได้ทันที ถ้าไม่ปลอดภัย โทร 191", "You can't send another report right now, and the team is looking at the ones you sent. You can block them right away. If you're in danger, call 191."],
   blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked, you won't see each other again"],
   thanks: ["ขอบคุณสำหรับความคิดเห็น", "Thanks for your feedback"],

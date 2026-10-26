@@ -180,13 +180,13 @@ describe("quests", () => {
   });
 });
 
-describe("romance gate", () => {
-  const base = { intents: ["open", "open"] as [string, string], eligible: [true, true] as [boolean, boolean], compatible: true, finishedQuests: 2 };
-  it("opens only when both chose 'open to more', both eligible and compatible, after two quests", () => {
+describe("romance gate (buddy-to-partner Pinky)", () => {
+  const base = { eligible: [true, true] as [boolean, boolean], compatible: true, blocked: false, finishedQuests: 2 };
+  it("opens only with 💘 on for both, a fit, no block, after two quests", () => {
     expect(romanceUnlocked(base)).toBe(true);
-    expect(romanceUnlocked({ ...base, intents: ["open", "friends"] })).toBe(false);
     expect(romanceUnlocked({ ...base, eligible: [true, false] })).toBe(false);
     expect(romanceUnlocked({ ...base, compatible: false })).toBe(false);
+    expect(romanceUnlocked({ ...base, blocked: true })).toBe(false);
     expect(romanceUnlocked({ ...base, finishedQuests: 1 })).toBe(false);
   });
 });
@@ -203,10 +203,6 @@ describe("dating only", () => {
     for (const [x, y] of r.pairs) expect([x, y].includes("a") ? [x, y].includes("c") : true).toBe(true);
   });
 
-  it("'dating' counts as open to more for the romance gate", () => {
-    expect(romanceUnlocked({ intents: ["dating", "open"], eligible: [true, true], compatible: true, finishedQuests: 2 })).toBe(true);
-    expect(romanceUnlocked({ intents: ["dating", "friends"], eligible: [true, true], compatible: true, finishedQuests: 2 })).toBe(false);
-  });
 });
 
 describe("the buddy deck and dating preferences", () => {

@@ -323,14 +323,20 @@ export function questText(q: { scenario: string; typeCode: string }): (Text & { 
   return a ? { en: a.en, th: a.th, icon: a.icon } : null;
 }
 
-/** Whether a mutual "open to more" may now be revealed to both. */
+/**
+ * Buddy-to-partner Pinky (owner card C4): whether two buddies' mutual taps
+ * unlock. The same test of 💘 as everywhere (romanceEligible: single and
+ * romance mode on, passed in as `eligible`), both open to each other, no block
+ * either way, and enough finished quests together. A stored buddy intent
+ * ("open", "dating") plays no part: 💘 is the only opt-in.
+ */
 export function romanceUnlocked(p: {
-  intents: [string, string];
   eligible: [boolean, boolean];
   compatible: boolean;
+  blocked: boolean;
   finishedQuests: number;
 }): boolean {
-  return p.intents.every((i) => DATING_INTENTS.includes(i)) && p.eligible.every(Boolean) && p.compatible && p.finishedQuests >= ROMANCE_AFTER_QUESTS;
+  return p.eligible.every(Boolean) && p.compatible && !p.blocked && p.finishedQuests >= ROMANCE_AFTER_QUESTS;
 }
 
 // ------------------------------------------------------------ no ghosting --

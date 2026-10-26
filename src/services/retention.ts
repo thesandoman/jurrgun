@@ -62,9 +62,10 @@
  *
  * Every run writes one "retention.run" audit row with the counts.
  */
-import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, ne, notExists, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
+import { BUDDY_PINKY_DAYS } from "../domain/pinky";
 import { bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
 import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
@@ -229,6 +230,23 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .limit(500);
   await dropFiles(env, oldPhotos.map((p) => p.key!));
 
+  // Buddy Pinky taps (keyed "buddy:<matchId>") expire BUDDY_PINKY_DAYS after the pairing ends (owner card C4).
+  const buddyCutoff = new Date(now.getTime() - BUDDY_PINKY_DAYS * DAY);
+  const buddyTaps = await db
+    .delete(connectionChoices)
+    .where(
+      and(
+        sql`${connectionChoices.eventId} like 'buddy:%'`,
+        notExists(
+          db
+            .select({ id: buddyMatches.id })
+            .from(buddyMatches)
+            .where(and(sql`${connectionChoices.eventId} = 'buddy:' || ${buddyMatches.id}`, or(ne(buddyMatches.state, "ended"), gt(buddyMatches.endedAt, buddyCutoff)))),
+        ),
+      ),
+    )
+    .returning({ id: connectionChoices.id });
+
   const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
   const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone, annsOld] = await batch(env, [
     db
@@ -363,7 +381,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   await db.delete(talkQuestions).where(inArray(talkQuestions.eventId, endedBefore(new Date(now.getTime() - 30 * DAY))));
   const counts: RetentionCounts = {
     signalsCleared: signals.length,
-    choicesDeleted: choices.length,
+    choicesDeleted: choices.length + buddyTaps.length,
     sessionsDeleted: sess.length,
     loginAttemptsDeleted: attempts.length,
     loginCodesDeleted: codesOld.length,

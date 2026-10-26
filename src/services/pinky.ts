@@ -12,7 +12,7 @@
 import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { batch, type getDb } from "../db";
-import { pinkyOffered, pinkyOn, pinkyUnlocked } from "../domain/pinky";
+import { buddyKey, pinkyOffered, pinkyOn, pinkyUnlocked } from "../domain/pinky";
 import { peopleWindow } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { notify } from "../lib/records";
@@ -127,18 +127,40 @@ export async function tapPinky(env: Env, db: Db, me: Profile, otherId: string): 
 }
 
 /**
- * Step back: my tap is withdrawn, quietly (deleted, the same as switching 💘
- * off: never a "friend" pick I didn't make). If we were a Pinky, it turns
- * back into friends.
+ * Step back: my tap is withdrawn, quietly (deleted, never turned into a
+ * "friend" pick I didn't make). If we were a Pinky, it goes back to friends
+ * and BOTH taps are cleared (owner, C4 panel), so nothing is left waiting for
+ * either of us. Returns "friends" when a Pinky ended, so the page can say so
+ * kindly.
  */
-export async function stepBack(env: Env, db: Db, me: Profile, otherId: string): Promise<void> {
+export async function stepBack(env: Env, db: Db, me: Profile, otherId: string): Promise<"friends" | "withdrawn" | null> {
   const event = await sharedEvent(db, me.accountId, otherId);
-  if (!event) return;
+  if (!event) return null;
   const [mine, conn] = await Promise.all([myChoice(db, event.id, me.accountId, otherId), pinkyConnection(db, event.id, me.accountId, otherId)]);
+  const mutual = !!conn && !conn.removedAt && conn.level === "romance";
   const writes: { toSQL(): { sql: string; params: unknown[] } }[] = [];
-  if (mine?.choice === "romance") writes.push(db.delete(connectionChoices).where(eq(connectionChoices.id, mine.id)));
-  if (conn && !conn.removedAt && conn.level === "romance") writes.push(db.update(connections).set({ level: "friend" }).where(eq(connections.id, conn.id)));
-  if (writes.length) await batch(env, writes);
+  if (mutual) {
+    writes.push(withdrawPairTaps(db, me.accountId, otherId, event.id), db.update(connections).set({ level: "friend" }).where(eq(connections.id, conn.id)));
+  } else if (mine?.choice === "romance") {
+    writes.push(db.delete(connectionChoices).where(eq(connectionChoices.id, mine.id)));
+  }
+  if (!writes.length) return null;
+  await batch(env, writes);
+  return mutual ? "friends" : "withdrawn";
+}
+
+/**
+ * Both people's Pinky taps on each other, deleted: at one event or pairing
+ * key, or everywhere (a block withdraws both, owner C4 panel).
+ */
+export function withdrawPairTaps(db: Db, x: string, y: string, key?: string) {
+  const pairWhere = or(and(eq(connectionChoices.fromAccount, x), eq(connectionChoices.toAccount, y)), and(eq(connectionChoices.fromAccount, y), eq(connectionChoices.toAccount, x)));
+  return db.delete(connectionChoices).where(and(eq(connectionChoices.choice, "romance"), pairWhere, key ? eq(connectionChoices.eventId, key) : undefined));
+}
+
+/** My buddy Pinky tap on this pairing, withdrawn (I asked to wrap up). */
+export function withdrawBuddyTap(db: Db, matchId: string, accountId: string) {
+  return db.delete(connectionChoices).where(and(eq(connectionChoices.eventId, buddyKey(matchId)), eq(connectionChoices.fromAccount, accountId), eq(connectionChoices.choice, "romance")));
 }
 
 /**

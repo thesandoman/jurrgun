@@ -23,11 +23,18 @@
  * Privacy: a one-sided tap is never shown, counted or hinted at to the other
  * person. Stepping back removes your tap without telling anyone.
  *
- * Bangkok Buddy stays friends only: a buddy pairing is never an event here.
+ * Bangkok Buddy: a buddy pairing is never an event here. Buddy-to-partner
+ * Pinky (owner card C4) uses the same rules on a pairing, keyed
+ * "buddy:<matchId>", with its own expiry (BUDDY_PINKY_DAYS).
  */
 import { romanceCompatible, romanceEligible, type RomanceSide } from "./rules";
 
 export type PinkySide = RomanceSide & { relationship: string; romanceOn: boolean };
+
+/** Buddy taps expire this many days after the pairing ends (owner card C4). */
+export const BUDDY_PINKY_DAYS = 7;
+/** The choice and connection key of a buddy pairing. */
+export const buddyKey = (matchId: string) => `buddy:${matchId}`;
 
 /** 💘 on, for Pinky: the one test used everywhere (single and romance mode on). */
 export function pinkyOn(p: { relationship: string; romanceOn: boolean }): boolean {
