@@ -8,6 +8,9 @@
  *   GET  /:id/results      aggregated results, k ≥ 10 on every cell (PRD §12.5),
  *                          shown counts rounded to 5 (C1); open questions as a daily snapshot
  *   GET  /:id/export.csv   the same aggregates as CSV
+ *   GET  /roundup          one ended month for the BMA (C4): closed questions,
+ *                          sorted topics and place checks, 10+ and rounded to 5
+ *   GET  /roundup.csv      the same as CSV; every download is audited
  *
  * Results are computed in SQL from research_pulse_responses and never joined
  * to accounts; research ids are never selected. Free-text answers are only
@@ -27,7 +30,7 @@ import { audit } from "../../lib/records";
 import { requireRole } from "../../lib/session";
 import { pulseQuestions, pulseResponses, pulseSuggestions } from "../../schema";
 import { SUGGEST_TOPICS } from "../../content/pulse";
-import { Button, Card, Choices, Empty, Field, int, LinkButton, list, Notice, page, Select, str, Tag, TextArea, view } from "../../ui/kit";
+import { Button, Card, Choices, Empty, Field, int, LinkButton, list, Notice, page, Select, Stat, str, Tag, TextArea, view } from "../../ui/kit";
 
 export const adminPulse = new Hono<AppEnv>();
 adminPulse.use("*", requireRole("bma_admin"));
@@ -297,6 +300,7 @@ adminPulse.get("/", async (c) => {
       <p class="row">
         <a href="/admin/pulse/places">{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</a>
         <a href="/admin/pulse/topics">{t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked")}</a>
+        <a href="/admin/pulse/roundup">{t("สรุปรายเดือน", "Monthly round-up")}</a>
       </p>
       <p class="muted">{t("จำนวนคำตอบที่น้อยกว่า 10 จะแสดงเป็น \"<10\"", "Response counts under 10 are shown as \"<10\".")}</p>
       {qs.length === 0 ? (
@@ -936,6 +940,254 @@ export function csvField(v: string): string {
   const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
+
+// ---------------------------------------------------- monthly round-up (C4) --
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** First instant of a Bangkok month (YYYY-MM), as a UTC Date; `add` moves by whole months. */
+function monthStart(month: string, add = 0): Date {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + add, 1) - 7 * 3_600_000);
+}
+
+/** The last `n` months that have ended in Bangkok, newest first. */
+export function endedMonths(now: Date, n = 12): string[] {
+  const current = bkkMonth(now);
+  return Array.from({ length: n }, (_, i) => bkkMonth(monthStart(current, -(i + 1))));
+}
+
+/** The month asked for if it has ended, else null; no month asked means the one just ended. */
+export function roundupMonth(param: string | undefined, now: Date): string | null {
+  if (!param) return endedMonths(now, 1)[0];
+  return MONTH_RE.test(param) && param < bkkMonth(now) ? param : null;
+}
+
+type PlaceRow = { venue: string; district: string; n: number; easy: number; hard: number; cyes: number; cno: number };
+type Roundup = {
+  month: string;
+  questions: Results[];
+  topics: { topic: string; n: number }[];
+  places: PlaceRow[];
+};
+
+/**
+ * One month for the BMA: questions that closed in it, topics sorted from that
+ * month's suggestions, and place checks from it. Only ended months, only groups
+ * of 10 or more, every count rounded to 5 by show() at display time.
+ */
+async function loadRoundup(c: Context<AppEnv>, month: string, now = new Date()): Promise<Roundup> {
+  const db = getDb(c.env);
+  const from = monthStart(month);
+  const to = monthStart(month, 1);
+  const closedIn = await db
+    .select()
+    .from(pulseQuestions)
+    .where(sql`coalesce(${pulseQuestions.activeTo}, ${pulseQuestions.createdAt}) >= ${from} and coalesce(${pulseQuestions.activeTo}, ${pulseQuestions.createdAt}) < ${to}`)
+    .orderBy(asc(pulseQuestions.sortOrder))
+    .limit(50);
+  const questions = await Promise.all(closedIn.filter((q) => isClosed(q, now)).map((q) => aggregate(c, q, now)));
+  const topicRows = await db
+    .select({ topic: pulseSuggestions.topic, n: sql<number>`count(*)`.mapWith(Number) })
+    .from(pulseSuggestions)
+    .where(sql`${pulseSuggestions.status} = 'sorted' and ${pulseSuggestions.month} = ${month}`)
+    .groupBy(pulseSuggestions.topic)
+    .limit(100);
+  const placeRows = (await db.execute(sql`
+    select venue, district, count(*) as n,
+      count(*) filter (where reach = 'easy') as easy, count(*) filter (where reach = 'hard') as hard,
+      count(*) filter (where comfort = 'yes') as cyes, count(*) filter (where comfort = 'no') as cno
+    from research_place_checks
+    where month = ${month}
+    group by venue, district
+    having count(*) >= 10
+    order by count(*) desc
+    limit 100`)) as unknown as unknown[];
+  return {
+    month,
+    questions: questions.filter((r) => safeCount(r.overall.n) !== null),
+    topics: topicRows
+      .filter((r) => r.topic && safeCount(r.n) !== null)
+      .map((r) => ({ topic: r.topic!, n: r.n }))
+      .sort((a, b) => (roundedCount(b.n) ?? 0) - (roundedCount(a.n) ?? 0) || a.topic.localeCompare(b.topic)),
+    places: placeRows.map((r) => {
+      const [venue, district, n, easy, hard, cyes, cno] = cols(r);
+      return { venue: String(venue), district: String(district), n: Number(n), easy: Number(easy), hard: Number(hard), cyes: Number(cyes), cno: Number(cno) };
+    }),
+  };
+}
+
+const monthLabel = (month: string, lang: Lang) =>
+  new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(monthStart(month));
+
+adminPulse.get("/roundup", async (c) => {
+  const { t, lang } = view(c);
+  const now = new Date();
+  const month = roundupMonth(c.req.query("month"), now);
+  if (!month) return c.text("Choose a month that has ended", 400);
+  const r = await loadRoundup(c, month, now);
+  const optLabel = (o: Opt) => (lang === "en" ? o.en : o.th);
+  return page(
+    c,
+    { title: t("สรุป City Pulse รายเดือน", "City Pulse monthly round-up"), admin: true },
+    <>
+      <p>
+        <a href="/admin/pulse">← City Pulse</a>
+      </p>
+      <h1>
+        {t("สรุป City Pulse", "City Pulse round-up")}: {monthLabel(month, lang)}
+      </h1>
+      <form method="get" action="/admin/pulse/roundup" class="row" style="align-items:end;flex-wrap:wrap">
+        <Select
+          label={t("เดือน", "Month")}
+          name="month"
+          value={month}
+          options={endedMonths(now).map((m) => ({ value: m, th: monthLabel(m, "th"), en: monthLabel(m, "en") }))}
+          lang={lang}
+        />
+        <Button kind="ghost">{t("แสดง", "Show")}</Button>
+        <a href={`/admin/pulse/roundup.csv?month=${month}`}>{t("ดาวน์โหลด CSV (รวม บันทึกทุกครั้ง)", "Download CSV (aggregated, every download is logged)")}</a>
+      </form>
+      <Notice kind="info">
+        {t(
+          "เฉพาะเดือนที่จบแล้ว แสดงเฉพาะผลรวมของกลุ่มที่มีอย่างน้อย 10 คน ตัวเลขปัดเป็นหลัก 5 ที่ใกล้ที่สุด ช่องที่น้อยกว่า 10 แสดงเป็น \"<10\"",
+          "Ended months only. Totals from groups of 10 or more; counts are rounded to the nearest 5, and any cell under 10 shows as \"<10\".",
+        )}
+      </Notice>
+
+      <div class="stats">
+        <Stat label={t("คำถามที่ปิดในเดือนนี้", "Questions closed this month")} value={r.questions.length} />
+        <Stat label={t("หัวข้อที่ถึง 10", "Topics with 10 or more")} value={r.topics.length} />
+        <Stat label={t("สถานที่ที่ถึง 10", "Places with 10 or more")} value={r.places.length} />
+      </div>
+
+      <h2>{t("คำถามที่ปิดแล้ว", "Closed questions")}</h2>
+      {r.questions.length === 0 ? (
+        <Empty>{t("ไม่มีคำถามที่ปิดในเดือนนี้และมีผู้ตอบถึง 10", "No question closed this month with 10 or more answers")}</Empty>
+      ) : (
+        r.questions.map((x) => (
+          <Card>
+            <h3 style="margin-top:0">{lang === "en" ? x.q.promptEn : x.q.promptTh}</h3>
+            <p class="muted">
+              {t("ผู้ตอบ", "Respondents")}: {show(x.overall.n)}
+              {x.q.kind === "scale" ? ` · ${t("ค่าเฉลี่ย", "Mean")} ${mean(x.overall)} / 5` : null}
+            </p>
+            {x.q.kind === "text"
+              ? null
+              : x.options
+                  .map((o) => ({ o, n: x.overall.counts.get(o.value) ?? 0 }))
+                  .sort((a, b) => (roundedCount(b.n) ?? -1) - (roundedCount(a.n) ?? -1))
+                  .slice(0, 8)
+                  .map(({ o, n }) => {
+                    const p = roundedPct(n, x.overall.n);
+                    return (
+                      <div style="margin:6px 0">
+                        <div class="spread">
+                          <span>{optLabel(o)}</span>
+                          <small>{p === null ? "<10" : `${show(n)} · ${p}%`}</small>
+                        </div>
+                        <div class="bar">
+                          <i style={`width:${p ?? 0}%`} />
+                        </div>
+                      </div>
+                    );
+                  })}
+          </Card>
+        ))
+      )}
+
+      <h2>{t("หัวข้อที่สมาชิกอยากให้ถาม", "Topics members want asked")}</h2>
+      <p class="muted">
+        {t(
+          "นับเฉพาะคำถามที่ทีมดูแลจัดหัวข้อแล้ว คำถามที่ยังไม่ได้จัดจะถูกลบหลัง 60 วันและไม่ถูกนับ",
+          "Topic totals count only suggestions a moderator has sorted. Unsorted ones are wiped after 60 days and never counted.",
+        )}
+      </p>
+      {r.topics.length === 0 ? (
+        <Empty>{t("ยังไม่มีหัวข้อที่ถึง 10 ในเดือนนี้", "No topic reached 10 this month")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">{t("หัวข้อ", "Topics")}</caption>
+            <thead>
+              <tr>
+                <th>{t("หัวข้อ", "Topic")}</th>
+                <th>{t("จำนวน", "Count")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.topics.map((x) => (
+                <tr>
+                  <td>{label(SUGGEST_TOPICS, x.topic, lang)}</td>
+                  <td>{show(x.n)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2>{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</h2>
+      {r.places.length === 0 ? (
+        <Empty>{t("ยังไม่มีสถานที่ที่มีคำตอบถึง 10 ในเดือนนี้", "No place had 10 answers this month")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">{t("เช็กสถานที่หลังโต๊ะ", "After-table place checks")}</caption>
+            <thead>
+              <tr>
+                <th>{t("สถานที่", "Place")}</th>
+                <th>{t("เขต", "District")}</th>
+                <th>{t("คำตอบ", "Answers")}</th>
+                <th>{t("มาง่าย", "Easy to reach")}</th>
+                <th>{t("มายาก", "Hard to reach")}</th>
+                <th>{t("ร่มเงาหรือที่นั่งพอ", "Enough shade or seats")}</th>
+                <th>{t("ไม่มีเลย", "None")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.places.map((p) => (
+                <tr>
+                  <td>{p.venue}</td>
+                  <td>{label(DISTRICTS, p.district, lang)}</td>
+                  <td>{show(p.n)}</td>
+                  <td>{show(p.easy)}</td>
+                  <td>{show(p.hard)}</td>
+                  <td>{show(p.cyes)}</td>
+                  <td>{show(p.cno)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>,
+  );
+});
+
+adminPulse.get("/roundup.csv", async (c) => {
+  const now = new Date();
+  const month = roundupMonth(c.req.query("month"), now);
+  if (!month) return c.text("Choose a month that has ended", 400);
+  const r = await loadRoundup(c, month, now);
+  const lines: string[][] = [["month", "section", "item", "option", "label", "count"]];
+  for (const x of r.questions) {
+    lines.push([month, "question", x.q.id, "_respondents", "Respondents", show(x.overall.n)]);
+    if (x.q.kind === "scale") lines.push([month, "question", x.q.id, "_mean", "Mean", mean(x.overall, "hidden")]);
+    if (x.q.kind !== "text") for (const o of x.options) lines.push([month, "question", x.q.id, o.value, o.en, show(x.overall.counts.get(o.value) ?? 0)]);
+  }
+  for (const x of r.topics) lines.push([month, "topic", x.topic, "_sorted", "Sorted suggestions", show(x.n)]);
+  for (const p of r.places) {
+    const item = `${p.venue} (${p.district})`;
+    for (const [k, v] of [["_answers", p.n], ["easy", p.easy], ["hard", p.hard], ["shade_yes", p.cyes], ["shade_no", p.cno]] as const) lines.push([month, "place", item, k, k, show(v)]);
+  }
+  await audit(getDb(c.env), c.var.user!.account.id, "pulse.roundup_export", { type: "pulse_roundup", id: month }, { rows: lines.length - 1 });
+  const body = "﻿" + lines.map((l) => l.map(csvField).join(",")).join("\r\n") + "\r\n";
+  return c.body(body, 200, {
+    "content-type": "text/csv; charset=utf-8",
+    "content-disposition": `attachment; filename="city-pulse-roundup-${month}.csv"`,
+  });
+});
 
 adminPulse.get("/:id/export.csv", async (c) => {
   const q = await loadQuestion(c);
