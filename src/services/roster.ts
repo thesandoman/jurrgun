@@ -1,0 +1,59 @@
+/**
+ * Counts and seat codes for the roster rule in src/domain/roster.ts.
+ */
+import { and, eq, gte, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
+import type { getDb } from "../db";
+import { bkkDayStart } from "../domain/pulse-heard";
+import { seatCode } from "../domain/roster";
+import { chunks, KEYSET_CHUNK } from "../lib/bulk";
+import { registrations } from "../schema";
+
+type Db = ReturnType<typeof getDb>;
+
+/**
+ * Booked seats and check-ins per event, frozen at 00:00 Bangkok time today: a
+ * seat counts if it was booked before then and not cancelled before then. The
+ * number can't move during the day, so watching it never shows one person
+ * booking, cancelling or arriving. Waitlist places and requests never count.
+ */
+export async function frozenCounts(db: Db, eventIds: string[], now = new Date()): Promise<Map<string, { booked: number; checkedIn: number }>> {
+  const out = new Map<string, { booked: number; checkedIn: number }>();
+  if (!eventIds.length) return out;
+  const cutoff = bkkDayStart(now);
+  for (const part of chunks(eventIds, KEYSET_CHUNK)) {
+    const rows = await db
+      .select({
+        eventId: registrations.eventId,
+        booked: sql<number>`count(*)`.mapWith(Number),
+        checkedIn: sql<number>`count(*) filter (where ${registrations.checkedInAt} < ${cutoff})`.mapWith(Number),
+      })
+      .from(registrations)
+      .where(
+        and(
+          inArray(registrations.eventId, part),
+          lt(registrations.createdAt, cutoff),
+          or(isNull(registrations.cancelledAt), gte(registrations.cancelledAt, cutoff)),
+          notInArray(registrations.status, ["waitlisted", "requested", "offered"]),
+        ),
+      )
+      .groupBy(registrations.eventId)
+      .limit(part.length);
+    for (const r of rows) out.set(r.eventId, { booked: r.booked, checkedIn: r.checkedIn });
+  }
+  return out;
+}
+
+/** Seat codes for these members at one event (a 💘 event's host sees these instead of names). */
+export async function seatCodes(db: Db, eventId: string, accountIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(accountIds)];
+  for (const part of chunks(ids, KEYSET_CHUNK)) {
+    const rows = await db
+      .select({ accountId: registrations.accountId, passToken: registrations.passToken })
+      .from(registrations)
+      .where(and(eq(registrations.eventId, eventId), inArray(registrations.accountId, part)))
+      .limit(part.length * 2);
+    for (const r of rows) out.set(r.accountId, seatCode(r.passToken));
+  }
+  return out;
+}

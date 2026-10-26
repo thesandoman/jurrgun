@@ -24,6 +24,8 @@ import { batch, getDb } from "../db";
 import { checkProposal, toBangkokInput, type ProposalInput } from "../domain/hosting";
 import { canBeWomenOnly, lateOrLong, partnerEventTags, WOMEN_ONLY_TAG } from "../domain/rules";
 import { talkSafeCount } from "../domain/event-rules";
+import { partnerCountPolicy, shownCount } from "../domain/roster";
+import { frozenCounts } from "../services/roster";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, values } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -197,6 +199,7 @@ export async function partnerEvents(env: AppEnv["Bindings"], orgId: string, limi
       partnerOrgId: events.partnerOrgId,
       talkMode: events.talkMode,
       openEntry: events.openEntry,
+      tags: events.tags,
     })
     .from(events)
     .where(and(or(eq(events.partnerOrgId, orgId), inArray(events.id, cohosted)), gte(events.startsAt, new Date(Date.now() - 30 * 86_400_000))))
@@ -204,14 +207,24 @@ export async function partnerEvents(env: AppEnv["Bindings"], orgId: string, limi
     .limit(limit);
 }
 
-/** Counts a partner may see: totals only, and at a private talk only from 10 people up (D52). */
+/**
+ * Counts a partner may see: totals only, and at a private talk only from 10
+ * people up (D52). A 💘 event shows "under 10" or a count frozen at 00:00
+ * Bangkok time and rounded to 5, so a partner can never watch one member book
+ * (owner card C1, src/domain/roster.ts).
+ */
 export async function partnerCounts(
   env: AppEnv["Bindings"],
-  rows: { id: string; talkMode: boolean }[],
+  rows: { id: string; talkMode: boolean; tags: string[] }[],
 ): Promise<Map<string, { booked: number | null; checked_in: number | null }>> {
-  const raw = await bookingCounts(env, rows.map((r) => r.id));
+  const romance = rows.filter((r) => partnerCountPolicy(r) === "frozen5").map((r) => r.id);
+  const [raw, frozen] = await Promise.all([bookingCounts(env, rows.map((r) => r.id)), frozenCounts(getDb(env), romance)]);
   return new Map(
     rows.map((r) => {
+      if (partnerCountPolicy(r) === "frozen5") {
+        const f = frozen.get(r.id) ?? { booked: 0, checkedIn: 0 };
+        return [r.id, { booked: shownCount("frozen5", f.booked), checked_in: shownCount("frozen5", f.checkedIn) }];
+      }
       const n = raw.get(r.id) ?? { booked: 0, checked_in: 0 };
       return [r.id, { booked: talkSafeCount(r.talkMode, n.booked), checked_in: talkSafeCount(r.talkMode, n.checked_in) }];
     }),

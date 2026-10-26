@@ -36,6 +36,7 @@ import {
   partnerOrgs,
   profiles,
   registrations,
+  reports,
   strikes,
   type Account,
   type Event,
@@ -53,6 +54,9 @@ import { VenueFields, DayStatusForm, EtaSummary } from "../../ui/day-of";
 import { DAY_OF_LEAD_HOURS, cleanNote, dayOfOpen, dayOfOpensAt, isDayStatus, shownDayStatus, shownEta, DAY_STATUS_TEXT } from "../../domain/day-of";
 import { deleteObject, getObject, getObjectUrl, putObject } from "../../storage";
 import { checkEventRules, effectiveAgeMin } from "../../domain/event-rules";
+import { countPolicy, isRomanceEvent, rosterAccess, seatCode, shownCount, type RosterAccess } from "../../domain/roster";
+import { frozenCounts, seatCodes } from "../../services/roster";
+import { isStaffTarget, reportLimit, limitText, staffAlert } from "../../services/report-intake";
 import { emptyEntryRules, EntryRuleFields, entryRulesFromBody, entryRulesFromEvent, type EntryRuleDraft } from "../../ui/entry-rules";
 import {
   Button,
@@ -146,6 +150,131 @@ function scopeWhere(a: Account): SQL | undefined {
   return eq(events.hostAccountId, a.id);
 }
 
+// ------------------------------------------------------- roster views --
+
+type T = (th: string, en: string) => string;
+
+/** A seat code as the 💘 host reads it. */
+function seatLabel(t: T, code: string | undefined): string {
+  return code ? t(`ที่นั่ง ${code}`, `Seat ${code}`) : "-";
+}
+
+/**
+ * The event page for someone who sees counts only (src/domain/roster.ts):
+ * the partner's other admins, and staff on partner and 💘 events. No names,
+ * no seat codes and no roster actions. 💘 events show counts frozen at 00:00
+ * and rounded to 5.
+ */
+async function countsOnlyPage(c: Ctx, e: Event, db: Db, access: RosterAccess, now: Date) {
+  const v = view(c);
+  const { t, lang } = v;
+  const a = me(c);
+  const policy = countPolicy(access, e);
+  const romance = isRomanceEvent(e);
+  let booked: number;
+  let checkedIn: number;
+  if (policy === "frozen5") {
+    const f = (await frozenCounts(db, [e.id], now)).get(e.id);
+    booked = f?.booked ?? 0;
+    checkedIn = f?.checkedIn ?? 0;
+  } else {
+    const [row] = await db
+      .select({
+        booked: sql<number>`count(*) filter (where ${registrations.status} = 'confirmed')`.mapWith(Number),
+        checkedIn: sql<number>`count(*) filter (where ${registrations.status} = 'confirmed' and ${registrations.checkedInAt} is not null)`.mapWith(Number),
+      })
+      .from(registrations)
+      .where(eq(registrations.eventId, e.id))
+      .limit(1);
+    booked = row?.booked ?? 0;
+    checkedIn = row?.checkedIn ?? 0;
+  }
+  const shown = (n: number) => shownCount(policy, n) ?? t("ไม่ถึง 10", "under 10");
+  const editable = canEdit(a, e);
+  const title = lang === "en" && e.titleEn ? e.titleEn : e.title;
+  const [hostRow, anns] = await Promise.all([
+    e.hostAccountId ? db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, e.hostAccountId)).limit(1) : Promise.resolve([] as { nickname: string }[]),
+    eventAnnouncements(db, e.id),
+  ]);
+  const announcer = canAnnounce(e, a);
+  return page(c, { title, admin: true }, (
+    <>
+      <p>
+        <a href={BASE}>{t("← กิจกรรมทั้งหมด", "← All events")}</a>
+      </p>
+      <div class="spread">
+        <h1>{title}</h1>
+        <StatusTag v={v} status={e.status} />
+      </div>
+      <div class="meta">
+        <span>🗓 {fmtDate(e.startsAt, lang)} {t("ถึง", "to")} {fmtDate(e.endsAt, lang)}</span>
+        <span>📍 {e.venueName} · {label(DISTRICTS, e.district, lang)}</span>
+        <span>👤 {t("โฮสต์", "Host")}: {hostRow[0]?.nickname ?? t("ยังไม่กำหนด", "not assigned")}</span>
+      </div>
+      <div class="row" style="margin:10px 0">
+        {editable ? (
+          <LinkButton href={`${BASE}/${e.id}/edit`} kind="ghost">
+            {t("แก้ไขรายละเอียด", "Edit details")}
+          </LinkButton>
+        ) : null}
+        {editable && e.status === "draft" ? (
+          <form method="post" action={`${BASE}/${e.id}/publish`}>
+            <Button kind="ghost">{t("เผยแพร่", "Publish")}</Button>
+          </form>
+        ) : null}
+        {editable && e.status !== "cancelled" ? (
+          <form method="post" action={`${BASE}/${e.id}/cancel`} onsubmit={`return confirm(${JSON.stringify(t("ยกเลิกกิจกรรมนี้และแจ้งผู้ลงทะเบียนทุกคน?", "Cancel this event and notify every registrant?"))})`}>
+            <Button kind="danger">{t("ยกเลิกกิจกรรม", "Cancel event")}</Button>
+          </form>
+        ) : null}
+      </div>
+      <div class="stats">
+        <Stat label={t("จองแล้ว", "Booked")} value={shown(booked)} hint={policy === "frozen5" ? t("ปัดเป็นหลัก 5 นับถึง 00:00 น. วันนี้", "rounded to 5, counted up to 00:00 today") : undefined} />
+        <Stat label={t("ที่นั่ง", "Capacity")} value={e.capacity} />
+        <Stat label={t("เช็กอินแล้ว", "Checked in")} value={shown(checkedIn)} />
+      </div>
+      <Notice kind="info">
+        {romance
+          ? t(
+              "นี่คือกิจกรรม 💘 จึงเห็นได้แค่จำนวน ไม่เห็นว่าใครจอง เพื่อไม่ให้ใครรู้ว่าใครเปิดรับเรื่องเดต โฮสต์ที่ระบุชื่อไว้ดูแลคนที่มาด้วยรหัสที่นั่ง",
+              "This is a 💘 event, so you see counts only, never who booked: nobody learns who is open to dating. The named host looks after people by seat code.",
+            )
+          : t(
+              "เห็นได้แค่จำนวน ไม่เห็นว่าใครจอง เฉพาะโฮสต์ที่ระบุชื่อไว้เท่านั้นที่เห็นรายชื่อ เพราะเป็นคนเช็กอินและจัดโต๊ะ",
+              "You see counts only, never who booked. Only the named host sees names, because they run check-in and the tables.",
+            )}
+      </Notice>
+      {announcer && announceOpen(e, now) ? (
+        <section class="ann-compose" aria-labelledby="announce">
+          <h2 id="announce">{t("ประกาศถึงคนที่มา", "Announce to people going")}</h2>
+          <AnnounceForm t={t} e={e} action={`${BASE}/${e.id}/announce`} back={`${BASE}/${e.id}`} />
+        </section>
+      ) : null}
+      <AnnouncementList t={t} lang={lang} items={anns} />
+    </>
+  ));
+}
+
+/**
+ * The 💘 host's private way to raise a safety concern about a seat: it files a
+ * report on that person without the host ever learning their name. The words
+ * go to moderators only.
+ */
+function SeatConcernForm(props: { t: T; action: string; registrationId: string }) {
+  const { t } = props;
+  return (
+    <details>
+      <summary>{t("แจ้งข้อกังวล", "Raise a concern")}</summary>
+      <form method="post" action={props.action}>
+        <input type="hidden" name="registrationId" value={props.registrationId} />
+        <TextArea label={t("เกิดอะไรขึ้น (ทีมดูแลเท่านั้นที่เห็น)", "What happened (only moderators see this)")} name="details" maxlength={1000} rows={3} required />
+        <Toggle name="urgent" label={t("ด่วน มีคนไม่ปลอดภัยตอนนี้", "Urgent: someone is unsafe right now")} />
+        <Button kind="ghost">{t("ส่งถึงทีมดูแล", "Send to moderators")}</Button>
+      </form>
+    </details>
+  );
+}
+
 function me(c: Ctx): Account {
   return c.var.user!.account;
 }
@@ -190,8 +319,12 @@ function refuse(c: Ctx, e: Event, msg: string, status: 400 | 403 | 404 | 409 = 4
 
 type Handler = (c: Ctx, e: Event, db: Db) => Promise<Response> | Response;
 
-/** Load the event in the URL and check the caller may see (or edit) it. */
-function withEvent(fn: Handler, opts: { edit?: boolean } = {}) {
+/**
+ * Load the event in the URL and check the caller may see (or edit) it.
+ * `roster`: the action works with the people (check-in, tables, +1s, requests,
+ * no-shows), so a counts-only viewer can't use it (src/domain/roster.ts).
+ */
+function withEvent(fn: Handler, opts: { edit?: boolean; roster?: boolean } = {}) {
   return async (c: Ctx) => {
     const id = c.req.param("id") ?? "";
     const db = getDb(c.env);
@@ -199,6 +332,7 @@ function withEvent(fn: Handler, opts: { edit?: boolean } = {}) {
     const a = me(c);
     if (!e || !canSee(a, e)) return notFound(c);
     if (opts.edit && !canEdit(a, e)) return forbidden(c);
+    if (opts.roster && rosterAccess(a, e) === "counts") return forbidden(c);
     return fn(c, e, db);
   };
 }
@@ -268,6 +402,18 @@ adminEvents.get("/", async (c) => {
     counts.filter((x) => x.eventId === id && x.status === status).reduce((s, x) => s + Number(x.n), 0);
   const checkedOf = (id: string) =>
     counts.filter((x) => x.eventId === id && x.status === "confirmed").reduce((s, x) => s + Number(x.checkedIn), 0);
+  // Who sees what (src/domain/roster.ts): 💘 events show frozen counts to everyone but their host.
+  const policyOf = new Map(rows.map((e) => [e.id, countPolicy(rosterAccess(a, e), e)]));
+  const frozen = await frozenCounts(db, rows.filter((e) => policyOf.get(e.id) === "frozen5").map((e) => e.id), now);
+  const under10 = t("ไม่ถึง 10", "under 10");
+  const shownOf = (id: string, live: number, kind: "booked" | "checkedIn" | "other"): string | number => {
+    const policy = policyOf.get(id) ?? "exact";
+    if (policy === "frozen5") {
+      if (kind === "other") return "-";
+      return shownCount(policy, frozen.get(id)?.[kind] ?? 0) ?? under10;
+    }
+    return shownCount(policy, live) ?? under10;
+  };
 
   const tabs: [ListView, string][] = [
     ["upcoming", t("กำลังจะมาถึง", "Upcoming")],
@@ -316,11 +462,11 @@ adminEvents.get("/", async (c) => {
                   <td>{fmtDate(e.startsAt, lang)}</td>
                   <td>{label(DISTRICTS, e.district, lang)}</td>
                   <td>
-                    {countOf(e.id, "confirmed")} / {e.capacity}
-                    {countOf(e.id, "offered") ? <small> (+{countOf(e.id, "offered")} {t("เสนอแล้ว", "offered")})</small> : null}
+                    {shownOf(e.id, countOf(e.id, "confirmed"), "booked")} / {e.capacity}
+                    {policyOf.get(e.id) === "exact" && countOf(e.id, "offered") ? <small> (+{countOf(e.id, "offered")} {t("เสนอแล้ว", "offered")})</small> : null}
                   </td>
-                  <td>{countOf(e.id, "waitlisted")}</td>
-                  <td>{checkedOf(e.id)}</td>
+                  <td>{shownOf(e.id, countOf(e.id, "waitlisted"), "other")}</td>
+                  <td>{shownOf(e.id, checkedOf(e.id), "checkedIn")}</td>
                   <td>
                     <StatusTag v={v} status={e.status} />
                   </td>
@@ -1212,7 +1358,7 @@ for (const answer of ["approve", "decline"] as const) {
             : notify(db, reg.accountId, "rsvp_declined", `ผู้จัดไม่ได้รับคำขอครั้งนี้: ${e.title}`, `The organiser couldn't take your request: ${title}`, `/events`),
       ]);
       return c.redirect(`${BASE}/${e.id}?notice=saved#requests`);
-    }),
+    }, { roster: true }),
   );
 }
 
@@ -1234,8 +1380,13 @@ adminEvents.get(
     const v = view(c);
     const { t, lang } = v;
     const a = me(c);
-    const isAdmin = a.role === "bma_admin";
     const now = new Date();
+    // Names, seat codes or counts only (src/domain/roster.ts).
+    const access = rosterAccess(a, e0);
+    if (access === "counts") return countsOnlyPage(c, e0, db, access, now);
+    const codes = access === "codes";
+    // Usernames are for bma_admin only, and never on a 💘 event.
+    const isAdmin = a.role === "bma_admin" && !codes;
 
     // Lazy timer: lapse expired offers and fill free seats on page load.
     let e = e0;
@@ -1254,13 +1405,13 @@ adminEvents.get(
     const [requests, questions] = await Promise.all([
       e.approvalRequired
         ? db
-            .select({ id: registrations.id, nickname: profiles.nickname, createdAt: registrations.createdAt })
+            .select({ id: registrations.id, accountId: registrations.accountId, nickname: profiles.nickname, createdAt: registrations.createdAt })
             .from(registrations)
             .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
             .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "requested")))
             .orderBy(asc(registrations.createdAt))
             .limit(200)
-        : Promise.resolve([] as { id: string; nickname: string | null; createdAt: Date }[]),
+        : Promise.resolve([] as { id: string; accountId: string; nickname: string | null; createdAt: Date }[]),
       e.talkMode
         ? db.select({ id: talkQuestions.id, body: talkQuestions.body, createdAt: talkQuestions.createdAt }).from(talkQuestions).where(eq(talkQuestions.eventId, e.id)).orderBy(asc(talkQuestions.createdAt)).limit(300)
         : Promise.resolve([] as { id: string; body: string; createdAt: Date }[]),
@@ -1360,6 +1511,12 @@ adminEvents.get(
         : Promise.resolve([] as { accountId: string; waivedBy: string | null; reason: string }[]),
     ]);
     for (const x of extraNicks) nick.set(x.accountId, x.nickname ?? noName);
+    for (const r of requests) nick.set(r.accountId, r.nickname ?? noName);
+    // A 💘 event's host works with seat codes, never names: every label on this page becomes the seat code.
+    if (codes) {
+      const seat = await seatCodes(db, e.id, [...nick.keys()]);
+      for (const id of nick.keys()) nick.set(id, seatLabel(t, seat.get(id)));
+    }
 
     const strikeOf = new Map(strikeRows.map((s) => [s.accountId, s]));
     checked.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime() || (x.id < y.id ? -1 : 1));
@@ -1379,14 +1536,16 @@ adminEvents.get(
     const dayOpen = dayOfOpen(e, now);
     const etaRows = dayOpen
       ? await db
-          .select({ etaStatus: registrations.etaStatus, etaAt: registrations.etaAt, checkedInAt: registrations.checkedInAt, nickname: profiles.nickname })
+          .select({ accountId: registrations.accountId, passToken: registrations.passToken, etaStatus: registrations.etaStatus, etaAt: registrations.etaAt, checkedInAt: registrations.checkedInAt, nickname: profiles.nickname })
           .from(registrations)
           .leftJoin(profiles, eq(profiles.accountId, registrations.accountId))
           .where(and(eq(registrations.eventId, e.id), eq(registrations.status, "confirmed"), isNotNull(registrations.etaStatus)))
           .limit(500)
       : [];
     const etaNames = (k: string) =>
-      etaRows.filter((r) => !r.checkedInAt && shownEta(e, r, now) === k).map((r) => (r.nickname ?? noName).trim().split(/\s+/)[0] ?? noName);
+      etaRows
+        .filter((r) => !r.checkedInAt && shownEta(e, r, now) === k)
+        .map((r) => (codes ? seatLabel(t, seatCode(r.passToken)) : ((r.nickname ?? noName).trim().split(/\s+/)[0] ?? noName)));
 
     const swaps = c.req.query("swaps");
     const isolated = c.req.query("isolated");
@@ -1450,7 +1609,7 @@ adminEvents.get(
               <ul class="plain">
                 {requests.map((r) => (
                   <li class="row">
-                    <span>{r.nickname ?? t("(ไม่มีชื่อ)", "(no name)")}</span>
+                    <span>{nick.get(r.accountId)}</span>
                     {e.status === "published" ? (
                       <>
                         <form method="post" action={`${BASE}/${e.id}/requests/${r.id}/approve`} style="display:inline">
@@ -1494,7 +1653,7 @@ adminEvents.get(
               <caption class="sr-only">{t("ผู้เข้าร่วม", "Attendees")}</caption>
               <thead>
                 <tr>
-                  <th>{t("ชื่อเล่น", "Nickname")}</th>
+                  <th>{codes ? t("ที่นั่ง", "Seat") : t("ชื่อเล่น", "Nickname")}</th>
                   {isAdmin ? <th>{t("ชื่อผู้ใช้", "Username")}</th> : null}
                   <th>{t("สถานะ", "Status")}</th>
                   <th>{t("มากับ (+1)", "+1 with")}</th>
@@ -1502,6 +1661,7 @@ adminEvents.get(
                   <th>{t("เช็กอิน", "Checked in")}</th>
                   <th>{t("โต๊ะ", "Table")}</th>
                   <th>{t("ไม่มาตามนัด", "No-show")}</th>
+                  {codes ? <th>{t("ความปลอดภัย", "Safety")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -1527,7 +1687,7 @@ adminEvents.get(
                       <td>
                         {r.noShowRecorded ? (
                           s && !s.waivedBy && s.reason === "no_show" ? (
-                            <form method="post" action={`${BASE}/${e.id}/strikes/${r.accountId}/waive`} class="row">
+                            <form method="post" action={`${BASE}/${e.id}/strikes/${r.id}/waive`} class="row">
                               <input type="text" name="reason" required maxlength={200} placeholder={t("เหตุผลที่ยกเว้น", "Reason to waive")} aria-label={t("เหตุผลที่ยกเว้น", "Reason to waive")} />
                               <Button kind="ghost">{t("ยกเว้น", "Waive")}</Button>
                             </form>
@@ -1540,6 +1700,11 @@ adminEvents.get(
                           "-"
                         )}
                       </td>
+                      {codes ? (
+                        <td>
+                          <SeatConcernForm t={t} action={`${BASE}/${e.id}/seat-concern`} registrationId={r.id} />
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}
@@ -1904,7 +2069,7 @@ adminEvents.get(
         <script dangerouslySetInnerHTML={{ __html: SCANNER_JS }} />
       </>
     ));
-  }),
+  }, { roster: true }),
 );
 
 adminEvents.post(
@@ -1957,8 +2122,9 @@ adminEvents.post(
       return fail(400, t("ใส่รหัส 6 ตัวหรือสแกน QR", "Enter the 6-character code or scan the QR"));
     }
 
-    const [prof] = await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, reg.accountId)).limit(1);
-    const nickname = prof?.nickname ?? "";
+    // A 💘 event's host checks people in by seat code: the name never reaches the station.
+    const [prof] = rosterAccess(a, e) === "codes" ? [] : await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, reg.accountId)).limit(1);
+    const nickname = rosterAccess(a, e) === "codes" ? seatLabel(t, seatCode(reg.passToken)) : (prof?.nickname ?? "");
 
     if (reg.status !== "confirmed") return fail(409, t(`${nickname} ยังไม่ได้ยืนยันที่นั่ง`, `${nickname} doesn't have a confirmed seat`));
 
@@ -2015,7 +2181,7 @@ adminEvents.post(
     const msg = t(`เช็กอิน ${nickname} แล้ว`, `${nickname} checked in`) + (groupNo !== null ? t(` · โต๊ะ ${groupNo}`, ` · group ${groupNo}`) : "");
     if (json) return c.json({ ok: true, already: false, message: msg, nickname, groupNo, checkedIn: await checkedInCount(db, e.id) });
     return c.redirect(`${BASE}/${e.id}/checkin?notice=checked_in`);
-  }),
+  }, { roster: true }),
 );
 
 // -------------------------------------------------------------- groups --
@@ -2125,7 +2291,7 @@ adminEvents.post(
     return c.redirect(
       `${BASE}/${e.id}?notice=groups_suggested&swaps=${m.blockingSwaps}&isolated=${m.isolated}&blocked=${blockedLeft}#groups`,
     );
-  }),
+  }, { roster: true }),
 );
 
 adminEvents.post(
@@ -2175,7 +2341,7 @@ adminEvents.post(
       audit(db, me(c).id, "event.group_move", { type: "registration", id: reg.id }, { eventId: e.id, from: reg.groupNo, to: groupNo }),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=saved#groups`);
-  }),
+  }, { roster: true }),
 );
 
 adminEvents.post(
@@ -2195,7 +2361,7 @@ adminEvents.post(
       ),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=groups_published#groups`);
-  }),
+  }, { roster: true }),
 );
 
 // ---------------------------------------------------- prompts & notices --
@@ -2397,7 +2563,7 @@ adminEvents.post(
       audit(db, me(c).id, "event.plusone_link", { type: "event", id: e.id }, { registrations: [x.id, y.id] }),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=saved`);
-  }),
+  }, { roster: true }),
 );
 
 // ------------------------------------------------- no-shows & strikes --
@@ -2447,14 +2613,23 @@ adminEvents.post(
       await audit(db, me(c).id, "event.noshows", { type: "event", id: e.id }, { count: 0 });
     }
     return c.redirect(`${BASE}/${e.id}?notice=strikes_recorded`);
-  }),
+  }, { roster: true }),
 );
 
 adminEvents.post(
-  "/:id/strikes/:accountId/waive",
+  "/:id/strikes/:who/waive",
   withEvent(async (c, e, db) => {
     const { t } = view(c);
-    const accountId = c.req.param("accountId") ?? "";
+    // The page sends the registration id, so no account id reaches a 💘 host's
+    // page. An account id still works for a host who sees names.
+    const who = c.req.param("who") ?? "";
+    const [reg] = await db
+      .select({ accountId: registrations.accountId })
+      .from(registrations)
+      .where(and(eq(registrations.id, who), eq(registrations.eventId, e.id)))
+      .limit(1);
+    if (!reg && rosterAccess(me(c), e) !== "names") return refuse(c, e, t("ไม่พบใบเตือนนี้", "Strike not found"), 404);
+    const accountId = reg?.accountId ?? who;
     const reason = str((await c.req.parseBody()).reason);
     if (!reason || reason.length > 200) return refuse(c, e, t("ระบุเหตุผล (ไม่เกิน 200 ตัวอักษร)", "Give a reason (max 200 characters)"));
     const [s] = await db
@@ -2470,5 +2645,41 @@ adminEvents.post(
       notify(db, accountId, "strike_waived", `ยกเว้นใบเตือนจาก "${e.title}" ให้แล้ว`, `Your strike from "${e.titleEn ?? e.title}" was waived`, "/me/events"),
     ]);
     return c.redirect(`${BASE}/${e.id}?notice=done`);
-  }),
+  }, { roster: true }),
+);
+
+/** A 💘 host raises a safety concern about a seat (SeatConcernForm). The host never sees who it is. */
+adminEvents.post(
+  "/:id/seat-concern",
+  withEvent(async (c, e, db) => {
+    const { t } = view(c);
+    const a = me(c);
+    if (rosterAccess(a, e) !== "codes") return forbidden(c);
+    const body = await c.req.parseBody();
+    const details = str(body.details);
+    const critical = str(body.urgent) === "1";
+    if (!details || details.length > 1000) return refuse(c, e, t("บอกสั้น ๆ ว่าเกิดอะไรขึ้น (ไม่เกิน 1000 ตัวอักษร)", "Say briefly what happened (max 1000 characters)"));
+    const [reg] = await db
+      .select({ accountId: registrations.accountId })
+      .from(registrations)
+      .where(and(eq(registrations.id, str(body.registrationId)), eq(registrations.eventId, e.id)))
+      .limit(1);
+    if (!reg) return refuse(c, e, t("ไม่พบที่นั่งนี้", "Seat not found"), 404);
+    if (reg.accountId === a.id) return refuse(c, e, t("แจ้งเรื่องตัวเองไม่ได้", "You can't report yourself"), 400);
+    const limit = await reportLimit(db, a.id, reg.accountId, critical);
+    if (limit) {
+      const [th, en] = limitText(limit);
+      return refuse(c, e, t(th, en), 409);
+    }
+    const alert = await staffAlert(c.env, db, { critical, aboutStaff: await isStaffTarget(db, reg.accountId) });
+    const id = newId();
+    await batch(c.env, [
+      // No event on the report: moderators see the reporter (the host) and the words, never that it was a 💘 event.
+      db.insert(reports).values({ id, reporter: a.id, targetAccount: reg.accountId, reason: "unsafe", details: `[Host, seat concern] ${details}`, severity: critical ? "critical" : "standard" }),
+      audit(db, a.id, "report.create", { type: "report", id }, { severity: critical ? "critical" : "standard", reason: "unsafe" }),
+      ...alert.writes,
+    ]);
+    await alert.push();
+    return c.redirect(`${BASE}/${e.id}?notice=reported#attendees`);
+  }, { roster: true }),
 );

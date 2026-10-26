@@ -30,6 +30,7 @@ import { OfflineSavedNote, SaveNext } from "../ui/offline-next";
 import { IcebreakerCard } from "../ui/icebreakers";
 import { icebreakersFor, icebreakerWindow } from "../content/icebreakers";
 import { segmentOf, type Segment } from "../domain/segment";
+import { isRomanceEvent, seatCode } from "../domain/roster";
 import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../domain/rules";
 import { weekKey } from "../domain/buddy";
 import { cleanBio } from "../content/profile";
@@ -2702,6 +2703,12 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
           </button>
           <p class="code">{code}</p>
           <p class="muted">{t("สแกนไม่ได้ ให้โฮสต์พิมพ์รหัสนี้ · อย่าแชร์บัตร", "Scan fails? The host types this code · Don't share your pass")}</p>
+          {isRomanceEvent(event) ? (
+            <p class="muted">
+              {t(`ที่นั่งของคุณ: ${seatCode(reg.passToken)}`, `Your seat: ${seatCode(reg.passToken)}`)} ·{" "}
+              {t("โฮสต์งาน 💘 เห็นแค่รหัสที่นั่ง ไม่เห็นชื่อคุณ", "At a 💘 event the host sees this seat code, not your name")}
+            </p>
+          ) : null}
           {reg.checkedInAt ? <Tag tone="ok">{t("เช็กอินแล้ว", "Checked in")}</Tag> : null}
         </div>
       </section>
