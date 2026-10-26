@@ -27,3 +27,17 @@ How Jurrgun may read each source, checked 2026-10-20. The list in code is `src/c
 Partners (D47) bring their own feed and post with their own key, so their terms are the partnership itself.
 
 To change a source: edit `src/content/sources.ts` and this table together, with the date you checked.
+
+## Feed check, 2026-10-26 (owner card 3)
+
+The owner allowed admin iCal feeds for BMA and VisitBangkok, TCDC and Bangkok Design Week, and BACC, **only where each really publishes an iCal feed**, with the terms note naming the exact page permission came from. None of them does, so **no feeds were added**. Hosts paste links for these sources instead, and their pages are never scraped. Each source was checked for `.ics`, `webcal:`, `?ical=1` and `/feed` URLs and for Google Calendar embeds; no URL returned `text/calendar` with any `VEVENT`.
+
+| Source | Feed | Terms page found |
+| --- | --- | --- |
+| BMA, www.bangkok.go.th | none (`/events?ical=1`, `/calendar.ics`, `/feed` all 404) | none (`/terms` 404); robots.txt blocks nothing |
+| VisitBangkok, visit.bangkok.go.th (visitbangkok.go.th doesn't resolve) | none (`?ical=1`, `/feed` 404) | privacy and cookie policies only, nothing on reuse |
+| TCDC, www.tcdc.or.th | none (JavaScript app; `?ical=1` returns HTML) | none readable (terms URLs return the app shell) |
+| Bangkok Design Week, www.bangkokdesignweek.com | none (`?ical=1`, `/feed` 500) | none; copyright line only |
+| BACC, www.bacc.or.th | none (`?ical=1` returns HTML; `/feed` is the blog's RSS, not events) | `/en/terms-of-use` exists but is empty |
+
+Re-check when a source announces a calendar, or ask the organisation directly for a feed. A data-sharing agreement would also count as the terms note.
