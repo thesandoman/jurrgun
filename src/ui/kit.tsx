@@ -155,6 +155,8 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
   // Circle heads are members who host; they reach their check-in tools from Host.
   const staff = user && user.account.role !== "user" && user.account.role !== "circle_head";
   const other = v.lang === "th" ? "en" : "th";
+  const langHref = `/lang/${other}?back=${encodeURIComponent(v.path)}`;
+  const langInMenu = member && !opts.bare;
   return (
     <html lang={v.lang}>
       <head>
@@ -207,7 +209,9 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           </a>
           {/* Prototype notice: a small chip, the full sentence one tap away. */}
           <details class="proto-chip">
-            <summary>{t("ทดลอง", "Prototype")}</summary>
+            <summary>
+              <span class="proto-tag">{t("ทดลอง", "Prototype")}</span>
+            </summary>
             <p>{t("เวอร์ชันทดลอง อย่าใส่ข้อมูลส่วนตัวจริง", "Prototype: please don't use real personal data")}</p>
           </details>
           {/* City Pulse is a main feature with its own place in the top bar, not a tab (owner D62). No dot or count, ever. */}
@@ -217,10 +221,13 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           <nav class="top-actions">
             {staff ? <a href="/admin" class="chip">{t("ทีมงาน", "Staff")}</a> : null}
             {member ? <NotifMenu t={t} unread={user?.unread ?? 0} /> : null}
-            <A11yMenu t={t} />
-            <a href={`/lang/${other}?back=${encodeURIComponent(v.path)}`} class="chip" lang={other}>
-              {other === "en" ? "EN" : "ไทย"}
-            </a>
+            {/* Members switch language from the accessibility menu (mobile card 1); signed-out and first-run pages keep the switch in sight. */}
+            <A11yMenu t={t} lang={langInMenu ? { other, href: langHref } : undefined} />
+            {langInMenu ? null : (
+              <a href={langHref} class="chip lang-chip" lang={other}>
+                {other === "en" ? "EN" : "ไทย"}
+              </a>
+            )}
             {!user ? <a href="/login" class="chip">{t("เข้าสู่ระบบ", "Sign in")}</a> : null}
           </nav>
         </header>

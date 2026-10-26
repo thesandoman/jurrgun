@@ -1336,4 +1336,37 @@ main .host-send .btn{width:auto;margin:0}
   html:has(main .host-send){scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 }
 @media (min-width:1024px){main .pf-save.host-send{position:static;margin:24px 0 0;padding:0;border:0;background:none;box-shadow:none}}
+/* ---- Mobile cards, 2026-10-26 (owner via Main) ---- */
+/* Card 1: on member pages the language switch is the first row of the accessibility menu, with a globe. */
+.a11y-row.a11y-lang{justify-content:flex-start;color:var(--ink);text-decoration:none;min-height:52px}
+.a11y-lang>span:nth-child(2){flex:1;min-width:0}
+.a11y-lang-ico{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--brand-soft);color:var(--brand)}
+.a11y-lang-ico svg{width:20px;height:20px}
+.a11y-lang>b{flex:none;padding:4px 12px;border-radius:999px;border:1px solid var(--line);color:var(--brand);font-weight:700}
+.a11y-lang:hover>b{border-color:var(--brand)}
+/* Card 1: Prototype is a small tag beside the logo; the tap target around it stays 44px. */
+.topbar .proto-chip>summary{min-width:44px;padding:0 2px;background:none;justify-content:center}
+.proto-tag{display:inline-block;padding:1px 6px;border-radius:6px;background:var(--info-soft);color:var(--info);font-size:.75rem;font-weight:700;line-height:1.4;white-space:nowrap}
+/* Card 1: City Pulse keeps its name beside the icon from 360px. */
+@media (min-width:360px) and (max-width:480px){
+  .pulse-btn{min-width:44px;padding:4px 10px;font-size:.8rem}
+  .pulse-btn span{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
+}
+/* Card 1: large text (200%) never pushes the page sideways: the top bar wraps onto a second row instead. */
+@media (max-width:1023.98px){
+  .topbar{flex-wrap:wrap;row-gap:4px}
+  .topbar>*{min-width:0;max-width:100%}
+  .topbar .top-actions{margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+  .topbar .pulse-btn{white-space:normal;text-align:start}
+}
+/* Discover at 200% text (Website's report): the time tabs wrap inside their own row, each still a 44px target. */
+@media (max-width:1023.98px){
+  .disc-bar{grid-template-columns:minmax(0,1fr)}
+  .disc-bar>*{min-width:0}
+  .disc-bar:not(.is-stuck) .seg{flex-wrap:wrap;overflow:visible;border-radius:22px}
+  .disc-bar:not(.is-stuck) .seg a{flex:1 1 auto;min-width:44px;overflow-wrap:anywhere}
+  .disc-bar:not(.is-stuck) .disc-tools{flex-wrap:wrap}
+  .disc-bar:not(.is-stuck) .disc-tools .filters>summary{white-space:normal}
+}
+
 `);

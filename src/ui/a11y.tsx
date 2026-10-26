@@ -37,7 +37,21 @@ export function A11yIcon() {
   );
 }
 
-export function A11yMenu(props: { t: T; class?: string }) {
+/** A globe: the language row in the menu. */
+export function GlobeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3Z" />
+    </svg>
+  );
+}
+
+/**
+ * `lang`: on member pages the EN / ไทย switch lives here, as the first row (mobile card 1).
+ * Signed-out and first-run pages keep their own switch in sight and leave this out.
+ */
+export function A11yMenu(props: { t: T; class?: string; lang?: { other: "th" | "en"; href: string } }) {
   const { t } = props;
   const sizes: [string, string, string][] = [
     ["small", t("เล็ก", "Small"), ".85rem"],
@@ -68,6 +82,18 @@ export function A11yMenu(props: { t: T; class?: string }) {
         <p class="a11y-h" id="a11y-h">
           {t("การช่วยการเข้าถึง", "Accessibility")}
         </p>
+        {props.lang ? (
+          <a class="a11y-row a11y-lang" href={props.lang.href}>
+            <span class="a11y-lang-ico">
+              <GlobeIcon />
+            </span>
+            <span>
+              {t("ภาษา", "Language")}
+              <small>{t("เปลี่ยนเป็นภาษาอังกฤษ", "Switch to Thai")}</small>
+            </span>
+            <b lang={props.lang.other}>{props.lang.other === "en" ? "English" : "ไทย"}</b>
+          </a>
+        ) : null}
         <fieldset class="a11y-size">
           <legend>{t("ธีมสี", "Appearance")}</legend>
           <div>
