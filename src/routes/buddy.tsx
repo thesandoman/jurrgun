@@ -36,7 +36,7 @@ import { Sheet } from "../ui/sheet";
 import { ALL_INTERESTS, cleanBio, promptById } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
-import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
 import { batch, getDb } from "../db";
 import {
   BUDDY_INTENTS,
@@ -67,7 +67,9 @@ import { Button, Card, Choices, LinkButton, Notice, page, str, view, type View }
 import { AvatarStack, Bento, Big, Pill, PostcardFan, Stamps, Tile, artFor } from "../ui/visual";
 import type { Child } from "hono/jsx";
 import { ARCHETYPES, isArchetypeKey, normalizeType, type ArchetypeKey } from "../vibe/archetypes";
-import { withdrawBuddyTap } from "../services/pinky";
+import { buddyPinkyState, stepBackBuddy, tapBuddyPinky, withdrawBuddyTap } from "../services/pinky";
+import { BUDDY_PINKY_DAYS } from "../domain/pinky";
+import { PinkyRow } from "../ui/pinky";
 import { consentsFor, PERSONALIZATION_CONSENT } from "../services/consent";
 
 export const buddyRoutes = new Hono<AppEnv>();
@@ -684,6 +686,30 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
   const buddyName = buddyRows[0]?.nickname ?? "";
   const [quest, bigQuest, offApp] = match?.state === "active" ? await Promise.all([weekQuest(db, match, types, now), monthQuest(db, match, now), movedOffApp(db, match)]) : [null, null, false];
   const iSaidMeet = match ? (side(match, me) === "a" ? match.aMeetAt : match.bMeetAt) : null;
+  // เกี่ยวก้อย · Pinky between buddies (owner card C4): on the current buddy, or for
+  // BUDDY_PINKY_DAYS on the last one (not after a block). Null when there's no row.
+  const myProfile = c.var.user!.profile!;
+  const [last] =
+    match?.state === "active"
+      ? []
+      : await db
+          .select()
+          .from(buddyMatches)
+          .where(
+            and(
+              eq(buddyMatches.state, "ended"),
+              ne(buddyMatches.endReason, "blocked"),
+              gt(buddyMatches.endedAt, new Date(now.getTime() - BUDDY_PINKY_DAYS * DAY_MS)),
+              or(eq(buddyMatches.aAccount, me), eq(buddyMatches.bAccount, me)),
+            ),
+          )
+          .orderBy(desc(buddyMatches.endedAt))
+          .limit(1);
+  const pinkyMatch = match?.state === "active" ? match : (last ?? null);
+  const pinky = pinkyMatch ? await buddyPinkyState(db, myProfile, pinkyMatch) : null;
+  const lastName = last && pinky ? ((await db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, other(last, me))).limit(1))[0]?.nickname ?? "") : "";
+  const pinkyRow = (name: string) =>
+    pinky && pinkyMatch ? <PinkyRow t={t} otherId={other(pinkyMatch, me)} name={name} state={pinky} buddy={{ matchId: pinkyMatch.id, openUntil: pinky.openUntil ? fmtDay(pinky.openUntil, v.lang) : null }} /> : null;
 
   return page(
     c,
@@ -735,8 +761,10 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
               triggerClass="sheet-more"
               triggerLabel={t(`ตัวเลือกเพิ่มเติมสำหรับ ${buddyName}`, `More options for ${buddyName}`)}
               align="start"
+              open={c.req.query("pinky") === "open"}
             >
-              {/* Pinky slot: the quiet "เกี่ยวก้อย · Pinky" row for members with 💘 on goes first here, never on the card face. */}
+              {/* The quiet "เกี่ยวก้อย · Pinky" row (C4) goes first here, never on the card face, on the same sheet as Wrap up and Block. */}
+              {pinkyRow(buddyName)}
               <a class="sheet-item" href={`/people/${otherId}`}>
                 <span aria-hidden="true">👤</span> {t(`ดูโปรไฟล์ ${buddyName}`, `See ${buddyName}'s profile`)}
               </a>
@@ -771,6 +799,16 @@ buddyRoutes.get("/buddy", requireMember, async (c) => {
           </Card>
         </>
       )}
+      {last && pinky ? (
+        <Card class="last-buddy">
+          <p class="eyebrow">{t(`บัดดี้คนล่าสุด: ${lastName}`, `Your last buddy: ${lastName}`)}</p>
+          {pinkyRow(lastName)}
+          <form method="post" action={`/block/${other(last, me)}`}>
+            <input type="hidden" name="back" value="/buddy" />
+            <button class="btn ghost danger">⛔ {t("บล็อก", "Block")}</button>
+          </form>
+        </Card>
+      ) : null}
       <Passport v={v} stamped={stamped} compact wish={cleanBio(c.var.user!.profile?.bio).reflections?.notYet?.districts} />
       {optin?.active && match?.state !== "active" ? (
         <details>
@@ -835,6 +873,21 @@ async function myMatch(c: Ctx): Promise<{ m: BuddyMatch; me: string; them: strin
   if (!m || (m.aAccount !== me && m.bAccount !== me)) return null;
   return { m, me, them: other(m, me) };
 }
+
+/**
+ * เกี่ยวก้อย · Pinky on a buddy pairing (owner card C4). The answer is the same
+ * redirect whatever the buddy chose: only a mutual Pinky changes the page.
+ */
+buddyRoutes.post("/buddy/:id/pinky", requireMember, async (c) => {
+  const found = await myMatch(c);
+  if (!found) return c.redirect("/buddy");
+  const db = getDb(c.env);
+  const profile = c.var.user!.profile!;
+  const action = str((await c.req.parseBody()).action);
+  if (action === "tap") await tapBuddyPinky(c.env, db, profile, found.m);
+  else if (action === "back" && (await stepBackBuddy(c.env, db, profile, found.m)) === "friends") return c.redirect("/buddy?notice=back_to_friends");
+  return c.redirect("/buddy?pinky=open#pinky");
+});
 
 buddyRoutes.post("/buddy/:id/meet", requireMember, async (c) => {
   const found = await myMatch(c);

@@ -19,9 +19,14 @@ function PinkyIcon() {
   );
 }
 
-export function PinkyRow(props: { t: T; otherId: string; name: string; state: PinkyState }) {
+/**
+ * `buddy` (owner card C4): the same row on a Bangkok Buddy pairing. It posts to
+ * the pairing's own action, says a Pinky never changes your quests, and once
+ * the pairing has ended, until when a tap is taken.
+ */
+export function PinkyRow(props: { t: T; otherId: string; name: string; state: PinkyState; buddy?: { matchId: string; openUntil: string | null } }) {
   const { t, state } = props;
-  const action = `/people/${encodeURIComponent(props.otherId)}/pinky`;
+  const action = props.buddy ? `/buddy/${encodeURIComponent(props.buddy.matchId)}/pinky` : `/people/${encodeURIComponent(props.otherId)}/pinky`;
   return (
     <section class="pinky" id="pinky" aria-labelledby="pinky-h">
       <div class="pinky-head">
@@ -30,7 +35,11 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
           <h2 id="pinky-h" class="pinky-name">
             เกี่ยวก้อย · Pinky
           </h2>
-          <p class="pinky-sub">{t("เกี่ยวก้อยไว้ ถ้าเขาเกี่ยวกลับ ค่อยลองไปเดตกัน", "Hook pinkies to try a date")}</p>
+          <p class="pinky-sub">
+            {props.buddy
+              ? t("ทำเควสต์ด้วยกันมา 2 ครั้งแล้ว เกี่ยวก้อยไว้ ถ้าเขาเกี่ยวกลับ ค่อยลองไปเดตกัน", "Two quests done together. Hook pinkies to try a date.")
+              : t("เกี่ยวก้อยไว้ ถ้าเขาเกี่ยวกลับ ค่อยลองไปเดตกัน", "Hook pinkies to try a date")}
+          </p>
         </div>
       </div>
       {state.mutual ? (
@@ -82,6 +91,12 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
           </form>
         </>
       )}
+      {props.buddy ? (
+        <p class="pinky-note">
+          {t("เกี่ยวก้อยไม่เปลี่ยนเควสต์ของคุณ", "A Pinky never changes your quests.")}
+          {props.buddy.openUntil && !state.mutual ? ` ${t(`เกี่ยวก้อยได้ถึง ${props.buddy.openUntil}`, `Open until ${props.buddy.openUntil}.`)}` : null}
+        </p>
+      ) : null}
     </section>
   );
 }
