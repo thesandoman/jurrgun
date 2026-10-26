@@ -369,5 +369,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"social_profiles\" ADD COLUMN \"district_alert_opt_in\" boolean DEFAULT false NOT NULL;",
       "ALTER TABLE \"social_profiles\" ADD COLUMN \"district_alert_last_sent_at\" timestamp with time zone;"
     ]
+  },
+  {
+    "id": "0029_universities",
+    "statements": [
+      "CREATE TABLE \"social_universities\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"cc\" text NOT NULL,\n\t\"name_th\" text,\n\t\"search\" text NOT NULL,\n\t\"th_fold\" text\n);"
+    ]
   }
 ];
