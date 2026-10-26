@@ -39,7 +39,7 @@ import { getStatefulObject } from "../state";
 import { blockedAmong, getTable, memberIds, myTables, standing } from "../services/regular-tables";
 import { Sheet } from "../ui/sheet";
 import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/kit";
-import { NewBadge, UnreadCount } from "../ui/unread";
+import { UnreadDot } from "../ui/unread";
 import { AvatarStack } from "../ui/visual";
 import { coverEmoji } from "./events";
 
@@ -285,8 +285,12 @@ export async function chatRows(db: Db, me: string, now = new Date()): Promise<Ch
     .sort((a, b) => (b.last?.createdAt.getTime() ?? 0) - (a.last?.createdAt.getTime() ?? 0));
 }
 
-/** One chat row: avatar, name, a one-line preview, then New (or, with `count`, how many new). */
-export function ChatRow(props: { v: View; r: ChatRowData; count?: boolean }) {
+/**
+ * One chat row: avatar, name, a one-line preview, then a plain dot when something is unread, never a
+ * number pill (no counts on screen). The count is in the row's accessible name, visually hidden:
+ * "ยังไม่อ่าน 3 ข้อความ" / "3 unread". The row is also tinted and bold, so the dot is not colour alone.
+ */
+export function ChatRow(props: { v: View; r: ChatRowData }) {
   const { t, lang } = props.v;
   const { th, last, unread, unreadN, other, who, tableTags } = props.r;
   return (
@@ -297,13 +301,11 @@ export function ChatRow(props: { v: View; r: ChatRowData; count?: boolean }) {
           <strong>{isGroup(th.key) ? L(lang, th.title) : who.join(", ")}</strong>
           <small>{last ? preview(last, t) : t("ยังไม่มีข้อความ", "No messages yet")}</small>
         </span>
-        {unread && props.count ? (
-          <b class="unread-badge">
-            {unreadN > 9 ? "9+" : unreadN}
-            <span class="sr-only"> {t("ข้อความใหม่", "new messages")}</span>
-          </b>
-        ) : unread ? (
-          <NewBadge t={t} />
+        {unread ? (
+          <>
+            <UnreadDot n={unreadN} class="chat-dot" />
+            <span class="sr-only">{t(` ยังไม่อ่าน ${unreadN} ข้อความ`, `, ${unreadN} unread`)}</span>
+          </>
         ) : !th.open ? (
           <small class="muted">{t("ปิดแล้ว", "Closed")}</small>
         ) : null}
@@ -323,11 +325,8 @@ chatRoutes.get("/chat", async (c) => {
     <>
       <h1>💬 {t("แชต", "Chats")}</h1>
       <p class="muted">{t("คุยสั้น ๆ แล้วนัดเจอกันจริง ไม่มีสถานะออนไลน์ และไม่บอกว่าอ่านแล้ว", "Short chats that lead to meeting. No online status, no read receipts.")}</p>
-      {unreadCount > 0 ? (
-        <p class="unread-sum">
-          <UnreadCount n={unreadCount} /> {t(`ยังไม่ได้อ่าน ${unreadCount} แชต`, `${unreadCount} unread ${unreadCount === 1 ? "chat" : "chats"}`)}
-        </p>
-      ) : null}
+      {/* No visible "N unread chats" line; screen readers still hear the total before the list. */}
+      {unreadCount > 0 ? <p class="sr-only">{t(`ยังไม่ได้อ่าน ${unreadCount} แชต`, `${unreadCount} unread ${unreadCount === 1 ? "chat" : "chats"}`)}</p> : null}
       {rows.length === 0 ? (
         <Empty>{t("ยังไม่มีแชต แชตจะเปิดเมื่อคุณมีบัดดี้ คนรู้จัก โต๊ะประจำ หรือแฮงเอาต์ส่วนตัว", "No chats yet. They open with a buddy, someone you've met, a Regular Table or a private hangout.")}</Empty>
       ) : (

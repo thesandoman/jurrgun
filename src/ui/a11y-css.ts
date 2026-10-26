@@ -1389,4 +1389,6 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 .month-sofar h2{margin:0 0 12px}
 .month-sofar a.fact{min-height:44px;color:var(--ink);text-decoration:none}
 .month-sofar a.fact:hover .big-n{text-decoration:underline;text-underline-offset:3px}
+/* Chats: an unread row ends in the card 5 dot, no number; the count is in the row's name for screen readers. */
+.chat-list a>.unread-dot.chat-dot{flex:none;align-self:center;margin-left:auto}
 `);

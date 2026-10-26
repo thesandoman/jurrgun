@@ -40,12 +40,13 @@ describe.skipIf(!HAS_DB)("clearer unread", () => {
     expect(people).toContain('aria-label="Chats, 1 unread"');
   });
 
-  it("the chat list marks the unread chat with the same pill and says how many", async () => {
+  it("the chat list marks the unread chat with the dot and tells screen readers how many", async () => {
     const { a } = await chatWithMessage();
     const html = await (await req("/chat", { cookie: `${a.cookie}; lang=en` })).text();
     expect(html).toContain('class="unread"');
-    expect(html).toContain('<b class="unread-badge unread-new">New</b>');
-    expect(html).toContain("1 unread chat");
+    expect(html).toContain('<span class="unread-dot chat-dot" aria-hidden="true"></span>');
+    expect(html).toContain('<span class="sr-only">, 1 unread</span>');
+    expect(html).toContain('<p class="sr-only">1 unread chat</p>');
   });
 
   it("the bell neither lists nor clears a chat's message", async () => {

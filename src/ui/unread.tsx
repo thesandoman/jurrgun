@@ -1,8 +1,8 @@
 /**
  * One unread style everywhere (owner: clearer unread): a lime pill with dark
  * text, a count where there is one and "ใหม่ / New" on a row (the bell and the
- * My people tab show a plain dot instead, UnreadDot). It is the same on the
- * Chats chip, chat rows and notification rows, and it always carries words or
+ * My people tab, the Chats chip and chat rows show a plain dot instead,
+ * UnreadDot). It is the same on notification rows, and it always carries words or
  * a number, never colour alone (1.4.1).
  *
  * The pill itself is hidden from screen readers where a count is involved:

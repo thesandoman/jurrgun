@@ -151,14 +151,14 @@ describe.skipIf(!HAS_DB)("grouped lists on member pages", () => {
     expect(html).toContain('<ul class="glist past-rows">');
   });
 
-  it("Chats: one list, the unread row keeps its New label", async () => {
+  it("Chats: one list, the unread row keeps its dot", async () => {
     const [a, b] = await Promise.all([createMember({ nickname: "Ann" }), createMember({ nickname: "Bee" })]);
     const [x, y] = a.id < b.id ? [a.id, b.id] : [b.id, a.id];
     const cid = newId();
     await db().insert(connections).values({ id: cid, aAccount: x, bAccount: y, level: "friend", eventId: newId() });
     await db().insert(chatMessages).values({ id: newId(), thread: `conn:${cid}`, sender: b.id, body: "See you Sunday?" });
     const html = await (await req("/chat", { cookie: `${a.cookie}; lang=en` })).text();
-    expect(html).toMatch(/<ul class="glist chat-list"><li><a href="\/chat\/conn:[^"]+" class="unread">[\s\S]*?See you Sunday\?[\s\S]*?New<\/b>/);
+    expect(html).toMatch(/<ul class="glist chat-list"><li><a href="\/chat\/conn:[^"]+" class="unread">[\s\S]*?See you Sunday\?[\s\S]*?class="unread-dot chat-dot"/);
   });
 
   it("Notifications: one list per day", async () => {

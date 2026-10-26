@@ -993,7 +993,7 @@ export function NewMessages(props: { v: View; rows: ChatRowData[] }) {
       <h2 id="people-new-h" class="h3">{t("ข้อความใหม่", "New messages")}</h2>
       <ul class="glist chat-list">
         {rows.map((r) => (
-          <ChatRow v={props.v} r={r} count />
+          <ChatRow v={props.v} r={r} />
         ))}
       </ul>
       <a class="people-new-all" href="/chat">

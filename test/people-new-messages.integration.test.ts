@@ -39,8 +39,10 @@ describe.skipIf(!HAS_DB)("My people: new messages first", () => {
     expect(g).toContain(`href="/chat/${key}"`);
     expect(g).toContain("Hello from 1");
     expect(g).toContain('class="chat-av"');
-    // The unread count on the row, in words for a screen reader too.
-    expect(g).toMatch(/class="unread-badge"[^>]*>2<span class="sr-only"> new messages<\/span>/);
+    // A dot on the row, no number pill; the count is in the row's name for a screen reader.
+    expect(g).toContain('<span class="unread-dot chat-dot" aria-hidden="true"></span>');
+    expect(g).toContain('<span class="sr-only">, 2 unread</span>');
+    expect(g).not.toContain("unread-badge");
     expect(g).toContain('<a class="people-new-all" href="/chat">All chats');
     // At the top: before the people list.
     expect(html.indexOf('<section class="people-new"')).toBeLessThan(html.indexOf('class="glist people-list"'));
