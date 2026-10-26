@@ -51,3 +51,16 @@ describe.skipIf(!HAS_DB)("card 1: the language switch and City Pulse in the top 
     expect(A11Y_CSS).toContain(".topbar{flex-wrap:wrap;row-gap:4px}");
   });
 });
+
+describe("card 4: 48px primary actions from the shared class", () => {
+  it("sizes primary buttons from a 48px token, above any page's squeeze, and keeps everything else at 44px", () => {
+    expect(A11Y_CSS).toContain(":root{--tap:44px;--tap-primary:48px}");
+    expect(A11Y_CSS).toContain(".btn.primary:not(#_){min-height:var(--tap-primary)}");
+    // "Bigger buttons" in the accessibility menu raises both tokens rather than being undone.
+    expect(A11Y_CSS).toContain("html.a11y-touch{--tap:56px;--tap-primary:56px}");
+    expect(A11Y_CSS).toContain(":is(a,button,label,summary).chip{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap)}");
+    expect(A11Y_CSS).toContain(".pill span{min-height:var(--tap)}");
+    // The rule comes after every contextual ".x .btn{min-height:44px}" squeeze in the file.
+    expect(A11Y_CSS.lastIndexOf(".btn{min-height:44px")).toBeLessThan(A11Y_CSS.indexOf(".btn.primary:not(#_)"));
+  });
+});

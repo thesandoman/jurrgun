@@ -1368,5 +1368,13 @@ main .host-send .btn{width:auto;margin:0}
   .disc-bar:not(.is-stuck) .disc-tools{flex-wrap:wrap}
   .disc-bar:not(.is-stuck) .disc-tools .filters>summary{white-space:normal}
 }
+/* Card 4: one tap scale from tokens. Primary actions (RSVP, Send, Save, any sticky bar built on .btn.primary) are 48px
+   from the class itself, wherever a page squeezes buttons; chips and every other control are at least 44px.
+   The :not(#_) only lifts the rule above contextual ".x .btn" squeezes; "Bigger buttons" raises both tokens. */
+:root{--tap:44px;--tap-primary:48px}
+html.a11y-touch{--tap:56px;--tap-primary:56px}
+.btn.primary:not(#_){min-height:var(--tap-primary)}
+:is(a,button,label,summary).chip{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap)}
+.pill span{min-height:var(--tap)}
 
 `);
