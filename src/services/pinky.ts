@@ -9,10 +9,10 @@
  *  - Nothing here writes to the audit log (staff never see romance data).
  *  - Stepping back tells nobody and withdraws the tap. Ending a Pinky turns it back into friends.
  */
-import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { batch, type getDb } from "../db";
-import { buddyKey, pinkyOffered, pinkyOn, pinkyUnlocked } from "../domain/pinky";
+import { buddyKey, endedKey, pinkyOffered, pinkyOn, pinkyUnlocked } from "../domain/pinky";
 import { peopleWindow } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { notify } from "../lib/records";
@@ -63,6 +63,32 @@ async function pinkyConnection(db: Db, eventId: string, x: string, y: string) {
   return row ?? null;
 }
 
+/** Whether this pair went "Back to friends" at this pairing key: then no new tap, ever, for that key. */
+export async function pinkyEnded(db: Db, x: string, y: string, key: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: connectionChoices.id })
+    .from(connectionChoices)
+    .where(and(eq(connectionChoices.eventId, endedKey(key)), or(and(eq(connectionChoices.fromAccount, x), eq(connectionChoices.toAccount, y)), and(eq(connectionChoices.fromAccount, y), eq(connectionChoices.toAccount, x)))))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** Of these people, the ones I went "Back to friends" with at this event (People I Met keeps romance off for them). */
+export async function endedWith(db: Db, me: string, others: string[], key: string): Promise<Set<string>> {
+  if (!others.length) return new Set();
+  const rows = await db
+    .select({ from: connectionChoices.fromAccount, to: connectionChoices.toAccount })
+    .from(connectionChoices)
+    .where(
+      and(
+        eq(connectionChoices.eventId, endedKey(key)),
+        or(and(eq(connectionChoices.fromAccount, me), inArray(connectionChoices.toAccount, others)), and(eq(connectionChoices.toAccount, me), inArray(connectionChoices.fromAccount, others))),
+      ),
+    )
+    .limit(others.length * 2);
+  return new Set(rows.map((r) => (r.from === me ? r.to : r.from)));
+}
+
 type Ctx = { event: { id: string; endsAt: Date }; open: boolean; mutual: boolean; conn: Awaited<ReturnType<typeof pinkyConnection>> };
 
 /**
@@ -74,7 +100,9 @@ async function load(db: Db, me: Profile, otherId: string): Promise<Ctx | null> {
   if (otherId === me.accountId || !pinkyOn(me)) return null;
   const [event, blocked] = await Promise.all([sharedEvent(db, me.accountId, otherId), blockedEitherWay(db, me.accountId, otherId)]);
   if (!event) return null;
-  const conn = await pinkyConnection(db, event.id, me.accountId, otherId);
+  const [conn, ended] = await Promise.all([pinkyConnection(db, event.id, me.accountId, otherId), pinkyEnded(db, me.accountId, otherId, event.id)]);
+  // After "Back to friends" there is no row and no tap for that table (owner, C4 panel).
+  if (ended) return null;
   const mutual = !!conn && !conn.removedAt && conn.level === "romance";
   const open = peopleWindow(event.endsAt) === "open";
   if (!pinkyOffered(me, { met: true, blocked, windowOpen: open, mutual })) return null;
@@ -140,7 +168,15 @@ export async function stepBack(env: Env, db: Db, me: Profile, otherId: string): 
   const mutual = !!conn && !conn.removedAt && conn.level === "romance";
   const writes: { toSQL(): { sql: string; params: unknown[] } }[] = [];
   if (mutual) {
-    writes.push(withdrawPairTaps(db, me.accountId, otherId, event.id), db.update(connections).set({ level: "friend" }).where(eq(connections.id, conn.id)));
+    writes.push(
+      withdrawPairTaps(db, me.accountId, otherId, event.id),
+      db.update(connections).set({ level: "friend" }).where(eq(connections.id, conn.id)),
+      // No new tap for this table, so nobody can re-tap and pressure the other.
+      db
+        .insert(connectionChoices)
+        .values({ id: newId(), eventId: endedKey(event.id), fromAccount: me.accountId, toAccount: otherId, choice: "none" })
+        .onConflictDoNothing({ target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount] }),
+    );
   } else if (mine?.choice === "romance") {
     writes.push(db.delete(connectionChoices).where(eq(connectionChoices.id, mine.id)));
   }

@@ -65,7 +65,7 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
-import { BUDDY_PINKY_DAYS } from "../domain/pinky";
+import { BUDDY_PINKY_DAYS, ENDED_PREFIX } from "../domain/pinky";
 import { bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
 import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
@@ -246,6 +246,38 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       ),
     )
     .returning({ id: connectionChoices.id });
+  // "Back to friends" markers go with what they belong to: a table's People I Met window, or a buddy pairing as above.
+  const endedTable = await db
+    .delete(connectionChoices)
+    .where(
+      and(
+        sql`${connectionChoices.eventId} like ${`${ENDED_PREFIX}%`}`,
+        sql`${connectionChoices.eventId} not like ${`${ENDED_PREFIX}buddy:%`}`,
+        // A number, not a bound parameter: substring(text from text) would be the regex form.
+        inArray(sql`substring(${connectionChoices.eventId} from ${sql.raw(String(ENDED_PREFIX.length + 1))})`, endedBefore(windowCutoff)),
+      ),
+    )
+    .returning({ id: connectionChoices.id });
+  const endedBuddy = await db
+    .delete(connectionChoices)
+    .where(
+      and(
+        sql`${connectionChoices.eventId} like ${`${ENDED_PREFIX}buddy:%`}`,
+        notExists(
+          db
+            .select({ id: buddyMatches.id })
+            .from(buddyMatches)
+            .where(and(sql`${connectionChoices.eventId} = ${`${ENDED_PREFIX}buddy:`} || ${buddyMatches.id}`, or(ne(buddyMatches.state, "ended"), gt(buddyMatches.endedAt, buddyCutoff)))),
+        ),
+      ),
+    )
+    .returning({ id: connectionChoices.id });
+  // Buddy connections that were ended (a block, or a Pinky taken back to nothing) are deleted, not just hidden,
+  // once the pairing's expiry has passed (owner, C4 panel).
+  const buddyConnsGone = await db
+    .delete(connections)
+    .where(and(sql`${connections.eventId} like 'buddy:%'`, isNotNull(connections.removedAt), lt(connections.removedAt, buddyCutoff)))
+    .returning({ id: connections.id });
 
   const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
   const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone, annsOld] = await batch(env, [
@@ -381,7 +413,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   await db.delete(talkQuestions).where(inArray(talkQuestions.eventId, endedBefore(new Date(now.getTime() - 30 * DAY))));
   const counts: RetentionCounts = {
     signalsCleared: signals.length,
-    choicesDeleted: choices.length + buddyTaps.length,
+    choicesDeleted: choices.length + buddyTaps.length + endedTable.length + endedBuddy.length + buddyConnsGone.length,
     sessionsDeleted: sess.length,
     loginAttemptsDeleted: attempts.length,
     loginCodesDeleted: codesOld.length,

@@ -35,6 +35,15 @@ export type PinkySide = RomanceSide & { relationship: string; romanceOn: boolean
 export const BUDDY_PINKY_DAYS = 7;
 /** The choice and connection key of a buddy pairing. */
 export const buddyKey = (matchId: string) => `buddy:${matchId}`;
+/**
+ * After "Back to friends", a marker under this key (a "none" row in
+ * social_connection_choices) means no new tap for that pairing: nobody can
+ * re-tap and pressure the other (owner, C4 panel). People I Met never reads
+ * this key, so it can't be overwritten there. Retention deletes it with the
+ * window or pairing it belongs to.
+ */
+export const ENDED_PREFIX = "pinky-ended:";
+export const endedKey = (key: string) => `${ENDED_PREFIX}${key}`;
 
 /** 💘 on, for Pinky: the one test used everywhere (single and romance mode on). */
 export function pinkyOn(p: { relationship: string; romanceOn: boolean }): boolean {

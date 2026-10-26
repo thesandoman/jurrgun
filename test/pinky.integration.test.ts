@@ -160,7 +160,8 @@ describe.skipIf(!HAS_DB)("เกี่ยวก้อย · Pinky", () => {
     // Both taps are cleared, not turned into friend picks (C4 panel).
     expect(await db().select().from(connectionChoices).where(eq(connectionChoices.eventId, ev))).toEqual([]);
     expect([(await notesOf(a)).length, (await notesOf(b)).length]).toEqual(before);
-    expect(row(await card(a, b))).toContain('value="tap"');
+    // No new tap for this table after Back to friends (C4 panel): no row at all.
+    expect(row(await card(a, b))).toBe("");
     expect(await (await req("/connections", { cookie: en(b) })).text()).not.toContain("tag love\">เกี่ยวก้อย");
   });
 

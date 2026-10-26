@@ -52,6 +52,27 @@ describe.skipIf(!HAS_DB)("Pinky groundwork (C4 panel fixes)", () => {
     expect(page).toContain("Nobody did anything wrong.");
   });
 
+  it("after Back to friends there's no new tap for that table, here or in People I Met", async () => {
+    const { a, b, ev } = await pairAtTable();
+    await tap(a, b);
+    await tap(b, a);
+    await tap(b, a, "back");
+    // No row on either card, and a forged tap stores nothing.
+    for (const [x, y] of [[a, b], [b, a]] as const) {
+      const html = await (await req(`/people/${y.id}`, { cookie: en(x) })).text();
+      expect(html).not.toContain('<section class="pinky"');
+      await tap(x, y);
+    }
+    expect(await tapsBetween(a, b)).toEqual([]);
+    // People I Met can't reopen it either: a romance pick there counts as friend.
+    await req(`/events/${ev}/people`, { cookie: a.cookie, form: { [`choice_${b.id}`]: "romance" } });
+    await req(`/events/${ev}/people`, { cookie: b.cookie, form: { [`choice_${a.id}`]: "romance" } });
+    expect(await tapsBetween(a, b)).toEqual([]);
+    const [x, y] = a.id < b.id ? [a.id, b.id] : [b.id, a.id];
+    const [c] = await db().select().from(connections).where(and(eq(connections.aAccount, x), eq(connections.bAccount, y), eq(connections.eventId, ev)));
+    expect(c.level).toBe("friend");
+  });
+
   it("a block withdraws both people's taps", async () => {
     const { a, b } = await pairAtTable();
     await tap(a, b);
@@ -82,6 +103,32 @@ describe.skipIf(!HAS_DB)("Pinky groundwork (C4 panel fixes)", () => {
     await runRetention(ENV);
     const left = (await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, a.id))).map((r) => r.eventId).sort();
     expect(left).toEqual([`buddy:${active}`, `buddy:${recent}`].sort());
+  });
+
+  it("retention deletes Back-to-friends markers and ended buddy connections with what they belong to", async () => {
+    const [a, b] = await Promise.all([createMember(), createMember()]);
+    const old = await buddyMatch(a, b, { state: "ended", endedAt: new Date(Date.now() - 8 * DAY) });
+    const live = await buddyMatch(a, b);
+    const ev = newId();
+    const ends = new Date(Date.now() - 100 * HOUR);
+    await db().insert(events).values({ id: ev, title: "GW-old", startsAt: new Date(ends.getTime() - 2 * HOUR), endsAt: ends, venueName: "Cafe", district: "watthana", capacity: 8, status: "published", createdBy: "test" });
+    await db().insert(connectionChoices).values([
+      { id: newId(), eventId: `pinky-ended:buddy:${old}`, fromAccount: a.id, toAccount: b.id, choice: "none" },
+      { id: newId(), eventId: `pinky-ended:buddy:${live}`, fromAccount: a.id, toAccount: b.id, choice: "none" },
+      { id: newId(), eventId: `pinky-ended:${ev}`, fromAccount: a.id, toAccount: b.id, choice: "none" },
+    ]);
+    const [x, y] = a.id < b.id ? [a.id, b.id] : [b.id, a.id];
+    const gone = newId();
+    const kept = newId();
+    await db().insert(connections).values([
+      { id: gone, aAccount: x, bAccount: y, level: "activity", eventId: `buddy:${old}`, removedAt: new Date(Date.now() - 8 * DAY) },
+      { id: kept, aAccount: x, bAccount: y, level: "activity", eventId: `buddy:${live}` },
+    ]);
+    await runRetention(ENV);
+    const markers = (await db().select().from(connectionChoices).where(eq(connectionChoices.fromAccount, a.id))).map((r) => r.eventId);
+    expect(markers.sort()).toEqual([`pinky-ended:buddy:${live}`]);
+    const conns = (await db().select().from(connections).where(or(eq(connections.id, gone), eq(connections.id, kept)))).map((r) => r.id);
+    expect(conns).toEqual([kept]);
   });
 
   it("where-we-met shows a Bangkok Buddy pairing", async () => {

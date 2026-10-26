@@ -72,7 +72,7 @@ import { KIND_DIGEST, isDigest } from "../domain/digest";
 import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
-import { withdrawPairTaps } from "../services/pinky";
+import { endedWith, withdrawPairTaps } from "../services/pinky";
 import { SeeAgainCard } from "../ui/see-again";
 import { Sheet } from "../ui/sheet";
 import { visibleLinks, type ShownLink } from "../services/profile-links";
@@ -426,6 +426,9 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
 
   const db = getDb(c.env);
   const targets = [...picks.keys()];
+  // After "Back to friends" at this table, People I Met can't re-open romance with that person (C4 panel).
+  const ended = await endedWith(db, myId, targets, eventId);
+  for (const other of ended) if (picks.get(other) === "romance") picks.set(other, "friend");
   const [theirs, existing] = await Promise.all([
     db
       .select({ from: connectionChoices.fromAccount, choice: connectionChoices.choice })
