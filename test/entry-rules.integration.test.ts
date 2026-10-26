@@ -247,3 +247,90 @@ describe.skipIf(!HAS_DB)("D56 to D61: entry rules at booking", () => {
     expect((await api(p.key, "POST", body(p.username, { tags: ["women_only"] }))).status).toBe(201);
   });
 });
+
+describe.skipIf(!HAS_DB)("owner P2: a 💘 event is never limited to a group", () => {
+  const groupForm = { groupLabel: "Chula students", groupJoinCode: "CHULA-26" };
+  const bkk = (days: number, hour: number) => isoIn(days, hour).slice(0, 16);
+
+  it("the partner API refuses a join code on a dating partner's or a 💘 event, and still allows women-only and LGBTQ+ on 💘", async () => {
+    const dating = await partner("dating");
+    const res = await api(dating.key, "POST", body(dating.username, { group_label: "Chula students", join_code: "CHULA-26" }));
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(await res.json())).toContain("can't be limited to a group");
+    const venue = await partner("venue");
+    expect((await api(venue.key, "POST", body(venue.username, { tags: ["open_to_more"], group_label: "Chula students", join_code: "CHULA-26" }))).status).toBe(400);
+    // The same group on an ordinary event is fine.
+    const ok = await api(venue.key, "POST", body(venue.username, { group_label: "Chula students", join_code: "CHULA-26" }));
+    expect(ok.status).toBe(201);
+    const love = await api(dating.key, "POST", body(dating.username, { tags: ["lgbtq_community"] }));
+    expect(love.status).toBe(201);
+    // 💘 events show their tag on staff pages another file checks (staff-privacy): clear it at once.
+    await db().delete(events).where(eq(events.partnerOrgId, dating.orgId));
+  });
+
+  it("the host form refuses it for a dating partner", async () => {
+    const dating = await partner("dating");
+    const title = `Love group ${randomToken(5)}`;
+    const r = await req("/host/new", {
+      cookie: dating.admin.cookie,
+      form: {
+        title,
+        description: "A small table at a public place, with a host who greets everyone.",
+        startsAt: bkk(8, 18),
+        endsAt: bkk(8, 20),
+        venueName: "Public library",
+        venueAddress: "10 Phahonyothin Road",
+        district: "phaya_thai",
+        capacity: "10",
+        ageMin: "18",
+        ageMax: "99",
+        languages: ["th"],
+        costThb: "0",
+        intensity: "social",
+        groupMin: "4",
+        groupMax: "6",
+        visibility: "public",
+        ...groupForm,
+      },
+    });
+    expect(r.status).toBe(400);
+    expect(await r.text()).toContain("can't be limited to a group");
+    expect(await db().select().from(events).where(eq(events.title, title))).toHaveLength(0);
+  });
+
+  it("the admin form refuses it on a 💘 event", async () => {
+    const admin = await en(await createMember({ role: "bma_admin" }));
+    const title = `Love group ${randomToken(5)}`;
+    const r = await req("/admin/events/new", {
+      cookie: admin.cookie,
+      form: {
+        title,
+        startsAt: "2030-03-01T18:00",
+        endsAt: "2030-03-01T20:00",
+        venueName: "Hall",
+        district: "pathum_wan",
+        capacity: "10",
+        ageMin: "18",
+        ageMax: "99",
+        languages: "th",
+        intensity: "social",
+        groupMin: "4",
+        groupMax: "6",
+        status: "draft",
+        tags: ["open_to_more"],
+        ...groupForm,
+      },
+    });
+    expect(r.status).toBe(400);
+    expect(await r.text()).toContain("can't be limited to a group");
+    expect(await db().select().from(events).where(eq(events.title, title))).toHaveLength(0);
+  });
+
+  it("a dating partner can't be invited to co-host a join-code group's event", async () => {
+    const venue = await partner("venue");
+    const dating = await partner("dating");
+    const out = (await (await api(venue.key, "POST", body(venue.username, { group_label: "Chula students", join_code: "CHULA-26" }))).json()) as { id: string };
+    await req(`/partner/events/${out.id}/cohosts`, { cookie: venue.admin.cookie, form: { orgId: dating.orgId } });
+    expect(await db().select().from(eventPartners).where(eq(eventPartners.eventId, out.id))).toHaveLength(0);
+  });
+});

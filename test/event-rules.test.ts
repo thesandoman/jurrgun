@@ -55,6 +55,16 @@ describe("event rules (D51 to D61)", () => {
     expect(checkEventRules({ groupLabel: "x", groupJoinCode: "no!" }, {}).errors).toHaveLength(1);
   });
 
+  it("never limits a 💘 event to a group, whoever posts it; women-only and LGBTQ+ stay allowed (owner P2)", () => {
+    const group = { groupLabel: "Chula students", groupJoinCode: "CHULA-26" };
+    expect(checkEventRules({ ...group, tags: ["open_to_more"] }, {}).errors).toHaveLength(1);
+    expect(checkEventRules({ groupLabel: "Chula students", tags: ["open_to_more"] }, {}).errors.length).toBeGreaterThan(0);
+    // A dating partner's events count as 💘 whatever tags are typed.
+    expect(checkEventRules(group, { partnerKind: "dating" }).errors).toHaveLength(1);
+    expect(checkEventRules(group, { partnerKind: "community" }).errors).toHaveLength(0);
+    expect(checkEventRules({ tags: ["open_to_more", "women_only", "lgbtq_community"] }, { partnerKind: "dating" }).errors).toHaveLength(0);
+  });
+
   it("matches join codes without case or spaces", () => {
     expect(joinCodeMatches("chula-26", "CHULA-26")).toBe(true);
     expect(joinCodeMatches(" CHULA - 26", "CHULA-26")).toBe(true);

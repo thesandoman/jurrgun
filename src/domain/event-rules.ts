@@ -8,9 +8,13 @@
  *  - D53, D54: collab events and who may co-host with whom.
  *  - D56: open entry.
  *  - D57: organiser approval, verified groups by join code, bring or know before.
+ *    A 💘 event is never limited to a group (owner P2, 2026-10-26), so nobody's
+ *    dating is tied to their university, club or workplace.
  *  - D58, D59: alcohol served (the event becomes 20+) and smoking area.
  *  - D61: the disclaimer a member ticks before booking.
  */
+
+import { OPEN_TO_MORE_TAG } from "./rules";
 
 export type Lang2 = { th: string; en: string };
 
@@ -43,6 +47,14 @@ export type EventRulesInput = {
   requirements?: string;
   groupLabel?: string;
   groupJoinCode?: string;
+  /** The event's categories as typed; a dating partner's events count as 💘 whatever is typed. */
+  tags?: string[];
+};
+
+/** The refusal when a join-code group meets 💘 (on the form, or a dating co-host joining). */
+export const LOVE_GROUP_REFUSAL: Lang2 = {
+  th: "กิจกรรม 💘 จำกัดเฉพาะกลุ่มด้วยรหัสเข้าร่วมไม่ได้ เพื่อไม่ให้เรื่องเดตผูกกับมหาวิทยาลัย ชมรม หรือที่ทำงานของใคร",
+  en: "A 💘 event can't be limited to a group with a join code, so nobody's dating is tied to their university, club or workplace.",
 };
 
 export type EventRules = {
@@ -91,6 +103,9 @@ export function checkEventRules(
   need(!code || JOIN_CODE_RE.test(code), "รหัสเข้าร่วมใช้ตัวอักษรอังกฤษ ตัวเลข หรือขีด 4 ถึง 24 ตัว", "The join code is 4 to 24 letters, numbers or dashes.");
   need(!code || !!groupLabel, "ใส่ด้วยว่ากิจกรรมนี้สำหรับกลุ่มไหน", "Say who the event is for, alongside the join code.");
   need(!groupLabel || !!code, "ใส่รหัสเข้าร่วมให้กลุ่มนี้ด้วย", "Add a join code for this group.");
+  // Women-only and LGBTQ+ community tags stay allowed on 💘: they're safety opt-ins, not closed groups.
+  const love = (d.tags ?? []).includes(OPEN_TO_MORE_TAG) || ctx.partnerKind === "dating";
+  need(!(love && (code || groupLabel)), LOVE_GROUP_REFUSAL.th, LOVE_GROUP_REFUSAL.en);
 
   const talkMode = !!d.talkMode;
   const health = ctx.partnerKind === "health";

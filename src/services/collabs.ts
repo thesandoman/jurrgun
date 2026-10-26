@@ -6,7 +6,7 @@
  */
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { batch, getDb } from "../db";
-import { collabIsDating, collabMixRefusal, MAX_COHOSTS, type Lang2 } from "../domain/event-rules";
+import { collabIsDating, collabMixRefusal, LOVE_GROUP_REFUSAL, MAX_COHOSTS, type Lang2 } from "../domain/event-rules";
 import { OPEN_TO_MORE_TAG } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -73,7 +73,11 @@ const refuse = (th: string, en: string): Lang2 => ({ th, en });
 /** The lead partner invites a verified co-host to one of its upcoming events. */
 export async function inviteCohost(env: Env, by: { accountId: string; orgId: string }, eventId: string, targetOrgId: string): Promise<Lang2 | null> {
   const db = getDb(env);
-  const [ev] = await db.select({ id: events.id, partnerOrgId: events.partnerOrgId, startsAt: events.startsAt, title: events.title, titleEn: events.titleEn }).from(events).where(eq(events.id, eventId)).limit(1);
+  const [ev] = await db
+    .select({ id: events.id, partnerOrgId: events.partnerOrgId, startsAt: events.startsAt, title: events.title, titleEn: events.titleEn, groupJoinCode: events.groupJoinCode })
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1);
   if (!ev || ev.partnerOrgId !== by.orgId) return refuse("ไม่พบกิจกรรมนี้", "We can't find that event.");
   if (ev.startsAt.getTime() <= Date.now()) return refuse("กิจกรรมนี้เริ่มไปแล้ว", "That event has already started.");
   if (targetOrgId === by.orgId) return refuse("เลือกพาร์ตเนอร์อื่น", "Choose another partner.");
@@ -85,6 +89,8 @@ export async function inviteCohost(env: Env, by: { accountId: string; orgId: str
   const kinds = [(await kindOf(env, by.orgId)) ?? "events", ...current.map((c) => c.kind), target.kind];
   const mix = collabMixRefusal(kinds);
   if (mix) return mix;
+  // A dating co-host would put a join-code group behind 💘 (owner P2).
+  if (collabIsDating(kinds) && ev.groupJoinCode) return LOVE_GROUP_REFUSAL;
   const admins = await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.partnerOrgId, targetOrgId), eq(accounts.role, "partner_admin"))).limit(20);
   const id = newId();
   // A declined invite from before is replaced by the new one.
@@ -107,7 +113,7 @@ export async function respondToInvite(env: Env, by: { accountId: string; orgId: 
   const db = getDb(env);
   const [inv] = await db.select().from(eventPartners).where(eq(eventPartners.id, inviteId)).limit(1);
   if (!inv || inv.partnerOrgId !== by.orgId || inv.status !== "invited") return refuse("ไม่พบคำเชิญนี้", "We can't find that invitation.");
-  const [ev] = await db.select({ id: events.id, partnerOrgId: events.partnerOrgId, tags: events.tags }).from(events).where(eq(events.id, inv.eventId)).limit(1);
+  const [ev] = await db.select({ id: events.id, partnerOrgId: events.partnerOrgId, tags: events.tags, groupJoinCode: events.groupJoinCode }).from(events).where(eq(events.id, inv.eventId)).limit(1);
   if (!ev) return refuse("ไม่พบกิจกรรมนี้", "We can't find that event.");
   if (!accept) {
     await batch(env, [
@@ -120,6 +126,8 @@ export async function respondToInvite(env: Env, by: { accountId: string; orgId: 
   const kinds = [(await kindOf(env, ev.partnerOrgId)) ?? "events", ...others.map((c) => c.kind), (await kindOf(env, by.orgId)) ?? "events"];
   const mix = collabMixRefusal(kinds);
   if (mix) return mix;
+  // The group may have been added after the invite went out.
+  if (collabIsDating(kinds) && ev.groupJoinCode) return LOVE_GROUP_REFUSAL;
   const tags = collabIsDating(kinds) && !ev.tags.includes(OPEN_TO_MORE_TAG) ? [...ev.tags, OPEN_TO_MORE_TAG] : ev.tags;
   await batch(env, [
     db.update(eventPartners).set({ status: "accepted", respondedAt: new Date() }).where(eq(eventPartners.id, inviteId)),
