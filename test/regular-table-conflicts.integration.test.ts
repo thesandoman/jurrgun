@@ -149,7 +149,8 @@ describe.skipIf(!HAS_DB)("regular table conflicts", () => {
     // Nobody removed by reporting.
     expect(await isMember(table, a)).toBe(true);
     expect(await isMember(table, b)).toBe(true);
-    expect((await db().select().from(notifications).where(and(eq(notifications.accountId, mod.id), eq(notifications.kind, "report")))).length).toBeGreaterThan(0);
+    // A standard report: in the queue, with no alert to each moderator (owner card A).
+    expect((await db().select().from(notifications).where(and(eq(notifications.accountId, mod.id), eq(notifications.kind, "report")))).length).toBe(0);
     expect((await req("/admin/moderation", { cookie: mod.cookie })).status).toBe(200);
     expect(await (await req(`/admin/moderation/${report.id}`, { cookie: en(mod) })).text()).toContain(b.username);
     expect(Object.keys((await auditOf(host, "regular_table.conflict_report")).detail)).toEqual(["report"]);

@@ -18,18 +18,19 @@
  * pairing ends, a connection is removed, someone blocks, or a hangout is a
  * week past. No read receipts, typing indicators or online status.
  */
+import { isStaffTarget, reportLimit, staffAlert } from "../services/report-intake";
 import { DayStatusLine } from "../ui/day-of";
 import { shownDayStatus } from "../domain/day-of";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
-import { getDb } from "../db";
+import { batch, getDb } from "../db";
 import { CHAT_KIND, EXTRA_TEXT, HANGOUT_OPEN_DAYS, POLL_MAX, checkMessage, checkPhoto, checkPoll, notifyAt, parseThread, REASON_TEXT, shouldNudge, tally, threadKey } from "../domain/chat";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate, fmtDay, L } from "../lib/i18n";
 import { audit } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, blocks, buddyMatches, buddyQuests, chatMessages, chatReads, chatVotes, circleHeadRequests, connections, events, notifications, profiles, registrations, reports } from "../schema";
+import { blocks, buddyMatches, buddyQuests, chatMessages, chatReads, chatVotes, circleHeadRequests, connections, events, notifications, profiles, registrations, reports } from "../schema";
 import { getObject, getObjectUrl, putObject } from "../storage";
 import { PROMPT_BANK } from "../content/profile";
 import { icebreakersFor, icebreakerWindow } from "../content/icebreakers";
@@ -781,21 +782,25 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
   if (!th) return c.text("Not found", 404);
   const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), inArray(chatMessages.thread, keysOf(th)))).limit(1);
   if (!m || m.sender === me) return c.redirect(`/chat/${key}`);
+  const critical = !!m.moneyFlag;
+  // Owner card A: 1 a day about the same person, 10 a day in all; critical never blocked.
+  if (await reportLimit(db, me, m.sender, critical)) return c.redirect(`/chat/${key}?notice=report_limit`);
+  const alert = await staffAlert(c.env, db, { critical, aboutStaff: await isStaffTarget(db, m.sender) });
   const id = newId();
-  await db.insert(reports).values({
-    id,
-    reporter: me,
-    targetAccount: m.sender,
-    targetMessage: m.id,
-    reason: m.moneyFlag ? "spam_scam" : "harassment",
-    details: m.kind === "photo" ? `Chat photo (caption: ${m.body.slice(0, 200)})` : m.kind === "poll" ? `Chat poll: ${m.body.slice(0, 500)}` : `Chat message: ${m.body.slice(0, 500)}`,
-    severity: m.moneyFlag ? "critical" : "standard",
-  });
-  await audit(db, me, "chat.report", { type: "report", id });
-  const staff = await db.select({ id: accounts.id }).from(accounts).where(and(inArray(accounts.role, ["moderator", "bma_admin"]), eq(accounts.status, "active"))).limit(500);
-  if (staff.length) {
-    await db.insert(notifications).values(staff.map((s) => ({ id: newId(), accountId: s.id, kind: "report", titleTh: "มีรายงานแชตรอตรวจสอบ", titleEn: "Chat message reported", link: "/admin/moderation" })));
-  }
+  await batch(c.env, [
+    db.insert(reports).values({
+      id,
+      reporter: me,
+      targetAccount: m.sender,
+      targetMessage: m.id,
+      reason: m.moneyFlag ? "spam_scam" : "harassment",
+      details: m.kind === "photo" ? `Chat photo (caption: ${m.body.slice(0, 200)})` : m.kind === "poll" ? `Chat poll: ${m.body.slice(0, 500)}` : `Chat message: ${m.body.slice(0, 500)}`,
+      severity: critical ? "critical" : "standard",
+    }),
+    audit(db, me, "chat.report", { type: "report", id }),
+    ...alert.writes,
+  ]);
+  await alert.push();
   return c.redirect(`/chat/${key}?notice=reported`);
 });
 

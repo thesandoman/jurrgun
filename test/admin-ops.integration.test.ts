@@ -120,7 +120,8 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     const admin = await createMember({ role: "bma_admin" });
     const id = await report((await createMember()).id, admin.id);
     const r = await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "warning", note: "nope" } });
-    expect(r.status).toBe(403);
+    // Reports about staff are for admins only, so a moderator gets "not found".
+    expect(r.status).toBe(404);
     const [acct] = await db().select().from(accounts).where(eq(accounts.id, admin.id));
     expect(acct.status).toBe("active");
   });
@@ -131,17 +132,33 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     const aboutAdmin = await report((await createMember()).id, admin.id);
     const aboutMe = await report((await createMember()).id, mod.id);
     for (const action of ["dismiss", "note"]) {
-      expect((await req(`/admin/moderation/${aboutAdmin}/action`, { cookie: mod.cookie, form: { action, note: "x" } })).status, action).toBe(403);
-      expect((await req(`/admin/moderation/${aboutMe}/action`, { cookie: mod.cookie, form: { action, note: "x" } })).status, action).toBe(400);
+      expect((await req(`/admin/moderation/${aboutAdmin}/action`, { cookie: mod.cookie, form: { action, note: "x" } })).status, action).toBe(404);
+      expect((await req(`/admin/moderation/${aboutMe}/action`, { cookie: mod.cookie, form: { action, note: "x" } })).status, action).toBe(404);
     }
     for (const id of [aboutAdmin, aboutMe]) {
       const [rep] = await db().select().from(reports).where(eq(reports.id, id));
       expect(rep.status).toBe("open");
       expect(await db().select().from(moderationActions).where(eq(moderationActions.reportId, id))).toHaveLength(0);
     }
-    // An admin can still close a report about another admin.
+    // About an admin: another admin only records a note or closes it (BMA oversight handles it outside the app).
     const other = await createMember({ role: "bma_admin" });
+    expect(await (await req(`/admin/moderation/${aboutAdmin}?lang=en`, { cookie: `${other.cookie}; lang=en` })).text()).toContain("BMA oversight outside the app");
+    expect((await req(`/admin/moderation/${aboutAdmin}/action`, { cookie: other.cookie, form: { action: "warning", note: "x" } })).status).toBe(400);
     expect((await req(`/admin/moderation/${aboutAdmin}/action`, { cookie: other.cookie, form: { action: "dismiss" } })).status).toBe(302);
+    // An admin can't close a report about themselves either.
+    const aboutOther = await report((await createMember()).id, other.id);
+    expect((await req(`/admin/moderation/${aboutOther}/action`, { cookie: other.cookie, form: { action: "dismiss" } })).status).toBe(400);
+  });
+
+  it("keeps reports about a moderator out of other moderators' queue and counts; admins handle them", async () => {
+    const [mod, peer, admin] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "moderator" }), createMember({ role: "bma_admin" })]);
+    const id = await report((await createMember()).id, peer.id);
+    expect(await (await req("/admin/moderation", { cookie: mod.cookie })).text()).not.toContain(`/admin/moderation/${id}`);
+    expect((await req(`/admin/moderation/${id}`, { cookie: mod.cookie })).status).toBe(404);
+    expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form: { action: "suspend", days: "3", note: "x", rule: "harassment" } })).status).toBe(404);
+    expect((await db().select().from(accounts).where(eq(accounts.id, peer.id)))[0].status).toBe("active");
+    expect(await (await req("/admin/moderation", { cookie: admin.cookie })).text()).toContain(`/admin/moderation/${id}`);
+    expect((await req(`/admin/moderation/${id}/action`, { cookie: admin.cookie, form: { action: "warning", note: "Be kind" } })).status).toBe(302);
   });
 
   it("dismisses a report and 404s an unknown one", async () => {

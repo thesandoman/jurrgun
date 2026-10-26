@@ -204,7 +204,7 @@ adminReview.get("/", async (c) => {
             </p>
             <div class="grid2">
               <form method="post" action={`/admin/review/${e.id}/approve`}>
-                {paused ? null : <Toggle name="trust" label={t("ไว้ใจผู้จัดนี้ (ครั้งต่อไปไม่ต้องตรวจ)", "Trust this host (their next events skip review)")} />}
+                {paused || !isAdmin ? null : <Toggle name="trust" label={t("ไว้ใจผู้จัดนี้ (ครั้งต่อไปไม่ต้องตรวจ)", "Trust this host (their next events skip review)")} />}
                 <Button>✓ {paused ? t("กลับมาจัดต่อ", "Back on") : t("อนุมัติและเผยแพร่", "Approve and publish")}</Button>
               </form>
               <form
@@ -271,7 +271,8 @@ adminReview.post("/:id/approve", async (c) => {
     ]);
     return c.redirect("/admin/review?notice=approved");
   }
-  const trust = str((await c.req.parseBody()).trust) === "1";
+  // Only admins make a host trusted (owner card A); a moderator's tick is ignored.
+  const trust = me.role === "bma_admin" && str((await c.req.parseBody()).trust) === "1";
   const ops: { toSQL(): { sql: string; params: unknown[] } }[] = [
     db.update(events).set({ status: "published", reviewNote: null }).where(and(eq(events.id, e.id), eq(events.status, "pending"))),
     notify(db, e.createdBy, "host_approved", `เผยแพร่แล้ว: ${e.title}`, `Your event is live: ${e.titleEn ?? e.title}`, `/events/${e.id}`),

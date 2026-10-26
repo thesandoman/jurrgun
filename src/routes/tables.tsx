@@ -24,7 +24,7 @@ import type { AppEnv } from "../lib/env";
 import { fmtDate } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
 import { requireMember } from "../lib/session";
-import { accounts, circleHeadRequests, events, notifications, profiles, regularTableConflicts, regularTableMembers, regularTables, reports, type RegularTable } from "../schema";
+import { accounts, circleHeadRequests, events, profiles, regularTableConflicts, regularTableMembers, regularTables, reports, type RegularTable } from "../schema";
 import { blockedAmong, getTable, hostTable, memberIds, myTables, newTable, rejoinAfterFor, standing, wentWithHost } from "../services/regular-tables";
 import { newId } from "../lib/crypto";
 import { Button, Card, Empty, Field, LinkButton, Notice, page, Select, str, Tag, TextArea, Toggle, view } from "../ui/kit";
@@ -498,10 +498,8 @@ tableRoutes.post("/tables/:id/conflicts/:cid", async (c) => {
     return c.redirect(`${back}?notice=stepped_back`);
   }
   // Send to moderators: a report in the usual queue, naming both members, with no reason or direction.
-  const [pair, staff] = await Promise.all([
-    db.select({ id: accounts.id, username: accounts.username }).from(accounts).where(inArray(accounts.id, [r.aAccount, r.bAccount])).limit(2),
-    db.select({ id: accounts.id }).from(accounts).where(and(inArray(accounts.role, ["moderator", "bma_admin"]), eq(accounts.status, "active"))).limit(500),
-  ]);
+  // A standard report: it shows in the queue count on the staff dashboard, with no alert to each moderator (owner card A).
+  const pair = await db.select({ id: accounts.id, username: accounts.username }).from(accounts).where(inArray(accounts.id, [r.aAccount, r.bAccount])).limit(2);
   const u = (id: string) => pair.find((x) => x.id === id)?.username ?? id;
   const reportId = newId();
   await batch(c.env, [
@@ -515,9 +513,6 @@ tableRoutes.post("/tables/:id/conflicts/:cid", async (c) => {
     }),
     close("reported"),
     audit(db, me, "regular_table.conflict_report", target, { report: reportId }),
-    ...(staff.length
-      ? [db.insert(notifications).values(staff.map((s) => ({ id: newId(), accountId: s.id, kind: "report", titleTh: "มีรายงานจากโต๊ะประจำรอตรวจสอบ", titleEn: "Regular Table report to review", link: "/admin/moderation" })))]
-      : []),
   ]);
   return c.redirect(`${back}?notice=reported`);
 });

@@ -337,7 +337,19 @@ describe.skipIf(!HAS_DB)("Bangkok circle, report, block, notifications", () => {
     expect(await crit.text()).toContain("1669");
     const rows = await db().select().from(reports).where(eq(reports.reporter, x.id));
     expect(rows.map((r) => r.severity).sort()).toEqual(["critical", "standard"]);
-    expect((await notesFor(mod)).filter((n) => n.kind === "report").length).toBe(2);
+    // Owner card A: only the critical one alerts each moderator; the standard one is in the queue count.
+    expect((await notesFor(mod)).filter((n) => n.kind === "report").length).toBe(1);
+
+    // 1 standard report a day about the same person; a critical one always goes through.
+    const again = await req("/report", { cookie: en(x), form: { account: y.id, reason: "harassment" } });
+    expect(again.status).toBe(429);
+    expect(await again.text()).toContain("already reported this person today");
+    expect((await req("/report", { cookie: en(x), form: { account: y.id, reason: "unsafe", unsafe: "1" } })).status).toBe(200);
+    // 10 a day in all.
+    await db().insert(reports).values(Array.from({ length: 10 }, () => ({ id: newId(), reporter: x.id, reason: "other", details: "filler" })));
+    const daily = await req("/report", { cookie: en(x), form: { event: ev, reason: "other" } });
+    expect(daily.status).toBe(429);
+    expect(await daily.text()).toContain("10 reports today");
 
     // Events: only if registered.
     expect((await req(`/report?event=${ev}`, { cookie: x.cookie })).status).toBe(200);

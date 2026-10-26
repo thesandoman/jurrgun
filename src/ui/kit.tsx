@@ -47,7 +47,7 @@ export type PageOpts = {
   tab?: Tab;
   /** Staff pages get a wider layout and the admin side menu. */
   admin?: boolean;
-  status?: 200 | 400 | 403 | 404 | 409 | 500;
+  status?: 200 | 400 | 403 | 404 | 409 | 429 | 500;
   /** Focused task screens (onboarding, quiz): no tab bar, no footer. */
   bare?: boolean;
   /** Full-screen map screens (Discover): the page draws its own floating header. */
@@ -81,6 +81,7 @@ const NOTICES: Record<string, [string, string]> = {
   checked_in: ["เช็กอินสำเร็จ", "Checked in"],
   choices_saved: ["บันทึกแล้ว เราจะบอกก็ต่อเมื่อเลือกกันทั้งสองคน", "Saved, you'll only hear if it's mutual"],
   reported: ["ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ", "Report received, our team will review it"],
+  report_limit: ["ตอนนี้ส่งรายงานเพิ่มไม่ได้ ทีมงานกำลังดูรายงานที่คุณส่งมา คุณบล็อกเขาได้ทันที ถ้าไม่ปลอดภัย โทร 191", "You can't send another report right now, and the team is looking at the ones you sent. You can block them right away. If you're in danger, call 191."],
   blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked, you won't see each other again"],
   thanks: ["ขอบคุณสำหรับความคิดเห็น", "Thanks for your feedback"],
   shared: ["แชร์ช่องทางติดต่อแล้ว", "Contact shared"],

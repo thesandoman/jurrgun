@@ -190,6 +190,7 @@ adminPartnerReview.get("/", async (c) => {
   const who = new Map(applicants.map((a) => [a.id, a.username]));
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
   const kind = (k: keyof typeof KIND_TEXT) => (lang === "en" ? KIND_TEXT[k][1] : KIND_TEXT[k][0]);
+  const isAdmin = c.var.user!.account.role === "bma_admin";
   return page(
     c,
     { title: t("ตรวจพาร์ตเนอร์", "Partner review"), admin: true },
@@ -216,9 +217,13 @@ adminPartnerReview.get("/", async (c) => {
             </p>
             {a.about ? <p style="white-space:pre-wrap">{a.about}</p> : null}
             <div class="row">
-              <form method="post" action={`/admin/partner-review/${a.id}/approve`}>
-                <Button>{t("ยืนยันพาร์ตเนอร์", "Verify partner")}</Button>
-              </form>
+              {isAdmin ? (
+                <form method="post" action={`/admin/partner-review/${a.id}/approve`}>
+                  <Button>{t("ยืนยันพาร์ตเนอร์", "Verify partner")}</Button>
+                </form>
+              ) : (
+                <p class="muted">{t("แอดมินเป็นคนยืนยันพาร์ตเนอร์ (ให้สิทธิ์แอดมินองค์กร)", "An admin verifies partners, since it grants the partner admin role.")}</p>
+              )}
               <form method="post" action={`/admin/partner-review/${a.id}/decline`}>
                 <TextArea label={t("เหตุผล (ผู้สมัครเห็น)", "Why (the applicant sees this)")} name="note" rows={2} required maxlength={NOTE_MAX} />
                 <Button kind="ghost">{t("ปฏิเสธ", "Decline")}</Button>
@@ -286,6 +291,8 @@ adminPartnerReview.post("/:id/approve", async (c) => {
     .from(partnerApplications)
     .where(and(eq(partnerApplications.id, c.req.param("id")), eq(partnerApplications.status, "pending")))
     .limit(1);
+  // Verifying grants partner_admin, and only admins grant roles (owner card A).
+  if (me.role !== "bma_admin") return c.text("Forbidden", 403);
   if (!a) return c.redirect("/admin/partner-review");
   if (a.accountId === me.id) return c.redirect("/admin/partner-review?error=own");
   const [applicant] = await db.select({ role: accounts.role, status: accounts.status }).from(accounts).where(eq(accounts.id, a.accountId)).limit(1);

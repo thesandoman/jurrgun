@@ -168,7 +168,11 @@ describe.skipIf(!HAS_DB)("D47: partners apply, get verified, post with their own
     expect((await req("/partner/apply", { cookie: applicant.cookie, form: { orgName, kind, contact: "hello@soi.example", about: "Live music nights" } })).headers.get("location")).toBe("/partner/apply?notice=done");
     const [app] = await db().select().from(partnerApplications).where(eq(partnerApplications.accountId, applicant.id));
     expect(await (await req("/admin/partner-review", { cookie: mod.cookie })).text()).toContain(orgName);
-    await req(`/admin/partner-review/${app.id}/approve`, { cookie: mod.cookie, method: "POST" });
+    // Verifying grants partner_admin: admins only (owner card A).
+    expect((await req(`/admin/partner-review/${app.id}/approve`, { cookie: mod.cookie, method: "POST" })).status).toBe(403);
+    expect((await db().select().from(accounts).where(eq(accounts.id, applicant.id)))[0].role).toBe("user");
+    const bma = await createMember({ role: "bma_admin" });
+    await req(`/admin/partner-review/${app.id}/approve`, { cookie: bma.cookie, method: "POST" });
     const [acct] = await db().select().from(accounts).where(eq(accounts.id, applicant.id));
     expect(acct.role).toBe("partner_admin");
     const page = await req("/partner/keys", { cookie: applicant.cookie, method: "POST", form: { label: "ticketing" } });

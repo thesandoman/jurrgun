@@ -11,8 +11,8 @@
  *   POST /partner/events/:id/cohosts/:invite/remove  withdraw or remove a co-host
  *   POST /partner/invites/:invite/accept|decline     answer an invitation
  *
- * A Jurrgun admin, a moderator or a BMA admin verifies applications
- * (src/routes/admin/partner-review.tsx). A partner sees its own events with
+ * Only an admin (bma_admin) verifies applications, since that grants
+ * partner_admin (owner card A; src/routes/admin/outside.tsx). A partner sees its own events with
  * booking counts and a referral code per event: never names, never who.
  */
 import { Hono, type Context } from "hono";

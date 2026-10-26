@@ -14,6 +14,7 @@
  * `use("*")`, because this sub-app is mounted at "/" and a wildcard would
  * wrap every page in the app.
  */
+import { isStaffTarget, limitText, reportLimit, staffAlert } from "../services/report-intake";
 import { vapidKeys } from "../services/push";
 import { PushSwitch } from "../ui/push-switch";
 import { MAX_SHARES_PER_DAY } from "../domain/rules";
@@ -1291,12 +1292,13 @@ peopleRoutes.post("/report", requireMember, async (c) => {
 
   const db = getDb(c.env);
   const me = c.var.user!.account.id;
-  const staff = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(inArray(accounts.role, ["moderator", "bma_admin"]), eq(accounts.status, "active")))
-    // Every active moderator is told; the cap only guards against runaway growth.
-    .limit(500);
+  // Owner card A: 1 a day about the same person, 10 a day in all; critical never blocked.
+  const limit = await reportLimit(db, me, target.accountId, critical);
+  if (limit) {
+    const [th, en] = limitText(limit);
+    return page(c, { title: t("รายงาน", "Report"), status: 429 }, <ReportForm v={v} target={target} error={t(th, en)} values={values} />);
+  }
+  const alert = await staffAlert(c.env, db, { critical, aboutStaff: await isStaffTarget(db, target.accountId) });
   const id = newId();
   const writes: { toSQL(): { sql: string; params: unknown[] } }[] = [
     db.insert(reports).values({
@@ -1309,22 +1311,10 @@ peopleRoutes.post("/report", requireMember, async (c) => {
       severity: critical ? "critical" : "standard",
     }),
     audit(db, me, "report.create", { type: "report", id }, { severity: critical ? "critical" : "standard", reason: values.reason }),
+    ...alert.writes,
   ];
-  if (staff.length) {
-    writes.push(
-      db.insert(notifications).values(
-        staff.map((s) => ({
-          id: newId(),
-          accountId: s.id,
-          kind: "report",
-          titleTh: critical ? "รายงานด่วน: มีคนรู้สึกไม่ปลอดภัย" : "มีรายงานใหม่รอตรวจสอบ",
-          titleEn: critical ? "Urgent report: someone feels unsafe" : "New report to review",
-          link: "/admin/moderation",
-        })),
-      ),
-    );
-  }
   await batch(c.env, writes);
+  await alert.push();
   if (!critical) return c.redirect("/connections?notice=reported");
   return page(
     c,

@@ -19,7 +19,7 @@ import { fmtDate, fmtDay } from "../../lib/i18n";
 import { audit } from "../../lib/records";
 import { hasRole, requireRole } from "../../lib/session";
 import { accounts, moderationActions, profiles, reports } from "../../schema";
-import { Button, Card, Empty, page, str, Tag, view } from "../../ui/kit";
+import { Button, Card, Empty, Notice, page, str, Tag, TextArea, view } from "../../ui/kit";
 
 export const adminUsers = new Hono<AppEnv>();
 adminUsers.use("*", requireRole("moderator"));
@@ -36,6 +36,7 @@ const basics = {
   suspendedUntil: accounts.suspendedUntil,
   verification: accounts.verification,
   bkkRegistered: accounts.bkkRegistered,
+  trustedHost: accounts.trustedHost,
   createdAt: accounts.createdAt,
   nickname: profiles.nickname,
   district: profiles.district,
@@ -189,6 +190,10 @@ adminUsers.get("/:id", async (c) => {
               </tr>
               <tr><th scope="row">{t("การยืนยันบัญชี", "Account verification")}</th><td>{L2(verLabel, acct.verification)}</td></tr>
               <tr><th scope="row">{t("ทะเบียนบ้าน กทม.", "Bangkok registration")}</th><td>{L2(bkkLabel, acct.bkkRegistered)}</td></tr>
+              <tr>
+                <th scope="row">{t("ผู้จัดที่ไว้ใจ", "Trusted host")}</th>
+                <td>{acct.trustedHost ? t("ใช่ กิจกรรมใหม่ไม่ต้องรอตรวจ", "Yes: new events skip review") : t("ไม่ใช่", "No")}</td>
+              </tr>
               <tr><th scope="row">{t("เขต", "District")}</th><td>{acct.district ? label(DISTRICTS, acct.district, lang) : "-"}</td></tr>
               <tr><th scope="row">{t("สร้างเมื่อ", "Created")}</th><td>{fmtDay(acct.createdAt, lang)}</td></tr>
               <tr>
@@ -208,6 +213,22 @@ adminUsers.get("/:id", async (c) => {
           )}
         </p>
       </Card>
+
+      {c.req.query("notice") === "untrusted" ? <Notice kind="ok">{t("ยกเลิกผู้จัดที่ไว้ใจแล้ว กิจกรรมใหม่จะต้องรอตรวจ", "Trusted host removed. Their new events wait for review.")}</Notice> : null}
+      {c.req.query("notice") === "need_reason" ? <Notice kind="error">{t("ใส่เหตุผลก่อน (ไม่เกิน 500 ตัวอักษร)", "Add a reason first (up to 500 characters).")}</Notice> : null}
+      {admin && acct.trustedHost ? (
+        <Card>
+          <h2 style="margin-top:0">{t("ผู้จัดที่ไว้ใจ", "Trusted host")}</h2>
+          <form
+            method="post"
+            action={`/admin/users/${encodeURIComponent(acct.id)}/untrust`}
+            onsubmit={`return confirm(${JSON.stringify(t("ยกเลิกผู้จัดที่ไว้ใจ? กิจกรรมใหม่ของเขาจะต้องรอตรวจ", "Remove trusted host? Their new events will wait for review."))})`}
+          >
+            <TextArea label={t("เหตุผล (บันทึกในบันทึกการตรวจสอบ)", "Reason (kept in the audit log)")} name="reason" rows={2} required maxlength={500} />
+            <Button kind="ghost">{t("ยกเลิกผู้จัดที่ไว้ใจ", "Remove trusted host")}</Button>
+          </form>
+        </Card>
+      ) : null}
 
       {admin ? (
         <Card>
@@ -301,4 +322,23 @@ async function setField(c: Context<AppEnv>, field: "verification" | "bkkRegister
 }
 
 adminUsers.post("/:id/verification", (c) => setField(c, "verification", VERIFICATION));
+
+/** Admins only (owner card A): a trusted host goes back to review, with a reason in the audit log. */
+adminUsers.post("/:id/untrust", async (c) => {
+  const me = c.var.user!.account;
+  if (!hasRole(me.role, [])) return c.text("Forbidden", 403);
+  const id = c.req.param("id");
+  const reason = str((await c.req.parseBody()).reason).trim();
+  if (!reason || reason.length > 500) return c.redirect(`/admin/users/${encodeURIComponent(id)}?notice=need_reason`);
+  const db = getDb(c.env);
+  const [acct] = await db.select({ id: accounts.id, trustedHost: accounts.trustedHost }).from(accounts).where(eq(accounts.id, id)).limit(1);
+  if (!acct) return c.text("Not found", 404);
+  if (acct.trustedHost) {
+    await batch(c.env, [
+      db.update(accounts).set({ trustedHost: false }).where(eq(accounts.id, id)),
+      audit(db, me.id, "users.untrust_host", { type: "account", id }, { reason }),
+    ]);
+  }
+  return c.redirect(`/admin/users/${encodeURIComponent(id)}?notice=untrusted`);
+});
 adminUsers.post("/:id/bkk", (c) => setField(c, "bkkRegistered", BKK));

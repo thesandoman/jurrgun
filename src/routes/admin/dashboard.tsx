@@ -27,6 +27,7 @@ import { K_THRESHOLD, safeCount } from "../../domain/rules";
 import { retentionIfDue, runRetention, type RetentionRun } from "../../services/retention";
 import { clockNext, startClock, stopClock } from "../../services/clock";
 import { vapidKeys } from "../../services/push";
+import { moderatorVisible } from "../../services/report-intake";
 import { alias } from "drizzle-orm/pg-core";
 import { connections, events, registrations, reports } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
@@ -255,7 +256,8 @@ adminDashboard.get("/", async (c) => {
             critical: sql<number>`sum(case when ${reports.severity} = 'critical' then 1 else 0 end)`.mapWith(Number),
           })
           .from(reports)
-          .where(inArray(reports.status, ["open", "in_review"]))
+          // Reports about staff are for admins only, in the count too (owner card A).
+          .where(and(inArray(reports.status, ["open", "in_review"]), role === "bma_admin" ? undefined : moderatorVisible()))
       : Promise.resolve(null),
     showHost && hostWhere
       ? db

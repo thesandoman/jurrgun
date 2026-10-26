@@ -114,15 +114,29 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     expect(w.status).toBe("draft");
   });
 
-  it("trusted hosts publish straight away", async () => {
-    const [m, mod] = await Promise.all([createMember({ role: "circle_head" }), createMember({ role: "moderator" })]);
+  it("trusted hosts publish straight away; only admins grant or remove trust", async () => {
+    const [m, mod, admin] = await Promise.all([createMember({ role: "circle_head" }), createMember({ role: "moderator" }), createMember({ role: "bma_admin" })]);
     await req("/host/new", { cookie: m.cookie, form: proposal() });
     const first = await latest(m.id);
+    // A moderator's tick is ignored (owner card A).
     await req(`/admin/review/${first.id}/approve`, { cookie: mod.cookie, form: { trust: "1" } });
-    const r = await req("/host/new", { cookie: m.cookie, form: proposal({ title: "Second meet-up" }) });
-    expect(r.headers.get("location")).toBe("/host?notice=published");
+    expect((await db().select({ trusted: accounts.trustedHost }).from(accounts).where(eq(accounts.id, m.id)))[0].trusted).toBe(false);
+    await req("/host/new", { cookie: m.cookie, form: proposal({ title: "Second meet-up" }) });
     const [second] = await db().select().from(events).where(and(eq(events.createdBy, m.id), eq(events.title, "Second meet-up")));
-    expect(second.status).toBe("published");
+    expect(second.status).toBe("pending");
+    await req(`/admin/review/${second.id}/approve`, { cookie: admin.cookie, form: { trust: "1" } });
+    const r = await req("/host/new", { cookie: m.cookie, form: proposal({ title: "Third meet-up" }) });
+    expect(r.headers.get("location")).toBe("/host?notice=published");
+    const [third] = await db().select().from(events).where(and(eq(events.createdBy, m.id), eq(events.title, "Third meet-up")));
+    expect(third.status).toBe("published");
+
+    // Removing trust: admins only, with a reason, audited.
+    expect((await req(`/admin/users/${m.id}/untrust`, { cookie: mod.cookie, form: { reason: "x" } })).status).toBe(403);
+    expect((await req(`/admin/users/${m.id}/untrust`, { cookie: admin.cookie, form: { reason: "" } })).headers.get("location")).toContain("notice=need_reason");
+    expect((await req(`/admin/users/${m.id}/untrust`, { cookie: admin.cookie, form: { reason: "Reports about two meet-ups" } })).headers.get("location")).toContain("notice=untrusted");
+    expect((await db().select({ trusted: accounts.trustedHost }).from(accounts).where(eq(accounts.id, m.id)))[0].trusted).toBe(false);
+    const r4 = await req("/host/new", { cookie: m.cookie, form: proposal({ title: "Fourth meet-up" }) });
+    expect(r4.headers.get("location")).not.toBe("/host?notice=published");
   });
 
   it("only admins, verified partners and circle heads host; members are pointed to lead a circle", async () => {

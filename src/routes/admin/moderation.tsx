@@ -30,6 +30,7 @@ import { accounts, events, moderationActions, profiles, registrations, reports, 
 import { Card, Empty, Field, int, Notice, page, pageOf, Pager, str, Tag, TextArea, view } from "../../ui/kit";
 import { statusTag } from "./users";
 import { releaseUpcomingSeats } from "../../services/events";
+import { moderatorVisible, STAFF_TARGET_ROLES } from "../../services/report-intake";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
 
 /** Rules a moderator can name as broken: the report reasons, minus "other". */
@@ -60,6 +61,10 @@ const STATUS_LABELS: Record<string, [string, string]> = {
 
 const reporterProfile = aliasedTable(profiles, "reporter_profile");
 const targetProfile = aliasedTable(profiles, "target_profile");
+const targetAccount = aliasedTable(accounts, "target_account");
+
+/** Reports about a moderator or an admin are for admins only (owner card A). */
+const isAdmin = (c: Context<AppEnv>) => c.var.user!.account.role === "bma_admin";
 
 function age(from: Date, lang: "th" | "en"): string {
   const h = Math.max(0, Math.floor((Date.now() - from.getTime()) / 3_600_000));
@@ -84,7 +89,8 @@ adminModeration.get("/", async (c) => {
 
   // Server search over every report in this status: the reason (its stored
   // value and its Thai / English labels), both nicknames and the event title.
-  let where: SQL = eq(reports.status, status);
+  const admin = isAdmin(c);
+  let where: SQL = admin ? eq(reports.status, status) : and(eq(reports.status, status), moderatorVisible())!;
   if (q) {
     const like = `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
     const needle = q.toLowerCase();
@@ -133,6 +139,7 @@ adminModeration.get("/", async (c) => {
     db
       .select({ status: reports.status, n: sql<number>`count(*)`.mapWith(Number) })
       .from(reports)
+      .where(admin ? undefined : moderatorVisible())
       .groupBy(reports.status)
       .limit(10),
   ]);
@@ -226,12 +233,16 @@ async function loadReport(c: Context<AppEnv>, id: string) {
       eventTitleEn: events.titleEn,
       eventStartsAt: events.startsAt,
       eventHost: events.hostAccountId,
+      targetRole: targetAccount.role,
     })
     .from(reports)
     .leftJoin(reporterProfile, eq(reporterProfile.accountId, reports.reporter))
     .leftJoin(events, eq(events.id, reports.targetEvent))
+    .leftJoin(targetAccount, eq(targetAccount.id, reports.targetAccount))
     .where(eq(reports.id, id))
     .limit(1);
+  // A moderator never sees a report about staff, so it's "not found", not "forbidden".
+  if (row && !isAdmin(c) && row.targetRole && (STAFF_TARGET_ROLES as readonly string[]).includes(row.targetRole)) return null;
   return row ?? null;
 }
 
@@ -475,6 +486,17 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
         {protectedTarget ? (
           <Notice kind="warn">{t("ผู้ดูแลจัดการบัญชีแอดมินไม่ได้", "Moderators can't act on an admin account.")}</Notice>
         ) : null}
+        {target?.role === "bma_admin" && !selfTarget ? (
+          <Notice kind="warn">
+            {t(
+              "รายงานนี้เกี่ยวกับแอดมิน ส่งต่อให้ฝ่ายกำกับดูแลของ BMA นอกแอป แล้วบันทึกผลเป็นโน้ตที่นี่",
+              "This report is about an admin. Send it to BMA oversight outside the app, then record the outcome here as a note.",
+            )}
+          </Notice>
+        ) : null}
+        {target?.role === "moderator" ? (
+          <Notice kind="info">{t("รายงานนี้เกี่ยวกับผู้ดูแล มีแค่แอดมินที่เห็น", "This report is about a moderator. Only admins see it.")}</Notice>
+        ) : null}
         {selfTarget ? (
           <Notice kind="warn">{t("รายงานนี้เกี่ยวกับบัญชีของคุณ ให้ผู้ดูแลคนอื่นจัดการ", "This report is about your account. Another moderator has to handle it.")}</Notice>
         ) : null}
@@ -596,6 +618,10 @@ adminModeration.post("/:id/action", async (c) => {
   if (target) {
     if (target.role === "bma_admin" && me.role !== "bma_admin") return c.text("Forbidden", 403);
     if (target.id === me.id) return bad(t("ดำเนินการกับบัญชีของตัวเองไม่ได้", "You can't act on your own account"));
+    // About an admin: BMA oversight handles it outside the app; here an admin only records a note or closes it.
+    if (target.role === "bma_admin" && action !== "note" && action !== "dismiss") {
+      return bad(t("รายงานเกี่ยวกับแอดมินให้ส่งต่อ BMA นอกแอป ในนี้บันทึกโน้ตหรือปิดรายงานได้เท่านั้น", "A report about an admin goes to the BMA outside the app. Here you can only add a note or close it."));
+    }
   }
 
   // Fair process: removal needs a named rule, or 3 flags already.
