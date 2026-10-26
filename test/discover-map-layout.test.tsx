@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { readFileSync } from "node:fs";
-import { FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, sheetCopy } from "../src/ui/discover-map";
+import { FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, SIDE_PANEL_MQ, sheetCopy } from "../src/ui/discover-map";
 
 const en = tr("en");
 const th = tr("th");
@@ -105,6 +105,21 @@ describe("Discover map page CSS", () => {
     // -1 is the search pill's blur layer, inside the pill's own isolated stack.
     expect(zs.filter((z) => !z.startsWith("var(--z-") && z !== "-1")).toEqual([]);
     expect(FULLMAP_CSS).toContain("--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-panel:9;--z-sheet:10;--z-tab:11;--z-card:12;--z-skip:30");
+  });
+
+  it("the page script is valid JavaScript", () => {
+    const body = FULLMAP_JS.replace(/^import .*$/m, "");
+    expect(() => new Function(`return async () => {${body}\n}`)).not.toThrow();
+  });
+
+  it("landscape phones get the side panel: left of the rail, scrolling inside itself", () => {
+    expect(SIDE_PANEL_MQ).toBe("(min-width: 900px), (max-height: 480px) and (orientation: landscape)");
+    expect(FULLMAP_JS).toContain(`const SIDE = matchMedia("${SIDE_PANEL_MQ}")`);
+    const css = FULLMAP_CSS.slice(FULLMAP_CSS.indexOf("@media (max-height:480px) and (orientation:landscape){"));
+    expect(css).toContain(".fd-sheet{left:var(--edge-l);right:auto;width:min(360px,calc(50vw - 24px));bottom:var(--tab-h);");
+    expect(css).toContain("max-height:calc(100dvh - var(--free-top) - var(--tab-h))");
+    expect(css).toContain("overflow:auto");
+    expect(css).toContain(".fd-sheet-body{max-height:none;overflow:visible");
   });
 
   it("keeps the fixed chrome inside the safe areas, and the rail comes back once a pin's card closes", () => {

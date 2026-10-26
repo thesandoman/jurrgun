@@ -153,6 +153,13 @@ export function PinLegend(props: { t: T }) {
   );
 }
 
+/**
+ * When the events list is a side panel on the left instead of a bottom sheet:
+ * laptops, and landscape phones (480px tall or less), where a bottom sheet
+ * would leave almost no map (owner card 1).
+ */
+export const SIDE_PANEL_MQ = "(min-width: 900px), (max-height: 480px) and (orientation: landscape)";
+
 /** JSON for a <script type="application/json"> block, safe against </script>. */
 function scriptJson(x: unknown): string {
   return JSON.stringify(x).replace(/</g, "\\u003c");
@@ -349,6 +356,7 @@ const sheetEl = document.getElementById("discover-sheet");
 const railEl = document.querySelector(".fd-rail");
 const tabEl = document.querySelector(".tabbar");
 const GAP = 8;
+const SIDE = matchMedia("${SIDE_PANEL_MQ}");
 const isShown = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
 const hits = (a, b) => a.width > 0 && b.width > 0 && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const px = (v) => Math.ceil(v) + "px";
@@ -376,7 +384,9 @@ function layoutChrome() {
   const handle = sheetEl.querySelector("summary").offsetHeight;
   root.style.setProperty("--sheet-h", px(handle));
   // Phones: an open sheet is taller than its handle, and the map tools wait above it.
-  root.style.setProperty("--sheet-cur", px(matchMedia("(min-width: 900px)").matches ? handle : sheetEl.offsetHeight));
+  // Landscape phones: the list is a side panel on the left, so the rail and the credit keep the whole right-hand side.
+  const short = SIDE.matches && innerWidth < 900;
+  root.style.setProperty("--sheet-cur", px(short ? 0 : SIDE.matches ? handle : sheetEl.offsetHeight));
   const c = credit();
   root.style.setProperty("--credit-h", px(c ? c.offsetHeight : 0));
   const top = chromeTop() + GAP;
@@ -397,7 +407,7 @@ function watchChrome() {
 }
 addEventListener("resize", queueChrome);
 sheetEl?.addEventListener("toggle", queueChrome);
-// Nothing coming up opens the sheet on its empty state, except on a short landscape screen, where it would cover the map tools.
+// Nothing coming up opens the sheet on its empty state, except on a short landscape screen, where the open panel would take most of the map.
 if (sheetEl?.open && matchMedia("(max-height: 480px)").matches) sheetEl.open = false;
 
 function announce(text) { const live = document.getElementById("fd-live"); if (!live) return; live.textContent = ""; setTimeout(() => { live.textContent = text || ""; }, 50); }
@@ -407,9 +417,13 @@ function refit(points, instant = false) {
   if (!map || !points.length) return;
   const top = (document.querySelector(".svm-chips")?.getBoundingClientRect().bottom ?? 220) + 24;
   const rail = document.querySelector(".fd-rail")?.getBoundingClientRect();
-  const sheetTop = document.getElementById("discover-sheet")?.getBoundingClientRect().top ?? innerHeight - 120;
-  const wide = innerWidth >= 900;
-  const pad = { top, bottom: Math.max(40, innerHeight - sheetTop + 24), left: wide ? 440 : 40, right: rail ? innerWidth - rail.left + 16 : 80 };
+  const sr = sheetEl.getBoundingClientRect();
+  // A side panel that is open takes the left of the map; closed, only its handle sits in the bottom-left corner.
+  const sideOpen = SIDE.matches && sheetEl.open;
+  const pad = { top, bottom: Math.max(40, innerHeight - (sideOpen ? tabTop() : sr.top) + 24), left: sideOpen ? sr.right + 16 : 40, right: rail ? innerWidth - rail.left + 16 : 80 };
+  // Too little map left between the paddings: fit to the whole map instead of failing.
+  if (pad.left + pad.right > innerWidth - 60) { pad.left = 40; pad.right = 40; }
+  if (pad.top + pad.bottom > innerHeight - 60) { pad.top = 40; pad.bottom = 40; }
   let s = 90, w = 180, n = -90, e = -180;
   for (const p of points) { s = Math.min(s, p.lat); n = Math.max(n, p.lat); w = Math.min(w, p.lng); e = Math.max(e, p.lng); }
   try {
@@ -440,13 +454,15 @@ for (const a of document.querySelectorAll('a[href="#discover-sheet"]')) a.addEve
  * interface rules): drag the handle and it follows 1:1, rubber-banding past
  * the top; let go and the flick is projected forward to choose open or
  * closed, with the finger's velocity handed to the spring. A tap springs it
- * open or shut, and a sheet in motion can be grabbed again. Phones only; on
- * a laptop it is a side panel. Reduced motion: it simply opens and closes.
+ * open or shut, and a sheet in motion can be grabbed again. Portrait phones
+ * only; on a laptop or a landscape phone it is a side panel. Reduced motion:
+ * it simply opens and closes.
  */
 const M = window.jgMotion;
 const sum = sheet.querySelector("summary");
 const body = sheet.querySelector(".fd-sheet-body");
-const wide = () => matchMedia("(min-width: 1024px)").matches;
+// A side panel (laptops, landscape phones) simply opens and closes; only the bottom sheet springs.
+const wide = () => SIDE.matches;
 let sy = 0, sAnim = null, sTo = 0, sDrag = null, swallow = false;
 const sTr = M.tracker();
 const H = () => body.offsetHeight || 1;
@@ -629,5 +645,19 @@ body.fullmap-body .tabbar{z-index:var(--z-tab)}
   .fullmap .fd-sheet-body.discover-list{grid-template-columns:minmax(0,1fr);gap:12px}
   /* Laptops: a tapped pin's card sits in the left column, above the events list. */
   .fullmap .svm-sheet{left:12px!important;right:auto!important;top:auto!important;width:400px;max-height:calc(100dvh - var(--tk-h) - var(--top-h) - 220px)}
+}
+/*
+ * Landscape phones (owner card 1): the list is a side panel on the left, as on
+ * laptops, from under the chips down to the tab bar. It never reaches the rail
+ * on the right, and the whole panel scrolls inside itself, so even 200% text
+ * never clips its handle or its buttons.
+ */
+@media (max-height:480px) and (orientation:landscape){
+  .fd-sheet{left:var(--edge-l);right:auto;width:min(360px,calc(50vw - 24px));bottom:var(--tab-h);border-radius:18px;border:1px solid var(--line);max-height:calc(100vh - var(--free-top) - var(--tab-h));overflow:auto;overscroll-behavior:contain;will-change:auto}
+  @supports (height:100dvh){.fd-sheet{max-height:calc(100dvh - var(--free-top) - var(--tab-h))}}
+  .fd-sheet-body{max-height:none;overflow:visible;padding:0 10px 10px}
+  .fullmap .fd-sheet-body.discover-list{grid-template-columns:minmax(0,1fr);gap:10px}
+  /* The panel scrolls as a page does, so its handle may scroll away: let the finger scroll it there too. */
+  .fd-sheet>summary{touch-action:auto}
 }
 `;
