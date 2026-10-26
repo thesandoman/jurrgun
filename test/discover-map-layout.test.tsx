@@ -234,6 +234,9 @@ describe("Discover map page CSS", () => {
     expect(css).toContain("max-height:calc(100dvh - var(--free-top) - var(--tab-h))");
     expect(css).toContain("overflow:auto");
     expect(css).toContain(".fd-sheet-body{max-height:none;overflow:visible");
+    // 200% text: the credit stays right of the panel and the rail still fits above the tab bar.
+    expect(css).toContain(".fullmap .maplibregl-ctrl-bottom-right{max-width:calc(100% - min(360px,50vw - 24px) - var(--edge-l) - var(--edge-r))}");
+    expect(css).toContain(".fullmap .fd-rail-btn{font-size:min(.7rem,14px)}");
   });
 
   it("keeps the fixed chrome inside the safe areas, and the rail comes back once a pin's card closes", () => {

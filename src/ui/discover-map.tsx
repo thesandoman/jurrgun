@@ -859,5 +859,10 @@ body.fullmap-body .tabbar{z-index:var(--z-tab)}
   .fullmap .fd-sheet-body.discover-list{grid-template-columns:minmax(0,1fr);gap:10px}
   /* The panel scrolls as a page does, so its handle may scroll away: let the finger scroll it there too. */
   .fd-sheet>summary{touch-action:auto}
+  /* The map credit stays right of the panel, and with large text the rail's labels stop growing at 14px so it still fits above the tab bar. */
+  .fullmap .maplibregl-ctrl-bottom-right{max-width:calc(100% - min(360px,50vw - 24px) - var(--edge-l) - var(--edge-r))}
+  .fullmap .maplibregl-ctrl-attrib{font-size:min(.75rem,12px)}
+  .fullmap .fd-rail-btn{font-size:min(.7rem,14px)}
+  .fullmap .fd-rail-btn b{font-size:min(1.2rem,22px)}
 }
 `;
