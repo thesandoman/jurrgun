@@ -9,7 +9,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { createMember, db, HAS_DB, req } from "./helpers";
 import { accounts, consents, profiles } from "../src/schema";
 import { randomToken } from "../src/lib/crypto";
-import { TERMS_CONSENT, TERMS_VERSION } from "../src/content/privacy";
+import { NOTICE_DATE, TERMS_CONSENT, TERMS_VERSION } from "../src/content/privacy";
 
 const latest = async (id: string, category: string) =>
   (await db().select().from(consents).where(and(eq(consents.accountId, id), eq(consents.category, category))).orderBy(desc(consents.createdAt)).limit(1))[0];
@@ -108,7 +108,7 @@ describe.skipIf(!HAS_DB)("the consent centre", () => {
     expect(html).toContain("Agreements on record");
     for (const key of ["service", "safety", "terms", "guide"]) expect(html).not.toContain(`name="consent_${key}"`);
     expect(html).toMatch(/Acknowledged \d{1,2} [A-Z][a-z]{2} \d{4}/);
-    expect(html).toMatch(/Agreed \d{1,2} [A-Z][a-z]{2} \d{4} · Version of 16 October 2026/);
+    expect(html).toMatch(new RegExp(`Agreed \\d{1,2} [A-Z][a-z]{2} \\d{4} · Version of ${NOTICE_DATE.en}`));
     // Each switch says what switching it off does.
     expect(html).toContain("If you turn it off, we delete your past City Pulse and wellbeing answers");
     expect(html).toContain("so we can&#39;t find yours to delete");
