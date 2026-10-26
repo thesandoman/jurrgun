@@ -1238,4 +1238,14 @@ a.nowrap{white-space:nowrap}
   .tabbar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}
   body:has(.tabbar){padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 }
+/* Focus is never hidden (2.4.11): a control reached with Tab or a link to #anchor stops below the
+   sticky top bar and above the tab bar, the sticky action bar or the chat box. Pages that set their
+   own (edit profile) keep theirs: these rules carry no extra weight. */
+html{scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}
+@media (max-width:1023.98px){
+  html:where(:has(body .tabbar)){scroll-padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+  html:where(:has(main .flow-bar)){scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  html:where(:has(main :is(.chat-compose,.chat-send))){scroll-padding-bottom:calc(184px + env(safe-area-inset-bottom,0px))}
+}
+@media (min-width:1024px){html{scroll-padding-top:88px}}
 `);
