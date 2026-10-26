@@ -8,7 +8,8 @@ import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { NoEventsYet } from "../src/ui/discover-map";
 import { alertFitsView } from "../src/domain/district-alert";
-import { CONSENT_CATEGORIES } from "../src/content/privacy";
+import { CONSENT_CATEGORIES, NOTICE_CHANGES, NOTICE_ISO } from "../src/content/privacy";
+import { readFileSync } from "node:fs";
 
 const en = tr("en");
 const th = tr("th");
@@ -93,5 +94,20 @@ describe("the privacy notice names the alert (owner-approved legal edit)", () =>
     expect(hint.en).toBe("Reminders before events and when a spot opens, and, if you turn it on, a weekly note when something opens in your district.");
     expect(hint.th).toBe("เตือนก่อนกิจกรรมและเมื่อมีที่ว่าง และหากคุณเปิดไว้ จะมีข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ");
     expect(`${hint.th} ${hint.en}`).not.toMatch(/[–—]/);
+  });
+});
+
+describe("today's notice tells members about the alert (owner, 2026-10-26)", () => {
+  it("What changed lists the weekly district note, with the date unchanged", () => {
+    expect(NOTICE_ISO).toBe("2026-10-26");
+    const item = NOTICE_CHANGES.find((c) => c.en.includes("weekly note"))!;
+    expect(item.en).toBe("If you turn it on, we send a weekly note when something opens in your district. You can turn it off any time.");
+    expect(item.th).toContain("สัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ");
+    expect(`${item.th} ${item.en}`).not.toMatch(/[–—]/);
+  });
+  it("the onboarding consent summary matches the notice", () => {
+    const src = readFileSync("src/routes/onboarding.tsx", "utf8");
+    expect(src).toContain("Reminders: before events and when a spot opens, and, if you turn it on, a weekly note when something opens in your district.");
+    expect(src).toContain("และหากคุณเปิดไว้ จะมีข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ");
   });
 });

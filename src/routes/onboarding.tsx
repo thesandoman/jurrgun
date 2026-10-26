@@ -555,8 +555,8 @@ function PrivacyForm(props: { v: View; j: Journey; error?: string; needTerms: bo
             </summary>
             <div class="more-info-body">
               {t(
-                "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง",
-                "Seating uses your interests and languages. Reminders: before events and when a spot opens.",
+                "จัดโต๊ะ: ใช้ความสนใจและภาษาของคุณ แจ้งเตือน: เตือนก่อนกิจกรรมเริ่ม และเมื่อมีที่ว่าง และหากคุณเปิดไว้ จะมีข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ",
+                "Seating uses your interests and languages. Reminders: before events and when a spot opens, and, if you turn it on, a weekly note when something opens in your district.",
               )}
             </div>
           </details>

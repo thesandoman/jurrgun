@@ -29,6 +29,10 @@ export const NOTICE_CHANGES: Text[] = [
     th: "ถ้ามีคนรายงานข้อความหรือรูปในแชต เราเก็บสำเนาเฉพาะสิ่งที่ถูกรายงานไว้กับรายงาน ไม่ใช่ทั้งแชต รูปเก็บจนกว่าจะปิดรายงาน",
     en: "If someone reports a chat message or photo, we keep a copy of just that item with the report, never the whole chat. A photo is kept only until the report is closed.",
   },
+  {
+    th: "ถ้าคุณเปิดไว้ เราจะส่งข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ ปิดได้ทุกเมื่อ",
+    en: "If you turn it on, we send a weekly note when something opens in your district. You can turn it off any time.",
+  },
 ];
 
 const MONTHS: [string, string][] = [
