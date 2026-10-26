@@ -132,7 +132,7 @@ export const DARK: Palette = {
   "mango-ink": "#ffc766",
   "on-mango": P.mango[900],
   love: "#f0505c",
-  "love-ink": "#ff9aa3",
+  "love-ink": "#ff6b74",
   "love-soft": "#3a1a1e",
   "cat-green": "#19431d",
   "cat-teal": "#0b4c50",
