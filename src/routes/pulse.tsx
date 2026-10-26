@@ -26,7 +26,7 @@ import { bkkMonth, bkkWeekKey, bkkWeekStart, heardShares } from "../domain/pulse
 import { DISTRICTS, label, values, districtsAZ } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
-import { fmtDate, L, type Lang } from "../lib/i18n";
+import { fmtDate, fmtParts, L, type Lang } from "../lib/i18n";
 import { requireMember } from "../lib/session";
 import { consents, profiles, pulseQuestions, pulseResponses, pulseSuggestions, registrations, wellbeing } from "../schema";
 import { Button, Card, Choices, LinkButton, list, Notice, page, Select, str, TextArea, view, type View } from "../ui/kit";
@@ -34,7 +34,8 @@ import { UCLA3, UCLA_SCALE } from "./onboarding";
 import { CHANGE_PULSE_ID, CHANGE_PULSE_QUESTION } from "../content/reflections";
 import { HEARD_SHOWN, SUGGEST_MAX, WEEK_CAP } from "../content/pulse";
 import { bangkokWeather, heatBand, pm25Band, type Weather } from "../services/weather";
-import { SANROO_URL, sanrooHeadline, type SanrooHeadline } from "../services/sanroo";
+import { SANROO_URL, type SanrooHeadline } from "../services/sanroo";
+import { cityNow } from "../services/city-now";
 
 export const pulseRoutes = new Hono<AppEnv>();
 pulseRoutes.use("/pulse", requireMember);
@@ -262,6 +263,12 @@ export async function pulseGlance(c: C): Promise<{ weather: Weather | null; wait
   return { weather, waiting };
 }
 
+/** "As of 14:00" (Bangkok time) for a stored reading: the clock refreshes it hourly (owner card D1). */
+export function asOf(t: View["t"], lang: Lang, at: number): string {
+  const time = fmtParts(new Date(at), lang).time;
+  return t(`ข้อมูลเมื่อ ${time}`, `as of ${time}`);
+}
+
 /** Short "33° · rain 20% · PM2.5 18" pieces, each only when known. */
 export function weatherBits(t: View["t"], w: Weather | null): string[] {
   if (!w) return [];
@@ -302,6 +309,7 @@ function BangkokNow(props: { v: View; weather: Weather | null; sanroo: SanrooHea
       ) : (
         <p class="muted">{t("ตอนนี้ยังดึงข้อมูลอากาศไม่ได้", "Weather isn't available right now.")}</p>
       )}
+      {rows.length && w ? <p class="muted cp-asof">{asOf(t, lang, w.fetchedAt)}</p> : null}
       {props.sanroo ? (
         <p class="cp-sanroo">
           {L(lang, props.sanroo)}{" "}
@@ -548,7 +556,8 @@ async function renderPulse(c: C, opts: { error?: string; status?: 200 | 400 | 40
   const title = "City Pulse";
   const rid = user.account.researchId;
   const consented = !!rid && (await researchConsent(c, user.account.id));
-  const [weather, sanroo] = await Promise.all([bangkokWeather(c.env).catch(() => null), sanrooHeadline(c.env).catch(() => null)]);
+  // One read of the stored reading (owner card D1): the clock fetches the outside sites, never this page.
+  const { weather, sanroo } = await cityNow(c.env);
   if (!consented) {
     return page(
       c,

@@ -1,8 +1,9 @@
 /**
  * Ticker weather: parsing Open-Meteo responses and the Thai bands.
  */
-import { describe, expect, it } from "vitest";
-import { bangkokWeather, heatBand, parseWeather, pm25Band } from "../src/services/weather";
+import { describe, expect, it, vi } from "vitest";
+import { heatBand, parseWeather, pm25Band } from "../src/services/weather";
+import { refreshCityNow } from "../src/services/city-now";
 
 describe("parseWeather", () => {
   it("takes the max rain chance over the next 3 hours and sums 24 hours of rain", () => {
@@ -47,8 +48,11 @@ describe("bands", () => {
   });
 });
 
-describe("bangkokWeather", () => {
+describe("refreshCityNow", () => {
   it("never calls out when NO_EXTERNAL is set (tests, offline)", async () => {
-    expect(await bangkokWeather({ NO_EXTERNAL: "1" })).toBeNull();
+    const spy = vi.spyOn(globalThis, "fetch");
+    expect(await refreshCityNow({ NO_EXTERNAL: "1" })).toEqual({ weather: false, sanroo: false });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

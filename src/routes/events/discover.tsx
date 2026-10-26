@@ -2,7 +2,7 @@
  * Events, discover part (split from routes/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
-import { pulseGlance, weatherBits } from "../pulse";
+import { asOf, pulseGlance, weatherBits } from "../pulse";
 import { segmentOf, type Segment } from "../../domain/segment";
 import { OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, womenOnlyEventVisible } from "../../domain/rules";
 import { weekKey } from "../../domain/buddy";
@@ -368,6 +368,8 @@ eventRoutes.get("/events", requireMember, async (c) => {
   // One calm City Pulse line (owner D62): Bangkok now, and whether a question is waiting. No count, no dot.
   const glance = await pulseGlance(c);
   const nowBits = weatherBits(t, glance.weather);
+  // The reading is stored hourly by the clock (owner card D1), so it says when it's from.
+  if (nowBits.length && glance.weather) nowBits.push(asOf(t, lang, glance.weather.fetchedAt));
   return page(
     c,
     { title: t("ค้นหากิจกรรม", "Discover"), tab: "events" },

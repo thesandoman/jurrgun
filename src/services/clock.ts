@@ -56,6 +56,7 @@ import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
 import { retentionIfDue } from "./retention";
 import { readDueFeeds } from "./outside-events";
+import { refreshCityNow } from "./city-now";
 import { consentsFor, NOTIFICATIONS_CONSENT } from "./consent";
 import { listableBase } from "./events";
 
@@ -76,7 +77,7 @@ export const SAME_DAY_LEAD_MS = 3 * HOUR;
 /** Below this, the day-before reminder's window (18 to 30 hours) has passed. */
 const DAY_BEFORE_MIN_MS = 18 * HOUR;
 
-export type ClockRun = { retention: boolean; quiet: boolean; feeds: number; tomorrow: number; today: number; windowOpen: number; digest: number; districtAlert: number; pushed: number };
+export type ClockRun = { retention: boolean; city: boolean; quiet: boolean; feeds: number; tomorrow: number; today: number; windowOpen: number; digest: number; districtAlert: number; pushed: number };
 
 /** The next hourly slot after `firedAt`, skipping any that already passed. */
 export function nextSlot(firedAt: number, now: number): number {
@@ -214,9 +215,12 @@ function usable(now: Date) {
 }
 
 export async function runClock(env: Bindings, now: Date = new Date()): Promise<ClockRun> {
-  const out: ClockRun = { retention: false, quiet: false, feeds: 0, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, districtAlert: 0, pushed: 0 };
+  const out: ClockRun = { retention: false, city: false, quiet: false, feeds: 0, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, districtAlert: 0, pushed: 0 };
   const before = await retentionIfDue(env, "system", now);
   out.retention = !!before && before.at.getTime() === now.getTime();
+  // Bangkok now (owner card D1): weather and the Sanroo headline, fetched here so pages never wait on them. Every hour, quiet or not.
+  const city = await refreshCityNow(env, now);
+  out.city = city.weather || city.sanroo;
   // Outside calendar feeds into the host inbox, each at most once a day (D46). Quiet hours don't matter: nobody is messaged.
   out.feeds = await readDueFeeds(env, now);
   if (quietHours(now)) {

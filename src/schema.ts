@@ -797,6 +797,23 @@ export const socialUniversities = pgTable("social_universities", {
 });
 
 /**
+ * The latest Bangkok conditions (owner card D1, 2026-10-26): Open-Meteo weather
+ * and Sanroo's headline, fetched by the hourly clock and read by pages, so no
+ * member's page ever waits on an outside site. One row per city ("bangkok").
+ * About the city, never about a person.
+ */
+export const socialCityNow = pgTable("social_city_now", {
+  id: text("id").primaryKey(),
+  /** services/weather.ts Weather, or null when no reading has worked yet. */
+  weather: jsonb("weather"),
+  weatherAt: timestamp("weather_at", { withTimezone: true }),
+  /** services/sanroo.ts SanrooHeadline, or null. */
+  sanroo: jsonb("sanroo"),
+  sanrooAt: timestamp("sanroo_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * "What should the city ask?" (D66). No person. The words are read by
  * moderators only and wiped once sorted into a topic; the BMA sees topic totals of 10+.
  */

@@ -4,9 +4,13 @@
  *
  * Source: Open-Meteo (free, no key; attribution required: "Weather data by
  * Open-Meteo.com"). Only the city's own coordinates are sent, never anything
- * about the person. Cached in memory for 15 minutes per isolate; a slow or
- * failed request just leaves the weather out of the ticker.
+ * about the person. The hourly clock fetches it (fetchBangkokWeather) into
+ * social_city_now; pages read that row (bangkokWeather), so no member's page
+ * waits on Open-Meteo (owner card D1). A failed fetch keeps the last reading.
  */
+
+import type { DatabaseEnv } from "../db";
+import { cityNow } from "./city-now";
 
 export type Weather = {
   /** Highest chance of rain in the next 3 hours, %. */
@@ -22,7 +26,6 @@ export type Weather = {
 
 const LAT = 13.7563;
 const LNG = 100.5018;
-const TTL_MS = 15 * 60_000;
 const TIMEOUT_MS = 1500;
 
 export const FORECAST_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=apparent_temperature&hourly=precipitation_probability,precipitation&forecast_days=2&timezone=Asia%2FBangkok`;
@@ -70,25 +73,17 @@ export function heatBand(v: number): { th: string; en: string; tone: "ok" | "war
   return { th: "อันตรายมาก", en: "Extreme danger", tone: "bad" };
 }
 
-let cache: Weather | null = null;
-let inflight: Promise<Weather | null> | null = null;
+/** Live fetch, for the hourly clock only (services/city-now.ts). Null when both calls fail. */
+export async function fetchBangkokWeather(now = Date.now(), get: typeof fetch = fetch): Promise<Weather | null> {
+  const one = async <T,>(url: string): Promise<T | null> => {
+    const r = await get(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: "application/json" } });
+    return r.ok ? ((await r.json()) as T) : null;
+  };
+  const [f, a] = await Promise.all([one<Forecast>(FORECAST_URL).catch(() => null), one<Air>(AIR_URL).catch(() => null)]);
+  return f || a ? parseWeather(f, a, now) : null;
+}
 
-export async function bangkokWeather(env: { NO_EXTERNAL?: string }, now = Date.now()): Promise<Weather | null> {
-  if (env.NO_EXTERNAL) return null; // tests and offline development
-  if (cache && now - cache.fetchedAt < TTL_MS) return cache;
-  inflight ??= (async () => {
-    try {
-      const get = async <T,>(url: string): Promise<T | null> => {
-        const r = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: "application/json" } });
-        return r.ok ? ((await r.json()) as T) : null;
-      };
-      const [f, a] = await Promise.all([get<Forecast>(FORECAST_URL).catch(() => null), get<Air>(AIR_URL).catch(() => null)]);
-      if (!f && !a) return cache; // keep the last good reading, if any
-      cache = parseWeather(f, a, now);
-      return cache;
-    } finally {
-      inflight = null;
-    }
-  })();
-  return inflight;
+/** The latest stored reading (fetched by the hourly clock), or null. One database read, no outside call. */
+export async function bangkokWeather(env: DatabaseEnv): Promise<Weather | null> {
+  return (await cityNow(env)).weather;
 }
