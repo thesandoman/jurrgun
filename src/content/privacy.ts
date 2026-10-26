@@ -17,7 +17,19 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-10-16";
+export const NOTICE_ISO = "2026-10-26";
+
+/**
+ * What changed since the version before, in plain words: shown once on the
+ * "updated Terms" card on Me (owner, 2026-10-26: one calm card, no reminders).
+ */
+export const NOTICE_CHANGES: Text[] = [
+  { th: "บันทึกการทำงานของระบบเก็บ 2 ปี (จากเดิม 1 ปี) เท่ากับรายงาน", en: "The system's audit log is kept 2 years (was 1), the same as reports." },
+  {
+    th: "ถ้ามีคนรายงานข้อความหรือรูปในแชต เราเก็บสำเนาเฉพาะสิ่งที่ถูกรายงานไว้กับรายงาน ไม่ใช่ทั้งแชต รูปเก็บจนกว่าจะปิดรายงาน",
+    en: "If someone reports a chat message or photo, we keep a copy of just that item with the report, never the whole chat. A photo is kept only until the report is closed.",
+  },
+];
 
 const MONTHS: [string, string][] = [
   ["มกราคม", "January"], ["กุมภาพันธ์", "February"], ["มีนาคม", "March"], ["เมษายน", "April"], ["พฤษภาคม", "May"], ["มิถุนายน", "June"],

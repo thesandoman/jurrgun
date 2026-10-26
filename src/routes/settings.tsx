@@ -138,7 +138,7 @@ import { acceptedTerms, consentEffects, consentRow, deleteDatingIntents, GENDER_
 import { isArchetype, loadVibe } from "./quiz";
 import { ARCHETYPES, displayName } from "../vibe/archetypes";
 import { fmtDate, L, type T } from "../lib/i18n";
-import { NOTICE_DATE } from "../content/privacy";
+import { NOTICE_CHANGES, NOTICE_DATE } from "../content/privacy";
 import { Sheet } from "../ui/sheet";
 import { releaseUpcomingSeats } from "../services/events";
 
@@ -327,6 +327,14 @@ settingsRoutes.get("/settings", async (c) => {
                 <a href="/terms">{t("อ่านข้อกำหนด", "Read the Terms")}</a> · <a href="/privacy">{t("อ่านนโยบาย", "Read the notice")}</a>
               </small>
             </p>
+            <small>{t("สิ่งที่เปลี่ยน", "What changed")}:</small>
+            <ul class="muted" style="margin:4px 0 8px">
+              {NOTICE_CHANGES.map((x) => (
+                <li>
+                  <small>{L(lang, x)}</small>
+                </li>
+              ))}
+            </ul>
             <button class="btn primary">{t("ฉันยอมรับข้อกำหนดและรับทราบนโยบาย", "I agree to the Terms and have read the notice")}</button>
           </form>
         ) : // Six months in, still marked new: ask once instead of keeping the label (and the newcomer card on Discover) forever.

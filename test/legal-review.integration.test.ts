@@ -90,7 +90,12 @@ describe.skipIf(!HAS_DB)("members who joined before the Terms box", () => {
     const m = await createMember();
     await withoutTerms(m.id);
     await db().insert(consents).values({ id: crypto.randomUUID(), accountId: m.id, category: TERMS_CONSENT, granted: true, version: "terms-2020-01-01" });
-    expect(await (await req("/settings", { cookie: m.cookie })).text()).toContain('action="/settings/terms"');
+    const html = await (await req("/settings?lang=en", { cookie: m.cookie })).text();
+    expect(html).toContain('action="/settings/terms"');
+    // One calm card that says what changed (owner, 2026-10-26).
+    expect(html).toContain("What changed");
+    expect(html).toContain("audit log is kept 2 years");
+    expect(html.match(/action="\/settings\/terms"/g)).toHaveLength(1);
   });
 });
 
