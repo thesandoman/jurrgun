@@ -225,6 +225,13 @@
       "when": 1793006614790,
       "tag": "0031_pinky_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793007515128,
+      "tag": "0032_pinky_ended_at",
+      "breakpoints": true
     }
   ]
 }

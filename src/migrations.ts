@@ -394,5 +394,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE UNIQUE INDEX \"social_pinky_idea_views_day_idx\" ON \"social_pinky_idea_views\" (\"pinky_id\",\"day\");",
       "CREATE UNIQUE INDEX \"social_pinky_plans_pinky_idx\" ON \"social_pinky_plans\" (\"pinky_id\");"
     ]
+  },
+  {
+    "id": "0032_pinky_ended_at",
+    "statements": [
+      "ALTER TABLE \"social_pinkies\" ADD COLUMN \"ended_at\" timestamp with time zone;"
+    ]
   }
 ];
