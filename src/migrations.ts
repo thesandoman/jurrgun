@@ -375,5 +375,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "CREATE TABLE \"social_universities\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"cc\" text NOT NULL,\n\t\"name_th\" text,\n\t\"search\" text NOT NULL,\n\t\"th_fold\" text\n);"
     ]
+  },
+  {
+    "id": "0030_city_now",
+    "statements": [
+      "CREATE TABLE \"social_city_now\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"weather\" jsonb,\n\t\"weather_at\" timestamp with time zone,\n\t\"sanroo\" jsonb,\n\t\"sanroo_at\" timestamp with time zone,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);"
+    ]
   }
 ];
