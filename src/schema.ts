@@ -290,6 +290,14 @@ export const profiles = pgTable(
     onboardedAt: ts("onboarded_at"),
     /** "Pause Jurrgun": out of buddy rounds, the deck and new tables until then. Circle and chats stay. */
     pausedUntil: ts("paused_until"),
+    /**
+     * Empty-district alert (owner card 7, migration 0028): "Tell me when an
+     * event opens in my district". One opt-in, read by the hourly clock only
+     * while the notifications consent is yes; at most one alert a week.
+     */
+    districtAlertOptIn: boolean("district_alert_opt_in").notNull().default(false),
+    /** When the last district alert went out (null: never). The weekly limit counts from here. */
+    districtAlertLastSentAt: ts("district_alert_last_sent_at"),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
   (t) => [index("social_profiles_district_idx").on(t.district)],
