@@ -1527,3 +1527,72 @@ export type Registration = typeof registrations.$inferSelect;
 export type RegularTable = typeof regularTables.$inferSelect;
 export type BuddyMatch = typeof buddyMatches.$inferSelect;
 export type BuddyQuest = typeof buddyQuests.$inferSelect;
+
+// ---------------------------------------------------------- pinky plans --
+// Pinky Plans (owner, 2026-10-26): a private space for two people who chose
+// each other (a mutual Pinky). Staff never see any of it: no admin page reads
+// these tables and nothing about them is audited. End kindly deletes all of it.
+
+/** One live Pinky: the pair, where it came from, and whether it's paused. Deleted on End kindly. */
+export const pinkies = pgTable(
+  "social_pinkies",
+  {
+    id: text("id").primaryKey(),
+    /** a < b */
+    aAccount: text("a_account").notNull(),
+    bAccount: text("b_account").notNull(),
+    /** table | buddy */
+    source: text("source").notNull(),
+    /** The event id, or buddy:<matchId>. */
+    sourceKey: text("source_key").notNull(),
+    /** The romance connection this Pinky lives on; changed together with it. */
+    connectionId: text("connection_id").notNull(),
+    /** active | paused */
+    state: text("state").notNull().default("active"),
+    pausedBy: text("paused_by"),
+    pausedAt: ts("paused_at"),
+    createdAt: created(),
+  },
+  (t) => [
+    uniqueIndex("social_pinkies_connection_idx").on(t.connectionId),
+    index("social_pinkies_a_idx").on(t.aAccount),
+    index("social_pinkies_b_idx").on(t.bAccount),
+  ],
+);
+
+/**
+ * The pair's one shared date plan. One shared note both can edit, with no
+ * history, no "edited by" and no timestamps (owner: mutual, never a tool for
+ * checking up). A confirm is cleared when the place or time changes.
+ */
+export const pinkyPlans = pgTable(
+  "social_pinky_plans",
+  {
+    id: text("id").primaryKey(),
+    pinkyId: text("pinky_id").notNull(),
+    placeName: text("place_name"),
+    /** A curated idea (src/content/date-ideas.ts), when the place came from one. */
+    ideaKey: text("idea_key"),
+    district: text("district"),
+    startsAt: ts("starts_at"),
+    note: text("note").notNull().default(""),
+    aConfirmedAt: ts("a_confirmed_at"),
+    bConfirmedAt: ts("b_confirmed_at"),
+  },
+  (t) => [uniqueIndex("social_pinky_plans_pinky_idx").on(t.pinkyId)],
+);
+
+/** How many ideas a pair was shown today: only the count, never shown to anyone. Deleted with the Pinky; retention clears old days. */
+export const pinkyIdeaViews = pgTable(
+  "social_pinky_idea_views",
+  {
+    id: text("id").primaryKey(),
+    pinkyId: text("pinky_id").notNull(),
+    /** YYYY-MM-DD, Bangkok time */
+    day: text("day").notNull(),
+    shown: integer("shown").notNull().default(0),
+  },
+  (t) => [uniqueIndex("social_pinky_idea_views_day_idx").on(t.pinkyId, t.day)],
+);
+export type Pinky = typeof pinkies.$inferSelect;
+export type PinkyPlan = typeof pinkyPlans.$inferSelect;

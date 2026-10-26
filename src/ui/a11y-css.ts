@@ -740,6 +740,26 @@ main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
 .pinky-note{margin:8px 0 0;font-size:.9rem;color:var(--ink-2)}
 .pinky-safety{margin:12px 0 0;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--love) 25%,transparent);font-size:.92rem;color:var(--ink)}
 .pinky-safety a{color:var(--love-ink);font-weight:600}
+/* Pinky Plans space (/pinky/:id): cream and brand green only. Love red stays at the unlock moment, never in here. */
+.pk-head{display:flex;gap:12px;align-items:center;margin:4px 0 12px}
+.pk-head .pinky-ico{color:var(--brand);flex:none}
+.pk-title{margin:0;font-size:1.3rem}
+.pk-head .muted{margin:2px 0 0}
+.pk-sec{margin:20px 0;padding-top:16px;border-top:1px solid var(--line)}
+.pk-sec h2{margin:0 0 10px;font-size:1.05rem}
+.pk-plan p{margin:4px 0}
+.pk-place{font-weight:600}
+.pk-confirmed{color:var(--brand-strong,var(--brand));font-weight:700}
+.pk-note{margin-top:12px}
+.pk-ideas{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.pk-idea{padding:12px 14px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--line)}
+.pk-idea b{display:block}
+.pk-idea p{margin:6px 0 8px}
+.pk-idea .btn{min-height:44px}
+.pk-sec .pinky-safety{border-top-color:var(--line)}
+.pk-sec .pinky-safety a{color:var(--brand)}
+.pk-out form{margin:8px 0}
+.pk-tag{text-decoration:none}
 .pinky-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .pinky-actions form{margin:0}
 .pinky .btn{min-height:44px}

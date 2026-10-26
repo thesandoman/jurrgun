@@ -10,7 +10,7 @@ import type { PinkyState } from "../services/pinky";
 type T = (th: string, en: string) => string;
 
 /** Two little fingers hooked together, drawn in the nav's stroke style. */
-function PinkyIcon() {
+export function PinkyIcon() {
   return (
     <svg class="pinky-ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M4 15V8.5a2 2 0 0 1 4 0V12a3 3 0 0 0 3 3h1.5" />
@@ -46,11 +46,17 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
         <>
           <p class="pinky-state" role="status">
             <b>{t(`คุณกับ ${props.name} เกี่ยวก้อยกันแล้ว`, `You and ${props.name} both hooked pinkies`)}</b>{" "}
-            {t("ลองชวนกันไปเดตดูนะ", "Maybe plan a date?")}
+            {t("เกี่ยวก้อยกันแล้ว ไปเจอกันที่ไหนสักแห่งในกรุงเทพฯ", "You chose each other. Now go somewhere real.")}
           </p>
           <div class="pinky-actions">
+            {/* Pinky Plans: the pair's private space. Love red stays here, at the unlock, and not inside the space. */}
+            {state.pinkyId ? (
+              <a class="btn pinky-btn" href={`/pinky/${state.pinkyId}`}>
+                {t("เปิดพื้นที่ของเรา", "Open our Pinky space")}
+              </a>
+            ) : null}
             {state.connectionId ? (
-              <a class="btn pinky-btn" href={`/chat/conn:${state.connectionId}`}>
+              <a class={state.pinkyId ? "btn ghost" : "btn pinky-btn"} href={`/chat/conn:${state.connectionId}`}>
                 {t("ทักไปชวนเลย", "Send a message")}
               </a>
             ) : null}

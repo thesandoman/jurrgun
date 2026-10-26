@@ -85,11 +85,11 @@ safetyRoutes.get("/safety", (c) => {
           </label>
           <label>
             {t("ที่ไหน", "Where")}
-            <input name="where" maxlength={80} placeholder={t("เช่น คาเฟ่ในอารีย์", "e.g. a café in Ari")} />
+            <input name="where" maxlength={80} value={(c.req.query("where") ?? "").slice(0, 80)} placeholder={t("เช่น คาเฟ่ในอารีย์", "e.g. a café in Ari")} />
           </label>
           <label>
             {t("เมื่อไร", "When")}
-            <input name="when" maxlength={40} placeholder={t("เช่น เสาร์ 6 โมงเย็น", "e.g. Sat 6 pm")} />
+            <input name="when" maxlength={40} value={(c.req.query("when") ?? "").slice(0, 40)} placeholder={t("เช่น เสาร์ 6 โมงเย็น", "e.g. Sat 6 pm")} />
           </label>
           <label>
             {t("จะทักกลับก่อน", "Back by")}

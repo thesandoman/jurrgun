@@ -66,7 +66,8 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, ne, notExists, 
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
 import { BUDDY_PINKY_DAYS, ENDED_PREFIX } from "../domain/pinky";
-import { bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
+import { bkkDayStart, bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
+import { endPinkiesOf } from "./pinky-plans";
 import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
 import { deleteObject, type StorageEnv } from "../storage";
@@ -128,6 +129,7 @@ import {
   safeArrivals,
   talkQuestions,
   eventPartners,
+  pinkyIdeaViews,
 } from "../schema";
 
 const HOUR = 3_600_000;
@@ -278,6 +280,9 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .delete(connections)
     .where(and(sql`${connections.eventId} like 'buddy:%'`, isNotNull(connections.removedAt), lt(connections.removedAt, buddyCutoff)))
     .returning({ id: connections.id });
+
+  // Pinky Plans: the daily idea count is only needed for today (Bangkok time).
+  await db.delete(pinkyIdeaViews).where(lt(pinkyIdeaViews.day, new Date(bkkDayStart(now).getTime() + 7 * HOUR).toISOString().slice(0, 10)));
 
   const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
   const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone, annsOld] = await batch(env, [
@@ -464,6 +469,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
           ),
         ),
       db.delete(profileLinks).where(inArray(profileLinks.accountId, ids)),
+      // Pinky Plans: any Pinky they were in, with its plan (before their messages go below).
+      ...ids.flatMap((id) => endPinkiesOf(db, id)),
       db.delete(chatMessages).where(inArray(chatMessages.sender, ids)),
       db.delete(chatReads).where(inArray(chatReads.accountId, ids)),
       db.delete(chatVotes).where(inArray(chatVotes.accountId, ids)),

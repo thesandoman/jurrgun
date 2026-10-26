@@ -14,6 +14,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { batch, type getDb } from "../db";
 import { BUDDY_PINKY_DAYS, buddyKey, endedKey, pinkyOffered, pinkyOn, pinkyUnlocked } from "../domain/pinky";
 import { ROMANCE_AFTER_QUESTS, romanceUnlocked } from "../domain/buddy";
+import { endPinkiesOf, endPinkyOnConnection, pinkyIdsFor, startPinky } from "./pinky-plans";
 import { romanceCompatible } from "../domain/rules";
 import { peopleWindow } from "../domain/rules";
 import { newId } from "../lib/crypto";
@@ -23,7 +24,7 @@ import { blocks, buddyMatches, buddyQuests, connectionChoices, connections, even
 type Db = ReturnType<typeof getDb>;
 type Env = Parameters<typeof batch>[0];
 
-export type PinkyState = { eventId: string; mine: boolean; mutual: boolean; connectionId: string | null; open: boolean };
+export type PinkyState = { eventId: string; mine: boolean; mutual: boolean; connectionId: string | null; open: boolean; pinkyId?: string | null };
 
 const pair = (x: string, y: string): [string, string] => (x < y ? [x, y] : [y, x]);
 
@@ -115,8 +116,8 @@ async function load(db: Db, me: Profile, otherId: string): Promise<Ctx | null> {
 export async function pinkyState(db: Db, me: Profile, otherId: string): Promise<PinkyState | null> {
   const ctx = await load(db, me, otherId);
   if (!ctx) return null;
-  const mine = await myChoice(db, ctx.event.id, me.accountId, otherId);
-  return { eventId: ctx.event.id, mine: mine?.choice === "romance", mutual: ctx.mutual, connectionId: ctx.conn && !ctx.conn.removedAt ? ctx.conn.id : null, open: ctx.open };
+  const [mine, pinkyId] = await Promise.all([myChoice(db, ctx.event.id, me.accountId, otherId), ctx.mutual && ctx.conn ? pinkyIdsFor(db, [ctx.conn.id]).then((m) => m.get(ctx.conn!.id) ?? null) : null]);
+  return { eventId: ctx.event.id, mine: mine?.choice === "romance", mutual: ctx.mutual, connectionId: ctx.conn && !ctx.conn.removedAt ? ctx.conn.id : null, open: ctx.open, pinkyId };
 }
 
 /**
@@ -146,11 +147,14 @@ export async function tapPinky(env: Env, db: Db, me: Profile, otherId: string): 
   // Neutral words: a phone's lock screen never says "date".
   const th = "มีเรื่องดี ๆ รอคุณอยู่ที่คนรู้จัก";
   const en = "Something nice is waiting in My people";
+  // The connection and its Pinky change in one batch (Pinky Plans).
+  const connId = ctx.conn?.id ?? newId();
   await batch(env, [
     db
       .insert(connections)
-      .values({ id: newId(), aAccount: a, bAccount: b, level: "romance", eventId })
+      .values({ id: connId, aAccount: a, bAccount: b, level: "romance", eventId })
       .onConflictDoUpdate({ target: [connections.aAccount, connections.bAccount, connections.eventId], set: { level: "romance", removedAt: null } }),
+    startPinky(db, { x: me.accountId, y: otherId, source: "table", sourceKey: eventId, connectionId: connId }),
     notify(db, me.accountId, "connection", th, en, `/people/${otherId}`),
     notify(db, otherId, "connection", th, en, `/people/${me.accountId}`),
   ]);
@@ -172,6 +176,7 @@ export async function stepBack(env: Env, db: Db, me: Profile, otherId: string): 
   if (mutual) {
     writes.push(
       withdrawPairTaps(db, me.accountId, otherId, event.id),
+      ...endPinkyOnConnection(db, conn.id),
       db.update(connections).set({ level: "friend" }).where(eq(connections.id, conn.id)),
       // No new tap for this table, so nobody can re-tap and pressure the other.
       db
@@ -208,6 +213,8 @@ export function withdrawBuddyTap(db: Db, matchId: string, accountId: string) {
  */
 export function endPinkies(db: Db, accountId: string) {
   return [
+    // Pinky Plans: turning 💘 off deletes the Pinky rows, plans and Pinky-period chat (3 Wise Men condition).
+    ...endPinkiesOf(db, accountId),
     db.delete(connectionChoices).where(and(eq(connectionChoices.fromAccount, accountId), eq(connectionChoices.choice, "romance"))),
     db
       .update(connections)
@@ -265,8 +272,8 @@ async function loadBuddy(db: Db, me: Profile, m: MatchRow, now = new Date()): Pr
 export async function buddyPinkyState(db: Db, me: Profile, m: MatchRow): Promise<BuddyPinkyState | null> {
   const ctx = await loadBuddy(db, me, m);
   if (!ctx) return null;
-  const mine = await myChoice(db, ctx.key, me.accountId, ctx.otherId);
-  return { eventId: ctx.key, mine: mine?.choice === "romance", mutual: ctx.mutual, connectionId: ctx.conn && !ctx.conn.removedAt ? ctx.conn.id : null, open: ctx.open, openUntil: buddyOpenUntil(m) };
+  const [mine, pinkyId] = await Promise.all([myChoice(db, ctx.key, me.accountId, ctx.otherId), ctx.mutual && ctx.conn ? pinkyIdsFor(db, [ctx.conn.id]).then((x) => x.get(ctx.conn!.id) ?? null) : null]);
+  return { eventId: ctx.key, mine: mine?.choice === "romance", mutual: ctx.mutual, connectionId: ctx.conn && !ctx.conn.removedAt ? ctx.conn.id : null, open: ctx.open, openUntil: buddyOpenUntil(m), pinkyId };
 }
 
 /** Hook my pinky on my buddy. Stored and answered the same way whatever their status. */
@@ -284,11 +291,13 @@ export async function tapBuddyPinky(env: Env, db: Db, me: Profile, m: MatchRow):
   const [a, b] = pair(me.accountId, ctx.otherId);
   const th = "มีเรื่องดี ๆ รอคุณอยู่ที่คนรู้จัก";
   const en = "Something nice is waiting in My people";
+  const connId = ctx.conn?.id ?? newId();
   await batch(env, [
     db
       .insert(connections)
-      .values({ id: newId(), aAccount: a, bAccount: b, level: "romance", eventId: ctx.key })
+      .values({ id: connId, aAccount: a, bAccount: b, level: "romance", eventId: ctx.key })
       .onConflictDoUpdate({ target: [connections.aAccount, connections.bAccount, connections.eventId], set: { level: "romance", removedAt: null } }),
+    startPinky(db, { x: me.accountId, y: ctx.otherId, source: "buddy", sourceKey: ctx.key, connectionId: connId }),
     notify(db, me.accountId, "connection", th, en, "/buddy?pinky=open#pinky"),
     notify(db, ctx.otherId, "connection", th, en, "/buddy?pinky=open#pinky"),
   ]);
@@ -309,6 +318,7 @@ export async function stepBackBuddy(env: Env, db: Db, me: Profile, m: MatchRow):
   if (mutual) {
     writes.push(
       withdrawPairTaps(db, me.accountId, otherId, key),
+      ...endPinkyOnConnection(db, conn.id),
       db.update(connections).set({ level: "activity" }).where(eq(connections.id, conn.id)),
       db
         .insert(connectionChoices)

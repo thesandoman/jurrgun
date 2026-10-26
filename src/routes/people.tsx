@@ -74,6 +74,7 @@ import { AvatarStack, artFor } from "../ui/visual";
 import { QuestionArt } from "../ui/question-art";
 import { seeAgain, type SeeAgain } from "../services/see-again";
 import { endedWith, withdrawPairTaps } from "../services/pinky";
+import { endPinkiesBetween, endPinkyOnConnection, pinkyIdsFor, startPinky } from "../services/pinky-plans";
 import { SeeAgainCard } from "../ui/see-again";
 import { Sheet } from "../ui/sheet";
 import { visibleLinks, type ShownLink } from "../services/profile-links";
@@ -461,6 +462,7 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
   ];
 
   const upserts: { id: string; aAccount: string; bAccount: string; level: Level; eventId: string }[] = [];
+  const pinkyWrites: { toSQL(): { sql: string; params: unknown[] } }[] = [];
   const removeIds: string[] = [];
   const notifyIds: string[] = [];
   for (const other of targets) {
@@ -470,13 +472,19 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
     const romanceOk = iAmEligible && romanceEligible(them) && romanceCompatible(myProfile, them);
     const level = resolveMutual(picks.get(other)!, theirs, romanceOk);
     const prev = existingByOther.get(other);
+    const wasPinky = !!prev && !prev.removedAt && prev.level === "romance";
     if (level === null) {
       if (prev && !prev.removedAt) removeIds.push(prev.id);
+      if (wasPinky) pinkyWrites.push(...endPinkyOnConnection(db, prev.id));
       continue;
     }
     if (prev && !prev.removedAt && prev.level === level) continue; // unchanged
     const [a, b] = myId < other ? [myId, other] : [other, myId];
-    upserts.push({ id: newId(), aAccount: a, bAccount: b, level, eventId });
+    // The connection and its Pinky change in the same batch (Pinky Plans).
+    const connId = prev?.id ?? newId();
+    upserts.push({ id: connId, aAccount: a, bAccount: b, level, eventId });
+    if (level === "romance") pinkyWrites.push(startPinky(db, { x: myId, y: other, source: "table", sourceKey: eventId, connectionId: connId }));
+    else if (wasPinky) pinkyWrites.push(...endPinkyOnConnection(db, prev.id));
     if (!prev || prev.removedAt) notifyIds.push(myId, other);
   }
   if (upserts.length) {
@@ -513,6 +521,7 @@ peopleRoutes.post("/events/:id/people", requireMember, async (c) => {
       ),
     );
   }
+  writes.push(...pinkyWrites);
   await batch(c.env, writes);
   // A new mutual connection gets its moment (the spark); anything else just says saved.
   return c.redirect(`/events/${eventId}/people?notice=${notifyIds.length ? "connected" : "choices_saved"}`);
@@ -543,6 +552,8 @@ type CircleRow = {
   meets?: number;
   /** Their social links, only when they let their people see them (services/profile-links.ts). */
   links?: ShownLink[];
+  /** The Pinky Plans space for a romance connection (only the two of them can open it). */
+  pinkyId?: string;
 };
 
 /**
@@ -630,7 +641,10 @@ async function loadCircle(c: Ctx): Promise<{ rows: CircleRow[]; myVibe?: VibeInf
     });
   }
   await markGraduations(c, out);
-  return { rows: onePerPerson(out), myVibe: vibeMap.get(me) };
+  const merged = onePerPerson(out);
+  const pinkyIds = await pinkyIdsFor(db, merged.filter((r) => r.level === "romance").map((r) => r.id));
+  for (const r of merged) r.pinkyId = pinkyIds.get(r.id);
+  return { rows: merged, myVibe: vibeMap.get(me) };
 }
 
 /** Meets with someone: shared events (one connection row each) plus buddy quests finished together. */
@@ -895,7 +909,13 @@ function PersonCard(props: { v: View; r: CircleRow; error?: string }) {
             {r.level === "romance" ? (
               <>
                 {" · "}
-                <Tag tone="love">เกี่ยวก้อย · Pinky</Tag>
+                {r.pinkyId ? (
+                  <a href={`/pinky/${r.pinkyId}`} class="pk-tag">
+                    <Tag tone="love">เกี่ยวก้อย · Pinky</Tag>
+                  </a>
+                ) : (
+                  <Tag tone="love">เกี่ยวก้อย · Pinky</Tag>
+                )}
               </>
             ) : null}
           </p>
@@ -1368,6 +1388,8 @@ peopleRoutes.post("/block/:accountId", requireMember, async (c) => {
       ),
     // A block withdraws both people's Pinky taps on each other, at tables and as buddies (owner, C4 panel).
     withdrawPairTaps(db, me, other),
+    // ...and ends any Pinky between them, with its plan and Pinky-period chat.
+    ...endPinkiesBetween(db, me, other),
     // Privacy R9: the audit log never says who was blocked.
     audit(db, me, "block.create"),
   ]);
