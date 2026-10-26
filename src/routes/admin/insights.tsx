@@ -52,7 +52,7 @@ type Db = ReturnType<typeof getDb>;
 /**
  * segmentOf(profile) as SQL over social_profiles aliased `p`. test/measurement
  * checks they agree. bio may be stored as a JSON string (driver dependent), so
- * unwrap it first, as events.tsx jsonHas does.
+ * unwrap it first, as events/shared.tsx jsonHas does.
  */
 const STORY_SQL = sql`(case when jsonb_typeof(p.bio) = 'string' then (p.bio #>> '{}')::jsonb else p.bio end)->>'story'`;
 export const SEGMENT_SQL = sql`case

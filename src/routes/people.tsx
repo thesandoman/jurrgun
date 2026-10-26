@@ -162,7 +162,7 @@ async function blockedSet(db: Db, me: string): Promise<Set<string>> {
 
 // ------------------------------------------- badges and Bangkok Types --
 //
-// Shared with the live page in events.tsx. Both are DISPLAY ONLY: they never
+// Shared with the live page in events/live.tsx. Both are DISPLAY ONLY: they never
 // order, filter or hide anyone (PRD §3.2 badge is opt-in; Bangkok Types are
 // conversation starters, never a ranking).
 
