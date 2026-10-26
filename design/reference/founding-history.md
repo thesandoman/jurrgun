@@ -58,6 +58,33 @@ with what they said, the code wins, and the note says so.
   deactivated more than 30 days ago. *Status now:* it runs from the clock
   (`services/clock.ts`) as well as from the admin dashboard.
 
+### Smaller findings from 1.0's build agents, still worth knowing
+
+- **Local Postgres double-encodes JSON list fields,** so a database-side
+  "contains" search on them silently matches nothing. The event filters work
+  around it. Check this before writing any jsonb containment query.
+- **The table matcher** can seat two people who blocked each other when
+  tables are nearly full. The route repairs this afterwards, so the matcher on
+  its own is not block-safe.
+- **Language:** a member's saved language used to override a `?lang=` link.
+  This was fixed during integration.
+- **Git history:**
+  - PR #1 came from branch `bkk-social-v3-matching` (commit `19d2bbe`, with the
+    `.gitignore` added then).
+  - The P0/P1 release had no PR because `gh` got a permissions error. It was
+    merged to `main` locally, tested and pushed.
+- **Demo and local data:**
+  - `npm run seed` creates the local demo accounts `ploy`, `ken`, `host` and
+    `admin`. The shared password is in the seed script; it is local only.
+  - Staff can pin an event exactly by pasting a full Google Maps link that
+    contains `@lat,lng`. Short `maps.app.goo.gl` links fall back to the
+    district.
+  - To update `sv-map`, change the commit in `package.json`, then run
+    `npm install` and `npm run svmap`. A test fails if the bundled copy drifts.
+- **Learn sources:** two facts were corrected while checking sources.
+  Marriage equality took effect on **23** January 2025. The 1663 line runs
+  09:00 to 21:00 and is anonymous.
+
 ### Caveats 1.0 left open
 
 1. **The public `/api/vibe/quiz` was on the old format** (scale and choice only)
@@ -118,7 +145,7 @@ with what they said, the code wins, and the note says so.
 | 02:59 to 03:28 | More interests, a spiritual group, occupation; remove "What I do"; a livelier Me tab | 354 interests in 18 groups. Spiritual interests are framed as things people do. An occupation dropdown with an "Other" box. A Timeleft and Beli-style Me hub. |
 | 03:34 to 04:12 | Make it unique (Bangkok livery); show password; Google and LINE sign-in; drop the stripes | A livery pass that was later flattened (Inter everywhere, no stripes), Show/Hide on passwords, **Google and LINE OAuth** (asks for an ID only), a new sign-in table on live, "across N crews" on the Circle stat. |
 | 04:13 to 05:38 | Hide Change password for OAuth accounts; hunt bugs, fix and push | Three review passes. **Fixed:** skipping consent, editing your age after onboarding, seats held by banned members, blocked pairs at late seating, **RSVP overbooking races** (save, then recount, then waitlist), double taps, a City Pulse leak through subtraction on "Other", unpublishing stranding attendees, data export gaps, ages counted in UTC instead of Bangkok time, the tab bar covering buttons. Retention extended (12 months for check-in detail, 24 months for Pulse answers). |
-| 06:46 to 07:17 | Education; a notifications dropdown; a movable map key; profile details for expats, transplants and visitors; 3 to 5 residency options | Degree, university search (about 10,300 universities under MIT licence, plus 26 Thai ones) and graduation year; a "same university" badge that also nudges seating; a bell dropdown; a draggable key; **My Bangkok** (story, time here, from, happy to help); **sign-up opened** to 4 residency options (live here, nearby, moving soon, here for a while). |
+| 06:46 to 07:17 | Education; a notifications dropdown; a movable map key; profile details for expats, transplants and visitors; 3 to 5 residency options | Degree, university search (about 10,300 universities under MIT licence, plus 26 Thai ones) and graduation year; a "same university" badge that also nudges seating; a bell dropdown; a draggable key; **My Bangkok** (story, time here, from, happy to help); **sign-up opened** to residency options (live here, nearby, moving soon, here for a while, then "just passing through" as a fifth). |
 | 07:20 to 13:02 | Comb for bugs; set up an agent that fixes bugs | **A nightly bug-hunter routine**, 03:00 Bangkok time, `trig_016p7xVDVSuBY5FS4wUexa5B`. It opens PRs only and never pushes. Also `npm run check` (types, tests, assets, build, a smoke test of live). **Fixed:** an open redirect after sign-in or a language switch, Thai university search, duplicate notifications, accepting an offer for a cancelled event, "Lift" re-activating deleted accounts, crashes on bad input, CSV formula injection, **a separate test database for each run**. The first cloud run failed to download `sv-map`, so the install moved to git over https. The second run was clean, with 318 tests. |
 | 12 Oct | Use the Kaipa API (a friend's ticketing platform); study it and build our own hosting | Kaipa listings built but switched off. A study of a hosting framework, borrowing ticket types, private links and fee-inclusive prices. **Community hosting Phase 1**: members propose, staff review, private link-only events, a 3-pending cap, a "trusted host" skip. Also fixed: drafts were visible to any staff host. *Status now:* **Kaipa was removed** (`b224341`, then `c5cefd3`). Partner organisations and outside events (D45 to D50) cover that ground. |
 | 13 Oct | Admins, moderators and members can all host; who are the admins? | Hosting for every role, with **no self-approval**, and moderators get tools for their own events only. **sandosit, pjj and aey made admins**, each through a one-time setup key that was deleted right after. Old account `sando` is deactivated. |
@@ -135,6 +162,17 @@ with what they said, the code wins, and the note says so.
   pattern for any capacity-limited feature.
 - **Events with sign-ups can't go back to draft.** They can only be cancelled,
   which notifies everyone.
+- **Hosting answers from the owner (12 Oct):** he took the recommended option
+  on all three questions. Members propose and the team approves, with trusted
+  hosts skipping review. Money is free or "pay at the venue": no money passes
+  through Jurrgun and there are no bank details, with online payments later.
+  Phase 1 is built first. The design study's lifecycle is draft → submitted →
+  approved/published → cancelled/ended. It also suggests scoped, revocable,
+  hashed partner keys; an event with sales can only be hidden, not deleted;
+  times are stored as an exact moment plus a time zone; prices are shown with
+  fees included.
+- **Reserved usernames:** new usernames can't start with `google_` or `line_`,
+  the prefixes used for OAuth accounts, so nobody can pose as one.
 - **Hosting tiers:** admin, moderator and partner admin publish straight away.
   Members go through review unless trusted. Nobody approves their own event.
 - **Tests own their own database.** Each run creates its own and drops it
@@ -157,15 +195,42 @@ with what they said, the code wins, and the note says so.
 3. **The nightly bug hunter** was created on 10 Oct. Whether it is still
    enabled, and where its PRs go now that QA & Release is the push gate, was
    not checked in this pass.
-4. **Short trips** of a few days fit none of the residency options. "Just
-   passing through" was offered and not taken up.
+4. *(Closed.)* Short trips: the owner took up "✈️ Just passing through (a few
+   days)" as a **fifth** residency option on 10 Oct. It is live and shows on
+   the profile card.
 5. **Hosting phases 2 to 4** were not built: ticket types, a public partner API
    and online payments. *Status now:* partner keys and feeds landed with D45 to
    D50. Ticket types and payments are still not built.
-6. **`.mcp.json` in the working folder** may hold the 21st key. It must stay
-   untracked.
+6. **Local-only config:** `.mcp.json` turned out to hold the SV Cloud MCP
+   config with no keys, and is local by design. The 21st MCP entry, with its
+   key, lives in `~/.claude.json` for this project and is not in the repo. A
+   People I Met consent test was seen to flake once in a full run. The
+   per-run test database fix landed later that day.
 
 ---
+
+## 2b. Live accounts at the time of the staff setup (13 Oct)
+
+The live site had 9 accounts: `sando` (deactivated, the owner's old one),
+`ployjun`, `pjj`, `sandosit`, `aey`, `snns`, `bo.uah`, `minniexliling` and `bbb`.
+Admins: `sandosit` (the owner), `pjj` (PJ) and `aey`. There were no moderators
+then. Moderators get the review queue and reports, but not the rest of Staff.
+
+## 2c. OAuth setup reference
+
+- **Google:**
+  - The redirect URI goes in *Authorized redirect URIs*, not *JavaScript
+    origins*, which reject a path. The URI is
+    `https://jurrgun.apps.sv-academy.org/auth/google/callback`.
+  - Publish under Audience.
+- **LINE:**
+  - Callback `https://jurrgun.apps.sv-academy.org/auth/line/callback`, exact,
+    with no trailing slash. LINE took about a minute to accept it.
+  - Publish the channel, which starts out as Developing.
+- **Secrets:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `LINE_CHANNEL_ID` and
+  `LINE_CHANNEL_SECRET`, set with `svcloud secrets set jurrgun <NAME>`.
+- **Live check:** sign in on a phone at `/login`. The first time lands in
+  onboarding; after that it signs straight back in.
 
 ## 3. Still unfinished, as of 26 Oct
 
