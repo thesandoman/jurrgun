@@ -15,10 +15,21 @@ import { audit, notify } from "../lib/records";
 import { accounts, blocks, buddyPairs, connections, events, partnerOrgs, profiles, registrations, strikes, vibes, type Event } from "../schema";
 import { segmentOf } from "../domain/segment";
 import { consentsFor, PERSONALIZATION_CONSENT } from "./consent";
+import { noOpenInvite } from "./collabs";
 
 type Db = ReturnType<typeof getDb>;
 
 export const SEAT_STATUSES = ["confirmed", "offered"] as const;
+
+/**
+ * What Discover may list for anyone, before the member's own rules (dating
+ * and women-only events, added by each caller): published, public (private
+ * events open only through their link), not over yet, and no open co-host
+ * invite (D53). Discover and the empty-district alert both start here.
+ */
+export function listableBase(now: Date) {
+  return [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now), noOpenInvite()];
+}
 
 /** Seats currently held (confirmed + offered), split by resident status. */
 export async function seatState(db: Db, event: Event) {

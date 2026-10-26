@@ -23,7 +23,7 @@ export const KIND_DIGEST = "digest";
 /** The summary goes at the first hourly run from 18:00 Bangkok (quiet hours start at 21:00). */
 export const DIGEST_HOUR = 18;
 
-type Group = "thanks" | "friend" | "connection" | "plan" | "other";
+type Group = "thanks" | "friend" | "connection" | "plan" | "district" | "other";
 
 /** Every non-urgent kind, and the line of the summary it adds to. */
 export const DIGEST_KINDS: Record<string, Group> = {
@@ -39,6 +39,7 @@ export const DIGEST_KINDS: Record<string, Group> = {
   buddy_stamp: "other", // a new district stamp
   buddy_keep: "other", // your buddy took back a wrap-up
   event_update: "other", // a host's plain update (time, venue and cancel changes stay urgent)
+  district_alert: "district", // the weekly empty-district alert (src/domain/district-alert.ts): never counted, never names the event
 };
 
 /** Whether a notification waits for the evening summary instead of counting as urgent. */
@@ -47,12 +48,13 @@ export function isDigest(kind: string, link: string | null): boolean {
   return kind !== "connection" || link === "/connections";
 }
 
-const ORDER: Group[] = ["thanks", "friend", "connection", "plan", "other"];
+const ORDER: Group[] = ["thanks", "friend", "connection", "plan", "district", "other"];
 const WORDS: Record<Group, { th: string; en: [string, string] }> = {
   thanks: { th: "ขอบคุณ", en: ["thank-you", "thank-yous"] },
   friend: { th: "เพื่อนใหม่", en: ["new friend", "new friends"] },
   connection: { th: "คนรู้จักใหม่", en: ["new connection", "new connections"] },
   plan: { th: "ไอเดียแผน", en: ["plan idea", "plan ideas"] },
+  district: { th: "มีกิจกรรมใหม่ในเขตของคุณ", en: ["something new in your district", "something new in your district"] },
   other: { th: "อัปเดตอื่น", en: ["other update", "other updates"] },
 };
 
@@ -65,6 +67,8 @@ export function digestText(kinds: string[], lang: Lang): string {
   }
   const parts = ORDER.filter((g) => n.get(g)).map((g) => {
     const c = n.get(g)!;
+    // The district alert is a plain line with no number (owner card 7: no counts), and it never names the event.
+    if (g === "district") return lang === "en" ? WORDS[g].en[0] : WORDS[g].th;
     return lang === "en" ? `${c} ${WORDS[g].en[c === 1 ? 0 : 1]}` : `${WORDS[g].th} ${c}`;
   });
   return `${lang === "en" ? "Today" : "วันนี้"}: ${parts.join(" · ")}`;

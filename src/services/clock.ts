@@ -15,6 +15,9 @@
  *                  once a day (src/services/outside-events.ts)
  *   summary        once a day from 18:00: one push per member counting the
  *                  day's unread non-urgent notifications (src/domain/digest.ts)
+ *   district alert members who opted in to "Tell me when an event opens in
+ *                  my district", at most once a week (runDistrictAlerts);
+ *                  non-urgent, so the phone hears about it in the summary
  *
  * Messages are in-app notifications, plus Web Push for members who turned it
  * on. Nothing is sent from 21:00 to 08:00 Bangkok time: the windows above are
@@ -28,19 +31,22 @@
  * An admin starts and stops the chain from /admin. Locally there are no
  * stateful objects; tests call runClock directly.
  */
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import type { Bindings } from "../lib/env";
 import { fmtParts, type Lang } from "../lib/i18n";
 import { sha256 } from "../lib/crypto";
 import { createLogger } from "../logger";
-import { OPEN_TO_MORE_TAG, PEOPLE_WINDOW_HOURS } from "../domain/rules";
+import { OPEN_TO_MORE_TAG, PEOPLE_WINDOW_HOURS, ageOn, isPaused, romanceEventOk, womenOnlyEventOk } from "../domain/rules";
 import { DIGEST_HOUR, DIGEST_KINDS, KIND_DIGEST, digestText, isDigest } from "../domain/digest";
-import { accounts, consents, events, notifications, profiles, registrations, type Event } from "../schema";
+import { DISTRICT_ALERT_DAYS, DISTRICT_ALERT_ON, KIND_DISTRICT_ALERT, PUBLISH_ACTIONS, alertCutoff, alertLink, alertText, districtName, publishedAt } from "../domain/district-alert";
+import { accounts, auditLog, blocks, consents, events, notifications, profiles, registrations, type Event } from "../schema";
 import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
 import { retentionIfDue } from "./retention";
 import { readDueFeeds } from "./outside-events";
+import { consentsFor, NOTIFICATIONS_CONSENT } from "./consent";
+import { listableBase } from "./events";
 
 const HOUR = 3_600_000;
 export const CLOCK_TASK = "clock";
@@ -55,7 +61,7 @@ export const SAME_DAY_LEAD_MS = 3 * HOUR;
 /** Below this, the day-before reminder's window (18 to 30 hours) has passed. */
 const DAY_BEFORE_MIN_MS = 18 * HOUR;
 
-export type ClockRun = { retention: boolean; quiet: boolean; feeds: number; tomorrow: number; today: number; windowOpen: number; digest: number; pushed: number };
+export type ClockRun = { retention: boolean; quiet: boolean; feeds: number; tomorrow: number; today: number; windowOpen: number; digest: number; districtAlert: number; pushed: number };
 
 /** The next hourly slot after `firedAt`, skipping any that already passed. */
 export function nextSlot(firedAt: number, now: number): number {
@@ -140,7 +146,7 @@ function usable(now: Date) {
 }
 
 export async function runClock(env: Bindings, now: Date = new Date()): Promise<ClockRun> {
-  const out: ClockRun = { retention: false, quiet: false, feeds: 0, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, pushed: 0 };
+  const out: ClockRun = { retention: false, quiet: false, feeds: 0, tomorrow: 0, today: 0, windowOpen: 0, digest: 0, districtAlert: 0, pushed: 0 };
   const before = await retentionIfDue(env, "system", now);
   out.retention = !!before && before.at.getTime() === now.getTime();
   // Outside calendar feeds into the host inbox, each at most once a day (D46). Quiet hours don't matter: nobody is messaged.
@@ -224,6 +230,9 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   const sentWindow = await sendOnce(env, KIND_WINDOW, ended, (d) => `/events/${d.event.id}/people`, (d, lang) => windowText(d.event, lang, now), 24 * 3600);
   out.windowOpen = sentWindow.sent;
   out.pushed += sentWindow.pushed;
+
+  // Before the summary, so an alert written at 18:00 is in that evening's push.
+  out.districtAlert = await runDistrictAlerts(env, now);
 
   const summary = await runDigest(env, now);
   out.digest = summary.sent;
@@ -323,6 +332,166 @@ export async function runDigest(env: Bindings, now: Date): Promise<{ sent: numbe
 }
 
 /**
+ * The empty-district alert (owner card 7, src/domain/district-alert.ts), on
+ * every hourly run outside quiet hours. Due: usable members (as `usable`)
+ * who opted in, are not on a break, whose newest notifications answer is
+ * yes, and whose last alert was 7 or more days ago (or never). Each gets ONE
+ * in-app row when an event in their own district went public after their
+ * last alert (or after they opted in, when that is later or there was no
+ * alert yet).
+ *
+ * The events are Discover's own (listableBase: published, public, not over,
+ * no open co-host invite) that have not started, minus private talks (D52,
+ * never in a public feed). Per member, the same rules as the event page and
+ * RSVP: dating events only with 💘 on (romanceEventOk), women-only events
+ * only for women and non-binary members (womenOnlyEventOk), the member's age
+ * inside the event's range, nothing hosted by someone either side blocked
+ * (as a Regular Table is hidden, tableVisible), and never their own event.
+ *
+ * When an event went public: social_events has no published_at, and the
+ * "event.publish" audit row only covers the admin Publish button, so the
+ * job takes the latest of created_at and the publishing audit rows
+ * (publishedAt in the domain module).
+ *
+ * The row is non-urgent: no push of its own, the evening summary says
+ * "มีกิจกรรมใหม่ในเขตของคุณ / something new in your district" and never names
+ * the event. Its id comes from clockNotificationId with a link carrying the
+ * Bangkok date, so a duplicate task inserts it once; district_alert_last_sent_at
+ * is then set for everyone due, so the next run skips them for a week.
+ */
+export async function runDistrictAlerts(env: Bindings, now: Date): Promise<number> {
+  if (quietHours(now)) return 0;
+  const db = getDb(env);
+  const weekAgo = new Date(now.getTime() - DISTRICT_ALERT_DAYS * 24 * HOUR);
+  let sent = 0;
+  let after = "";
+  // Page through everyone due, so members whose district is still empty (they stay due) never crowd out the rest.
+  for (let pageNo = 0; pageNo < DISTRICT_ALERT_PAGES; pageNo++) {
+    const members = await db
+      .select({
+        accountId: profiles.accountId,
+        locale: profiles.locale,
+        district: profiles.district,
+        birthDate: profiles.birthDate,
+        relationship: profiles.relationship,
+        romanceOn: profiles.romanceOn,
+        gender: profiles.gender,
+        pausedUntil: profiles.pausedUntil,
+        lastSentAt: profiles.districtAlertLastSentAt,
+      })
+      .from(profiles)
+      .innerJoin(accounts, eq(accounts.id, profiles.accountId))
+      .where(
+        and(
+          eq(profiles.districtAlertOptIn, true),
+          usable(now),
+          or(isNull(profiles.districtAlertLastSentAt), lte(profiles.districtAlertLastSentAt, weekAgo)),
+          // The newest notifications answer is yes (no row means no); checked again per batch below.
+          sql`(select ${consents.granted} from ${consents} where ${consents.accountId} = ${profiles.accountId} and ${consents.category} = ${NOTIFICATIONS_CONSENT} order by ${consents.createdAt} desc limit 1) = true`,
+          gt(profiles.accountId, after),
+        ),
+      )
+      .orderBy(asc(profiles.accountId))
+      .limit(BATCH);
+    sent += await districtAlertBatch(env, members, now);
+    if (members.length < BATCH) break;
+    after = members[members.length - 1].accountId;
+  }
+  return sent;
+}
+
+/** At most this many pages of BATCH members per hourly run. */
+const DISTRICT_ALERT_PAGES = 20;
+
+type AlertMember = {
+  accountId: string;
+  locale: string;
+  district: string;
+  birthDate: string;
+  relationship: string;
+  romanceOn: boolean;
+  gender: string | null;
+  pausedUntil: Date | null;
+  lastSentAt: Date | null;
+};
+
+async function districtAlertBatch(env: Bindings, members: AlertMember[], now: Date): Promise<number> {
+  const db = getDb(env);
+  const named = members.filter((m) => districtName(m.district, "en") && !isPaused(m, now));
+  if (!named.length) return 0;
+  const ids = named.map((m) => m.accountId);
+  const [said, optIns] = await Promise.all([
+    // The newest notifications answer per member: only a yes counts (privacy R7).
+    consentsFor(db, ids, NOTIFICATIONS_CONSENT),
+    db
+      .selectDistinctOn([auditLog.actor], { actor: auditLog.actor, createdAt: auditLog.createdAt })
+      .from(auditLog)
+      .where(and(eq(auditLog.action, DISTRICT_ALERT_ON), inArray(auditLog.actor, ids)))
+      .orderBy(auditLog.actor, desc(auditLog.createdAt))
+      .limit(ids.length),
+  ]);
+  const optedInAt = new Map(optIns.map((r) => [r.actor, r.createdAt]));
+  const asked = named.flatMap((m) => {
+    const cutoff = said.has(m.accountId) ? alertCutoff(m.lastSentAt, optedInAt.get(m.accountId) ?? null) : null;
+    return cutoff ? [{ ...m, cutoff }] : [];
+  });
+  if (!asked.length) return 0;
+  const list = await db
+    .select()
+    .from(events)
+    .where(and(...listableBase(now), gt(events.startsAt, now), eq(events.talkMode, false), inArray(events.district, [...new Set(asked.map((m) => m.district))])))
+    .orderBy(asc(events.startsAt))
+    .limit(BATCH);
+  if (!list.length) return 0;
+  const hostOf = (e: Event) => e.hostAccountId ?? e.createdBy;
+  const askedIds = asked.map((m) => m.accountId);
+  const hosts = [...new Set(list.map(hostOf))];
+  const since = new Date(Math.min(...asked.map((m) => m.cutoff.getTime())));
+  const [audits, blockRows] = await Promise.all([
+    db
+      .select({ targetId: auditLog.targetId, action: auditLog.action, detail: auditLog.detail, createdAt: auditLog.createdAt })
+      .from(auditLog)
+      .where(and(eq(auditLog.targetType, "event"), inArray(auditLog.action, [...PUBLISH_ACTIONS]), inArray(auditLog.targetId, list.map((e) => e.id)), gt(auditLog.createdAt, since)))
+      .limit(list.length * 20),
+    db
+      .select({ blocker: blocks.blocker, blocked: blocks.blocked })
+      .from(blocks)
+      .where(or(and(inArray(blocks.blocker, askedIds), inArray(blocks.blocked, hosts)), and(inArray(blocks.blocked, askedIds), inArray(blocks.blocker, hosts))))
+      .limit(5000),
+  ]);
+  const auditsOf = new Map<string, typeof audits>();
+  for (const a of audits) if (a.targetId) auditsOf.set(a.targetId, [...(auditsOf.get(a.targetId) ?? []), a]);
+  const wentPublic = new Map(list.map((e) => [e.id, publishedAt(e.createdAt, auditsOf.get(e.id) ?? []).getTime()]));
+  const blocked = new Set(blockRows.flatMap((b) => [`${b.blocker} ${b.blocked}`, `${b.blocked} ${b.blocker}`]));
+  const due: Due[] = [];
+  for (const m of asked) {
+    const age = ageOn(m.birthDate, now);
+    const event = list.find(
+      (e) =>
+        e.district === m.district &&
+        wentPublic.get(e.id)! > m.cutoff.getTime() &&
+        wentPublic.get(e.id)! <= now.getTime() &&
+        romanceEventOk(e.tags, m) &&
+        womenOnlyEventOk(e.tags, m) &&
+        e.ageMin <= age &&
+        age <= e.ageMax &&
+        hostOf(e) !== m.accountId &&
+        !blocked.has(`${m.accountId} ${hostOf(e)}`),
+    );
+    if (event) due.push({ accountId: m.accountId, locale: m.locale, event });
+  }
+  if (!due.length) return 0;
+  const date = bangkokDate(now);
+  const sent = await sendOnce(env, KIND_DISTRICT_ALERT, due, (d) => alertLink(d.event.district, date), (d, lang) => alertText(d.event.district, lang), null);
+  // Everyone due has their alert now (this run's, or a racing run's with the same id): the week starts here.
+  await db
+    .update(profiles)
+    .set({ districtAlertLastSentAt: now })
+    .where(inArray(profiles.accountId, due.map((d) => d.accountId)));
+  return sent.sent;
+}
+
+/**
  * The notification id for one message: the same kind, member and link always
  * give the same id, so a second run inserting it at the same moment hits the
  * primary key and inserts nothing (no schema change, no lock to hold).
@@ -334,6 +503,8 @@ export function clockNotificationId(kind: string, accountId: string, link: strin
 /**
  * Writes one notification per (member, link) that has none of this kind (or
  * of the `blockedBy` kinds) yet, and pushes only the ones this call inserted.
+ * A null `ttl` pushes nothing: a non-urgent kind reaches the phone in the
+ * evening summary instead (runDigest).
  */
 async function sendOnce(
   env: Bindings,
@@ -341,7 +512,7 @@ async function sendOnce(
   due: Due[],
   linkOf: (d: Due) => string,
   textOf: (d: Due, lang: Lang) => string,
-  ttl: number,
+  ttl: number | null,
   blockedBy: string[] = [],
 ): Promise<{ sent: number; pushed: number }> {
   if (!due.length) return { sent: 0, pushed: 0 };
@@ -381,6 +552,7 @@ async function sendOnce(
   );
   const mineToSend = todo.filter((_, i) => inserted.has(rows[i].id));
   let pushed = 0;
+  if (ttl === null) return { sent: mineToSend.length, pushed: 0 };
   for (const d of mineToSend) {
     const lang: Lang = d.locale === "en" ? "en" : "th";
     pushed += await pushToAccount(env, db, d.accountId, { title: "Jurrgun", body: textOf(d, lang), url: linkOf(d), tag: `${kind}:${d.event.id}` }, ttl);

@@ -20,7 +20,8 @@ import { requireMember } from "../../lib/session";
 import { events, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, Select, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
 import { FullDiscover, NoEventsYet, sheetCopy, type MapChip, type MapPoint } from "../../ui/discover-map";
-import { collabNamesFor, noOpenInvite } from "../../services/collabs";
+import { collabNamesFor } from "../../services/collabs";
+import { listableBase } from "../../services/events";
 import { eventRoutes } from "./app";
 import {
   ACTIVE,
@@ -63,7 +64,7 @@ const WHEN_OPTS = [
  * anyone who hasn't said).
  */
 function listable(profile: Profile, now: Date) {
-  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now), noOpenInvite()];
+  const where = listableBase(now);
   if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
   if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   return where;
