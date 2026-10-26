@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { readFileSync } from "node:fs";
-import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, SEARCH_COUNT_JS, SIDE_PANEL_MQ, moreChipsWords, searchCountWords, sheetCopy } from "../src/ui/discover-map";
+import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, LAPTOP_OPEN_JS, LAPTOP_OPEN_MQ, NoEventsYet, SEARCH_COUNT_JS, SIDE_PANEL_MQ, moreChipsWords, searchCountWords, sheetCopy } from "../src/ui/discover-map";
 
 const en = tr("en");
 const th = tr("th");
@@ -150,6 +150,40 @@ describe("Discover map live search count", () => {
     expect(FULLMAP_JS).toContain("clearTimeout(sayTimer);");
     expect(FULLMAP_JS).toContain("sayTimer = setTimeout(() => announce(searchCount(shown, cfg.words.found)), 600);");
     expect(page(en)).toMatch(/<p class="sr-only" id="fd-live" role="status" aria-live="polite"><\/p>/);
+  });
+});
+
+describe("Discover map list on arrival", () => {
+  // The script as a browser of a given size runs it.
+  const opensAt = (w: number, h: number, startOpen = false) => {
+    const sheet = { open: startOpen };
+    const matchMedia = (q: string) => {
+      const minW = Number(/min-width: (\d+)px/.exec(q)?.[1] ?? 0);
+      const minH = Number(/min-height: (\d+)px/.exec(q)?.[1] ?? 0);
+      return { matches: w >= minW && h >= minH };
+    };
+    new Function("matchMedia", "document", LAPTOP_OPEN_JS)(matchMedia, { getElementById: (id: string) => (id === "discover-sheet" ? sheet : null) });
+    return sheet.open;
+  };
+
+  it("opens the side panel on laptops at least 1024px wide and 600px tall, and nowhere else", () => {
+    expect(LAPTOP_OPEN_MQ).toBe("(min-width: 1024px) and (min-height: 600px)");
+    expect(opensAt(1280, 800)).toBe(true);
+    expect(opensAt(1024, 700)).toBe(true);
+    expect(opensAt(1024, 600)).toBe(true);
+    expect(opensAt(1023, 800)).toBe(false);
+    expect(opensAt(1280, 599)).toBe(false);
+    expect(opensAt(812, 375)).toBe(false);
+    expect(opensAt(412, 908)).toBe(false);
+    // Elsewhere the current behaviour stays: an empty state that started open is left alone.
+    expect(opensAt(412, 908, true)).toBe(true);
+  });
+
+  it("runs right after the panel, before the map script", () => {
+    const html = page(en);
+    const at = html.indexOf(LAPTOP_OPEN_JS);
+    expect(at).toBeGreaterThan(html.indexOf('id="discover-sheet"'));
+    expect(at).toBeLessThan(html.indexOf('type="module"'));
   });
 });
 

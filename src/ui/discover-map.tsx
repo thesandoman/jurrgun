@@ -194,6 +194,15 @@ export const SEARCH_COUNT_JS = `function searchCount(n, w) {
   return (n === 1 ? w.one : w.many).replace("{n}", String(n));
 }`;
 
+/**
+ * Laptops open the events list on arrival (owner card 5): a wide screen that
+ * is also tall enough has room for the side panel and the map together.
+ * Smaller screens keep the closed handle.
+ */
+export const LAPTOP_OPEN_MQ = "(min-width: 1024px) and (min-height: 600px)";
+/** Runs right after the panel is parsed, so it opens before the first paint rather than jumping open later. */
+export const LAPTOP_OPEN_JS = `try{if(matchMedia("${LAPTOP_OPEN_MQ}").matches)document.getElementById("discover-sheet").open=true}catch(e){}`;
+
 /** JSON for a <script type="application/json"> block, safe against </script>. */
 function scriptJson(x: unknown): string {
   return JSON.stringify(x).replace(/</g, "\\u003c");
@@ -340,6 +349,7 @@ export function FullDiscover(props: {
           {props.list}
         </section>
       </details>
+      <script dangerouslySetInnerHTML={{ __html: LAPTOP_OPEN_JS }} />
 
       {/* Read out once typing pauses: how many events the search found. */}
       <p class="sr-only" id="fd-live" role="status" aria-live="polite" />
