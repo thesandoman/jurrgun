@@ -40,6 +40,23 @@ import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached,
 /** Rules a moderator can name as broken: the report reasons, minus "other". */
 const RULES = REPORT_REASON_LABELS.filter((r) => r.value !== "other");
 
+/**
+ * Participation history without romance data (owner rule: staff never see it,
+ * every role, bma_admin included). A 💘 event or a dating partner's event shows
+ * only as "a private event": no title, date or venue. Private-link events look
+ * the same, so the label alone doesn't say 💘, and they all go to the end so
+ * their place in the list doesn't give a date away.
+ */
+type HistoryRow = { title: string; titleEn: string | null; startsAt: Date; status: string; checkedInAt: Date | null; tags: string[]; visibility: string; orgKind: string | null };
+
+function privateHistory(rows: HistoryRow[]) {
+  const shown = rows.map((h) => {
+    const hidden = h.tags.includes(OPEN_TO_MORE_TAG) || h.orgKind === "dating" || h.visibility === "private";
+    return { title: hidden ? "" : h.title, titleEn: hidden ? null : h.titleEn, startsAt: h.startsAt, status: h.status, checkedInAt: h.checkedInAt, hidden };
+  });
+  return [...shown.filter((h) => !h.hidden), ...shown.filter((h) => h.hidden)];
+}
+
 /** Upheld warnings in the last year. */
 async function flagCount(db: ReturnType<typeof getDb>, accountId: string, now = new Date()): Promise<number> {
   const [row] = await db
@@ -310,21 +327,17 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
             startsAt: events.startsAt,
             status: registrations.status,
             checkedInAt: registrations.checkedInAt,
+            tags: events.tags,
+            visibility: events.visibility,
+            orgKind: partnerOrgs.kind,
           })
           .from(registrations)
           .innerJoin(events, eq(events.id, registrations.eventId))
           .leftJoin(partnerOrgs, eq(partnerOrgs.id, events.partnerOrgId))
-          // Staff never learn who is open to something more: 💘 events and dating
-          // partners' events are left out, with no marker that anything was left out.
-          .where(
-            and(
-              eq(registrations.accountId, targetId!),
-              sql`not ((case when jsonb_typeof(${events.tags}) = 'string' then (${events.tags} #>> '{}')::jsonb else ${events.tags} end) @> jsonb_build_array(${OPEN_TO_MORE_TAG}::text))`,
-              sql`coalesce(${partnerOrgs.kind}, '') <> 'dating'`,
-            ),
-          )
+          .where(eq(registrations.accountId, targetId!))
           .orderBy(desc(events.startsAt))
           .limit(100)
+          .then(privateHistory)
       : Promise.resolve(null),
   ]);
 
@@ -487,8 +500,8 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
                   <tbody>
                     {history.map((h) => (
                       <tr>
-                        <td>{lang === "en" && h.titleEn ? h.titleEn : h.title}</td>
-                        <td>{fmtDate(h.startsAt, lang)}</td>
+                        <td>{h.hidden ? <em>{t("กิจกรรมส่วนตัว", "A private event")}</em> : lang === "en" && h.titleEn ? h.titleEn : h.title}</td>
+                        <td>{h.hidden ? "-" : fmtDate(h.startsAt, lang)}</td>
                         <td>{h.status}</td>
                         <td>{h.checkedInAt ? "✓" : "-"}</td>
                       </tr>

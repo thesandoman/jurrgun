@@ -117,7 +117,7 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     expect(rows[0].targetId).toBe(target.id);
   });
 
-  it("leaves 💘 events out of the participation history, with no trace", async () => {
+  it("shows a 💘 event in the participation history only as a private event: no title or date", async () => {
     const [mod, host, target] = await Promise.all([createMember({ role: "moderator" }), createMember({ role: "host" }), createMember()]);
     const mk = async (title: string, tags: string[]) => {
       const id = newId();
@@ -133,6 +133,12 @@ describe.skipIf(!HAS_DB)("moderation", () => {
     const html = await (await req(`/admin/moderation/${id}?history=1`, { cookie: `${mod.cookie}; lang=en` })).text();
     expect(html).toContain(friendly);
     expect(html).not.toContain(dating);
+    expect(html).toContain("A private event");
+    // bma_admin too.
+    const admin = await createMember({ role: "bma_admin" });
+    const adminHtml = await (await req(`/admin/moderation/${id}?history=1`, { cookie: `${admin.cookie}; lang=en` })).text();
+    expect(adminHtml).not.toContain(dating);
+    expect(adminHtml).toContain("A private event");
   });
 
   it("refuses moderator actions against a BMA admin", async () => {
