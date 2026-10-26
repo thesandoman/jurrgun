@@ -7,7 +7,8 @@
 import { describe, expect, it } from "vitest";
 import { createMember, db, HAS_DB, req } from "./helpers";
 import { newId } from "../src/lib/crypto";
-import { buddyMatches, buddyOptins, chatMessages, consents, datingIntents, meetFeedback, planPitches, safeArrivals, thanks, weeklyPlans } from "../src/schema";
+import { eq } from "drizzle-orm";
+import { buddyMatches, buddyOptins, chatMessages, consents, datingIntents, meetFeedback, planPitches, profiles, safeArrivals, thanks, weeklyPlans } from "../src/schema";
 
 describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
   it("includes the member's own chats, dating, buddy, feedback, thanks, plans and safety checks", async () => {
@@ -49,5 +50,15 @@ describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
     // No secrets, nothing private about the other person, no account ids.
     for (const bad of ["their words", "THEIR PRIVATE FEEDBACK", "secret-key", match, other.id, m.id]) expect(text).not.toContain(bad);
     expect(text).not.toMatch(/password|salt|passToken|photoKey/i);
+  });
+
+  it("lists the empty-district alert's two fields with the profile", async () => {
+    const m = await createMember();
+    const sent = new Date("2026-10-20T03:00:00Z");
+    await db().update(profiles).set({ districtAlertOptIn: true, districtAlertLastSentAt: sent }).where(eq(profiles.accountId, m.id));
+    const data = JSON.parse(await (await req("/settings/privacy/export", { cookie: m.cookie })).text());
+    expect(data.profile.districtAlertOptIn).toBe(true);
+    expect(data.profile.districtAlertLastSentAt).toBe(sent.toISOString());
+    await db().update(profiles).set({ districtAlertOptIn: false }).where(eq(profiles.accountId, m.id));
   });
 });

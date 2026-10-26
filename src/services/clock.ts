@@ -432,7 +432,8 @@ async function districtAlertBatch(env: Bindings, members: AlertMember[], now: Da
   ]);
   const optedInAt = new Map(optIns.map((r) => [r.actor, r.createdAt]));
   const asked = named.flatMap((m) => {
-    const cutoff = said.has(m.accountId) ? alertCutoff(m.lastSentAt, optedInAt.get(m.accountId) ?? null) : null;
+    // No opt-in row left (audit rows are kept for 730 days) and no alert yet: the past week counts.
+    const cutoff = said.has(m.accountId) ? (alertCutoff(m.lastSentAt, optedInAt.get(m.accountId) ?? null) ?? new Date(now.getTime() - DISTRICT_ALERT_DAYS * 24 * HOUR)) : null;
     return cutoff ? [{ ...m, cutoff }] : [];
   });
   if (!asked.length) return 0;
