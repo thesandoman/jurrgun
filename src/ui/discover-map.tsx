@@ -183,6 +183,17 @@ function moreLabel(n, words) {
   return String(words || "{n}").replace("{n}", String(n));
 }`;
 
+/** What the sheet's handle says while you type in the map search, with {n} for the number (owner card 4). */
+export function searchCountWords(t: T): { one: string; many: string; none: string } {
+  return { one: t("พบ {n} กิจกรรม", "{n} match"), many: t("พบ {n} กิจกรรม", "{n} matches"), none: t("ไม่พบกิจกรรม", "No matches") };
+}
+
+/** The search count, as plain browser JavaScript: never "0 found", zero has its own words. */
+export const SEARCH_COUNT_JS = `function searchCount(n, w) {
+  if (!n) return w.none;
+  return (n === 1 ? w.one : w.many).replace("{n}", String(n));
+}`;
+
 /** JSON for a <script type="application/json"> block, safe against </script>. */
 function scriptJson(x: unknown): string {
   return JSON.stringify(x).replace(/</g, "\\u003c");
@@ -220,6 +231,7 @@ export function FullDiscover(props: {
       streets: t("แผนที่ถนน", "Street map"),
       noMatch: t("ไม่พบกิจกรรมที่ค้นหา", "No events match your search"),
       moreChips: moreChipsWords(t),
+      found: searchCountWords(t),
     },
   };
   return (
@@ -527,13 +539,35 @@ new MutationObserver(() => { if (style === "auto") start(); }).observe(document.
 
 // Search: filter pins and the list as you type (the form still works without JS).
 const listItems = () => Array.from(document.querySelectorAll("#discover-list .ev-item"));
+/*
+ * While a search is typed, the sheet's handle says how many events it found
+ * ("พบ 3 กิจกรรม", "No matches"), and the week's count comes back when the box
+ * is cleared. Screen readers hear the count once typing pauses, not on every key.
+ */
+${SEARCH_COUNT_JS}
+const statusEl = document.getElementById("fd-status");
+const subEl = document.querySelector(".fd-handle-sub");
+const statusHome = statusEl ? { text: statusEl.textContent, cls: statusEl.className } : null;
+let sayTimer = 0;
 function applySearch() {
   let shown = 0;
   for (const el of listItems()) { const on = !query || (el.dataset.s || "").includes(query); el.hidden = !on; if (on) shown++; }
   document.getElementById("fd-nomatch").hidden = shown > 0 || !query;
+  if (statusEl && statusHome) {
+    statusEl.textContent = query ? searchCount(shown, cfg.words.found) : statusHome.text;
+    statusEl.className = query ? "fd-handle-title" : statusHome.cls;
+  }
+  if (subEl) subEl.hidden = !!query;
+  queueChrome();
   api?.setPoints(visible());
+  return shown;
 }
-document.getElementById("fd-q").addEventListener("input", (e) => { query = e.target.value.trim().toLowerCase(); applySearch(); });
+document.getElementById("fd-q").addEventListener("input", (e) => {
+  query = e.target.value.trim().toLowerCase();
+  const shown = applySearch();
+  clearTimeout(sayTimer);
+  if (query) sayTimer = setTimeout(() => announce(searchCount(shown, cfg.words.found)), 600);
+});
 if (query) applySearch();
 
 // Status card and "skip the map" open the events sheet.

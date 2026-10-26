@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { tr } from "../src/lib/i18n";
 import { readFileSync } from "node:fs";
-import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, SIDE_PANEL_MQ, moreChipsWords, sheetCopy } from "../src/ui/discover-map";
+import { CHIPS_JS, FULLMAP_CSS, FULLMAP_JS, FullDiscover, NoEventsYet, SEARCH_COUNT_JS, SIDE_PANEL_MQ, moreChipsWords, searchCountWords, sheetCopy } from "../src/ui/discover-map";
 
 const en = tr("en");
 const th = tr("th");
@@ -128,6 +128,28 @@ describe("Discover map chips row", () => {
     expect(FULLMAP_CSS).toMatch(/\.fd-more\{position:fixed;z-index:var\(--z-chips\);min-width:44px;min-height:44px;/);
     expect(FULLMAP_JS).toContain('f.open = true;');
     expect(FULLMAP_JS).toContain('bar.addEventListener("scroll", queueChips, { passive: true })');
+  });
+});
+
+const searchCount = new Function(`${SEARCH_COUNT_JS}; return searchCount;`)() as (n: number, w: ReturnType<typeof searchCountWords>) => string;
+
+describe("Discover map live search count", () => {
+  it("says how many events match, Thai first, and never 'พบ 0' or '0 matches'", () => {
+    expect(searchCount(3, searchCountWords(th))).toBe("พบ 3 กิจกรรม");
+    expect(searchCount(1, searchCountWords(th))).toBe("พบ 1 กิจกรรม");
+    expect(searchCount(3, searchCountWords(en))).toBe("3 matches");
+    expect(searchCount(1, searchCountWords(en))).toBe("1 match");
+    expect(searchCount(0, searchCountWords(th))).toBe("ไม่พบกิจกรรม");
+    expect(searchCount(0, searchCountWords(en))).toBe("No matches");
+    for (const t of [th, en]) for (const n of [0, 1, 2, 12]) expect(searchCount(n, searchCountWords(t))).not.toMatch(/พบ 0|\b0 match|[–—]/);
+  });
+
+  it("shows it on the sheet's handle as you type, and reads it out only once typing pauses", () => {
+    expect(page(th)).toContain('"found":{"one":"พบ {n} กิจกรรม","many":"พบ {n} กิจกรรม","none":"ไม่พบกิจกรรม"}');
+    expect(FULLMAP_JS).toContain("statusEl.textContent = query ? searchCount(shown, cfg.words.found) : statusHome.text;");
+    expect(FULLMAP_JS).toContain("clearTimeout(sayTimer);");
+    expect(FULLMAP_JS).toContain("sayTimer = setTimeout(() => announce(searchCount(shown, cfg.words.found)), 600);");
+    expect(page(en)).toMatch(/<p class="sr-only" id="fd-live" role="status" aria-live="polite"><\/p>/);
   });
 });
 
