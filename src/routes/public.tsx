@@ -19,6 +19,15 @@ export const publicRoutes = new Hono<AppEnv>();
 
 export const INTRO_COOKIE = "jg_intro";
 
+/**
+ * The quiet line under the landing's start (owner card 6, 2026-10-27). Its own constant, not
+ * BRAND.bma: films, the Organization JSON-LD and Marketing's drafts quote BRAND.bma word for word.
+ */
+export const LANDING_TRUST = {
+  th: "สถานที่จริง มีเจ้าภาพโต๊ะ เช็กอินได้ · แอปอิสระ กทม. เป็นเจ้าภาพและกำกับดูแล",
+  en: "Real places, Table Hosts, check-in · An independent app, hosted and overseen by the BMA",
+};
+
 /** The landing's three front doors (owner card 5): public pages, one per kind of visitor. */
 export const DOORS = [
   { href: "/new", icon: "👋", label: { th: "เพิ่งย้ายมากรุงเทพฯ", en: "New to Bangkok" } },
@@ -51,7 +60,6 @@ publicRoutes.get("/", (c) => {
             {taglinePhrases(L(lang, BRAND.tagline), lang).map((w, i) => <>{i ? " " : ""}<span class="ph">{w}</span></>)}
           </h1>
           <p class="hero-sub">{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</p>
-          <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
           <div class="hero-cta">
             {/* The page's one start: a pill with the arrow in its own circle. */}
             {user ? (
@@ -71,6 +79,7 @@ publicRoutes.get("/", (c) => {
               </>
             )}
           </div>
+          <p class="trust-line">{L(lang, LANDING_TRUST)}</p>
         </Tile>
         {/* Tiles link to public pages only. Buddy needs an account, so it explains without linking.
             Four columns: hero and Buddy fill rows 1 and 2, the steps and Safety share row 3 (no hole);
@@ -178,7 +187,7 @@ publicRoutes.get("/intro", (c) => {
             {i === 0 ? <h1>{sl.title}</h1> : <h2>{sl.title}</h2>}
             <p>{sl.body}</p>
             {sl.note ? <p class="muted">{sl.note}</p> : null}
-            {sl.foot ? <p class="intro-foot">🏛️ {sl.foot}</p> : null}
+            {sl.foot ? <p class="intro-foot">{sl.foot}</p> : null}
             {i === slides.length - 1 ? (
               <div class="intro-cta">
                 <LinkButton href={done}>{user ? t("ไปต่อ", "Continue") : t("เริ่มเลย", "Get started")}</LinkButton>

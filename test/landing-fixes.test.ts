@@ -162,6 +162,30 @@ describe("card 5: three doors", () => {
   });
 });
 
+describe("card 6: the BMA line", () => {
+  it("is one quiet line under the start, with no chip and no 🏛️ in the hero", async () => {
+    const hero = (h: string) => h.slice(h.indexOf("tile2 hero"), h.indexOf("</a>", h.indexOf('class="trust-line"')) + 1);
+    const en = (await bento("en")).html;
+    const th = (await bento("th")).html;
+    expect(en).toContain('<p class="trust-line">Real places, Table Hosts, check-in · An independent app, hosted and overseen by the BMA</p>');
+    expect(th).toContain('<p class="trust-line">สถานที่จริง มีเจ้าภาพโต๊ะ เช็กอินได้ · แอปอิสระ กทม. เป็นเจ้าภาพและกำกับดูแล</p>');
+    // Under the start: after the hero buttons.
+    expect(en.indexOf('class="trust-line"')).toBeGreaterThan(en.indexOf('class="hero-link"'));
+    const bentoEn = (await bento("en")).bento;
+    expect(bentoEn.slice(0, bentoEn.indexOf("</h1>") + 2000)).not.toContain("🏛️");
+    expect(hero(en)).not.toContain("endorse");
+  });
+
+  it("uses a neutral class name everywhere", async () => {
+    const { STYLES } = await import("../src/ui/styles");
+    expect(STYLES).not.toContain("endorse");
+    expect(STYLES).toContain(".trust-line{");
+    const en = (await bento("en")).html;
+    expect(en).not.toContain("endorse");
+    expect(en).toContain('class="foot-trust"');
+  });
+});
+
 describe("card 2: one start", () => {
   it("has a single primary, Find my first table, to sign up, with Sign in as the secondary link", async () => {
     const en = (await bento("en")).html;

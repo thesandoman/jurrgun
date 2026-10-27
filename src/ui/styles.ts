@@ -164,8 +164,8 @@ dl.facts dd{margin:0}
 .intro-slide h1{font-size:1.9rem;margin:10px 0 4px}
 .intro-slide p{max-width:30ch;color:var(--ink-2);font-size:1.05rem}
 .intro-slide p.intro-foot{font-size:.85rem;font-weight:600;color:var(--ink-3)}
-.endorse{display:block;margin-top:6px;font-weight:600;opacity:.92}
-.foot-endorse{font-weight:600}
+.trust-line{display:block;margin-top:6px;font-weight:600;opacity:.92}
+.foot-trust{font-weight:600}
 .intro-art{width:min(62vw,240px);aspect-ratio:1;border-radius:36%;display:grid;place-items:center;box-shadow:0 18px 50px color-mix(in srgb,var(--fresh) 30%,transparent)}
 .intro-art b{font-size:min(28vw,108px);line-height:1}
 .intro-mark{display:block;width:72%;height:72%}.intro-mark svg{width:100%;height:100%;filter:drop-shadow(0 8px 18px rgba(0,0,0,.18))}

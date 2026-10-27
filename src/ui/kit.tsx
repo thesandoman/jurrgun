@@ -286,7 +286,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
           <span>{t(BRAND.tagline.th, BRAND.tagline.en)}</span>
           {/* "ผู้กำกับดูแล" stays one word: at 320px Thai line breaking split it after "ผู้". */}
-          <span class="foot-endorse">
+          <span class="foot-trust">
             🏛️{" "}
             {t(BRAND.bma.th, BRAND.bma.en)
               .split(/(ผู้กำกับดูแล)/)
