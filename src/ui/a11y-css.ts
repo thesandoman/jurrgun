@@ -1323,10 +1323,10 @@ main .pc-name>a{display:inline-block;min-width:44px}
 @container ev-picks (max-width:17rem){.disc-picks>.card.ev-card,.disc-picks>.card.ev-card.feat{-webkit-mask:none;mask:none}}
 /* The district alert under the list view's filtered empty line, centred like it (owner card 7 follow-up). */
 .empty-alert{display:grid;justify-items:center;margin:-12px 0 24px;text-align:center}
-/* Event page, phones (owner card 2): one RSVP bar above the tab bar, clear of the raised centre button.
-   The strip under the title keeps its RSVP on tablets only. The bar steps aside while a text field has
+/* Event page, phones and tablets (owner cards 2 and 6): one RSVP bar above the tab bar, clear of the raised
+   centre button, and no RSVP in the strip under the title. The bar steps aside while a text field has
    focus (here even without JS) and the page keeps room for it, so it never covers a focused control (2.4.11). */
-@media (max-width:760px){
+@media (max-width:1023.98px){
   .ev-strip.ev-tab{display:none}
   .sticky-cta.rsvp-bar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(112px + env(safe-area-inset-bottom,0px));gap:12px;padding:8px 8px 8px 16px;background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;transition:transform .2s ease,opacity .2s ease,visibility .2s}
   .rsvp-bar .sticky-cta-note{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.25em;flex:1 1 auto;min-width:0;margin:0;line-height:1.35;color:var(--ink-2);font-weight:600}
@@ -1338,8 +1338,7 @@ main .pc-name>a{display:inline-block;min-width:44px}
   html:has(#sticky-rsvp){scroll-padding-bottom:calc(200px + env(safe-area-inset-bottom,0px))}
   body:has(#sticky-rsvp) main.wrap{padding-bottom:96px}
 }
-@media (min-width:761px){#sticky-rsvp{display:none}body:has(#sticky-rsvp) main.wrap{padding-bottom:36px}}
-@media (min-width:1024px){body:has(#sticky-rsvp) main.wrap{padding-bottom:56px}}
+@media (min-width:1024px){#sticky-rsvp{display:none}body:has(#sticky-rsvp) main.wrap{padding-bottom:56px}}
 @media (prefers-reduced-motion:reduce){.sticky-cta,.sticky-cta.rsvp-bar{transition:none}}
 /* Event page (owner card 7): with no photo there is no band above the title, so the sheet sits in the page
    like any card; the category emoji leads the line above the title. */
@@ -1437,6 +1436,7 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 /* Section headings at large text (owner, 2026-10-26): the gap above an h2 grows with the text size, so at
    200% it passed the spacing cap (40px phones, 56px laptops). It still scales, but never past the cap. */
 h2{margin-top:min(1.8rem,56px)}
+@media (max-width:520px){h2{margin-top:min(1.5rem,40px)}}
 /* Laptop event page, one RSVP (owner card 2, 2026-10-27): with choices to make first, the rail's strip shows the
    price, the spots left and a 44px link down to My registration, whose heading takes the focus. */
 @media (min-width:1024px){
@@ -1460,4 +1460,6 @@ h2{margin-top:min(1.8rem,56px)}
 .fd-forming a{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-decoration:none}
 .fd-forming a strong{min-width:0;overflow-wrap:anywhere}
 .fd-forming a .muted{font-size:.9rem}
+/* Event page, tablets (owner card 6): the RSVP bar lines up with the centred tab bar pill above it. */
+@media (min-width:700px) and (max-width:1023.98px){.sticky-cta.rsvp-bar{left:0;right:0;width:min(560px,calc(100% - 40px));max-width:none;margin:0 auto}}
 `);

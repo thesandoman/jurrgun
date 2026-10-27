@@ -14,7 +14,7 @@ import { A11Y_CSS } from "../src/ui/a11y-css";
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const css = (() => {
-  const i = A11Y_CSS.indexOf("/* Event page, phones (owner card 2)");
+  const i = A11Y_CSS.indexOf("/* Event page, phones and tablets (owner cards 2 and 6)");
   return i < 0 ? "" : A11Y_CSS.slice(i);
 })();
 
@@ -33,13 +33,17 @@ const bar = (html: string) => html.match(/<div class="sticky-cta rsvp-bar[^"]*" 
 const page = async (ev: string, cookie: string, lang = "en") => (await req(`/events/${ev}?lang=${lang}`, { cookie })).text();
 
 describe("RSVP bar: the CSS", () => {
-  it("phones only, above the tab bar and the raised centre button, padded for the safe area", () => {
-    expect(css).toMatch(/@media \(max-width:760px\)\{[^@]*\.sticky-cta\.rsvp-bar\{[^}]*bottom:calc\(112px \+ env\(safe-area-inset-bottom,0px\)\)/);
-    expect(css).toContain("@media (min-width:761px){#sticky-rsvp{display:none}");
+  it("phones and tablets (up to 1023px, owner card 6), above the tab bar and the raised centre button, padded for the safe area", () => {
+    expect(css).toMatch(/@media \(max-width:1023\.98px\)\{[^@]*\.sticky-cta\.rsvp-bar\{[^}]*bottom:calc\(112px \+ env\(safe-area-inset-bottom,0px\)\)/);
+    expect(css).toContain("@media (min-width:1024px){#sticky-rsvp{display:none}");
+    expect(css).not.toContain("@media (max-width:760px)");
+    expect(css).not.toContain("min-width:761px");
+    // On tablets it lines up with the centred tab bar pill (700px+), without a transform that would fight the hide slide.
+    expect(A11Y_CSS).toMatch(/@media \(min-width:700px\) and \(max-width:1023\.98px\)\{\.sticky-cta\.rsvp-bar\{left:0;right:0;width:min\(560px,calc\(100% - 40px\)\);max-width:none;margin:0 auto\}\}/);
   });
 
-  it("the strip's RSVP under the title is hidden on phones", () => {
-    expect(css).toMatch(/@media \(max-width:760px\)\{[^@]*\.ev-strip\.ev-tab\{display:none\}/);
+  it("the strip's RSVP under the title is hidden on phones and tablets: one pattern on touch screens", () => {
+    expect(css).toMatch(/@media \(max-width:1023\.98px\)\{[^@]*\.ev-strip\.ev-tab\{display:none\}/);
   });
 
   it("the page reserves room under the bar (scroll-padding), and the bar steps aside while a text field has focus", () => {
@@ -66,7 +70,7 @@ describe.skipIf(!HAS_DB)("RSVP bar: the markup and its states", () => {
     expect(b).toContain('<button type="submit" form="rsvp" class="btn primary">RSVP</button>');
     // The inline RSVP inside the registration card is kept.
     expect(html).toMatch(/<form method="post" action="\/events\/[^"]+\/rsvp" id="rsvp">[\s\S]*class="btn primary btn-ticket"/);
-    // The top RSVP is marked tablet-only, so phones see one RSVP: the bar's.
+    // The top RSVP is marked ev-tab and hidden on phones and tablets, so touch screens see one RSVP: the bar's.
     expect(html).toContain('class="ev-strip is-open ev-phone ev-tab"');
     // The script hides it for the keyboard, focused text fields and My registration in view.
     expect(html).toContain("visualViewport");

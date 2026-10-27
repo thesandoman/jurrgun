@@ -673,9 +673,9 @@ function stripParts(props: StripProps): { tone: string; text: string; sub: strin
 
 /**
  * The status strip under the title (owner card, 2026-10-17): where I stand and
- * the ONE next action. On phones (owner card 2, 2026-10-26) the RSVP itself
- * lives in the bottom bar instead, so the strip's RSVP shows on tablets only
- * (ev-tab) and phones never see two RSVP buttons.
+ * the ONE next action. On phones and tablets (owner cards 2 and 6) the RSVP
+ * itself lives in the bottom bar instead, so a strip with the RSVP is marked
+ * ev-tab and hidden below 1024px, and touch screens never see two RSVP buttons.
  */
 export function StatusStrip(props: StripProps & { class?: string }) {
   const p = stripParts(props);
@@ -738,7 +738,7 @@ function bookLabel(e: Event, t: T): string {
 }
 
 /**
- * Phones (owner card 2, 2026-10-26): one bar above the tab bar with the price,
+ * Phones and tablets (owner cards 2 and 6): one bar above the tab bar with the price,
  * the spots left and the next action, from the same logic as the status strip.
  * It shows without JS; the script only hides it while the keyboard is open,
  * a text field has focus, or My registration or the status strip is on screen,
