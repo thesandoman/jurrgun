@@ -27,14 +27,34 @@ export const consentRoutes = new Hono<AppEnv>();
 
 export type LatestConsent = { granted: boolean; at: Date; version: string };
 
-/** The newest row per category for one member. */
-export async function latestConsents(env: AppEnv["Bindings"], accountId: string): Promise<Map<string, LatestConsent>> {
-  const rows = await getDb(env)
+export type ConsentRow = LatestConsent & { category: string };
+
+/** Every consent row for one member, newest first (the history: rows are never edited). */
+export async function consentHistory(env: AppEnv["Bindings"], accountId: string): Promise<ConsentRow[]> {
+  return getDb(env)
     .select({ category: consents.category, granted: consents.granted, at: consents.createdAt, version: consents.version })
     .from(consents)
     .where(eq(consents.accountId, accountId))
     .orderBy(desc(consents.createdAt))
     .limit(500);
+}
+
+/** The newest row per category, from the history. */
+export function latestOf(rows: ConsentRow[]): Map<string, LatestConsent> {
+  const out = new Map<string, LatestConsent>();
+  for (const r of rows) if (!out.has(r.category)) out.set(r.category, { granted: r.granted, at: r.at, version: r.version });
+  return out;
+}
+
+/** The notice a row was given under, as a date ("notice-2026-10-27" → 27 October 2026), or the raw version. */
+export function versionText(version: string, lang: "th" | "en"): string {
+  const iso = /(\d{4}-\d{2}-\d{2})/.exec(version)?.[1];
+  return iso ? L(lang, isoDateText(iso)) : version;
+}
+
+/** The newest row per category for one member. */
+export async function latestConsents(env: AppEnv["Bindings"], accountId: string): Promise<Map<string, LatestConsent>> {
+  const rows = await consentHistory(env, accountId);
   const out = new Map<string, LatestConsent>();
   for (const r of rows) if (!out.has(r.category)) out.set(r.category, { granted: r.granted, at: r.at, version: r.version });
   return out;
@@ -113,7 +133,12 @@ function RecordRow(props: { v: View; cat: ConsentCategory; now?: LatestConsent }
 consentRoutes.get("/settings/consents", requireMember, async (c) => {
   const v = view(c);
   const { t, lang } = v;
-  const latest = await latestConsents(c.env, c.var.user!.account.id);
+  const history = await consentHistory(c.env, c.var.user!.account.id);
+  const latest = latestOf(history);
+  const titleOf = (key: string) => {
+    const cat = CONSENT_CATEGORIES.find((x) => x.key === key);
+    return cat ? L(lang, cat.title) : key;
+  };
   const of = (control: ConsentCategory["control"][]) => CONSENT_CATEGORIES.filter((cat) => control.includes(cat.control));
   return page(
     c,
@@ -148,6 +173,22 @@ consentRoutes.get("/settings/consents", requireMember, async (c) => {
           <RecordRow v={v} cat={cat} now={latest.get(cat.key)} />
         ))}
       </ul>
+
+      {history.length ? (
+        <details class="consent-history" id="history">
+          <summary>{t(`ประวัติ (${history.length})`, `History (${history.length})`)}</summary>
+          <p class="muted">{t("ทุกครั้งที่ให้หรือถอนความยินยอม พร้อมวันที่และฉบับของประกาศความเป็นส่วนตัวในตอนนั้น", "Each time you gave or withdrew a consent, with the date and the privacy notice in force then.")}</p>
+          <ul class="consent-list">
+            {history.map((r) => (
+              <li data-category={r.category}>
+                <strong>{titleOf(r.category)}</strong>
+                <span>{r.granted ? t("ให้", "Given") : t("ถอนหรือปิด", "Withdrawn or turned off")}</span>
+                <small>{`${fmtDay(r.at, lang)} · ${t("ประกาศฉบับ", "Notice of")} ${versionText(r.version, lang)}`}</small>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
 
       <nav class="policy-links" aria-label={t("ข้อมูลของฉัน", "My data")}>
         <a href="/settings/privacy/export">{t("ดาวน์โหลดข้อมูลของฉัน", "Download my data")}</a>

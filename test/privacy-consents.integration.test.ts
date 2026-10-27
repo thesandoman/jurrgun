@@ -132,3 +132,19 @@ describe.skipIf(!HAS_DB)("R7: research", () => {
     expect((await account(kept.id)).researchId).toBe(kept.researchId);
   });
 });
+
+describe.skipIf(!HAS_DB)("card P2: consent history on /settings/consents", () => {
+  it("shows every give and withdraw with its date and notice version, newest first", async () => {
+    const m = await createMember();
+    await db().insert(consents).values([
+      { id: newId(), accountId: m.id, category: "research", granted: true, version: "notice-2026-10-16", createdAt: new Date("2026-10-16T05:00:00Z") },
+      { id: newId(), accountId: m.id, category: "research", granted: false, version: "notice-2026-10-26", createdAt: new Date("2026-10-26T05:00:00Z") },
+    ]);
+    const html = await (await req("/settings/consents?lang=en", { cookie: m.cookie })).text();
+    expect(html).toContain('id="history"');
+    const hist = html.slice(html.indexOf('id="history"'));
+    expect(hist).toContain("Notice of 26 October 2026");
+    expect(hist).toContain("Notice of 16 October 2026");
+    expect(hist.indexOf("26 October 2026")).toBeLessThan(hist.indexOf("16 October 2026"));
+  });
+});
