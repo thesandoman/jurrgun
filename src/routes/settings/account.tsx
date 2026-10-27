@@ -11,8 +11,8 @@ import { cleanBio } from "../../content/profile";
 import { hashPassword, newId, sha256, verifyPassword } from "../../lib/crypto";
 import { audit } from "../../lib/records";
 import { SESSION_COOKIE } from "../../lib/session";
-import { accounts, exitReasons, loginAttempts, pushSubscriptions, oauthLinks, emailLinks, profileLinks, profiles, sessions } from "../../schema";
-import { attemptUser, ipKey, loginThrottled } from "../auth";
+import { accounts, exitReasons, pushSubscriptions, oauthLinks, emailLinks, profileLinks, profiles, sessions } from "../../schema";
+import { attemptUser, ipKey, loginThrottled, recordFailure } from "../auth";
 import { deleteObject } from "../../storage";
 import { Button, Field, list, Notice, page, str, view, type View } from "../../ui/kit";
 import { researchWithdrawn } from "../../services/consent";
@@ -119,7 +119,7 @@ settingsRoutes.post("/settings/password", async (c) => {
     return fail(t("ลองหลายครั้งเกินไปแล้ว รอ 15 นาทีแล้วลองใหม่", "Too many attempts. Try again in 15 minutes."));
   }
   if (!(await verifyPassword(current, user.account.passwordHash, user.account.passwordSalt))) {
-    await getDb(c.env).insert(loginAttempts).values({ id: newId(), username: attempt, ipHash: ip.ipHash, createdAt: now });
+    await recordFailure(c, attempt, ip, now);
     return fail(t("รหัสผ่านปัจจุบันไม่ถูกต้อง", "Your current password is incorrect."));
   }
   if (passwordProblem(password)) return fail(t("รหัสผ่านต้องยาว 8 ถึง 200 ตัวอักษร", "Password must be 8 to 200 characters."));

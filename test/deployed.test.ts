@@ -50,3 +50,18 @@ describe("burnPasswordCheck", () => {
     expect(await burnPasswordCheck("")).toBe(false);
   });
 });
+
+describe("card S3: sign-in throttle rules", () => {
+  it("refuses per account+IP, then at the hourly ceiling, then per IP", async () => {
+    const { throttleVerdict, LOGIN_ACCOUNT_CEILING } = await import("../src/routes/auth");
+    expect(throttleVerdict({ accountIp: 4, accountHour: 4, ip: 4 }, true)).toBeNull();
+    expect(throttleVerdict({ accountIp: 5, accountHour: 5, ip: 5 }, true)).toBe("account_ip");
+    expect(throttleVerdict({ accountIp: 0, accountHour: LOGIN_ACCOUNT_CEILING, ip: 0 }, true)).toBe("ceiling");
+    expect(throttleVerdict({ accountIp: 0, accountHour: 0, ip: 20 }, true)).toBe("ip");
+    expect(throttleVerdict({ accountIp: 0, accountHour: 0, ip: 20 }, false)).toBeNull();
+  });
+  it("waits a little longer after each failure, capped at 2 seconds", async () => {
+    const { failureDelayMs } = await import("../src/routes/auth");
+    expect([0, 1, 2, 3, 4, 5, 9].map(failureDelayMs)).toEqual([0, 0, 250, 500, 1000, 2000, 2000]);
+  });
+});

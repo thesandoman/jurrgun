@@ -10,10 +10,10 @@ import { isPasswordless, normalizeUsername, passwordProblem, USERNAME_RE } from 
 import { burnPasswordCheck, hashPassword, hmacSha256, newId, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
-import { audit } from "../lib/records";
+import { audit, notify } from "../lib/records";
 import { isDeployed } from "../lib/deployed";
 import { accountUsable, endSession, startSession } from "../lib/session";
-import { accounts, loginAttempts, type Account } from "../schema";
+import { accounts, loginAttempts, notifications, type Account } from "../schema";
 import { emailEnabled } from "../services/email-code";
 import { signupSource } from "../lib/source";
 import { enabledProviders, SocialSignIn } from "./oauth";
@@ -33,8 +33,18 @@ export const authRoutes = new Hono<AppEnv>();
 
 const MINUTE = 60_000;
 export const LOGIN_WINDOW_MS = 15 * MINUTE;
-export const LOGIN_MAX_PER_USER = 5;
+/** Failures per account from one IP (card S3: so nobody elsewhere can lock you out). */
+export const LOGIN_MAX_PER_ACCOUNT_IP = 5;
+/** Kept for callers and tests that read the old name: the per-account-and-IP limit. */
+export const LOGIN_MAX_PER_USER = LOGIN_MAX_PER_ACCOUNT_IP;
+/** Failures per account from all IPs in an hour: the ceiling against spread-out guessing. */
+export const LOGIN_ACCOUNT_CEILING = 50;
+export const LOGIN_CEILING_WINDOW_MS = 60 * MINUTE;
 export const LOGIN_MAX_PER_IP = 20;
+/** The longest a failed sign-in waits before answering. */
+export const LOGIN_DELAY_MAX_MS = 2_000;
+/** The in-app warning to the owner when the ceiling trips: at most once a day. */
+export const CEILING_NOTICE_KIND = "security.sign_in_attempts";
 export const SIGNUP_WINDOW_MS = 60 * MINUTE;
 export const SIGNUP_MAX_PER_IP = 10;
 export const SIGNUP_PREFIX = "signup:";
@@ -72,24 +82,84 @@ export async function attemptUser(c: Context<AppEnv>, username: string): Promise
 }
 
 /**
- * True when this sign-in must be refused before the password is checked.
- * One query for both counts. Signup rows (username "signup:…") never count
- * against a username, and only count against an IP for the signup limit.
- * Requests with no client IP at all (local dev, tests) skip the IP limit:
- * deployed on Cloudflare every request carries cf-connecting-ip.
+ * Why a sign-in is refused before the password is checked, or null (card S3):
+ *  - "account_ip": 5 failures for this account from this IP in 15 minutes.
+ *    Someone guessing from elsewhere no longer locks the owner out.
+ *  - "ceiling": 50 failures for this account from anywhere in an hour, so
+ *    guessing spread over many IPs still stops. The owner gets an in-app
+ *    warning (at most once a day).
+ *  - "ip": 20 failures from this IP in 15 minutes, whatever the account.
+ * Requests with no client IP (local dev, tests) share one "unknown" IP, and
+ * skip the IP-wide limit; deployed, every request carries cf-connecting-ip.
  */
-export async function loginThrottled(c: Context<AppEnv>, username: string, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
+export type ThrottleVerdict = "account_ip" | "ceiling" | "ip" | null;
+export type LoginCounts = { accountIp: number; accountHour: number; ip: number };
+
+export function throttleVerdict(n: LoginCounts, ipKnown: boolean): ThrottleVerdict {
+  if (n.accountIp >= LOGIN_MAX_PER_ACCOUNT_IP) return "account_ip";
+  if (n.accountHour >= LOGIN_ACCOUNT_CEILING) return "ceiling";
+  if (ipKnown && n.ip >= LOGIN_MAX_PER_IP) return "ip";
+  return null;
+}
+
+/** A small, growing wait after each failure from the same IP: 0, 0, 250, 500, 1000, then 2000 ms. */
+export function failureDelayMs(failuresSoFar: number): number {
+  if (failuresSoFar < 2) return 0;
+  return Math.min(LOGIN_DELAY_MAX_MS, 250 * 2 ** (failuresSoFar - 2));
+}
+
+export async function loginCounts(c: Context<AppEnv>, username: string, ip: { ipHash: string }, now: Date): Promise<LoginCounts> {
   const since = new Date(now.getTime() - LOGIN_WINDOW_MS);
+  const hour = new Date(now.getTime() - LOGIN_CEILING_WINDOW_MS);
   const [row] = await getDb(c.env)
     .select({
-      byUser: sql<number>`count(*) filter (where ${loginAttempts.username} = ${username})`.mapWith(Number),
-      byIp: sql<number>`count(*) filter (where ${loginAttempts.ipHash} = ${ip.ipHash} and ${loginAttempts.username} not like ${SIGNUP_PREFIX + "%"})`.mapWith(Number),
+      accountIp: sql<number>`count(*) filter (where ${loginAttempts.username} = ${username} and ${loginAttempts.ipHash} = ${ip.ipHash} and ${loginAttempts.createdAt} >= ${since})`.mapWith(Number),
+      accountHour: sql<number>`count(*) filter (where ${loginAttempts.username} = ${username})`.mapWith(Number),
+      ip: sql<number>`count(*) filter (where ${loginAttempts.ipHash} = ${ip.ipHash} and ${loginAttempts.createdAt} >= ${since} and ${loginAttempts.username} not like ${SIGNUP_PREFIX + "%"})`.mapWith(Number),
     })
     .from(loginAttempts)
-    .where(and(gte(loginAttempts.createdAt, since), sql`(${loginAttempts.username} = ${username} or ${loginAttempts.ipHash} = ${ip.ipHash})`));
-  const byUser = Number(row?.byUser ?? 0);
-  const byIp = Number(row?.byIp ?? 0);
-  return byUser >= LOGIN_MAX_PER_USER || (ip.known && byIp >= LOGIN_MAX_PER_IP);
+    .where(and(gte(loginAttempts.createdAt, hour), sql`(${loginAttempts.username} = ${username} or ${loginAttempts.ipHash} = ${ip.ipHash})`));
+  return { accountIp: Number(row?.accountIp ?? 0), accountHour: Number(row?.accountHour ?? 0), ip: Number(row?.ip ?? 0) };
+}
+
+/** The verdict for this account and IP right now (truthy when refused). */
+export async function loginThrottled(c: Context<AppEnv>, username: string, ip: { ipHash: string; known: boolean }, now: Date): Promise<ThrottleVerdict> {
+  return throttleVerdict(await loginCounts(c, username, ip, now), ip.known);
+}
+
+/** Records one failure, then waits a little longer each time (failureDelayMs). */
+export async function recordFailure(c: Context<AppEnv>, username: string, ip: { ipHash: string }, now: Date): Promise<void> {
+  const db = getDb(c.env);
+  await db.insert(loginAttempts).values({ id: newId(), username, ipHash: ip.ipHash, createdAt: now });
+  const n = await loginCounts(c, username, ip, now);
+  const wait = failureDelayMs(n.accountIp);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+}
+
+/**
+ * When the ceiling trips for a real account, tell its owner in the app, at
+ * most once a day. Sign-in emails are stored only as hashes, so this can't be
+ * an email (card S3 asked for one; noted to Main). The response to the
+ * person trying is the same whether or not the account exists.
+ */
+export async function warnOwnerOfCeiling(c: Context<AppEnv>, accountId: string | null, now: Date): Promise<void> {
+  if (!accountId) return;
+  const db = getDb(c.env);
+  const dayAgo = new Date(now.getTime() - 86_400_000);
+  const [recent] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(eq(notifications.accountId, accountId), eq(notifications.kind, CEILING_NOTICE_KIND), gte(notifications.createdAt, dayAgo)))
+    .limit(1);
+  if (recent) return;
+  await notify(
+    db,
+    accountId,
+    CEILING_NOTICE_KIND,
+    "มีคนพยายามเข้าบัญชีของคุณหลายครั้ง เราหยุดไว้ชั่วคราวแล้ว ถ้าไม่ใช่คุณ เปลี่ยนรหัสผ่านได้ที่การตั้งค่า",
+    "Someone tried many times to sign in to your account. We've paused it for now. If it wasn't you, you can change your password in Settings.",
+    "/settings/password",
+  );
 }
 
 export async function signupThrottled(c: Context<AppEnv>, ip: { ipHash: string; known: boolean }, now: Date): Promise<boolean> {
@@ -286,14 +356,21 @@ authRoutes.post("/login", async (c) => {
   // Checked before the account lookup, so the answer is the same whether or
   // not the username exists, and the password is never verified once locked.
   const attempt = await attemptUser(c, username);
-  if (await loginThrottled(c, attempt, ip, now)) return tooMany(c, "login");
+  const verdict = await loginThrottled(c, attempt, ip, now);
+  if (verdict) {
+    if (verdict === "ceiling") {
+      const [owner] = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.username, username)).limit(1);
+      await warnOwnerOfCeiling(c, owner?.id ?? null, now);
+    }
+    return tooMany(c, "login");
+  }
 
   const [acct] = await db.select().from(accounts).where(eq(accounts.username, username)).limit(1);
   // Same message whether the username or the password was wrong.
   // No account: still spend the PBKDF2 time, so timing doesn't reveal which usernames exist.
   const ok = acct ? await verifyPassword(password, acct.passwordHash, acct.passwordSalt) : await burnPasswordCheck(password);
   if (!acct || !ok) {
-    await db.insert(loginAttempts).values({ id: newId(), username: attempt, ipHash: ip.ipHash, createdAt: now });
+    await recordFailure(c, attempt, ip, now);
     return fail(t("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "Wrong username or password."));
   }
   // Correct password: forget this username's failures.

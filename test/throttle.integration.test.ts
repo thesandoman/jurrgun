@@ -7,7 +7,9 @@ import { eq } from "drizzle-orm";
 import app from "../src/index";
 import { ENV, HAS_DB, TEST_PASSWORD, createMember, db } from "./helpers";
 import { hmacSha256, randomToken } from "../src/lib/crypto";
-import { loginAttempts } from "../src/schema";
+import { loginAttempts, notifications } from "../src/schema";
+import { and } from "drizzle-orm";
+import { CEILING_NOTICE_KIND, LOGIN_ACCOUNT_CEILING } from "../src/routes/auth";
 
 /** How a username is stored in identity_login_attempts: a keyed hash, never the name (privacy R11). Tests set no secret. */
 const userKey = async (u: string) => `user:${await hmacSha256("user:", u)}`;
@@ -71,6 +73,29 @@ describe.skipIf(!HAS_DB)("login throttling", () => {
     // The same member from a different network is fine.
     expect((await login(m.username, TEST_PASSWORD, randomIp())).status).toBe(302);
   });
+});
+
+describe.skipIf(!HAS_DB)("card S3: account lockout can't be used against the owner", () => {
+  it("failures from one IP don't lock the owner out from another", async () => {
+    const m = await createMember();
+    const attacker = randomIp();
+    for (let i = 0; i < 5; i++) expect((await login(m.username, "wrongpass1", attacker)).status).toBe(400);
+    expect((await login(m.username, TEST_PASSWORD, attacker)).status).toBe(429);
+    expect((await login(m.username, TEST_PASSWORD, randomIp())).status).toBe(302);
+  });
+
+  it("stops guessing spread over many IPs at the hourly ceiling, and warns the owner once", async () => {
+    const m = await createMember();
+    for (let i = 0; i < LOGIN_ACCOUNT_CEILING; i++) await login(m.username, "wrongpass1", randomIp());
+    expect((await login(m.username, TEST_PASSWORD, randomIp())).status).toBe(429);
+    expect((await login(m.username, TEST_PASSWORD, randomIp())).status).toBe(429);
+    const warned = await db()
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.accountId, m.id), eq(notifications.kind, CEILING_NOTICE_KIND)))
+      .limit(5);
+    expect(warned).toHaveLength(1);
+  }, 60_000);
 });
 
 describe.skipIf(!HAS_DB)("signup throttling", () => {

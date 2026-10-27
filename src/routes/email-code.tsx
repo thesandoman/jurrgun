@@ -23,7 +23,7 @@ import { requireMember } from "../lib/session";
 import { accounts, emailLinks, loginAttempts } from "../schema";
 import { checkCode, emailEnabled, emailHash, normalizeEmail, requestCode, type CodeCheck } from "../services/email-code";
 import { Button, Card, Field, Notice, page, safeNext, str, view, type View } from "../ui/kit";
-import { ipKey, loginThrottled, signIn, tooMany } from "./auth";
+import { ipKey, loginThrottled, recordFailure, signIn, tooMany, warnOwnerOfCeiling } from "./auth";
 
 export const emailCodeRoutes = new Hono<AppEnv>();
 
@@ -165,14 +165,21 @@ emailCodeRoutes.post("/login/code/verify", async (c) => {
   const ip = await ipKey(c);
   const hash = await emailHash(c.env, email);
   // Checked first, so a locked address never gets its code compared.
-  if (await loginThrottled(c, attemptKey(hash), ip, now)) return tooMany(c, "login");
   const db = getDb(c.env);
+  const verdict = await loginThrottled(c, attemptKey(hash), ip, now);
+  if (verdict) {
+    if (verdict === "ceiling") {
+      const [owner] = await db.select({ id: emailLinks.accountId }).from(emailLinks).where(eq(emailLinks.emailHash, hash)).limit(1);
+      await warnOwnerOfCeiling(c, owner?.id ?? null, now);
+    }
+    return tooMany(c, "login");
+  }
   const result = await checkCode(c.env, email, str(body.code), now);
   const [acct] = result.ok
     ? await db.select({ account: accounts }).from(emailLinks).innerJoin(accounts, eq(accounts.id, emailLinks.accountId)).where(eq(emailLinks.emailHash, hash)).limit(1)
     : [];
   if (!acct) {
-    await db.insert(loginAttempts).values({ id: newId(), username: attemptKey(hash), ipHash: ip.ipHash, createdAt: now });
+    await recordFailure(c, attemptKey(hash), ip, now);
     return SignInCodePage(c, { email, next, error: codeError(t, result.ok ? "wrong" : result.reason), status: 400 });
   }
   await db.delete(loginAttempts).where(eq(loginAttempts.username, attemptKey(hash)));
@@ -275,7 +282,7 @@ emailCodeRoutes.post("/settings/email/verify", async (c) => {
   const db = getDb(c.env);
   const result = await checkCode(c.env, email, str(body.code), now);
   if (!result.ok) {
-    await db.insert(loginAttempts).values({ id: newId(), username: attemptKey(hash), ipHash: ip.ipHash, createdAt: now });
+    await recordFailure(c, attemptKey(hash), ip, now);
     return SettingsCodePage(c, { email, error: codeError(t, result.reason), status: 400 });
   }
   await db.delete(loginAttempts).where(eq(loginAttempts.username, attemptKey(hash)));
