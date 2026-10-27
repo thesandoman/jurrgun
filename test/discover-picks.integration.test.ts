@@ -73,10 +73,11 @@ describe.skipIf(!HAS_DB)("Discover: popular picks and the top 10 this week", () 
       await mkEvent(`Elders ${tag}`, { ageMin: 60, ageMax: 99 }),
     ];
     for (const id of hidden) await fill(id, 95);
-    // This week, next in line.
+    // This week, next in line. They start within hours, so they sit near the top of the shared test database
+    // and never fall past the full list's 100-event limit however many events other files have made.
     const week: string[] = [];
     for (let i = 0; i < 11; i++) {
-      const id = await mkEvent(`Week${String(i).padStart(2, "0")} ${tag}`, { startsAt: new Date(Date.now() + (2 + i / 10) * DAY) });
+      const id = await mkEvent(`Week${String(i).padStart(2, "0")} ${tag}`, { startsAt: new Date(Date.now() + (6 + i) * HOUR) });
       await fill(id, 70 - i);
       week.push(id);
     }
