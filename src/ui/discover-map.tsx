@@ -842,7 +842,8 @@ body.fullmap-body{--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-pane
 .fullmap .dmap-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--ink-3);background:var(--surface-2)}
 .fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right{display:none}
 .fullmap .svm-chips{position:fixed;z-index:var(--z-chips);left:0;right:0;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2 + 8px + var(--safe-t));padding:0 max(12px,calc(var(--safe-r) + 12px)) 4px max(12px,calc(var(--safe-l) + 12px))}
-.fullmap .svm-chip{box-shadow:var(--shadow)}
+/* sv-map draws its chips 40px tall: the house minimum is 44px. */
+.fullmap .svm-chip{min-height:44px;box-shadow:var(--shadow)}
 /* Chips that don't fit: the row fades out before the "+N" chip, which opens Filters (owner card 2). */
 .fullmap .svm-chips.over{padding-right:var(--more-r,72px)}
 .fullmap .svm-chips.over:not(.end){-webkit-mask-image:linear-gradient(to right,#000 calc(100% - var(--more-r,72px) - 40px),transparent calc(100% - var(--more-r,72px) + 4px));mask-image:linear-gradient(to right,#000 calc(100% - var(--more-r,72px) - 40px),transparent calc(100% - var(--more-r,72px) + 4px))}

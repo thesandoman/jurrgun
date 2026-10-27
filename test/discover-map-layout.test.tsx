@@ -129,6 +129,12 @@ describe("Discover map chips row", () => {
     expect(FULLMAP_JS).toContain('f.open = true;');
     expect(FULLMAP_JS).toContain('bar.addEventListener("scroll", queueChips, { passive: true })');
   });
+
+  it("every chip is a 44px target (sv-map's own chips are 40px), and the row is measured, not guessed", () => {
+    expect(FULLMAP_CSS).toMatch(/\.fullmap \.svm-chip\{min-height:44px;/);
+    // The free band under the chips comes from their measured bottom, so taller chips move the rail and pill with them.
+    expect(FULLMAP_JS).toContain('document.querySelector(".fullmap .svm-chips")]) if (isShown(e)) top = Math.max(top, e.getBoundingClientRect().bottom)');
+  });
 });
 
 const searchCount = new Function(`${SEARCH_COUNT_JS}; return searchCount;`)() as (n: number, w: ReturnType<typeof searchCountWords>) => string;
