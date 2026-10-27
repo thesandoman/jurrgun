@@ -123,7 +123,7 @@ describe("privacy notice: cookies and device storage", () => {
 
   it("names the session, language, intro and theme stores the owner asked about", () => {
     const names = [...COOKIES, ...DEVICE_STORAGE].map((k) => k.name);
-    for (const n of ["bkk_sid", "lang", "jg_intro", "jg_src", "bkk-a11y"]) expect(names).toContain(n);
+    for (const n of ["bkk_sid", "lang", "jg_src", "bkk-a11y"]) expect(names).toContain(n);
     // The theme is a device setting, not a cookie.
     expect(COOKIES.map((k) => k.name)).not.toContain("theme");
   });

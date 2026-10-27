@@ -176,7 +176,7 @@ export function llmsTxt(): string {
     "## Start here",
     "",
     `- [Jurrgun](${SITE_ORIGIN}/): the homepage, what Jurrgun is and how to start`,
-    `- [Intro](${SITE_ORIGIN}/intro): what Jurrgun is, in five short slides`,
+    `- [Intro](${SITE_ORIGIN}/intro): how Jurrgun works, in three short slides`,
     `- [New to Bangkok](${SITE_ORIGIN}/new): for people who moved to the city recently`,
     `- [From abroad](${SITE_ORIGIN}/international?lang=en): for international residents, in English`,
     `- [Bangkok locals](${SITE_ORIGIN}/local): for people who call Bangkok home and want new friends`,

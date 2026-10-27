@@ -11,8 +11,8 @@ import { headLinks, ldJson } from "../src/lib/seo";
 const LIVE = "https://jurrgun.apps.sv-academy.org";
 const html = { headers: { accept: "text/html" } };
 const get = (url: string, init = html) => app.request(url, init);
-// A signed-out visitor at "/" (the cookie only matters while "/" still sends first visits to the intro).
-const home = { headers: { accept: "text/html", cookie: "jg_intro=seen" } };
+// A signed-out visitor at "/".
+const home = { headers: { accept: "text/html" } };
 
 describe("robots.txt", () => {
   it("allows the live site, blocks private areas and names the sitemap", async () => {

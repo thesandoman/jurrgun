@@ -282,7 +282,6 @@ export type CookieItem = { name: string; what: Text; life: Text };
 export const COOKIES: CookieItem[] = [
   { name: "bkk_sid", what: { th: "ให้คุณเข้าสู่ระบบค้างไว้", en: "Keeps you signed in" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "lang", what: { th: "ภาษาที่คุณเลือก", en: "Your language" }, life: { th: "1 ปี", en: "1 year" } },
-  { name: "jg_intro", what: { th: "จำว่าคุณดูหน้าแนะนำแล้ว", en: "Remembers you've seen the intro" }, life: { th: "1 ปี", en: "1 year" } },
   { name: "jg_src", what: { th: "ลิงก์แคมเปญหรือพาร์ตเนอร์ที่พาคุณมา", en: "The campaign or partner link that brought you" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "bkk_oauth", what: { th: "ระหว่างเข้าสู่ระบบด้วย Google หรือ LINE", en: "While you sign in with Google or LINE" }, life: { th: "10 นาที", en: "10 minutes" } },
   { name: "bkk_invite", what: { th: "ลิงก์ชวนจากเพื่อน จนกว่าคุณจะสมัครเสร็จ", en: "A friend's invite link, until you finish signing up" }, life: { th: "7 วัน", en: "7 days" } },

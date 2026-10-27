@@ -1538,6 +1538,8 @@ main h2.doors-eyebrow{margin:24px 0 8px}
 .doors3 .door:hover{border-color:var(--brand)}
 .doors3 .door-label{flex:1;min-width:0}
 .doors3 .door-go{color:var(--brand);font-weight:800}
+.doors-more{margin:0 0 8px}
+.doors-more a{display:inline-flex;align-items:center;min-height:44px}
 /* Landing card 6: the BMA is one quiet line under the start, not a chip. */
 .tile2.hero p.trust-line{margin:12px 0 0;font-size:.875rem;font-weight:500;line-height:1.45;opacity:.95}
 `);

@@ -22,9 +22,11 @@ describe.skipIf(!HAS_DB)("Discover at /", () => {
     expect((await req("/events", { cookie: m.cookie })).headers.get("location")).toBe("/");
   });
 
-  it("signed out, /events still asks to sign in first, and / is the visitor intro", async () => {
+  it("signed out, /events still asks to sign in first, and / is the visitor landing (the intro is optional)", async () => {
     expect((await req("/events")).headers.get("location")).toBe("/login?next=%2Fevents");
-    expect((await req("/")).headers.get("location")).toBe("/intro");
+    const res = await req("/");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('href="/intro"');
   });
 
   it("the installed app starts at /", async () => {

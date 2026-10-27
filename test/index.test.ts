@@ -8,14 +8,17 @@
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
 
-/** A returning visitor (has seen the intro). */
-const seen = { headers: { cookie: "jg_intro=seen" } };
+/** A signed-out visitor. */
+const seen = { headers: {} };
 
 describe("GET /", () => {
-  it("sends a first-time visitor to the intro, once", async () => {
-    const res = await app.request("/");
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/intro");
+  it("shows a first-time visitor the landing, not a redirect, with a quiet link to the optional intro", async () => {
+    const res = await app.request("/?lang=en");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+    expect(await res.text()).toContain('<a href="/intro">How Jurrgun works</a>');
+    const th = await (await app.request("/?lang=th")).text();
+    expect(th).toContain('<a href="/intro">เจอกันคืออะไร</a>');
   });
 
   it("serves the landing page as HTML to returning visitors", async () => {
@@ -38,14 +41,22 @@ describe("GET /", () => {
 });
 
 describe("GET /intro", () => {
-  it("explains the name, sets the seen cookie and ends in sign-up", async () => {
+  it("is three optional slides (the name, real places and small groups, nobody gets rejected) ending where the landing starts", async () => {
     const res = await app.request("/intro?lang=en");
     expect(res.status).toBe(200);
-    expect(res.headers.get("set-cookie")).toContain("jg_intro=seen");
+    // Optional now: nothing to remember.
+    expect(res.headers.get("set-cookie") ?? "").not.toContain("jg_intro");
     const html = await res.text();
     expect(html).toContain("see you later");
-    expect(html.match(/class="intro-slide/g)?.length).toBe(5);
-    expect(html).toContain('href="/signup"');
+    expect(html.match(/class="intro-slide/g)?.length).toBe(3);
+    expect(html).toContain("Real places, small groups");
+    expect(html).toContain("Nobody gets rejected");
+    expect(html).not.toContain("What&#39;s your Bangkok Type?");
+    expect(html).not.toContain("For everyone");
+    expect(html).not.toContain("🏛️");
+    // Skip, and the last slide's start, go to the landing's start.
+    expect(html).toContain('<a class="intro-skip" href="/signup">Skip</a>');
+    expect(html).toContain('<a href="/signup" class="btn primary start-cta"><span>Find my first table</span>');
     expect(html).toContain('href="/login"');
     expect(html).not.toContain('class="tabbar"');
   });

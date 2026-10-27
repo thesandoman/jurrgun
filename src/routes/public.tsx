@@ -3,7 +3,7 @@
  */
 import { FAIR_PROCESS } from "../content/accountability";
 import { Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
 import { ABOUT } from "../content/learn";
 import { L } from "../lib/i18n";
@@ -16,8 +16,6 @@ import { GOOGLE_SITE_VERIFICATION, llmsTxt, robotsTxt, siteJsonLd, sitemapXml } 
 import { Script } from "../ui/kit";
 
 export const publicRoutes = new Hono<AppEnv>();
-
-export const INTRO_COOKIE = "jg_intro";
 
 /**
  * The quiet line under the landing's start (owner card 6, 2026-10-27). Its own constant, not
@@ -44,8 +42,7 @@ publicRoutes.get("/", (c) => {
   const { t, user, lang } = view(c);
   // Members get Discover right here (owner, 2026-10-27); /events redirects to /.
   if (user?.profile?.onboardedAt) return discoverPage(c);
-  // First visit: the intro first, once.
-  if (!user && !getCookie(c, INTRO_COOKIE)) return c.redirect("/intro");
+  // Visitors land here straight away; the intro is optional, linked under the doors (owner card 7).
   return page(
     c,
     // The homepage for search: indexable and with site data only signed out (signed in, "/" is Discover, noindex).
@@ -122,8 +119,8 @@ publicRoutes.get("/", (c) => {
           </li>
         ))}
       </ul>
-      <p>
-        <a href="/learn">{t("เรียนรู้เพิ่ม", "Learn more")}</a>
+      <p class="doors-more">
+        <a href="/intro">{t("เจอกันคืออะไร", "How Jurrgun works")}</a> · <a href="/learn">{t("เรียนรู้เพิ่ม", "Learn more")}</a>
       </p>
       <p class="muted">
         <a href="/partner/apply">{t("ผู้จัดงานและสถานที่: สมัครเป็นพาร์ตเนอร์", "For organisers and venues: become a partner")}</a>
@@ -132,10 +129,13 @@ publicRoutes.get("/", (c) => {
   );
 });
 
-/** The intro for first-time visitors: five swipeable slides, then sign up. */
+/**
+ * How Jurrgun works, optional (owner card 7, 2026-10-27): three swipeable slides (the name, real
+ * places and small groups, nobody gets rejected), reached from the landing's link. Skip and the
+ * last slide's start go where the landing's start goes.
+ */
 publicRoutes.get("/intro", (c) => {
   const { t, user, lang } = view(c);
-  setCookie(c, INTRO_COOKIE, "seen", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
   const done = user ? (user.profile?.onboardedAt ? "/" : "/onboarding") : "/signup";
   const slides: { art: string; tone: string; title: string; body: string; note?: string; foot?: string }[] = [
     {
@@ -158,18 +158,6 @@ publicRoutes.get("/intro", (c) => {
       title: t("ไม่มีใครต้องโดนปฏิเสธ", "Nobody gets rejected"),
       body: t("หลังกิจกรรม คุณเลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "After an event you choose quietly who you'd like to see again. You only hear when it's mutual."),
     },
-    {
-      art: "🧩",
-      tone: "s4",
-      title: t("คุณเป็นไทป์ไหน?", "What's your Bangkok Type?"),
-      body: t("16 ข้อ ราว 3 นาที มีตัวละคร 16 แบบ ไม่มีเรื่องการเมือง ช่วยจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก", "16 quick questions, about 3 minutes. 16 characters, nothing political. It helps us seat a good mix, with something in common to start."),
-    },
-    {
-      art: "🌈",
-      tone: "s5",
-      title: t("สำหรับทุกคน", "For everyone"),
-      body: t("ทุกเพศ ทุกความหลากหลาย ทั้งคนไทยและชาวต่างชาติ เริ่มต้นที่โหมดเพื่อนเสมอ และใช้ฟรี", "Any gender or orientation, Thai or expat. Friends-first by default. Free."),
-    },
   ];
   return page(
     c,
@@ -190,7 +178,14 @@ publicRoutes.get("/intro", (c) => {
             {sl.foot ? <p class="intro-foot">{sl.foot}</p> : null}
             {i === slides.length - 1 ? (
               <div class="intro-cta">
-                <LinkButton href={done}>{user ? t("ไปต่อ", "Continue") : t("เริ่มเลย", "Get started")}</LinkButton>
+                {user ? (
+                  <LinkButton href={done}>{t("ไปต่อ", "Continue")}</LinkButton>
+                ) : (
+                  <a href={done} class="btn primary start-cta">
+                    <span>{t("หาโต๊ะแรก", "Find my first table")}</span>
+                    <span class="start-arrow" aria-hidden="true">→</span>
+                  </a>
+                )}
                 {!user ? <a href="/login">{t("มีบัญชีแล้ว? เข้าสู่ระบบ", "Have an account? Sign in")}</a> : null}
               </div>
             ) : null}

@@ -22,7 +22,7 @@ describe("intro", () => {
   it("uses a real button, announces the slide, and offers the accessibility menu", async () => {
     const html = await (await app.request("/intro", { headers: { cookie: "lang=en", accept: "text/html" } })).text();
     expect(html).toContain('<button type="button" class="btn primary intro-next" id="intro-next">');
-    expect(html).toMatch(/id="intro-status" role="status"[^>]*>Slide 1 of 5</);
+    expect(html).toMatch(/id="intro-status" role="status"[^>]*>Slide 1 of 3</);
     expect(html).toContain('id="a11y"');
     expect(html).toMatch(/lang="en" aria-current="true">English</);
     expect(html).not.toContain('href="#" class="btn primary intro-next"');
