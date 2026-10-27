@@ -11,7 +11,8 @@ import { cleanBio } from "../../content/profile";
 import { hashPassword, newId, sha256, verifyPassword } from "../../lib/crypto";
 import { audit } from "../../lib/records";
 import { SESSION_COOKIE } from "../../lib/session";
-import { accounts, exitReasons, pushSubscriptions, oauthLinks, emailLinks, profileLinks, profiles, sessions } from "../../schema";
+import { accounts, exitReasons, loginAttempts, pushSubscriptions, oauthLinks, emailLinks, profileLinks, profiles, sessions } from "../../schema";
+import { attemptUser, ipKey, loginThrottled } from "../auth";
 import { deleteObject } from "../../storage";
 import { Button, Field, list, Notice, page, str, view, type View } from "../../ui/kit";
 import { researchWithdrawn } from "../../services/consent";
@@ -105,7 +106,16 @@ settingsRoutes.post("/settings/password", async (c) => {
   const password = typeof body.password === "string" ? body.password : "";
   const confirm = typeof body.confirm === "string" ? body.confirm : "";
   const fail = (error: string) => page(c, { title: t("เปลี่ยนรหัสผ่าน", "Change password"), tab: "me", status: 400 }, <PasswordForm v={v} error={error} />);
+  // The current-password check uses the sign-in throttle (same counter, same 15 minutes),
+  // so a stolen session can't be used to guess the password.
+  const now = new Date();
+  const ip = await ipKey(c);
+  const attempt = await attemptUser(c, user.account.username);
+  if (await loginThrottled(c, attempt, ip, now)) {
+    return fail(t("ลองหลายครั้งเกินไปแล้ว รอ 15 นาทีแล้วลองใหม่", "Too many attempts. Try again in 15 minutes."));
+  }
   if (!(await verifyPassword(current, user.account.passwordHash, user.account.passwordSalt))) {
+    await getDb(c.env).insert(loginAttempts).values({ id: newId(), username: attempt, ipHash: ip.ipHash, createdAt: now });
     return fail(t("รหัสผ่านปัจจุบันไม่ถูกต้อง", "Your current password is incorrect."));
   }
   if (passwordProblem(password)) return fail(t("รหัสผ่านต้องยาว 8 ถึง 200 ตัวอักษร", "Password must be 8 to 200 characters."));

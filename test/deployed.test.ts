@@ -42,3 +42,11 @@ describe("secureCookie and clientIp", () => {
     expect((await read(r)).ip).toBe("9.9.9.9");
   });
 });
+
+describe("burnPasswordCheck", () => {
+  it("never accepts a password", async () => {
+    const { burnPasswordCheck } = await import("../src/lib/crypto");
+    expect(await burnPasswordCheck("anything")).toBe(false);
+    expect(await burnPasswordCheck("")).toBe(false);
+  });
+});

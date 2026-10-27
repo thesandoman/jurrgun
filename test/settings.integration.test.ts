@@ -306,4 +306,18 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect((await req("/login", { form: { username: m.username, password: TEST_PASSWORD } })).status).toBe(400);
     expect((await req("/login", { form: { username: m.username, password: "newpassword1" } })).status).toBe(302);
   });
+
+  it("limits current-password guesses with the sign-in throttle", async () => {
+    const m = await createMember();
+    for (let i = 0; i < 5; i++) {
+      const r = await req("/settings/password", { cookie: m.cookie, form: { current: `wrong${i}wrong`, password: "newpassword1", confirm: "newpassword1" } });
+      expect(r.status).toBe(400);
+    }
+    // Locked now: even the right password is refused, and nothing changes.
+    const r = await req("/settings/password", { cookie: `${m.cookie}; lang=en`, form: { current: TEST_PASSWORD, password: "newpassword1", confirm: "newpassword1" } });
+    expect(r.status).toBe(400);
+    expect(await r.text()).toContain("Too many attempts");
+    // The same counter guards sign-in for this username.
+    expect((await req("/login", { form: { username: m.username, password: TEST_PASSWORD } })).status).not.toBe(302);
+  });
 });

@@ -7,7 +7,7 @@ import type { Context } from "hono";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { isPasswordless, normalizeUsername, passwordProblem, USERNAME_RE } from "../domain/rules";
-import { hashPassword, hmacSha256, newId, verifyPassword } from "../lib/crypto";
+import { burnPasswordCheck, hashPassword, hmacSha256, newId, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
@@ -290,7 +290,9 @@ authRoutes.post("/login", async (c) => {
 
   const [acct] = await db.select().from(accounts).where(eq(accounts.username, username)).limit(1);
   // Same message whether the username or the password was wrong.
-  if (!acct || !(await verifyPassword(password, acct.passwordHash, acct.passwordSalt))) {
+  // No account: still spend the PBKDF2 time, so timing doesn't reveal which usernames exist.
+  const ok = acct ? await verifyPassword(password, acct.passwordHash, acct.passwordSalt) : await burnPasswordCheck(password);
+  if (!acct || !ok) {
     await db.insert(loginAttempts).values({ id: newId(), username: attempt, ipHash: ip.ipHash, createdAt: now });
     return fail(t("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "Wrong username or password."));
   }

@@ -59,3 +59,15 @@ export async function verifyPassword(password: string, hash: string, salt: strin
   const { hash: candidate } = await hashPassword(password, salt);
   return safeEqual(candidate, hash);
 }
+
+/** A fixed salt for burnPasswordCheck: 16 zero bytes. Never used for a real password. */
+const DUMMY_SALT = "AAAAAAAAAAAAAAAAAAAAAA";
+
+/**
+ * Spends the same PBKDF2 time as a real check and always answers false. Used
+ * when the username doesn't exist, so the response time doesn't reveal it.
+ */
+export async function burnPasswordCheck(password: string): Promise<false> {
+  await hashPassword(password, DUMMY_SALT);
+  return false;
+}
