@@ -43,6 +43,7 @@ import { Button, Card, Empty, Notice, page, str, view, type View } from "../ui/k
 import { UnreadDot } from "../ui/unread";
 import { AvatarStack } from "../ui/visual";
 import { coverEmoji } from "./events";
+import { Script } from "../ui/kit";
 
 export const chatRoutes = new Hono<AppEnv>();
 chatRoutes.use("/chat", requireMember);
@@ -635,7 +636,7 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       {th.open ? null : (
         <Notice kind="info">{t("แชตนี้ปิดแล้ว อ่านย้อนหลังได้", "This chat has closed. You can still read it.")}</Notice>
       )}
-      <script dangerouslySetInnerHTML={{ __html: CHAT_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: CHAT_JS }} />
     </>,
   );
 }

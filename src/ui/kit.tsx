@@ -6,6 +6,7 @@
  */
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
+import { createContext, useContext } from "hono/jsx";
 import type { AppEnv, CurrentUser } from "../lib/env";
 import { headLinks, ldJson, type HeadLinks } from "../lib/seo";
 import { tr, type Lang, type T } from "../lib/i18n";
@@ -119,12 +120,28 @@ function SparkPop(props: { initial: string }) {
   );
 }
 
+/** The response's CSP nonce, provided by page() (src/lib/security-headers.ts). */
+const NonceContext = createContext<string | undefined>(undefined);
+
+/**
+ * Every inline <script> in the app is a <Script>: the same element plus this
+ * response's CSP nonce, so the Content-Security-Policy can refuse any script
+ * that didn't come from our own templates.
+ */
+export function Script(props: Record<string, unknown>) {
+  const nonce = useContext(NonceContext);
+  // JSON data blocks never run, so they need no nonce (and keep their markup unchanged).
+  if (typeof props.type === "string" && /^application\/(ld\+)?json$/.test(props.type)) return <script {...props} />;
+  return <script {...props} nonce={nonce} />;
+}
+
 export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
   const v = view(c);
   const noticeKey = c.req.query("notice");
   const notice = noticeKey && NOTICES[noticeKey];
   const errorText = c.req.query("error");
   return c.html(
+    <NonceContext.Provider value={c.var.nonce}>
     <Layout
       v={v}
       opts={opts}
@@ -140,7 +157,8 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
       {noticeKey === "connected" ? <SparkPop initial={(v.user?.profile?.nickname ?? "").slice(0, 1).toUpperCase()} /> : null}
       {errorText ? <Notice kind="error">{errorText}</Notice> : null}
       {body}
-    </Layout>,
+    </Layout>
+    </NonceContext.Provider>,
     opts.status ?? 200,
   );
 }
@@ -188,12 +206,12 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
         {/* Only the accessibility "easier to read" font comes from Google; the brand fonts are ours (ui/fonts.ts). */}
         <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
         <style dangerouslySetInnerHTML={{ __html: ALL_CSS }} />
-        <script
+        <Script
           dangerouslySetInnerHTML={{
             __html: A11Y_HEAD_JS,
           }}
         />
-        <script dangerouslySetInnerHTML={{ __html: SPRING_JS + ";" + SHEET_JS }} />
+        <Script dangerouslySetInnerHTML={{ __html: SPRING_JS + ";" + SHEET_JS }} />
       </head>
       <body class={[opts.admin && "admin", opts.bare && "bare", opts.fullscreen && "fullmap-body"].filter(Boolean).join(" ") || undefined}>
         {opts.fullscreen ? (
@@ -248,17 +266,17 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           </>
         )}
         {member && !opts.admin && !opts.bare ? <TabBar v={v} tab={opts.tab ?? "none"} /> : null}
-        <script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS + ";" + A11Y_FORM_JS }} />
-        {opts.admin ? <script dangerouslySetInnerHTML={{ __html: TABLE_FILTER_JS }} /> : null}
-        <script dangerouslySetInnerHTML={{ __html: ALIVE_JS }} />
-        {member && !opts.fullscreen ? <script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}
-        <script
+        <Script dangerouslySetInnerHTML={{ __html: A11Y_MENU_JS + ";" + A11Y_FORM_JS }} />
+        {opts.admin ? <Script dangerouslySetInnerHTML={{ __html: TABLE_FILTER_JS }} /> : null}
+        <Script dangerouslySetInnerHTML={{ __html: ALIVE_JS }} />
+        {member && !opts.fullscreen ? <Script dangerouslySetInnerHTML={{ __html: NOTIF_JS }} /> : null}
+        <Script
           dangerouslySetInnerHTML={{
             __html: `if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,
           }}
         />
         {/* Signed out (or the session ended): forget any table saved for offline on this device. The offline page is cached signed-out, so it is left out. */}
-        {!user && v.path !== "/offline" ? <script dangerouslySetInnerHTML={{ __html: CLEAR_OFFLINE_JS }} /> : null}
+        {!user && v.path !== "/offline" ? <Script dangerouslySetInnerHTML={{ __html: CLEAR_OFFLINE_JS }} /> : null}
       </body>
     </html>
   );

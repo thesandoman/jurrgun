@@ -68,6 +68,7 @@ import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPi
 import { safeNext } from "../ui/table-intro";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 import { INTENT_COOKIE, journeyFor, JourneyTop, type Journey } from "../ui/journey";
+import { Script } from "../ui/kit";
 
 export const onboarding = new Hono<AppEnv>();
 onboarding.use("*", requireUser);
@@ -288,7 +289,7 @@ onboarding.get("/dating", (c) => {
     <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")} journey={journeyFor(c, "dating")}>
       <FlowStep emoji="💘" title={t("อะไรทำให้อยากมาเดตที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
         <Pills name="reasons" options={DATING_REASONS.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
-        <script
+        <Script
           dangerouslySetInnerHTML={{
             __html: `(function(){var b=[].slice.call(document.querySelectorAll('input[name=reasons]'));function u(){var n=b.filter(function(x){return x.checked}).length;b.forEach(function(x){x.disabled=!x.checked&&n>=${MAX_REASONS}})}b.forEach(function(x){x.addEventListener("change",u)});u()})()`,
           }}
@@ -632,7 +633,7 @@ export function PronounField(props: { v: View; value?: string | null }) {
           </button>
         ))}
       </div>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `(function(){var w=document.currentScript.parentNode,i=w.querySelector('input[name="pronouns"]'),b=[].slice.call(w.querySelectorAll("[data-pronoun]"));function u(){b.forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.pronoun===i.value))})}b.forEach(function(x){x.addEventListener("click",function(){i.value=x.getAttribute("aria-pressed")==="true"?"":x.dataset.pronoun;u()})});i.addEventListener("input",u)})();`,
         }}
@@ -802,7 +803,7 @@ function RomanceFields(props: { v: View; openTo: string[] | "everyone" | null | 
       <div data-dating-self hidden={p?.genderIdentity === "self" ? undefined : true}>
         <Field label={t("อธิบายด้วยคำของคุณเอง (เป็นความลับ)", "In your own words (private)")} name="datingGenderSelf" value={cleanBio(p?.bio).datingGenderSelf} maxlength={30} />
       </div>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `(function(){var w=document.currentScript.previousElementSibling,s=w&&w.parentNode.querySelector('select[name="genderIdentity"]');if(!s)return;s.addEventListener("change",function(){w.hidden=s.value!=="self"})})();`,
         }}
@@ -854,7 +855,7 @@ export function WomenOnlyFields(props: { v: View }) {
           checked={!!p?.womenOnly}
         />
       </div>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `(function(){var f=document.currentScript.parentNode,s=f.querySelector('select[name="gender"]'),w=f.querySelector("[data-women-only]"),g=f.querySelector("[data-gender-self]");if(!s||!w)return;s.addEventListener("change",function(){var ok=s.value==="woman"||s.value==="non-binary";w.hidden=!ok;if(!ok){var c=w.querySelector("input");if(c)c.checked=false}if(g)g.hidden=s.value!=="self"})})();`,
         }}

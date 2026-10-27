@@ -15,6 +15,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../lib/env";
 import { Card, LinkButton, page, view } from "../ui/kit";
 import { NEXT_MAX, OFFLINE_CACHE, SAVED_ATTR } from "../ui/offline-next";
+import { Script } from "../ui/kit";
 
 export const pwaRoutes = new Hono<AppEnv>();
 
@@ -205,7 +206,7 @@ pwaRoutes.get("/offline", (c) => {
           <a href="tel:1669">1669</a>
         </p>
       </Card>
-      <script dangerouslySetInnerHTML={{ __html: SAVED_LIST_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: SAVED_LIST_JS }} />
     </>,
   );
 });

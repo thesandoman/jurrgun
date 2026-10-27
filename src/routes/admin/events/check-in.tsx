@@ -13,6 +13,7 @@ import { Button, Card, Field, Notice, page, str, Toggle, view } from "../../../u
 import { adminEvents } from "./app";
 import { QR_PREFIX, checkedInCount } from "./edit";
 import { BASE, checkedInRegistrations, me, refuse, seatLabel, wantsJson, withEvent } from "./shared";
+import { Script } from "../../../ui/kit";
 
 // ------------------------------------------------------------ check-in --
 
@@ -140,8 +141,8 @@ adminEvents.get(
             <Button>{t("เช็กอิน", "Check in")}</Button>
           </form>
         </Card>
-        <script type="application/json" id="scan-msgs" dangerouslySetInnerHTML={{ __html: scriptJson(msgs) }} />
-        <script dangerouslySetInnerHTML={{ __html: SCANNER_JS }} />
+        <Script type="application/json" id="scan-msgs" dangerouslySetInnerHTML={{ __html: scriptJson(msgs) }} />
+        <Script dangerouslySetInnerHTML={{ __html: SCANNER_JS }} />
       </>
     ));
   }, { roster: true }),

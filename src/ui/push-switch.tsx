@@ -14,6 +14,7 @@
  *     Safari before Add to Home Screen) still show the switch, switched off,
  *     with what to do instead, so it never just disappears.
  */
+import { Script } from "./kit";
 type T = (th: string, en: string) => string;
 
 export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
@@ -45,7 +46,7 @@ export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
           <span class="sw" aria-hidden="true" />
         </button>
       </div>
-      <script dangerouslySetInnerHTML={{ __html: PUSH_SWITCH_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: PUSH_SWITCH_JS }} />
     </>
   );
 }

@@ -71,6 +71,7 @@ import { buddyPinkyState, stepBackBuddy, tapBuddyPinky, withdrawBuddyTap } from 
 import { BUDDY_PINKY_DAYS } from "../domain/pinky";
 import { PinkyRow } from "../ui/pinky";
 import { consentsFor, PERSONALIZATION_CONSENT } from "../services/consent";
+import { Script } from "../ui/kit";
 
 export const buddyRoutes = new Hono<AppEnv>();
 type Ctx = Context<AppEnv>;
@@ -473,7 +474,7 @@ function QuestCard(props: { v: View; m: BuddyMatch; q: BuddyQuest; me: string; b
           </LinkButton>
         ) : null}
       </div>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `document.querySelectorAll("[data-share]").forEach(function(b){if(b.dataset.ready)return;b.dataset.ready=1;b.addEventListener("click",function(){var s=b.getAttribute("data-share");if(navigator.share){navigator.share({text:s}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(s);b.textContent="✓"}})})`,
         }}

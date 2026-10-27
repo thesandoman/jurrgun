@@ -31,6 +31,7 @@ import {
 } from "../content/profile";
 import type { View } from "./kit";
 import { PE_JS } from "./profile-edit-js";
+import { Script } from "./kit";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
 
@@ -130,7 +131,7 @@ export function InterestPicker(props: { v: View; values?: string[]; name?: strin
         );
       })}
       {props.folded ? (
-        <script
+        <Script
           dangerouslySetInnerHTML={{
             __html: `(function(){var ip=document.currentScript.parentNode;ip.addEventListener("change",function(e){var g=e.target.closest(".ip-group");if(!g)return;var c=g.querySelector(".ip-chosen");if(!c)return;c.textContent=[].slice.call(g.querySelectorAll("input:checked")).map(function(i){return "\u2713 "+i.nextElementSibling.textContent.replace(/^\\s+/,"").trim()}).join("  ")})})();`,
           }}
@@ -544,10 +545,10 @@ export function ProfileFormScript() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PROFILE_FORM_CSS }} />
-      <script dangerouslySetInnerHTML={{ __html: PROFILE_FORM_JS }} />
-      <script dangerouslySetInnerHTML={{ __html: UNI_PICKER_JS }} />
-      <script dangerouslySetInnerHTML={{ __html: PROFILE_EDIT_JS }} />
-      <script dangerouslySetInnerHTML={{ __html: PE_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: PROFILE_FORM_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: UNI_PICKER_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: PROFILE_EDIT_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: PE_JS }} />
     </>
   );
 }

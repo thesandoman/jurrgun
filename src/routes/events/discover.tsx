@@ -49,6 +49,7 @@ import {
   whenWindow,
 } from "./shared";
 import type { Db } from "./shared";
+import { Script } from "../../ui/kit";
 
 // ------------------------------------------------------------ discover --
 
@@ -368,7 +369,7 @@ export async function discoverPage(c: Context<AppEnv>) {
       c,
       { title: t("ค้นหากิจกรรม", "Discover"), tab: "events", fullscreen: true },
       <>
-      <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <FullDiscover
         t={t}
         lang={lang}
@@ -410,7 +411,7 @@ export async function discoverPage(c: Context<AppEnv>) {
     c,
     { title: t("ค้นหากิจกรรม", "Discover"), tab: "events" },
     <>
-      <script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <a href="/pulse" class="cp-line">
         {PULSE_ICON}
         <b>City Pulse</b>
@@ -467,7 +468,7 @@ export async function discoverPage(c: Context<AppEnv>) {
             <ViewSwitch t={t} on="cards" mapHref={mapHref} cardsHref={listHref} />
           </div>
         </div>
-        <script dangerouslySetInnerHTML={{ __html: RAIL_OPEN_JS }} />
+        <Script dangerouslySetInnerHTML={{ __html: RAIL_OPEN_JS }} />
         {above.size ? null : <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>}
         <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
           {above.size ? <h2 class="disc-more-h">{t("กิจกรรมอื่น ๆ", "More events")}</h2> : null}

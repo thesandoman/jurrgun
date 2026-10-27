@@ -14,6 +14,7 @@
 import type { Child } from "hono/jsx";
 import type { View } from "./kit";
 import { JourneyTop, type Journey } from "./journey";
+import { Script } from "./kit";
 
 export function FlowStep(props: {
   title: string;
@@ -145,7 +146,7 @@ export function Flow(props: {
         </button>
         {props.extra}
       </div>
-      <script dangerouslySetInnerHTML={{ __html: FLOW_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: FLOW_JS }} />
     </form>
   );
 }

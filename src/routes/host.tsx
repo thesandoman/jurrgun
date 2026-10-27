@@ -51,6 +51,7 @@ import { announceOpen } from "../services/announcements";
 import { canAnnounce } from "../domain/announcements";
 import { STATIONS, stationByKey } from "../content/stations";
 import type { Child } from "hono/jsx";
+import { Script } from "../ui/kit";
 
 export const hostRoutes = new Hono<AppEnv>();
 // Hosts only (see the top). Partners and admins don't need a member profile.
@@ -735,7 +736,7 @@ function ProposalForm(props: {
         </LinkButton>
         <Button>{props.direct ? t("เผยแพร่", "Publish") : props.editing ? t("ส่งให้ตรวจอีกครั้ง", "Send for review again") : t("ส่งให้ทีมงานตรวจ", "Send for review")}</Button>
       </div>
-      <script dangerouslySetInnerHTML={{ __html: HOST_FORM_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: HOST_FORM_JS }} />
     </form>
   );
 }

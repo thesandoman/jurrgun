@@ -14,6 +14,7 @@
  * data-offline-saved attribute; the worker fills in the time when it stores
  * its copy, so only a cached copy shows the "saved for offline" note.
  */
+import { Script } from "./kit";
 export const OFFLINE_CACHE = "jurrgun-next-v1";
 /** At most this many passes are kept on a device. */
 export const NEXT_MAX = 3;
@@ -28,7 +29,7 @@ export function SaveNext(props: { paths: string[]; replace?: boolean }) {
   if (!paths.length && !props.replace) return null;
   const msg = JSON.stringify({ type: "jurrgun-save-next", urls: paths, replace: !!props.replace }).replace(/</g, "\\u003c");
   return (
-    <script
+    <Script
       dangerouslySetInnerHTML={{
         __html: `(function(){if(!("serviceWorker" in navigator))return;navigator.serviceWorker.ready.then(function(r){if(r.active)r.active.postMessage(${msg})}).catch(function(){})})()`,
       }}
@@ -52,7 +53,7 @@ export function OfflineSavedNote(props: { t: T; lang: string }) {
           <small>{t("ไม่มีสัญญาณตอนนี้ ข้อมูลนี้มาจากเครื่องของคุณ ถ้ามีอะไรเปลี่ยน จะเห็นเมื่อกลับมาออนไลน์", "No signal right now, so this is the copy on your phone. Any changes show once you're back online.")}</small>
         </span>
       </p>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `(function(){var s=document.querySelector("[${SAVED_ATTR}]"),at=s&&s.getAttribute("${SAVED_ATTR}");if(!at)return;var d=new Date(at);if(isNaN(d))return;var n=document.getElementById("offline-saved");var th=${JSON.stringify(props.lang !== "en")};
 var f=d.toLocaleString(th?"th-TH":"en-GB",{timeZone:"Asia/Bangkok",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});n.querySelector("[data-saved-time]").textContent=(th?"เมื่อ ":"at ")+f;n.hidden=false})()`,

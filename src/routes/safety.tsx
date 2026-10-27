@@ -22,6 +22,7 @@ import { accounts, notifications, safeArrivals } from "../schema";
 import { HELPLINES } from "../content/learn";
 import { SAFETY_TIPS } from "../content/dating";
 import { Button, Card, Notice, page, str, view, type View } from "../ui/kit";
+import { Script } from "../ui/kit";
 
 export const safetyRoutes = new Hono<AppEnv>();
 
@@ -102,7 +103,7 @@ safetyRoutes.get("/safety", (c) => {
           </div>
           <small class="muted">🔒 {t("เราไม่เก็บแผนนี้ไว้ในระบบ", "This plan is never saved on our side.")}</small>
         </form>
-        <script dangerouslySetInnerHTML={{ __html: SHARE_JS }} />
+        <Script dangerouslySetInnerHTML={{ __html: SHARE_JS }} />
       </Card>
 
       <ul class="checklist">

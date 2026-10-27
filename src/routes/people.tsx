@@ -79,6 +79,7 @@ import { SeeAgainCard } from "../ui/see-again";
 import { Sheet } from "../ui/sheet";
 import { visibleLinks, type ShownLink } from "../services/profile-links";
 import { ProfileLinksSheet } from "../ui/profile-links";
+import { Script } from "../ui/kit";
 
 export const peopleRoutes = new Hono<AppEnv>();
 
@@ -1035,7 +1036,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
       )}
       <h1>{t("คนรู้จักในกรุงเทพฯ ของฉัน", "My people in Bangkok")}</h1>
       {props.chats ? <NewMessages v={props.v} rows={props.chats} /> : null}
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-thanks]");if(!b)return;var i=b.closest("form").querySelector("input[name=body]");if(i){i.value=b.dataset.thanks;i.focus()}})`,
         }}

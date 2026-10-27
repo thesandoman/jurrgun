@@ -59,5 +59,7 @@ export type AppEnv = {
   Variables: {
     user: CurrentUser | null;
     lang: Lang;
+    /** Per-response CSP nonce (src/lib/security-headers.ts); every inline <Script> carries it. */
+    nonce: string;
   };
 };

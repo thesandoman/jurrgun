@@ -61,6 +61,7 @@ import {
   title,
 } from "./shared";
 import type { Ctx, Db } from "./shared";
+import { Script } from "../../ui/kit";
 
 // -------------------------------------------------------------- detail --
 
@@ -768,7 +769,7 @@ function RsvpBar(props: StripProps) {
         )}
       </p>
       {p.action}
-      <script dangerouslySetInnerHTML={{ __html: RSVP_BAR_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: RSVP_BAR_JS }} />
     </div>
   );
 }
@@ -849,7 +850,7 @@ function InviteBox(props: { event: Event; url: string | null; v: View }) {
           {t("แชร์", "Share")}
         </button>
       </div>
-      <script dangerouslySetInnerHTML={{ __html: SHARE_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: SHARE_JS }} />
     </div>
   );
 }

@@ -36,6 +36,7 @@ import { banCopy, isLookAgain, LIFT_COPY, reporterCopy, suspendCopy } from "../.
 import { getObject, getObjectUrl } from "../../storage";
 import { OPEN_TO_MORE_TAG } from "../../domain/rules";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
+import { Script } from "../../ui/kit";
 
 /** Rules a moderator can name as broken: the report reasons, minus "other". */
 const RULES = REPORT_REASON_LABELS.filter((r) => r.value !== "other");
@@ -612,7 +613,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
             {t("บันทึกโน้ต", "Save note")}
           </button>
           {/* The form shows only what the chosen action needs, and the button says what it will do. */}
-          <script
+          <Script
             dangerouslySetInnerHTML={{
               __html: `(function(){var sel=document.getElementById("f-action"),go=document.getElementById("mod-go");if(!sel||!go)return;function upd(){var a=sel.value;document.querySelectorAll("[data-for]").forEach(function(el){el.hidden=el.dataset.for.split(" ").indexOf(a)<0});go.textContent=go.dataset[a]||go.textContent;go.classList.toggle("danger",a==="suspend"||a==="ban");go.classList.toggle("primary",!(a==="suspend"||a==="ban"))}sel.addEventListener("change",upd);upd()})()`,
             }}

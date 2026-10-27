@@ -76,6 +76,7 @@ import {
   type Answers,
   type Personal,
 } from "../vibe/generator";
+import { Script } from "../ui/kit";
 
 export const quizRoutes = new Hono<AppEnv>();
 
@@ -332,10 +333,10 @@ export function QuizFlow(props: {
       {/* Q7: the first page's answers (and reflections) ride along on the follow-up page. */}
       {Object.entries(props.carry ?? {}).flatMap(([k, val]) => (Array.isArray(val) ? val : [val]).map((x) => <input type="hidden" name={k} value={x} />))}
       {/* After the steps, so the radios it sets up are already parsed. */}
-      <script dangerouslySetInnerHTML={{ __html: QUIZ_NONE_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: QUIZ_NONE_JS }} />
       {/* Where people stop (owner card 10-16): one anonymous count per question reached. */}
       <i hidden id="quiz-reach" data-base={ask[0] ?? 0} data-seed={props.seed} />
-      <script dangerouslySetInnerHTML={{ __html: QUIZ_REACH_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: QUIZ_REACH_JS }} />
     </Flow>
   );
 }
@@ -796,7 +797,7 @@ function ShareType(props: { v: View; archetype: ArchetypeKey }) {
           {t("คัดลอกลิงก์", "Copy link")}
         </button>
       </div>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `(function(){var s=document.currentScript.parentNode,abs=function(p){return location.origin+p};
 var sh=s.querySelector("[data-share]"),ln=s.querySelector("[data-line]"),cp=s.querySelector("[data-copy]");

@@ -13,6 +13,7 @@ import { BRAND, MARK_SVG } from "../ui/brand";
 import { A11yMenu } from "../ui/a11y";
 import { discoverPage } from "./events/discover";
 import { GOOGLE_SITE_VERIFICATION, llmsTxt, robotsTxt, siteJsonLd, sitemapXml } from "../lib/seo";
+import { Script } from "../ui/kit";
 
 export const publicRoutes = new Hono<AppEnv>();
 
@@ -190,7 +191,7 @@ publicRoutes.get("/intro", (c) => {
         </p>
         <A11yMenu t={t} class="intro-a11y" />
       </div>
-      <script
+      <Script
         dangerouslySetInnerHTML={{
           __html: `(function(){var tr=document.getElementById("intro-track"),dots=document.querySelectorAll("#intro-dots i"),nx=document.getElementById("intro-next");
 var n=dots.length;function idx(){return Math.round(tr.scrollLeft/tr.clientWidth)}

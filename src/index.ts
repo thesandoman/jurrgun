@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { CLOCK_TASK, ensureClock, onClockTask, watchClock } from "./services/clock";
 import type { AppEnv } from "./lib/env";
 import { loadUser, sameOrigin } from "./lib/session";
+import { CSP_REPORT_PATH, cspReportSummary, securityHeaders } from "./lib/security-headers";
 import { captureSource } from "./lib/source";
 import { createLogger } from "./logger";
 import { verifyTaskWebhook } from "./state";
@@ -44,6 +45,15 @@ import { calendarRoutes } from "./routes/calendar";
 
 const app = new Hono<AppEnv>();
 
+// Every response: security headers and the CSP nonce (src/lib/security-headers.ts).
+app.use("*", securityHeaders);
+// Browsers post CSP violation reports here. Logged as directive + blocked origin only.
+app.post(CSP_REPORT_PATH, async (c) => {
+  const raw = (await c.req.text()).slice(0, 8_192);
+  const summary = cspReportSummary(raw);
+  if (summary) createLogger(c.env).warn("csp violation", summary);
+  return c.body(null, 204);
+});
 // Every request: refuse cross-site form posts, then load the signed-in user
 // (no database trip when there is no session cookie).
 app.use("*", sameOrigin);

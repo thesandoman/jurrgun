@@ -26,6 +26,7 @@ import type { Precision } from "../lib/places";
 import { BKK_CENTER, BKK_PAN_LIMIT } from "../lib/places";
 import { needsConsentText, optedInText, optInText } from "../domain/district-alert";
 import { SV_MAP_VERSION } from "../vendor/sv-map.generated";
+import { Script } from "./kit";
 
 export type MapPoint = {
   id: string;
@@ -448,12 +449,12 @@ export function FullDiscover(props: {
           {props.list}
         </section>
       </details>
-      <script dangerouslySetInnerHTML={{ __html: LAPTOP_OPEN_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: LAPTOP_OPEN_JS }} />
 
       {/* Read out once typing pauses: how many events the search found. */}
       <p class="sr-only" id="fd-live" role="status" aria-live="polite" />
-      <script type="application/json" id="dmap-data" dangerouslySetInnerHTML={{ __html: scriptJson(cfg) }} />
-      <script type="module" dangerouslySetInnerHTML={{ __html: FULLMAP_JS.replace("__V__", SV_MAP_VERSION) }} />
+      <Script type="application/json" id="dmap-data" dangerouslySetInnerHTML={{ __html: scriptJson(cfg) }} />
+      <Script type="module" dangerouslySetInnerHTML={{ __html: FULLMAP_JS.replace("__V__", SV_MAP_VERSION) }} />
     </div>
   );
 }

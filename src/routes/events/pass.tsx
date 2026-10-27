@@ -24,6 +24,7 @@ import { DayStatusLine, EtaBox, FindTheTable } from "../../ui/day-of";
 import { eventRoutes } from "./app";
 import { forbidden, notFound } from "./detail";
 import { costText, description, directionsUrl, eventIcs, firstName, me, title } from "./shared";
+import { Script } from "../../ui/kit";
 
 // ---------------------------------------------------------------- pass --
 
@@ -210,7 +211,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
           <span aria-hidden="true">🧭</span> {t("เส้นทาง", "Directions")}
         </a>
       </div>
-      <script dangerouslySetInnerHTML={{ __html: COUNTDOWN_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: COUNTDOWN_JS }} />
       <Essentials event={event} hostName={host?.nickname ?? null} v={view(c)} />
       <LinkButton href={`/events/${event.id}`} kind="ghost">{t("← รายละเอียดกิจกรรม", "← Event details")}</LinkButton>
     </>,
