@@ -13,6 +13,9 @@ import { accounts, emailLinks, loginAttempts, loginCodes } from "../src/schema";
 import { CODE_MAX_ATTEMPTS, CODE_MAX_PER_EMAIL, CODE_MAX_PER_IP, checkCode, emailHash, newCode, normalizeEmail, requestCode, setTestOutbox } from "../src/services/email-code";
 import { runRetention } from "../src/services/retention";
 
+/** Every response carries its own CSP nonce; the pages must match apart from that. */
+const noNonce = (html: string) => html.replace(/ nonce="[^"]*"/g, "");
+
 // Test-only values: nothing is sent anywhere (NO_EXTERNAL is set in ENV).
 const EMAIL_ENV = { ...ENV, EMAIL_PROVIDER: "resend", EMAIL_API_KEY: "test-only", EMAIL_FROM: "Jurrgun <codes@example.test>", EMAIL_HASH_SALT: "test-only-salt" };
 const HOUR = 3_600_000;
@@ -152,14 +155,14 @@ describe.skipIf(!HAS_DB)("sign in with an email code", () => {
     const a = await call("/login/code", { form: { email: known } });
     const b = await call("/login/code", { form: { email: unknown } });
     expect(a.status).toBe(b.status);
-    expect((await a.text()).replaceAll(known, "X")).toBe((await b.text()).replaceAll(unknown, "X"));
+    expect(noNonce((await a.text()).replaceAll(known, "X"))).toBe(noNonce((await b.text()).replaceAll(unknown, "X")));
     expect(outbox.map((o) => o.to)).toEqual([known]);
     // A guess for the unknown address fails like any wrong code.
     const guess = await call("/login/code/verify", { form: { email: unknown, code: "123456" } });
     const wrong = await call("/login/code/verify", { form: { email: known, code: outbox[0].code === "123456" ? "654321" : "123456" } });
     expect(guess.status).toBe(400);
     expect(wrong.status).toBe(400);
-    expect((await guess.text()).replaceAll(unknown, "X")).toBe((await wrong.text()).replaceAll(known, "X"));
+    expect(noNonce((await guess.text()).replaceAll(unknown, "X"))).toBe(noNonce((await wrong.text()).replaceAll(known, "X")));
   });
 
   it("refuses an expired code", async () => {
