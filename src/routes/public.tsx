@@ -71,7 +71,7 @@ publicRoutes.get("/", (c) => {
         <Tile href="/safety" tone="gold">
           <span class="ico" aria-hidden="true">🛡️</span>
           <h3>{t("ปลอดภัยไว้ก่อน", "Safety first")}</h3>
-          <small>{t("รู้ผลก็ต่อเมื่อเลือกตรงกัน", "You only hear when it's mutual")}</small>
+          <small>{t("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป", "Always in public places. Report or block in the app.")}</small>
         </Tile>
       </Bento>
       <div class="row">

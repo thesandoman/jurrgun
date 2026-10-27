@@ -48,3 +48,18 @@ describe("signed-out landing tiles", () => {
     expect(b).toMatch(/<div class="tile2 tall t-deep[^"]*">/);
   });
 });
+
+describe("Safety tile", () => {
+  it("says what keeps people safe, in Thai and English, and links to /safety", async () => {
+    const en = (await bento("en")).bento;
+    const th = (await bento("th")).bento;
+    const tile = (b: string) => b.slice(b.lastIndexOf("<a", b.indexOf("🛡️")), b.indexOf("</a>", b.indexOf("🛡️")));
+    expect(tile(en)).toContain('href="/safety"');
+    expect(tile(en)).toContain("Safety first");
+    expect(tile(en)).toContain("Always in public places. Report or block in the app.");
+    expect(tile(th)).toContain("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป");
+    // The old line was about mutual choices, not safety.
+    expect(en).not.toContain("You only hear when it's mutual");
+    expect(tile(en) + tile(th)).not.toMatch(/[–—]/);
+  });
+});
