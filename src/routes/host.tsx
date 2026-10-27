@@ -49,7 +49,8 @@ import { VenueFields } from "../ui/day-of";
 import { AnnounceForm } from "../ui/announcements";
 import { announceOpen } from "../services/announcements";
 import { canAnnounce } from "../domain/announcements";
-import { STATIONS } from "../content/stations";
+import { STATIONS, stationByKey } from "../content/stations";
+import type { Child } from "hono/jsx";
 
 export const hostRoutes = new Hono<AppEnv>();
 // Hosts only (see the top). Partners and admins don't need a member profile.
@@ -465,6 +466,9 @@ function GoTogetherCard(props: { v: View; d: ProposalInput; inbox: InboxItem | n
   );
 }
 
+/** Folded section summaries (owner card 4): a free-text value longer than this is cut with an ellipsis. */
+const SUM_CUT = 24;
+
 /**
  * The event form's Send (owner card 3, 2026-10-26). When the browser refuses the
  * form (a required field is empty, a number is out of range), each failing field
@@ -476,7 +480,7 @@ function GoTogetherCard(props: { v: View; d: ProposalInput; inbox: InboxItem | n
 const HOST_FORM_JS = `(function(){var f=document.currentScript&&document.currentScript.closest("form[data-first-error]");if(!f||f._fe)return;f._fe=1;
 var due=false;
 function say(el){if(el.validity.valueMissing)return el.tagName==="SELECT"?f.dataset.pick:f.dataset.miss;return el.validationMessage}
-function show(el){if(!el.id)return;var id=el.id+"-verr",s=document.getElementById(id);
+function show(el){var od=el.closest("details");if(od)od.open=true;if(!el.id)return;var id=el.id+"-verr",s=document.getElementById(id);
 if(!s){s=document.createElement("small");s.className="field-err";s.id=id;(el.closest(".field")||el.parentNode).appendChild(s);
 var d=(el.getAttribute("aria-describedby")||"").split(" ").filter(Boolean);d.push(id);el.setAttribute("aria-describedby",d.join(" "))}
 s.textContent="";var i=document.createElement("span");i.setAttribute("aria-hidden","true");i.textContent="⚠ ";s.appendChild(i);s.appendChild(document.createTextNode(say(el)));el.setAttribute("aria-invalid","true")}
@@ -487,10 +491,73 @@ setTimeout(function(){due=false;var first=[].filter.call(f.elements,function(x){
 function clear(e){var el=e.target;if(!el||!el.id||!el.checkValidity||!el.checkValidity())return;var s=document.getElementById(el.id+"-verr");if(!s)return;s.remove();
 el.setAttribute("aria-describedby",(el.getAttribute("aria-describedby")||"").split(" ").filter(function(x){return x&&x!==s.id}).join(" "));el.removeAttribute("aria-invalid")}
 f.addEventListener("input",clear);f.addEventListener("change",clear);
+function cut(s){return s.length>${SUM_CUT}?s.slice(0,${SUM_CUT - 1}).replace(/\\s+$/,"")+"…":s}
+function now(d){var o=[];JSON.parse(d.dataset.sum).forEach(function(p){var el=f.elements.namedItem(p.n);if(el&&!el.tagName)el=el[0];if(!el)return;
+var v=el.type==="checkbox"?el.checked:String(el.value||"").trim();
+if(p.k==="flag"){if(v===true)o.push(p.l);return}
+if(p.k==="cost")o.push(p.l+": "+(+v>0?"฿"+(+v):d.dataset.free));
+else if(p.k==="num"){if(+v>0)o.push(p.l.replace("{n}",String(+v)))}
+else if(p.k==="lines"){var n=v.split("\\n").filter(function(x){return x.trim()}).length;if(n)o.push(p.l.replace("{n}",String(n)))}
+else if(p.k==="sel"){if(v&&el.selectedIndex>=0)o.push(el.options[el.selectedIndex].text)}
+else if(p.k==="has"){if(v)o.push(p.l)}
+else if(v)o.push(p.l?p.l+": "+cut(v):cut(v))});
+var line=d.querySelector(".host-opt-now");if(line)line.textContent=o.length?o.join(" · "):d.dataset.none}
+function live(e){var d=e.target&&e.target.closest&&e.target.closest("details[data-sum]");if(d)now(d)}
+f.addEventListener("input",live);f.addEventListener("change",live);
 var vv=window.visualViewport,txt=false,TXT='input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]),textarea';
 function typing(){f.classList.toggle("is-typing",txt||(!!vv&&vv.height<window.innerHeight*0.75))}
 f.addEventListener("focusin",function(e){txt=!!(e.target.matches&&e.target.matches(TXT));typing()});f.addEventListener("focusout",function(){txt=false;setTimeout(typing,50)});
 if(vv)vv.addEventListener("resize",typing)})()`;
+
+/**
+ * Owner card 4 (2026-10-27): the form's optional sections (no required field
+ * inside) fold into <details>. The closed summary reads the section's current
+ * values in one short line, worked out on render here and live in HOST_FORM_JS
+ * from the same parts, or says Not set. Required sections stay open, and Send
+ * opens any folded section with an error in it (show() and go() above).
+ */
+type SumPart = { n: string; k: "cost" | "num" | "text" | "has" | "flag" | "sel" | "lines"; l: string };
+const cut = (s: string) => (s.length > SUM_CUT ? `${s.slice(0, SUM_CUT - 1).trimEnd()}…` : s);
+
+export function sumLine(parts: SumPart[], d: Record<string, unknown>, lang: string, free: string, none: string): string {
+  const out: string[] = [];
+  for (const p of parts) {
+    const raw = d[p.n];
+    if (p.k === "flag") {
+      if (raw === true) out.push(p.l);
+      continue;
+    }
+    const v = typeof raw === "string" ? raw.trim() : "";
+    if (p.k === "cost") out.push(`${p.l}: ${Number(v) > 0 ? `฿${Number(v)}` : free}`);
+    else if (p.k === "num") {
+      if (Number(v) > 0) out.push(p.l.replace("{n}", String(Number(v))));
+    } else if (p.k === "lines") {
+      const n = v.split("\n").filter((x) => x.trim()).length;
+      if (n) out.push(p.l.replace("{n}", String(n)));
+    } else if (p.k === "sel") {
+      const st = stationByKey(v);
+      if (st) out.push(lang === "en" ? st.en : st.th);
+    } else if (p.k === "has") {
+      if (v) out.push(p.l);
+    } else if (v) out.push(p.l ? `${p.l}: ${cut(v)}` : cut(v));
+  }
+  return out.length ? out.join(" · ") : none;
+}
+
+function Fold(props: { v: View; d: ProposalInput; title: string; parts: SumPart[]; open: boolean; card?: boolean; children: Child }) {
+  const { t, lang } = props.v;
+  const free = t("ฟรี", "Free");
+  const none = t("ยังไม่ได้ตั้ง", "Not set");
+  return (
+    <details class={props.card ? "card host-opt" : "how host-opt host-opt-sub"} open={props.open} data-sum={JSON.stringify(props.parts)} data-free={free} data-none={none}>
+      <summary>
+        {props.card ? <h2 class="host-opt-title">{props.title}</h2> : <span class="host-opt-title">{props.title}</span>}
+        <span class="host-opt-now">{sumLine(props.parts, props.d as unknown as Record<string, unknown>, lang, free, none)}</span>
+      </summary>
+      {props.children}
+    </details>
+  );
+}
 
 function ProposalForm(props: {
   v: View;
@@ -514,6 +581,8 @@ function ProposalForm(props: {
     { value: "public", th: "สาธารณะ: แสดงบนหน้าค้นหา", en: "Public: listed on Discover" },
     { value: "private", th: "ส่วนตัว: เฉพาะคนที่มีลิงก์", en: "Private: only people with the link" },
   ];
+  // The server refused the proposal: its errors may point into a folded section, so they all open.
+  const fold = !!props.errors?.length;
   return (
     <form
       method="post"
@@ -562,7 +631,20 @@ function ProposalForm(props: {
         )}
         <Field label={t("ลิงก์แผนที่ (ไม่บังคับ)", "Map link (optional)")} name="mapUrl" type="url" value={d.mapUrl} placeholder="https://maps.google.com/…" maxlength={500} />
         <Select label={t("เขต", "District")} name="district" options={districtsAZ(lang)} value={d.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
-        <VenueFields v={v} d={d} />
+        <Fold
+          v={v}
+          d={d}
+          open={fold}
+          title={t("วิธีหาโต๊ะ (ไม่บังคับ)", "Finding the table (optional)")}
+          parts={[
+            { n: "nearestStation", k: "sel", l: "" },
+            { n: "walkMinutes", k: "num", l: t("เดิน {n} นาที", "{n} min walk") },
+            { n: "venueNotes", k: "text", l: t("บอกทาง", "Directions") },
+            { n: "venueNotesEn", k: "has", l: t("มีคำบอกทางภาษาอังกฤษ", "English directions") },
+          ]}
+        >
+          <VenueFields v={v} d={d} />
+        </Fold>
         <Field
           label={t("ลิงก์ทักทายออนไลน์ก่อนวันงาน (ไม่บังคับ)", "Online hello before the day (optional)")}
           name="warmupUrl"
@@ -586,7 +668,24 @@ function ProposalForm(props: {
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Guests can bring a friend (+1)")} checked={d.plusOneAllowed} />
         <Select label={t("ใครเห็นกิจกรรมนี้", "Who can see it")} name="visibility" options={visOpts} value={d.visibility} lang={lang} />
-        <EntryRuleFields t={t} d={{ ...emptyEntryRules(), ...d, requirements: d.requirements ?? "", groupLabel: d.groupLabel ?? "", groupJoinCode: d.groupJoinCode ?? "" } as EntryRuleDraft} talk={!!props.talk} />
+        <Fold
+          v={v}
+          d={d}
+          open={fold}
+          title={t("กติกาการเข้าร่วม (ไม่บังคับ)", "Entry rules (optional)")}
+          parts={[
+            { n: "alcoholServed", k: "flag", l: t("มีแอลกอฮอล์", "Alcohol served") },
+            { n: "smokingArea", k: "flag", l: t("มีที่สูบบุหรี่", "Smoking area") },
+            { n: "openEntry", k: "flag", l: t("เข้างานได้เลย", "Open entry") },
+            { n: "approvalRequired", k: "flag", l: t("ผู้จัดอนุมัติที่นั่ง", "You approve places") },
+            ...(props.talk ? [{ n: "talkMode", k: "flag", l: t("วงพูดคุยส่วนตัว", "Private talk") } as SumPart] : []),
+            { n: "requirements", k: "lines", l: t("ต้องรู้ก่อนจอง {n} ข้อ", "{n} to know before booking") },
+            { n: "groupLabel", k: "text", l: t("เฉพาะ", "Only for") },
+            { n: "groupJoinCode", k: "has", l: t("มีรหัสเข้าร่วม", "Join code") },
+          ]}
+        >
+          <EntryRuleFields t={t} d={{ ...emptyEntryRules(), ...d, requirements: d.requirements ?? "", groupLabel: d.groupLabel ?? "", groupJoinCode: d.groupJoinCode ?? "" } as EntryRuleDraft} talk={!!props.talk} />
+        </Fold>
         {props.table ? (
           <Select
             label={t("ชวนใคร", "Who's it for")}
@@ -600,8 +699,21 @@ function ProposalForm(props: {
           />
         ) : null}
       </Card>
-      <Card>
-        <h2>{t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}</h2>
+      <Fold
+        v={v}
+        d={d}
+        card
+        open={fold}
+        title={t("ค่าใช้จ่ายและความปลอดภัย", "Cost and safety")}
+        parts={[
+          { n: "costThb", k: "cost", l: t("ค่าใช้จ่าย", "Cost") },
+          { n: "freeSeats", k: "num", l: t("ส่งต่อน้ำใจ {n} ที่", "{n} pay-it-forward") },
+          { n: "paymentNote", k: "text", l: t("จ่าย", "Pay") },
+          { n: "paymentUrl", k: "has", l: t("มีลิงก์รับเงิน", "Payment link") },
+          { n: "accessibility", k: "text", l: t("การเข้าถึง", "Access") },
+          { n: "safetyInfo", k: "text", l: t("ความปลอดภัย", "Safety") },
+        ]}
+      >
         <Field label={t("ค่าใช้จ่ายต่อคน (บาท, 0 = ฟรี)", "Cost per person (baht, 0 = free)")} name="costThb" type="number" min={0} max={20000} value={d.costThb} />
         <Field
           label={t("ที่นั่งส่งต่อน้ำใจ (ฟรี 0 ถึง 5 ที่)", "Pay-it-forward seats (free, 0-5)")}
@@ -624,7 +736,7 @@ function ProposalForm(props: {
         />
         <TextArea label={t("การเข้าถึง (ไม่บังคับ)", "Accessibility (optional)")} name="accessibility" value={d.accessibility} maxlength={1000} />
         <TextArea label={t("จุดนัดพบและความปลอดภัย", "Meeting point and safety")} name="safetyInfo" value={d.safetyInfo} maxlength={1000} />
-      </Card>
+      </Fold>
       <p class="muted">
         {t("เมื่อกดส่ง ถือว่าคุณยืนยันว่าจะดูแลผู้เข้าร่วมตาม", "By sending this you agree to look after your guests in line with the")} <a href="/code-of-conduct">{t("หลักปฏิบัติของชุมชน", "code of conduct")}</a>.
       </p>

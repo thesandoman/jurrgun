@@ -1462,4 +1462,18 @@ h2{margin-top:min(1.8rem,56px)}
 .fd-forming a .muted{font-size:.9rem}
 /* Event page, tablets (owner card 6): the RSVP bar lines up with the centred tab bar pill above it. */
 @media (min-width:700px) and (max-width:1023.98px){.sticky-cta.rsvp-bar{left:0;right:0;width:min(560px,calc(100% - 40px));max-width:none;margin:0 auto}}
+/* Host's event form, folded optional sections (owner card 4): the whole summary is the 44px target, the title over
+   one short line of the current values, and the chevron (native.ts) turns to show open or closed. The legend stays for
+   screen readers only, since the summary already names the group. */
+main .host-form details.host-opt>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:2px;min-height:44px;padding:4px 0;cursor:pointer;border-radius:8px}
+main .host-form details.host-opt>summary::after{grid-column:2;grid-row:1 / span 2}
+main .host-form details.host-opt>summary:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+main .host-form .host-opt-title{grid-column:1;margin:0;font-weight:700;color:var(--ink)}
+main .host-form .host-opt-now{grid-column:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;font-size:.9rem;color:var(--ink-2)}
+main .host-form details.host-opt[open]>summary .host-opt-now{display:none}
+main .host-form details.host-opt[open]>summary{margin-bottom:8px}
+main .host-form details.host-opt-sub{margin:16px 0 0;padding:4px 0 0;border:0;border-top:1px solid var(--line);border-radius:0;background:none;box-shadow:none}
+main .host-form details.host-opt-sub>fieldset{margin:0}
+main .host-form details.host-opt>fieldset>legend{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@media (prefers-reduced-motion:reduce){main .host-form details.host-opt>summary::after{transition:none}}
 `);
