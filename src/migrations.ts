@@ -408,5 +408,12 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "ALTER TABLE \"identity_accounts\" ADD COLUMN \"is_demo\" boolean DEFAULT false NOT NULL;",
       "CREATE UNIQUE INDEX \"social_src_landings_day_code_idx\" ON \"social_src_landings\" (\"day\",\"code\");"
     ]
+  },
+  {
+    "id": "0034_session_last_seen",
+    "statements": [
+      "ALTER TABLE \"identity_sessions\" ADD COLUMN \"last_seen_at\" timestamp with time zone;",
+      "ALTER TABLE \"identity_sessions\" ADD COLUMN \"device\" text;"
+    ]
   }
 ];

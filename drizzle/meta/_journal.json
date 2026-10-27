@@ -239,6 +239,13 @@
       "when": 1793101418038,
       "tag": "0033_demo_flag_and_landings",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793101673746,
+      "tag": "0034_session_last_seen",
+      "breakpoints": true
     }
   ]
 }
