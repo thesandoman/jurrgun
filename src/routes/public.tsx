@@ -11,7 +11,7 @@ import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { BRAND, MARK_SVG } from "../ui/brand";
 import { A11yMenu } from "../ui/a11y";
-import { llmsTxt, robotsTxt, siteJsonLd, sitemapXml } from "../lib/seo";
+import { GOOGLE_SITE_VERIFICATION, llmsTxt, robotsTxt, siteJsonLd, sitemapXml } from "../lib/seo";
 
 export const publicRoutes = new Hono<AppEnv>();
 
@@ -247,6 +247,10 @@ const TEXT_DAY = { "cache-control": "public, max-age=86400" };
 publicRoutes.get("/robots.txt", (c) => c.text(robotsTxt(new URL(c.req.url).host), 200, TEXT_DAY));
 publicRoutes.get("/sitemap.xml", (c) => c.body(sitemapXml(), 200, { ...TEXT_DAY, "content-type": "application/xml; charset=utf-8" }));
 publicRoutes.get("/llms.txt", (c) => c.text(llmsTxt(), 200, TEXT_DAY));
+/* Google Search Console ownership check (owner, 2026-10-27): the exact file Google issued, byte for byte. Keep it while the property is verified. */
+publicRoutes.get(`/${GOOGLE_SITE_VERIFICATION}`, (c) =>
+  c.body(`google-site-verification: ${GOOGLE_SITE_VERIFICATION}`, 200, { ...TEXT_DAY, "content-type": "text/html; charset=utf-8" }),
+);
 
 publicRoutes.get("/manifest.webmanifest", (c) =>
   c.json(

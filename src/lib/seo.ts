@@ -20,6 +20,9 @@ import { asset, assets } from "../assets";
 export const SITE_HOST = BRAND.url;
 export const SITE_ORIGIN = `https://${SITE_HOST}`;
 
+/** The Search Console verification file name Google issued for the live address (owner, 2026-10-27). */
+export const GOOGLE_SITE_VERIFICATION = "google50488074a0eaeddb.html";
+
 /**
  * Learn topics that lead with dating stay reachable and indexable, but are
  * left out of the sitemap and llms.txt, so search engines don't meet

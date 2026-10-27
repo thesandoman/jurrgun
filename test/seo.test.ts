@@ -170,3 +170,17 @@ describe("JSON-LD", () => {
     expect(blocks(page).some((b) => b["@type"] === "FAQPage")).toBe(false);
   });
 });
+
+describe("Google Search Console verification file", () => {
+  it("serves Google's exact one-line file at the root with text/html, no redirect", async () => {
+    const res = await get(`${LIVE}/google50488074a0eaeddb.html`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(await res.text()).toBe("google-site-verification: google50488074a0eaeddb.html");
+  });
+
+  it("isn't blocked by robots.txt", async () => {
+    const txt = await (await get(`${LIVE}/robots.txt`)).text();
+    expect(txt).not.toMatch(/Disallow: \/google/);
+  });
+});
