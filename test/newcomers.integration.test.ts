@@ -33,6 +33,19 @@ describe.skipIf(!HAS_DB)("/new", () => {
     expect(html).toContain('href="/signup"');
   });
 
+  it("links visitors only to public pages: no passport or quiz link, the types instead", async () => {
+    for (const path of ["/new?lang=en", "/international?lang=en"]) {
+      const html = await (await req(path)).text();
+      expect(html, path).not.toContain('href="/buddy/passport"');
+      expect(html, path).not.toContain('href="/quiz"');
+      expect(html, path).toContain('href="/types" class="tile2');
+    }
+    const m = await createMember();
+    const member = await (await req("/new?lang=en", { cookie: m.cookie })).text();
+    expect(member).toContain('href="/buddy/passport"');
+    expect(member).toContain('href="/quiz"');
+  });
+
   it("sends members to the event itself", async () => {
     const m = await createMember();
     const html = await (await req("/new", { cookie: m.cookie })).text();

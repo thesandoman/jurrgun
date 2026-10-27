@@ -144,7 +144,8 @@ async function landing(c: Ctx, audience: Audience) {
         <Tile>
           <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />
         </Tile>
-        <Tile tone="gold" href="/buddy/passport">
+        {/* Visitors get public links only: the passport and the quiz need an account. */}
+        <Tile tone="gold" href={member ? "/buddy/passport" : undefined}>
           <Big n="50" label={t("เขตให้ตะลุยด้วยกัน", "districts to explore together")} />
         </Tile>
         <Tile href={k.tile.href}>
@@ -152,7 +153,7 @@ async function landing(c: Ctx, audience: Audience) {
           <h3>{L2(k.tile.title)}</h3>
           <small>{L2(k.tile.body)}</small>
         </Tile>
-        <Tile href="/quiz" tone="deep">
+        <Tile href={member ? "/quiz" : "/types"} tone="deep">
           <span class="ico" aria-hidden="true">🧩</span>
           <h3>{t("คุณเป็นไทป์กรุงเทพฯ แบบไหน?", "What's your Bangkok Type?")}</h3>
           <small>{t("16 ข้อ ราว 3 นาที ช่วยจัดโต๊ะให้มีคนหลากหลาย และมีเรื่องคุยตั้งแต่แรก", "16 quick questions, about 3 minutes. It helps us seat a good mix, with something in common to start.")}</small>
