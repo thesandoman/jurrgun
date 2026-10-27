@@ -63,3 +63,14 @@ describe("Safety tile", () => {
     expect(tile(en) + tile(th)).not.toMatch(/[–—]/);
   });
 });
+
+describe("bottom padding", () => {
+  it("keeps tab bar room only on pages with a tab bar", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    expect(A11Y_CSS).toContain("body:not(:has(.tabbar)){padding-bottom:env(safe-area-inset-bottom,0px)}");
+    // Signed-in phones still reserve the room above the bar.
+    expect(A11Y_CSS).toContain("body:has(.tabbar){padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}");
+    const { html } = await bento();
+    expect(html).not.toContain('class="tabbar"');
+  });
+});

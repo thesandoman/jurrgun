@@ -1504,4 +1504,7 @@ body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) main.wrap{pa
 body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) main.wrap>:last-child{margin-bottom:0}
 body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) .foot{margin-top:8px}
 @media (min-width:1024px){body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) main.wrap{padding-bottom:24px}body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) .foot{margin-top:16px}}
+/* Room for the tab bar only where there is one: signed-out pages have none, so they end at the footer
+   (plus the home indicator's safe area) instead of a band of empty cream. */
+body:not(:has(.tabbar)){padding-bottom:env(safe-area-inset-bottom,0px)}
 `);
