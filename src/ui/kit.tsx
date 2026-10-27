@@ -285,7 +285,13 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
           <a href="/terms">{t("ข้อกำหนด", "Terms")}</a>
           <span>{t(BRAND.tagline.th, BRAND.tagline.en)}</span>
-          <span class="foot-endorse">🏛️ {t(BRAND.bma.th, BRAND.bma.en)}</span>
+          {/* "ผู้กำกับดูแล" stays one word: at 320px Thai line breaking split it after "ผู้". */}
+          <span class="foot-endorse">
+            🏛️{" "}
+            {t(BRAND.bma.th, BRAND.bma.en)
+              .split(/(ผู้กำกับดูแล)/)
+              .map((part) => (part === "ผู้กำกับดูแล" ? <span style="white-space:nowrap">{part}</span> : part))}
+          </span>
         </footer>
           </>
         )}

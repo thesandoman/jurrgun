@@ -64,6 +64,38 @@ describe("Safety tile", () => {
   });
 });
 
+describe("card 1: bigger headline", () => {
+  it("grows from 2.4rem on phones to 3.2rem on laptops in the display font", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    expect(A11Y_CSS).toContain(".tile2.hero .hero-title{font-family:var(--display);font-size:clamp(2.4rem,1.6rem + 2.5vw,3.2rem)}");
+  });
+
+  it("keeps each phrase whole but lets it wrap rather than overflow, with แล้วเจอกันนะ on its own line", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    expect(A11Y_CSS).toContain(".hero-title .ph{display:inline-block;max-width:100%}");
+    expect(A11Y_CSS).toContain(".hero-title .ph:last-child{display:block}");
+    const th = (await bento("th")).html;
+    const h1 = th.slice(th.indexOf('<h1 class="hero-title">'), th.indexOf("</h1>"));
+    expect(h1).not.toContain("nowrap");
+    expect([...h1.matchAll(/<span class="ph">([^<]+)<\/span>/g)].map((m) => m[1])).toEqual(["กลุ่มเล็ก", "สถานที่จริง", "แล้วเจอกันนะ"]);
+    const en = (await bento("en")).html;
+    const h1en = en.slice(en.indexOf('<h1 class="hero-title">'), en.indexOf("</h1>"));
+    expect([...h1en.matchAll(/<span class="ph">([^<]+)<\/span>/g)].map((m) => m[1]).at(-1)).toBe("See you there.");
+  });
+
+  it("has a plain support line and a solid eyebrow tag with no blur", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    const en = (await bento("en")).html;
+    expect(en).toContain('<p class="hero-sub">Make friends in Bangkok. No endless swiping.</p>');
+    expect(A11Y_CSS).toContain(".tile2.hero .pill2{background:var(--surface);color:var(--ink);text-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}");
+  });
+
+  it('keeps "ผู้กำกับดูแล" whole in the footer', async () => {
+    const th = (await bento("th")).html;
+    expect(th).toContain('<span style="white-space:nowrap">ผู้กำกับดูแล</span>');
+  });
+});
+
 describe("bottom padding", () => {
   it("keeps tab bar room only on pages with a tab bar", async () => {
     const { A11Y_CSS } = await import("../src/ui/a11y-css");

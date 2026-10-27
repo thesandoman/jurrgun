@@ -1507,4 +1507,13 @@ body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) .foot{margin
 /* Room for the tab bar only where there is one: signed-out pages have none, so they end at the footer
    (plus the home indicator's safe area) instead of a band of empty cream. */
 body:not(:has(.tabbar)){padding-bottom:env(safe-area-inset-bottom,0px)}
+/* Landing hero (owner card 1, 2026-10-27): a bigger display headline that grows from phone to laptop.
+   Each phrase is an inline-block: it moves to the next line whole while it fits, and wraps inside
+   (instead of running off the tile) at 320px or 200% text. The last phrase gets its own line. */
+.tile2.hero .hero-title{font-family:var(--display);font-size:clamp(2.4rem,1.6rem + 2.5vw,3.2rem)}
+.hero-title .ph{display:inline-block;max-width:100%}
+.hero-title .ph:last-child{display:block}
+.tile2.hero .hero-sub{margin:8px 0 0;font-size:1rem;font-weight:600;line-height:1.45}
+.tile2.hero .pill2{background:var(--surface);color:var(--ink);text-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.tile2.hero .pill2-dot{background:var(--brand)}
 `);

@@ -19,6 +19,11 @@ export const publicRoutes = new Hono<AppEnv>();
 
 export const INTRO_COOKIE = "jg_intro";
 
+/** The tagline's phrases: Thai separates them with spaces, English with full stops. */
+export function taglinePhrases(text: string, lang: string): string[] {
+  return lang === "th" ? text.split(" ") : text.split(/(?<=\.)\s+/);
+}
+
 publicRoutes.get("/", (c) => {
   const { t, user, lang } = view(c);
   // Members get Discover right here (owner, 2026-10-27); /events redirects to /.
@@ -33,9 +38,12 @@ publicRoutes.get("/", (c) => {
       <Bento>
         <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
           <Pill dot>{t("กรุงเทพฯ · กลุ่มเล็ก", "Bangkok · small groups")}</Pill>
-          {/* Each phrase stays whole: Thai line breaking would otherwise split "แล้ว|เจอกันนะ". */}
-          <h1 class="hero-title">{L(lang, BRAND.tagline).split(" ").map((w, i) => <>{i ? " " : ""}<span style="white-space:nowrap">{w}</span></>)}</h1>
-          <small>{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</small>
+          {/* Each phrase stays whole where it fits (Thai would otherwise split "แล้ว|เจอกันนะ") and wraps where it doesn't;
+              the last one, "แล้วเจอกันนะ", sits on its own line. */}
+          <h1 class="hero-title">
+            {taglinePhrases(L(lang, BRAND.tagline), lang).map((w, i) => <>{i ? " " : ""}<span class="ph">{w}</span></>)}
+          </h1>
+          <p class="hero-sub">{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</p>
           <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
           <div class="hero-cta">
             {user ? (
