@@ -53,6 +53,9 @@ publicRoutes.get("/", (c) => {
   const { t, user, lang } = view(c);
   // Members get Discover right here (owner, 2026-10-27); /events redirects to /.
   if (user?.profile?.onboardedAt) return discoverPage(c);
+  // Thai has no spaces between words, so the browser broke inside words ("ไม่รู้|จบ", "แอป|อิสระ") on narrow
+  // tiles. Each space-separated Thai phrase moves to the next line whole while it fits (.keep, a11y-css).
+  const keep = (s: string) => (lang === "th" ? s.split(" ").map((w, i) => <>{i ? " " : ""}<span class="keep">{w}</span></>) : s);
   // Visitors land here straight away; the intro is optional, linked under the doors (owner card 7).
   return page(
     c,
@@ -67,7 +70,7 @@ publicRoutes.get("/", (c) => {
           <h1 class="hero-title">
             {taglinePhrases(L(lang, BRAND.tagline), lang).map((w, i) => <>{i ? " " : ""}<span class="ph">{w}</span></>)}
           </h1>
-          <p class="hero-sub">{L(lang, HERO_SUB)}</p>
+          <p class="hero-sub">{keep(L(lang, HERO_SUB))}</p>
           <div class="hero-cta">
             {/* The page's one start: a pill with the arrow in its own circle. */}
             {user ? (
@@ -87,7 +90,7 @@ publicRoutes.get("/", (c) => {
               </>
             )}
           </div>
-          <p class="trust-line">{L(lang, LANDING_TRUST)}</p>
+          <p class="trust-line">{keep(L(lang, LANDING_TRUST))}</p>
         </Tile>
         {/* Tiles link to public pages only. Buddy needs an account, so it explains without linking.
             Four columns: hero and Buddy fill rows 1 and 2, the steps and Safety share row 3 (no hole);
@@ -95,7 +98,7 @@ publicRoutes.get("/", (c) => {
         <Tile tone="deep" size="tall">
           <AvatarStack items={[{ label: "You", emoji: "🍜", seed: "a" }, { label: "Buddy", emoji: "📜", seed: "b" }]} size={46} />
           <h3>{t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h3>
-          <small>{t("1 คน · เควสต์ทุกสัปดาห์", "1 person · weekly quests")}</small>
+          <small>{keep(t("1 คน · เควสต์ทุกสัปดาห์", "1 person · weekly quests"))}</small>
         </Tile>
         <Tile href="/learn/making-friends">
           <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />
@@ -107,14 +110,14 @@ publicRoutes.get("/", (c) => {
           <h2>{t("3 ขั้นตอน", "3 steps")}</h2>
           <ol class="steps3" role="list">
             <li>{t("เลือกโต๊ะ", "Pick a table")}</li>
-            <li>{t("เจอเจ้าภาพโต๊ะที่สถานที่จริง นั่งกัน 4 ถึง 6 คน จัดที่ให้คละกัน", "Meet your Table Host at a real place, 4 to 6 people seated to mix")}</li>
-            <li>{t("เลือกเงียบ ๆ ว่าอยากเจอใครอีก", "Choose quietly who you'd like to see again")}</li>
+            <li>{keep(t("เจอเจ้าภาพโต๊ะที่สถานที่จริง นั่งกัน 4 ถึง 6 คน จัดที่ให้คละกัน", "Meet your Table Host at a real place, 4 to 6 people seated to mix"))}</li>
+            <li>{keep(t("เลือกเงียบ ๆ ว่าอยากเจอใครอีก", "Choose quietly who you'd like to see again"))}</li>
           </ol>
         </Tile>
         <Tile href="/safety" tone="gold" size="wide">
           <span class="ico" aria-hidden="true">🛡️</span>
           <h3>{t("ปลอดภัยไว้ก่อน", "Safety first")}</h3>
-          <small>{t("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป", "Always in public places. Report or block in the app.")}</small>
+          <small>{keep(t("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป", "Always in public places. Report or block in the app."))}</small>
         </Tile>
       </Bento>
       {/* Three doors, one per kind of visitor; the FAQ, Learn and Code of conduct links live in the footer. */}

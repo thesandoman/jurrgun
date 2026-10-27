@@ -83,7 +83,7 @@ describe("homepage", () => {
       expect([...text].length, lang).toBeLessThan(155);
       expect(text, lang).not.toMatch(/[–—]/);
       // The hero says it: the tagline and the support line are both on the page.
-      expect(page, lang).toContain(`<p class="hero-sub">${HERO_SUB[lang]}</p>`);
+      expect(page.replace(/<span class="keep">([^<]*)<\/span>/g, "$1"), lang).toContain(`<p class="hero-sub">${HERO_SUB[lang]}</p>`);
     }
   });
 

@@ -1519,15 +1519,18 @@ body:not(:has(.tabbar)){padding-bottom:env(safe-area-inset-bottom,0px)}
 /* Landing card 2: one start. A 48px pill with the arrow in a nested circle; it presses to .97 with no
    bounce, and with reduced motion it doesn't scale at all. */
 .btn.start-cta{gap:12px;min-height:48px;padding:6px 6px 6px 22px;border-radius:999px}
-.start-cta .start-arrow{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800;line-height:1}
+.start-cta .start-arrow{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.22);color:inherit;font-weight:800;line-height:1}
+/* On a hero tile the button is white, so the circle takes the brand green. */
+:is(.tile2.t-brand,.tile2.t-deep,.tile2:has(.tile2-art)) .start-cta .start-arrow{background:var(--brand);color:var(--brand-ink)}
 @media (prefers-reduced-motion:reduce){.btn.start-cta:active{transform:none}}
 html.a11y-motion .btn.start-cta:active{transform:none}
 /* Landing card 3: the three steps, numbered in brand circles; the tile sits at the top, not the bottom. */
 .tile2.steps-tile{justify-content:flex-start;gap:8px}
 .tile2.steps-tile h2{margin:0;font-size:1.15rem}
 .steps3{list-style:none;counter-reset:step;margin:0;padding:0;display:grid;gap:8px}
-.steps3 li{counter-increment:step;display:flex;gap:10px;align-items:flex-start;line-height:1.45}
-.steps3 li::before{content:counter(step);flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-weight:800;font-size:.9rem}
+.steps3 li{counter-increment:step;position:relative;min-height:26px;padding-left:36px;line-height:1.45}
+.landing-bento .keep{display:inline-block;max-width:100%}
+.steps3 li::before{content:counter(step);position:absolute;left:0;top:0;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-weight:800;font-size:.9rem}
 /* Landing card 4: flat tiles. One edge per tile and nothing raised inside it: no shadow on the tiles,
    the start button or the avatars. */
 .landing-bento .tile2,.landing-bento .tile2 *{box-shadow:none}

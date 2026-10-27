@@ -10,8 +10,11 @@ import app from "../src/index";
 
 const visitor = (lang: "en" | "th") => ({ headers: { cookie: `jg_intro=seen; lang=${lang}`, accept: "text/html" } });
 
+/** Thai phrases on the landing are wrapped in <span class="keep">; most checks read the plain text. */
+const unkeep = (h: string) => h.replace(/<span class="keep">([^<]*)<\/span>/g, "$1");
+
 async function bento(lang: "en" | "th" = "en") {
-  const html = await (await app.request("/", visitor(lang))).text();
+  const html = unkeep(await (await app.request("/", visitor(lang))).text());
   const start = html.indexOf('class="bento');
   const end = html.indexOf('class="eyebrow doors-eyebrow"');
   expect(start).toBeGreaterThan(-1);
@@ -115,6 +118,16 @@ describe("card 1: bigger headline", () => {
     const en = (await bento("en")).html;
     expect(en).toContain('<p class="hero-sub">Make friends in Bangkok. No endless swiping.</p>');
     expect(A11Y_CSS).toContain(".tile2.hero .pill2{background:var(--surface);color:var(--ink);text-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}");
+  });
+
+  it("keeps Thai phrases whole on narrow tiles, and leaves English alone", async () => {
+    const raw = await (await app.request("/", visitor("th"))).text();
+    expect(raw).toContain('<p class="hero-sub"><span class="keep">เจอเพื่อนใหม่ในกรุงเทพฯ</span> <span class="keep">ไม่ต้องปัดไม่รู้จบ</span></p>');
+    expect(raw).toContain('<span class="keep">แอปอิสระ</span>');
+    const en = await (await app.request("/", visitor("en"))).text();
+    expect(en).not.toContain('class="keep"');
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    expect(A11Y_CSS).toContain(".landing-bento .keep{display:inline-block;max-width:100%}");
   });
 
   it('keeps "ผู้กำกับดูแล" whole in the footer', async () => {
