@@ -43,6 +43,10 @@ export const NOTICE_CHANGES: Text[] = [
     th: "ฟอนต์อ่านง่ายในการตั้งค่าการเข้าถึงมาจากเราเองแล้ว ไม่ใช่ Google Fonts จึงไม่มีข้อมูลการเข้าเว็บส่งไปที่ Google",
     en: "The easier-to-read font now comes from us, not Google Fonts, so Google no longer sees your visit.",
   },
+  {
+    th: "หน้าอุปกรณ์ที่เข้าสู่ระบบใหม่ ดูได้ว่าเข้าสู่ระบบไว้ที่ไหน และออกจากระบบในเครื่องอื่นได้ เราเก็บแค่ประเภทอุปกรณ์และวันที่ ถ้าไม่ได้ใช้ 14 วัน จะออกจากระบบให้เอง",
+    en: "A new Signed-in devices page shows where you're signed in and lets you sign out elsewhere. We keep only the kind of device and the dates. A device unused for 14 days is signed out by itself.",
+  },
   CAMPAIGN_COUNT_CHANGE,
 ];
 
@@ -216,6 +220,10 @@ export const RETENTION: RetentionItem[] = [
     period: { n: 30, unit: "days" },
     code: "SESSION_DAYS",
     from: "lib/session",
+  },
+  {
+    what: { th: "การเข้าสู่ระบบที่ไม่ได้ใช้ 14 วัน", en: "Signed-in sessions unused for 14 days" },
+    keep: { th: "ออกจากระบบและลบเอง", en: "end and are deleted by themselves" },
   },
   {
     what: { th: "ความพยายามเข้าสู่ระบบและรหัสทางอีเมล", en: "Sign-in attempts and email codes" },
