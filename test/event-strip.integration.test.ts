@@ -109,7 +109,7 @@ describe.skipIf(!HAS_DB)("event page: the status strip", () => {
     const m = await createMember();
     const ev = await mkEvent();
     const html = await (await req(`/events/${ev}?lang=en`, { cookie: m.cookie })).text();
-    expect(html.indexOf('class="ev-strip')).toBeLessThan(html.indexOf("<h2>My registration</h2>"));
+    expect(html.indexOf('class="ev-strip')).toBeLessThan(html.indexOf('<h2 id="reg-h" tabindex="-1">My registration</h2>'));
     expect(html).toContain('id="sticky-rsvp"');
     expect(html).toContain('document.querySelectorAll(".ev-reg,.ev-strip")');
   });

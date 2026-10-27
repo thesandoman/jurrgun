@@ -570,7 +570,7 @@ export async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) 
       <StatusStrip {...stripProps} class="ev-lap" />
       {event.status === "cancelled" ? null : (
         <Card class="ev-reg">
-          <h2>{t("การลงทะเบียนของฉัน", "My registration")}</h2>
+          <h2 id="reg-h" tabindex={-1}>{t("การลงทะเบียนของฉัน", "My registration")}</h2>
           <p class="safe-line">
             <ShieldIcon />
             <span>
@@ -608,12 +608,12 @@ type StripProps = {
  * status strip and the phone RSVP bar. "book" marks the RSVP or waitlist action.
  * Its buttons drive the forms in My registration (form="rsvp", form="offer").
  */
-function stripParts(props: StripProps): { tone: string; text: string; sub: string | null; action: Child | null; book: boolean } | null {
+function stripParts(props: StripProps): { tone: string; text: string; sub: string | null; action: Child | null; book: boolean; choices: boolean } | null {
   const { event, reg, left, started, ended } = props;
   const { t, lang } = props.v;
   if (event.status !== "published" || ended) return null;
   const status = reg?.status;
-  const part = (tone: string, text: string, sub: string | null, action: Child | null, book = false) => ({ tone, text, sub, action, book });
+  const part = (tone: string, text: string, sub: string | null, action: Child | null, book = false, choices = false) => ({ tone, text, sub, action, book, choices });
   if (status === "confirmed") {
     if (started && reg!.checkedInAt) {
       return part("ok", t("✓ เช็กอินแล้ว", "✓ You're checked in"), null, <LinkButton href={`/events/${event.id}/live`}>{t("หน้าในงาน", "Live page")}</LinkButton>);
@@ -667,6 +667,7 @@ function stripParts(props: StripProps): { tone: string; text: string; sub: strin
       </button>
     ),
     true,
+    choices,
   );
 }
 
@@ -679,6 +680,7 @@ function stripParts(props: StripProps): { tone: string; text: string; sub: strin
 export function StatusStrip(props: StripProps & { class?: string }) {
   const p = stripParts(props);
   if (!p) return null;
+  if (p.book && p.choices && props.class === "ev-lap") return <SeatJump {...props} text={p.text} tone={p.tone} />;
   const phoneBook = p.book && props.class === "ev-phone";
   return (
     <div class={["ev-strip", `is-${p.tone}`, props.class, phoneBook ? "ev-tab" : null].filter(Boolean).join(" ")}>
@@ -690,6 +692,43 @@ export function StatusStrip(props: StripProps & { class?: string }) {
     </div>
   );
 }
+
+/**
+ * Laptops (owner card 2, 2026-10-27): an event with choices to make first (+1, buddy, a free seat)
+ * keeps its one real RSVP in My registration, right below. The rail's strip shows the price and the
+ * spots left, and a link that jumps to the card and moves keyboard focus to its heading. Without JS
+ * it is a plain #anchor link; the scroll is instant under reduced motion.
+ */
+function SeatJump(props: StripProps & { class?: string; text: string; tone: string }) {
+  const { event, left } = props;
+  const { t } = props.v;
+  // Going together: the ticket is bought at the source, so "Free" would mislead; only a table cost shows.
+  const price = isGoTogether(event) && event.costThb === 0 ? null : costText(event, t);
+  return (
+    <div class={`ev-strip is-${props.tone} ${props.class ?? ""} ev-jump`}>
+      <p class="ev-strip-text">
+        {price ? (
+          <>
+            <b>{price}</b>
+            <small>{props.text}</small>
+          </>
+        ) : (
+          <b>{props.text}</b>
+        )}
+      </p>
+      <a href="#reg-h" class="ev-jump-link">
+        {left > 0 ? t("เลือกที่นั่ง", "Choose your seat") : t("ต่อคิวสำรอง", "Join the waitlist")}
+        <span aria-hidden="true"> ↓</span>
+      </a>
+      <script dangerouslySetInnerHTML={{ __html: SEAT_JUMP_JS }} />
+    </div>
+  );
+}
+
+/** Scrolls to My registration (smoothly unless reduced motion is on) and moves focus to its heading. */
+const SEAT_JUMP_JS = `(function(){document.querySelectorAll("a.ev-jump-link").forEach(function(a){a.addEventListener("click",function(e){var h=document.getElementById("reg-h");if(!h)return;e.preventDefault();
+var still=window.matchMedia("(prefers-reduced-motion: reduce)").matches||document.documentElement.classList.contains("a11y-motion");
+h.scrollIntoView({behavior:still?"auto":"smooth",block:"start"});h.focus({preventScroll:true})})})})()`;
 
 /** The booking button's words: a request (D57), a go-together group at an open event (D56), or an RSVP. */
 function bookLabel(e: Event, t: T): string {

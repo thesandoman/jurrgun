@@ -1437,6 +1437,14 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
 /* Section headings at large text (owner, 2026-10-26): the gap above an h2 grows with the text size, so at
    200% it passed the spacing cap (40px phones, 56px laptops). It still scales, but never past the cap. */
 h2{margin-top:min(1.8rem,56px)}
+/* Laptop event page, one RSVP (owner card 2, 2026-10-27): with choices to make first, the rail's strip shows the
+   price, the spots left and a 44px link down to My registration, whose heading takes the focus. */
+@media (min-width:1024px){
+  .ev-rail .ev-strip.ev-jump{display:flex}
+  .ev-jump .ev-jump-link{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;font-weight:700;color:var(--brand);text-underline-offset:3px}
+}
+.ev-reg>h2[tabindex]:focus{outline:none}
+.ev-reg>h2[tabindex]:focus-visible{outline:3px solid var(--ink);outline-offset:4px;border-radius:4px}
 @media (max-width:520px){h2{margin-top:min(1.5rem,40px)}}
 /* Admin: the one clock line under the heading; the whole line is a 44px link down to the clock card. */
 .notice.clock-line{display:flex;align-items:center;gap:8px}
