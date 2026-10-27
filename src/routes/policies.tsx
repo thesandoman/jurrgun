@@ -16,7 +16,7 @@ import { page, view, type View } from "../ui/kit";
 import { Sheet } from "../ui/sheet";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, LATE_CANCEL_HOURS, MIN_AGE } from "../domain/rules";
 import { DEACTIVATED_RETENTION_DAYS } from "../services/retention";
-import {
+import { CAMPAIGN_COUNT,
   APPEAL_REPLY_DAYS,
   CONTACT_ADDRESS,
   COOKIES,
@@ -75,15 +75,18 @@ export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
         ["บัญชี: ชื่อผู้ใช้และรหัสผ่านแบบแฮช หรือรหัสบัญชี Google หรือ LINE ถ้าคุณใช้เข้าสู่ระบบ", "Account: username and a hashed password, or a Google or LINE account ID if you sign in with them."],
         ["อีเมลสำหรับเข้าสู่ระบบ (ถ้าเพิ่ม): เก็บเป็นค่าแฮชเท่านั้น อ่านย้อนกลับไม่ได้", "Sign-in email, if you add one: stored only as a hash that can't be read back."],
         ["โปรไฟล์: ชื่อเล่น รูป เขต ภาษา ความสนใจ คำตอบในโปรไฟล์ และสรรพนามถ้าใส่", "Profile: nickname, photo, district, languages, interests, profile answers and pronouns if you add them."],
+        ["รูปทุกรูปที่อัปโหลด: เราลบข้อมูลตำแหน่ง กล้อง และเวลาที่ถ่ายออกก่อนเก็บ", "Every photo you upload: we remove location, camera and time details before storing it."],
         ["วันเกิด: ใช้ตรวจว่าอายุ 18 ปีขึ้นไป และจัดช่วงอายุ ไม่แสดงให้ใครเห็น", "Birth date: to check you're 18 or over and for age ranges. Never shown to anyone."],
         ["ข้อมูลส่วนตัว: เพศ และสถานะความสัมพันธ์ เก็บเมื่อคุณยินยอม", "Private details: gender and relationship status, kept with your consent."],
         ["ข้อมูลอ่อนไหว: อัตลักษณ์ทางเพศ คนที่อยากเจอ และเป้าหมายการเดต เก็บเมื่อคุณยินยอมโดยชัดแจ้งเท่านั้น", "Sensitive data: gender identity, who you'd like to meet and dating goals, kept only with your explicit consent."],
+        ["เกี่ยวก้อย · Pinky (เมื่อเปิด 💘): การเกี่ยวก้อยของคุณ และถ้าเลือกกันทั้งสองฝ่าย แผนนัด โน้ตที่เขียนร่วมกัน และแชตของสองคน การเกี่ยวก้อยที่อีกฝ่ายไม่ได้เลือกจะไม่บอกใคร", "เกี่ยวก้อย · Pinky (with 💘 on): your Pinky tap and, once it's mutual, the shared plan, the shared note and your chat. A tap that isn't mutual is never shown to anyone."],
         ["ผลแบบทดสอบไทป์กรุงเทพฯ", "Your Bangkok Type quiz result."],
         ["การใช้งาน: กิจกรรมที่ลงชื่อ การเช็กอิน เวลาที่จะไปถึง โต๊ะ คนรู้จัก ตัวเลือกหลังกิจกรรม แชตและรูป บัดดี้ คำขอบคุณ ความเห็นหลังกิจกรรม และคำตอบว่าถึงบ้านปลอดภัยไหม", "Activity: events you join, check-ins, your ETA, tables, connections, post-event choices, chats and photos, buddies, thank-yous, event feedback and \"home safe?\" answers."],
         ["ความปลอดภัย: รายงาน การบล็อก คำเตือน และใบเตือน", "Safety: reports, blocks, warnings and strikes."],
         ["City Pulse และคำถามเรื่องความรู้สึก เช่น ความเหงา: เมื่อคุณยินยอม เก็บโดยใช้รหัสแทนชื่อ", "City Pulse and wellbeing answers, such as how lonely you feel: with your consent, under a code, not your name."],
         ["ข้อมูลทางเทคนิค: ค่าแฮชแบบมีกุญแจของ IP เพื่อกันการเดารหัสผ่าน ที่อยู่สำหรับส่งการแจ้งเตือนถ้าคุณเปิด และลิงก์ที่พาคุณมาสมัคร", "Technical: a keyed hash of your IP address to stop password guessing, a push address if you turn notifications on, and the link that brought you to sign up."],
         ["แหล่งที่มาตอนสมัคร: ถ้าคุณเข้ามาจากลิงก์แคมเปญหรือพาร์ตเนอร์ เราจำชื่อลิงก์นั้นไว้ในคุกกี้ 30 วัน บันทึกไว้กับบัญชีตอนสมัคร และนับเป็นภาพรวมเท่านั้น", "Sign-up source: if a campaign or partner link brought you here, we keep that link's name in a cookie for 30 days, save it with your account when you sign up, and count it only as totals."],
+        [CAMPAIGN_COUNT.th, CAMPAIGN_COUNT.en],
         ["เราไม่เก็บตำแหน่ง GPS ปุ่มตำแหน่งของฉันบนแผนที่ทำงานในเบราว์เซอร์เท่านั้น ไม่ส่งมาหาเรา", "We don't collect GPS location. The map's my location button works in your browser only and is never sent to us."],
       ])}
       <p>{t(REQUIRED_TO_JOIN[0], REQUIRED_TO_JOIN[1])}</p>
@@ -105,6 +108,7 @@ export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
         ["คนในแชตเดียวกัน (โต๊ะ โต๊ะประจำ บัดดี้ หรือคนรู้จัก) เห็นข้อความในแชตนั้น", "People in a chat with you (a table, Regular Table, buddy or connection) see the messages in it."],
         ["ลิงก์โซเชียลในโปรไฟล์ของคุณ เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย และเฉพาะตอนที่คุณเปิดให้เห็น", "The social links on your profile are visible only to mutual connections, and only while your switch is on."],
         ["ข้อมูลเปิดใจมากกว่าเพื่อน เห็นได้เฉพาะคนที่เปิดใจเหมือนกัน และเฉพาะส่วนที่คุณเลือกแสดง", "Open to something more details are seen only by others who also opted in, and only what you choose to show."],
+        ["แผนนัด โน้ต และแชตของเกี่ยวก้อย เห็นแค่คุณสองคน ทีมงานไม่เห็น และไม่นับรวมในยอดใด ๆ", "A Pinky's plan, note and chat are seen only by the two of you. Staff never see them, and they're left out of every total."],
         ["ทีมงานและเจ้าหน้าที่ กทม. เห็นเฉพาะที่ความปลอดภัยต้องใช้ เช่น สถานะบัญชีและรายงาน ไม่เห็นข้อมูลเดต สถานะความสัมพันธ์ เพศ หรือตัวเลือกส่วนตัว และเห็นแชตเฉพาะข้อความที่ถูกรายงาน", "Our team and BMA staff see only what safety needs, such as account status and reports. They never see dating data, relationship status, gender or private choices, and see chats only when a message is reported."],
         ["กทม. ได้ผล City Pulse เป็นยอดรวมจาก 10 คนขึ้นไปเท่านั้น", "The BMA gets City Pulse only as totals from 10 or more people."],
         ["เราไม่ขายข้อมูล ไม่ใช้ตัวติดตามโฆษณา และพาร์ตเนอร์เห็นแค่สิ่งที่โฮสต์เห็นตามข้อด้านบน", "We never sell data or use ad trackers. Partners see only what hosts see, as above."],

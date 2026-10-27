@@ -17,22 +17,33 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-10-26";
+export const NOTICE_ISO = "2026-10-27";
+
+/** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
+export const CAMPAIGN_COUNT: Text = {
+  th: "การเข้ามาจากลิงก์แคมเปญนับเป็นยอดรายวันต่อลิงก์ ไม่มีข้อมูลของคนที่เข้ามา ไม่มี IP และไม่ใช้คุกกี้",
+  en: "Visits from campaign links are counted per link per day, with nothing about the person: no IP address and no cookie.",
+};
+const CAMPAIGN_COUNT_CHANGE: Text = CAMPAIGN_COUNT;
 
 /**
  * What changed since the version before, in plain words: shown once on the
  * "updated Terms" card on Me (owner, 2026-10-26: one calm card, no reminders).
  */
 export const NOTICE_CHANGES: Text[] = [
-  { th: "บันทึกการทำงานของระบบเก็บ 2 ปี (จากเดิม 1 ปี) เท่ากับรายงาน", en: "The system's audit log is kept 2 years (was 1), the same as reports." },
   {
-    th: "ถ้ามีคนรายงานข้อความหรือรูปในแชต เราเก็บสำเนาเฉพาะสิ่งที่ถูกรายงานไว้กับรายงาน ไม่ใช่ทั้งแชต รูปเก็บจนกว่าจะปิดรายงาน",
-    en: "If someone reports a chat message or photo, we keep a copy of just that item with the report, never the whole chat. A photo is kept only until the report is closed.",
+    th: "ใหม่: เกี่ยวก้อย · Pinky ถ้าคุณกับคนที่เคยเจอเลือกกันทั้งสองฝ่าย จะมีแผนนัดและแชตส่วนตัวของสองคน ลบทันทีเมื่อคนใดคนหนึ่งจบ ทีมงานไม่เห็น",
+    en: "New: เกี่ยวก้อย · Pinky. If you and someone you met both choose it, the two of you get a private shared plan and chat. It's deleted as soon as either of you ends it, and staff never see it.",
   },
   {
-    th: "ถ้าคุณเปิดไว้ เราจะส่งข้อความสัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ ปิดได้ทุกเมื่อ",
-    en: "If you turn it on, we send a weekly note when something opens in your district. You can turn it off any time.",
+    th: "รูปที่คุณอัปโหลด เราลบข้อมูลตำแหน่ง กล้อง และเวลาที่ถ่ายออกให้แล้ว รูปที่มีอยู่ก่อนหน้าก็ลบให้แล้วเช่นกัน",
+    en: "We now remove location, camera and time details from every photo you upload, and did the same for photos already here.",
   },
+  {
+    th: "ฟอนต์อ่านง่ายในการตั้งค่าการเข้าถึงมาจากเราเองแล้ว ไม่ใช่ Google Fonts จึงไม่มีข้อมูลการเข้าเว็บส่งไปที่ Google",
+    en: "The easier-to-read font now comes from us, not Google Fonts, so Google no longer sees your visit.",
+  },
+  CAMPAIGN_COUNT_CHANGE,
 ];
 
 const MONTHS: [string, string][] = [
@@ -101,6 +112,20 @@ export const RETENTION: RetentionItem[] = [
   {
     what: { th: "ข้อมูลเปิดใจมากกว่าเพื่อนและเป้าหมายการเดต", en: "Open to something more details and dating goals" },
     keep: { th: "ลบทันทีเมื่อกลับเป็นโหมดเพื่อน หรือถอนความยินยอม", en: "deleted at once when you switch back to friends only or withdraw consent" },
+  },
+  {
+    what: { th: "เกี่ยวก้อย · Pinky: แผนนัด โน้ตที่เขียนร่วมกัน และข้อความที่ส่งระหว่างนั้น", en: "เกี่ยวก้อย · Pinky: the shared plan, the shared note and the messages sent during it" },
+    keep: {
+      th: "ลบทันทีเมื่อคนใดคนหนึ่งจบหรือถอยออก ปิด 💘 บล็อก หรือปิดบัญชี ข้อความที่ถูกรายงานเก็บไว้จนกว่าการตรวจสอบจะเสร็จเท่านั้น",
+      en: "deleted at once when either of you ends it or steps back, turns 💘 off, blocks, or closes their account. A reported message stays only until the review ends",
+    },
+  },
+  {
+    what: { th: "การเกี่ยวก้อยหลังบัดดี้ที่อีกฝ่ายไม่ได้เลือก", en: "A Pinky tap after a buddy pairing that wasn't mutual" },
+    keep: { th: "ลบหลังจบการจับคู่", en: "deleted after the pairing ends, within" },
+    period: { n: 7, unit: "days" },
+    code: "BUDDY_PINKY_DAYS",
+    from: "domain/pinky",
   },
   {
     what: { th: "ตัวเลือกหลังกิจกรรมที่ไม่ตรงกัน", en: "Post-event choices that weren't mutual" },

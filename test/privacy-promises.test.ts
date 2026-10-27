@@ -15,6 +15,7 @@ import * as rules from "../src/domain/rules";
 import * as session from "../src/lib/session";
 import * as emailCode from "../src/services/email-code";
 import { SV_MAP_JS_B64 } from "../src/vendor/sv-map.generated";
+import * as pinky from "../src/domain/pinky";
 import { CONSENT_CATEGORIES, COOKIES, DEVICE_STORAGE, PROCESSORS, RETENTION, periodDays, periodText } from "../src/content/privacy";
 import { SAFETY_PROMISES } from "../src/routes/policies";
 
@@ -39,6 +40,7 @@ const words = (html: string) =>
 const MODULES: Record<string, Record<string, unknown>> = {
   "services/retention": retention as unknown as Record<string, unknown>,
   "domain/rules": rules as unknown as Record<string, unknown>,
+  "domain/pinky": pinky as unknown as Record<string, unknown>,
   "lib/session": session as unknown as Record<string, unknown>,
   "services/email-code": emailCode as unknown as Record<string, unknown>,
 };

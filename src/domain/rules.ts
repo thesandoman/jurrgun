@@ -338,7 +338,9 @@ export function roundedCount(n: number, k: number = K_THRESHOLD): number | null 
  *   of 5, and percentages use that coarser total.
  *
  * test/rules-suppression.test.ts checks by brute force that no hidden cell
- * can be pinned to one value from what is shown.
+ * can be pinned to one value from what is shown. City Pulse tables use the
+ * same rule extended for hidden columns and removed options: cellView in
+ * src/routes/admin/pulse.tsx.
  */
 export const COARSE_ROUND_TO = 10;
 

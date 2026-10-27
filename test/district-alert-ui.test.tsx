@@ -98,12 +98,10 @@ describe("the privacy notice names the alert (owner-approved legal edit)", () =>
 });
 
 describe("today's notice tells members about the alert (owner, 2026-10-26)", () => {
-  it("What changed lists the weekly district note, with the date unchanged", () => {
-    expect(NOTICE_ISO).toBe("2026-10-26");
-    const item = NOTICE_CHANGES.find((c) => c.en.includes("weekly note"))!;
-    expect(item.en).toBe("If you turn it on, we send a weekly note when something opens in your district. You can turn it off any time.");
-    expect(item.th).toContain("สัปดาห์ละครั้งเมื่อมีกิจกรรมเปิดในเขตของคุณ");
-    expect(`${item.th} ${item.en}`).not.toMatch(/[–—]/);
+  it("the 26 October notice listed the weekly district note; the 27 October one lists only what changed since", () => {
+    // The weekly note was in the 26 October "What changed" card; card P1 (27 October) moved the date on.
+    expect(NOTICE_ISO).toBe("2026-10-27");
+    expect(NOTICE_CHANGES.some((c) => c.en.includes("weekly note"))).toBe(false);
   });
   it("the onboarding consent summary matches the notice", () => {
     const src = readFileSync("src/routes/onboarding.tsx", "utf8");
