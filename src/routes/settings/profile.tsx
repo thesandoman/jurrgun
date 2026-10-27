@@ -2,6 +2,7 @@
  * Settings, profile part (split from routes/settings.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { cleanPhoto } from "../../domain/photos";
 import { NO_LOOKUP, type UniversityLookup } from "../../content/universities";
 import { educationLookup } from "../../services/universities";
 import { romanceEligible } from "../../domain/rules";
@@ -574,8 +575,15 @@ async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise
   };
   // Server-generated keys only; bytes go straight to the file store.
   const uploaded: string[] = [];
+  // Owner decision 2026-10-26: real type from the bytes, metadata (GPS) stripped before storage.
+  let badType = false;
   const put = async (key: string, file: File) => {
-    await putObject(c.env, key, await file.arrayBuffer(), { contentType: file.type });
+    const clean = cleanPhoto(await file.arrayBuffer(), file.type);
+    if (!clean.ok) {
+      badType = true;
+      throw new Error("photo refused");
+    }
+    await putObject(c.env, key, clean.bytes, { contentType: clean.type });
     uploaded.push(key);
   };
   let photoKey = p.photoKey;
@@ -595,6 +603,7 @@ async function saveProfile(c: C, parsed: Extract<Parsed, { ok: true }>): Promise
     }
   } catch {
     for (const k of uploaded) await deleteObject(c.env, k).catch(() => {});
+    if (badType) return t("รูปต้องเป็นไฟล์ JPG, PNG หรือ WebP จริง ๆ ลองบันทึกรูปใหม่เป็น JPG แล้วอัปโหลดอีกครั้ง", "The photo must really be a JPG, PNG or WebP. Try saving it as a JPG and uploading again.");
     return t("อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง", "The photo couldn't be uploaded. Please try again.");
   }
 

@@ -20,6 +20,7 @@
  */
 import { isStaffTarget, reportLimit, staffAlert } from "../services/report-intake";
 import { keepPhoto, PHOTO_DETAILS_PREFIX } from "../services/evidence";
+import { cleanPhoto } from "../domain/photos";
 import { DayStatusLine } from "../ui/day-of";
 import { shownDayStatus } from "../domain/day-of";
 import { Hono, type Context } from "hono";
@@ -733,8 +734,11 @@ chatRoutes.post("/chat/:thread/photo", async (c) => {
     .limit(50);
   const res = checkPhoto(file ? { type: file.type, size: file.size } : null, { kind: parseThread(key)!.kind, met: th.met, open: th.open, sentToday: sent.length });
   if (!res.ok) return renderThread(c, key, EXTRA_TEXT[res.reason], 400, { caption: str(body.caption).slice(0, 140) });
+  // Owner decision 2026-10-26: real type from the bytes, metadata (GPS) stripped before storage.
+  const clean = cleanPhoto(await file!.arrayBuffer(), file!.type);
+  if (!clean.ok) return renderThread(c, key, EXTRA_TEXT.type, 400, { caption: str(body.caption).slice(0, 140) });
   const photoKey = `chat/${key.replace(":", "-")}/${crypto.randomUUID()}`;
-  await putObject(c.env, photoKey, await file!.arrayBuffer(), { contentType: file!.type });
+  await putObject(c.env, photoKey, clean.bytes, { contentType: clean.type });
   const caption = str(body.caption).replace(/\s+/g, " ").trim().slice(0, 140);
   await db.insert(chatMessages).values({ id: newId(), thread: th.key, sender: me, body: caption, kind: "photo", photoKey, createdAt: now });
   await ping(c, key);

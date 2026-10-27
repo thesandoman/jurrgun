@@ -2,6 +2,7 @@
  * Staff events, edit part (split from routes/admin/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { cleanPhoto } from "../../../domain/photos";
 import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { batch, getDb } from "../../../db";
 import { canBeWomenOnly, OPEN_TO_MORE_TAG, partnerEventTags, seatAvailable, WOMEN_ONLY_TAG } from "../../../domain/rules";
@@ -264,7 +265,10 @@ function coverError(file: File | null, v: View): string | null {
 async function uploadCover(c: Ctx, eventId: string, file: File): Promise<string | null> {
   const key = `uploads/events/${eventId}/${crypto.randomUUID()}`;
   try {
-    await putObject(c.env, key, await file.arrayBuffer(), { contentType: file.type });
+    // Owner decision 2026-10-26: real type from the bytes, metadata (GPS) stripped before storage.
+    const clean = cleanPhoto(await file.arrayBuffer(), file.type);
+    if (!clean.ok) return null;
+    await putObject(c.env, key, clean.bytes, { contentType: clean.type });
     return key;
   } catch {
     return null;

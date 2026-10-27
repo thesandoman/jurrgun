@@ -54,6 +54,7 @@ import { DISTRICT_ALERT_DAYS, DISTRICT_ALERT_ON, KIND_DISTRICT_ALERT, PUBLISH_AC
 import { accounts, auditLog, blocks, consents, events, notifications, profiles, registrations, type Event } from "../schema";
 import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
+import { runPhotoCleanBatch } from "./photo-clean";
 import { retentionIfDue } from "./retention";
 import { readDueFeeds } from "./outside-events";
 import { refreshCityNow } from "./city-now";
@@ -223,6 +224,8 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   out.city = city.weather || city.sanroo;
   // Outside calendar feeds into the host inbox, each at most once a day (D46). Quiet hours don't matter: nobody is messaged.
   out.feeds = await readDueFeeds(env, now);
+  // One-time clean of photos stored before uploads were stripped (owner, 2026-10-26): a batch an hour until done.
+  await runPhotoCleanBatch(env).catch((err) => createLogger(env).warn("photo clean batch failed", { error: String(err) }));
   if (quietHours(now)) {
     out.quiet = true;
     return out;

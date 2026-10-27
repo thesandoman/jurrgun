@@ -28,6 +28,7 @@ import { K_THRESHOLD, safeCount } from "../../domain/rules";
 import { lastRetentionRun, runRetention, type RetentionRun } from "../../services/retention";
 import { ensureClock, startClock, stopClock, type ClockHealth } from "../../services/clock";
 import { vapidKeys } from "../../services/push";
+import { photoCleanSummary, runPhotoCleanBatch } from "../../services/photo-clean";
 import { moderatorVisible } from "../../services/report-intake";
 import { alias } from "drizzle-orm/pg-core";
 import { connections, events, registrations, reports } from "../../schema";
@@ -41,6 +42,11 @@ const DAY = 86_400_000;
 adminDashboard.post("/retention", requireRole("bma_admin"), async (c) => {
   await runRetention(c.env, new Date(), c.var.user!.account.id);
   return c.redirect("/admin?notice=done#retention");
+});
+
+adminDashboard.post("/photos-clean", requireRole("bma_admin"), async (c) => {
+  await runPhotoCleanBatch(c.env, c.var.user!.account.id);
+  return c.redirect("/admin?notice=done#photos");
 });
 
 /** The hourly clock (src/services/clock.ts): start once, stop any time. */
@@ -109,6 +115,44 @@ function ClockCard(props: { health: ClockHealth | null; push: boolean; t: (th: s
           <input type="hidden" name="on" value={on ? "0" : "1"} />
           <Button kind={on ? "ghost" : "primary"}>{on ? t("หยุดนาฬิกา", "Stop the clock") : t("เริ่มนาฬิกา", "Start the clock")}</Button>
         </form>
+      </Card>
+    </section>
+  );
+}
+
+/** The one-time clean of stored photos (owner decision 2026-10-26): counts, and a batch on demand. */
+function PhotoCleanCard(props: { summary: Awaited<ReturnType<typeof photoCleanSummary>>; t: (th: string, en: string) => string }) {
+  const { summary, t } = props;
+  const n = summary?.totals;
+  return (
+    <section id="photos">
+      <h2>{t("ล้างข้อมูลแฝงในรูปที่เก็บไว้", "Clean stored photos")}</h2>
+      <Card>
+        <p class="muted">
+          {t(
+            "ลบข้อมูลแฝง (เช่น ตำแหน่ง GPS) ออกจากรูปโปรไฟล์ รูปในแชต และภาพปกที่อัปโหลดก่อนมีการล้างอัตโนมัติ ทำครั้งเดียว นาฬิการายชั่วโมงทำให้ทีละชุดจนเสร็จ รูปที่อยู่ในรายงานที่ยังเปิดอยู่จะไม่ถูกแตะ",
+            "Strips metadata (such as GPS) from profile photos, chat photos and event covers uploaded before uploads were cleaned. One time only: the hourly clock does a batch each hour until it's done. Photos under an open report are left exactly as they are.",
+          )}
+        </p>
+        {n ? (
+          <div class="stats">
+            <Stat label={t("ตรวจแล้ว", "Checked")} value={n.checked} />
+            <Stat label={t("ล้างแล้ว", "Cleaned")} value={n.cleaned} />
+            <Stat label={t("ไม่มีข้อมูลแฝง", "Nothing to strip")} value={n.unchanged} />
+            <Stat label={t("เก็บไว้ตามรายงาน", "Held for a report")} value={n.skippedHeld} />
+            <Stat label={t("ไม่พบไฟล์", "File missing")} value={n.missing} />
+            <Stat label={t("อ่านไม่ได้", "Unreadable")} value={n.unreadable} />
+          </div>
+        ) : null}
+        {summary?.done ? (
+          <p>
+            <Tag tone="ok">{t("เสร็จแล้ว", "Done")}</Tag>
+          </p>
+        ) : (
+          <form method="post" action="/admin/photos-clean">
+            <Button kind="ghost">{t("ทำชุดถัดไปตอนนี้", "Run the next batch now")}</Button>
+          </form>
+        )}
       </Card>
     </section>
   );
@@ -290,6 +334,7 @@ adminDashboard.get("/", async (c) => {
     // The watchdog: shows the clock and re-arms it if a tick was missed.
     isAdmin ? ensureClock(c.env) : Promise.resolve(null),
   ]);
+  const photoClean = isAdmin ? await photoCleanSummary(c.env).catch(() => null) : null;
 
   const upcoming = adminStats?.[0][0]?.n ?? 0;
   const reconnected = adminStats?.[3] ?? 0;
@@ -329,6 +374,7 @@ adminDashboard.get("/", async (c) => {
           {trend ? <TrendCard weeks={trend} suppress={false} t={t} lang={lang} /> : null}
           <ClockCard health={clock} push={!!vapidKeys(c.env)} t={t} lang={lang} />
           <RetentionCard run={retention} t={t} lang={lang} />
+          <PhotoCleanCard summary={photoClean} t={t} />
         </>
       ) : null}
 

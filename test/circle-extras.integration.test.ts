@@ -6,6 +6,7 @@ import { createMember, db, ENV, HAS_DB, req, type Member } from "./helpers";
 import { newId, randomToken } from "../src/lib/crypto";
 import { auditLog, chatMessages, chatVotes, circleHeadRequests, events, registrations, reports } from "../src/schema";
 import { evidenceKey } from "../src/services/evidence";
+import { GPS_MARK, phonePng, text } from "./photo-fixtures";
 
 /** A tiny in-memory stand-in for the R2 bucket the app writes photos to. */
 function memBucket() {
@@ -84,7 +85,7 @@ describe.skipIf(!HAS_DB)("circle chat extras", () => {
       fd.append("caption", "Picnic crew 🧺");
       return app.request(`/chat/${key}/photo`, { method: "POST", headers: { cookie: who.cookie }, body: fd }, env);
     };
-    const png = () => new File([new Uint8Array([137, 80, 78, 71, 1, 2, 3])], "p.png", { type: "image/png" });
+    const png = () => new File([phonePng()], "p.png", { type: "image/png" });
     const before = await hangout(host, [guest], false);
     expect((await send(before, guest, png())).status).toBe(400);
     const key = await hangout(host, [guest], true);
@@ -94,6 +95,10 @@ describe.skipIf(!HAS_DB)("circle chat extras", () => {
     expect(m.kind).toBe("photo");
     expect(m.body).toBe("Picnic crew 🧺");
     expect(BUCKET.store.has(m.photoKey!)).toBe(true);
+    // Owner decision 2026-10-26: stored without metadata (GPS), and only if the bytes are really an image.
+    expect(text(BUCKET.store.get(m.photoKey!)!.data)).not.toContain(GPS_MARK);
+    const spoof = new File([new TextEncoder().encode("<svg onload=alert(1)>")], "x.png", { type: "image/png" });
+    expect((await send(key, guest, spoof)).status).toBe(400);
     const mine = await app.request(`/chat/${key}/photo/${m.id}`, { headers: { cookie: host.cookie } }, env);
     expect(mine.status).toBe(200);
     expect(mine.headers.get("content-type")).toBe("image/png");
