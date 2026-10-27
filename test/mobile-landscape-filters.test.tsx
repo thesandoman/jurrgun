@@ -89,4 +89,21 @@ describe("the chips row at large text in landscape", () => {
   it("fits the pins under the header when the chips are folded", () => {
     expect(FULLMAP_JS).toContain('(isShown(chipsEl) ? chipsEl : document.querySelector(".fd-top"))');
   });
+
+  it("opens Filters tall enough for the categories, and brings them into view", () => {
+    const body = rule.slice(0, rule.indexOf("\n}") + 2);
+    expect(body).toContain(".fd-top:has(.fd-filters[open]){z-index:var(--z-card)}");
+    expect(body).toMatch(/\.fd-filters-body\{max-height:calc\(100dvh - [^}]*var\(--tab-h\)[^}]*\)\}/);
+    expect(body).not.toContain("--sheet-h");
+    expect(FULLMAP_JS).toContain(`(tag?.closest(".field") || tag)?.scrollIntoView({ block: "nearest" })`);
+  });
+});
+
+describe("the floating tab bar from 700px", () => {
+  it("stays a centred pill: the safe-area edges apply below 700px only", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    const css = String(A11Y_CSS);
+    expect(css).toContain("@media (max-width:699.98px){.tabbar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}}");
+    expect(css.match(/\.tabbar\{left:max\(10px/g)).toHaveLength(1);
+  });
 });

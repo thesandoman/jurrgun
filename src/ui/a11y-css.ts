@@ -1255,9 +1255,11 @@ a.nowrap{white-space:nowrap}
 @media (min-width:481px){.topbar{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}}
 @media (max-width:1023.98px){
   main.wrap{padding-left:max(var(--gx,20px),env(safe-area-inset-left,0px));padding-right:max(var(--gx,20px),env(safe-area-inset-right,0px))}
-  .tabbar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}
   body:has(.tabbar){padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 }
+/* Only below 700px: from 700px the bar is a centred 560px pill (layout.ts), and a left edge here pushed
+   it 270px off the left of an 812px landscape phone. */
+@media (max-width:699.98px){.tabbar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}}
 /* Focus is never hidden (2.4.11): a control reached with Tab or a link to #anchor stops below the
    sticky top bar and above the tab bar, the sticky action bar or the chat box. Pages that set their
    own (edit profile) keep theirs: these rules carry no extra weight. */

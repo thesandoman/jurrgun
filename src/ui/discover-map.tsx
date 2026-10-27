@@ -550,6 +550,13 @@ moreBtn.addEventListener("click", () => {
   f.open = true;
   (f.querySelector('select[name="tag"]') || f.querySelector("summary"))?.focus();
 });
+// With the chips folded behind Filters (large text in landscape), opening Filters brings the categories into view.
+document.getElementById("fd-filters")?.addEventListener("toggle", (ev) => {
+  const f = ev.currentTarget;
+  if (!f.open || isShown(document.querySelector(".fullmap .svm-chips"))) return;
+  const tag = f.querySelector('select[name="tag"]');
+  (tag?.closest(".field") || tag)?.scrollIntoView({ block: "nearest" });
+});
 const queueChips = () => { if (chipsQueued) return; chipsQueued = true; requestAnimationFrame(() => { chipsQueued = false; layoutChips(); }); };
 function orderChips(bar) {
   const chips = Array.from(bar.querySelectorAll(".svm-chip"));
@@ -969,5 +976,8 @@ body.fullmap-body .tabbar{z-index:var(--z-tab)}
   .fullmap .svm-chips,.fullmap .fd-more{display:none}
   .fd-filters-word,.fd-filters-n{display:inline}
   .fd-filters>summary .fd-dot{display:none}
+  /* Open, the panel reaches down to the tab bar, over the side panel, so the categories have room. */
+  .fd-top:has(.fd-filters[open]){z-index:var(--z-card)}
+  .fd-filters-body{max-height:calc(100dvh - var(--tk-h) - var(--top-h) - var(--gap) * 3 - var(--tab-h) - var(--safe-t))}
 }
 `;
