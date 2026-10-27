@@ -5,7 +5,6 @@ import { FAIR_PROCESS } from "../content/accountability";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
-import { ABOUT } from "../content/learn";
 import { L } from "../lib/i18n";
 import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
@@ -24,6 +23,18 @@ export const publicRoutes = new Hono<AppEnv>();
 export const LANDING_TRUST = {
   th: "สถานที่จริง มีเจ้าภาพโต๊ะ เช็กอินได้ · แอปอิสระ กทม. เป็นเจ้าภาพและกำกับดูแล",
   en: "Real places, Table Hosts, check-in · An independent app, hosted and overseen by the BMA",
+};
+
+/** The hero's support line, under the tagline. */
+export const HERO_SUB = { th: "เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", en: "Make friends in Bangkok. No endless swiping." };
+
+/**
+ * The homepage's search snippet: the hero's own words (tagline, then the support line), short enough
+ * that Google shows it whole (under 155 characters). ABOUT stays the long text for llms.txt and JSON-LD.
+ */
+export const LANDING_DESCRIPTION = {
+  th: `${BRAND.tagline.th} ${HERO_SUB.th}`,
+  en: `${BRAND.tagline.en} ${HERO_SUB.en}`,
 };
 
 /** The landing's three front doors (owner card 5): public pages, one per kind of visitor. */
@@ -46,7 +57,7 @@ publicRoutes.get("/", (c) => {
   return page(
     c,
     // The homepage for search: indexable and with site data only signed out (signed in, "/" is Discover, noindex).
-    { title: t("เจอเพื่อนใหม่ในกรุงเทพฯ", "Make friends in Bangkok"), description: L(lang, ABOUT), jsonLd: siteJsonLd(lang), publicView: !user },
+    { title: t("เจอเพื่อนใหม่ในกรุงเทพฯ", "Make friends in Bangkok"), description: L(lang, LANDING_DESCRIPTION), jsonLd: siteJsonLd(lang), publicView: !user },
     <>
       <Bento class="landing-bento">
         <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
@@ -56,7 +67,7 @@ publicRoutes.get("/", (c) => {
           <h1 class="hero-title">
             {taglinePhrases(L(lang, BRAND.tagline), lang).map((w, i) => <>{i ? " " : ""}<span class="ph">{w}</span></>)}
           </h1>
-          <p class="hero-sub">{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</p>
+          <p class="hero-sub">{L(lang, HERO_SUB)}</p>
           <div class="hero-cta">
             {/* The page's one start: a pill with the arrow in its own circle. */}
             {user ? (

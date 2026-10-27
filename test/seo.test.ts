@@ -72,6 +72,21 @@ describe("homepage", () => {
     expect(txt).toContain(`- [Bangkok locals](${LIVE}/local): `);
   });
 
+  it('"/" has its own short description from the hero copy, under 155 characters in both languages', async () => {
+    const { BRAND } = await import("../src/ui/brand");
+    const { HERO_SUB } = await import("../src/routes/public");
+    for (const lang of ["th", "en"] as const) {
+      const page = await (await get(`${LIVE}/?lang=${lang}`, home)).text();
+      const desc = /<meta name="description" content="([^"]*)"\/>/.exec(page)?.[1] ?? "";
+      const text = desc.replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+      expect(text, lang).toBe(`${BRAND.tagline[lang]} ${HERO_SUB[lang]}`);
+      expect([...text].length, lang).toBeLessThan(155);
+      expect(text, lang).not.toMatch(/[–—]/);
+      // The hero says it: the tagline and the support line are both on the page.
+      expect(page, lang).toContain(`<p class="hero-sub">${HERO_SUB[lang]}</p>`);
+    }
+  });
+
   it('"/" is noindex unless the render says it is the public page', () => {
     expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/" }).robots).toBe("noindex");
     expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/", publicView: true }).canonical).toBe(`${LIVE}/`);
