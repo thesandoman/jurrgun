@@ -431,7 +431,8 @@ describe.skipIf(!HAS_DB)("owner cards 2026-10-20: go-together on Discover and th
     const [going, looking] = await Promise.all([createMember(), createMember()]);
     await db().insert(registrations).values({ id: newId(), eventId: id, accountId: going.id, status: "confirmed", passToken: randomToken(18) });
 
-    const list = await (await req("/?view=list&lang=en", { cookie: looking.cookie })).text();
+    // Search by title: the full list shows 100 events, and the shared test database holds many more.
+    const list = await (await req(`/?view=list&lang=en&q=${encodeURIComponent(`GO-${id.slice(0, 6)}`)}`, { cookie: looking.cookie })).text();
     expect(list).toContain("Via Ticketmelon · meet at Café by the hall");
 
     const page = await (await req(`/events/${id}?lang=en`, { cookie: looking.cookie })).text();

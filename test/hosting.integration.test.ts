@@ -82,7 +82,8 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     const [acct] = await db().select({ role: accounts.role, trusted: accounts.trustedHost }).from(accounts).where(eq(accounts.id, m.id));
     expect(acct).toEqual({ role: "circle_head", trusted: false });
     expect(await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), eq(notifications.kind, "host_approved")))).toHaveLength(1);
-    expect(await (await req("/?view=list", { cookie: other.cookie })).text()).toContain(`/events/${e.id}"`);
+    // Search by title: the full list shows 100 events, and the shared test database holds many more.
+    expect(await (await req("/?view=list&q=Sunday%20board%20games", { cookie: other.cookie })).text()).toContain(`/events/${e.id}"`);
   });
 
   it("sending back needs a note; the host sees it, edits, and resubmits", async () => {

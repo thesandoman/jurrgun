@@ -116,9 +116,10 @@ describe.skipIf(!HAS_DB)("a page for each person", () => {
     const id = newId();
     const startsAt = new Date(Date.now() + 4 * 86_400_000);
     await db().insert(events).values({ id, title: `Women's walk ${tag}`, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3600_000), venueName: "Park", district: "bang_rak", capacity: 10, status: "published", createdBy: "t", tags: ["women_only"] });
-    expect(await (await req("/?view=list", { cookie: m.cookie })).text()).not.toContain(`Women's walk ${tag}`);
+    expect(await (await req(`/?view=list&q=${encodeURIComponent(tag)}`, { cookie: m.cookie })).text()).not.toContain(`Women's walk ${tag}`);
     expect((await req(`/events/${id}`, { cookie: m.cookie })).status).toBe(404);
-    expect(await (await req("/?view=list", { cookie: w.cookie })).text()).toContain(`Women&#39;s walk ${tag}`);
+    // Search for it: the full list shows 100 events, and the shared test database holds many more.
+    expect(await (await req(`/?view=list&q=${encodeURIComponent(tag)}`, { cookie: w.cookie })).text()).toContain(`Women&#39;s walk ${tag}`);
     const forMan = await (await req("/settings/connections", { cookie: m.cookie })).text();
     const forWoman = await (await req("/settings/connections", { cookie: w.cookie })).text();
     expect(forMan).toMatch(/<div data-women-only[^>]*hidden/);
