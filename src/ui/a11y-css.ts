@@ -1476,4 +1476,9 @@ main .host-form details.host-opt-sub{margin:16px 0 0;padding:4px 0 0;border:0;bo
 main .host-form details.host-opt-sub>fieldset{margin:0}
 main .host-form details.host-opt>fieldset>legend{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media (prefers-reduced-motion:reduce){main .host-form details.host-opt>summary::after{transition:none}}
+/* Tablets (700 to 1023px): the tab bar is a centred pill (layout.ts), but the safe-area rule above reset its left edge and
+   kept the -50% shift, so half of it hung off the left of the screen. Centred by margins now, like the RSVP bar above it. */
+@media (min-width:700px) and (max-width:1023.98px){body:not(.fullmap-body) .tabbar{left:0;right:0;margin:0 auto;transform:none}}
+/* The booking disclaimer tick box: the whole line is a 44px target (2.5.8). */
+#rsvp label.check{display:flex;align-items:center;gap:8px;min-height:44px}
 `);
