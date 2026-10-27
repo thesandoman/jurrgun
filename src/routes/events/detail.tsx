@@ -721,7 +721,7 @@ function SeatJump(props: StripProps & { class?: string; text: string; tone: stri
         {left > 0 ? t("เลือกที่นั่ง", "Choose your seat") : t("ต่อคิวสำรอง", "Join the waitlist")}
         <span aria-hidden="true"> ↓</span>
       </a>
-      <script dangerouslySetInnerHTML={{ __html: SEAT_JUMP_JS }} />
+      <Script dangerouslySetInnerHTML={{ __html: SEAT_JUMP_JS }} />
     </div>
   );
 }
