@@ -11,12 +11,12 @@ describe.skipIf(!HAS_DB)("audit round three", () => {
     expect(await (await req("/settings?lang=en", { cookie: m.cookie })).text()).not.toContain("Still new to Bangkok?");
     await db().update(accounts).set({ createdAt: new Date(Date.now() - 200 * 86_400_000) }).where(eq(accounts.id, m.id));
     expect(await (await req("/settings?lang=en", { cookie: m.cookie })).text()).toContain("Still new to Bangkok?");
-    expect(await (await req("/events?view=list&lang=en", { cookie: m.cookie })).text()).toContain("Welcome to Bangkok");
+    expect(await (await req("/?view=list&lang=en", { cookie: m.cookie })).text()).toContain("Welcome to Bangkok");
     await req("/settings/newcomer", { cookie: m.cookie, method: "POST", form: { still: "0" } });
     const [p] = await db().select({ newcomer: profiles.newcomer }).from(profiles).where(eq(profiles.accountId, m.id));
     expect(p.newcomer).toBe(false);
     expect(await (await req("/settings?lang=en", { cookie: m.cookie })).text()).not.toContain("Still new to Bangkok?");
-    const disc = await (await req("/events?view=list&lang=en", { cookie: m.cookie })).text();
+    const disc = await (await req("/?view=list&lang=en", { cookie: m.cookie })).text();
     expect(disc).not.toContain("Welcome to Bangkok");
     expect(disc).toContain("English-friendly this week");
   });

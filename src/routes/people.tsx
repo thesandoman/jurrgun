@@ -788,7 +788,7 @@ function CircleTop(props: { v: View; extras: CircleExtras }) {
       ) : (
         <a href="/circles/lead">👑 {t("เป็นเจ้าภาพโต๊ะประจำ", "Host a Regular Table")}</a>
       )}
-      <a href="/events">🗓️ {t("กิจกรรมกลุ่ม", "Browse group events")}</a>
+      <a href="/">🗓️ {t("กิจกรรมกลุ่ม", "Browse group events")}</a>
     </nav>
   );
 }
@@ -1065,7 +1065,7 @@ function Circle(props: { v: View; rows: CircleRow[]; myVibe?: VibeInfo; error?: 
               "No connections yet. Join an event, then choose who you'd like to meet again within 72 hours.",
             )}
           </Empty>
-          <LinkButton href="/events">{t("ดูกิจกรรม", "Find an event")}</LinkButton>
+          <LinkButton href="/">{t("ดูกิจกรรม", "Find an event")}</LinkButton>
         </Card>
       ) : (
         // One grouped list, rows split by hairlines (owner, 2026-10-16: "too card/boxy").

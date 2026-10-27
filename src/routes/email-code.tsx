@@ -138,7 +138,7 @@ function SignInCodePage(c: C, opts: { email: string; next: string; error?: strin
 emailCodeRoutes.get("/login/code", (c) => {
   const { user } = view(c);
   const next = safeNext(c.req.query("next"), "");
-  if (user) return c.redirect(next || "/events");
+  if (user) return c.redirect(next || "/");
   return SignInEmailPage(c, { next });
 });
 

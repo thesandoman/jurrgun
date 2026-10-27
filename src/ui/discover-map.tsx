@@ -299,12 +299,12 @@ export function FullDiscover(props: {
 
       {/* Floating header */}
       <header class="fd-top">
-        <a href="/events" class="fd-logo" aria-label="Jurrgun">
+        <a href="/" class="fd-logo" aria-label="Jurrgun">
           <BrandMark />
           <small>Jurrgun</small>
         </a>
         <div class="fd-bar">
-        <form method="get" action="/events" class="fd-search" role="search">
+        <form method="get" action="/" class="fd-search" role="search">
           <span aria-hidden="true">⌕</span>
           <input
             type="search"

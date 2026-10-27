@@ -116,7 +116,7 @@ describe.skipIf(!HAS_DB)("hourly clock", () => {
 
   it("Notifications page: no badge once they're read, and the phone switch once keys are set", async () => {
     const m = await createMember();
-    await db().insert(notifications).values({ id: newId(), accountId: m.id, kind: "test", titleTh: "ทดสอบ", titleEn: "Test", link: "/events" });
+    await db().insert(notifications).values({ id: newId(), accountId: m.id, kind: "test", titleTh: "ทดสอบ", titleEn: "Test", link: "/" });
     const withKeys = { ...ENV, VAPID_PUBLIC_KEY: "x".repeat(87), VAPID_PRIVATE_KEY: "y".repeat(43) };
     const html = await (await app.request("/notifications", { headers: { cookie: `${m.cookie}; lang=en` } }, withKeys)).text();
     expect(html).toContain("Test");

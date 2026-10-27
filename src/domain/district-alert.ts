@@ -72,7 +72,7 @@ export function alertText(district: string, lang: Lang): string {
  * from the kind, member and link), while two runs on the same day share one.
  */
 export function alertLink(district: string, bangkokDate: string): string {
-  return `/events?district=${encodeURIComponent(district)}&alert=${bangkokDate}`;
+  return `/?district=${encodeURIComponent(district)}&alert=${bangkokDate}`;
 }
 
 /** The one-tap off in the alert. */

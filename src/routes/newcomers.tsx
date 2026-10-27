@@ -111,7 +111,7 @@ async function landing(c: Ctx, audience: Audience) {
     .orderBy(asc(events.startsAt))
     .limit(6);
   const member = !!user?.profile?.onboardedAt;
-  const join = member ? "/events" : "/signup";
+  const join = member ? "/" : "/signup";
   return page(
     c,
     { title: L2(k.title) },

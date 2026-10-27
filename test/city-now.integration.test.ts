@@ -59,7 +59,7 @@ describe.skipIf(!HAS_DB)("Bangkok now, stored by the clock", () => {
     expect(pulse).toContain("Light rain in Thonburi");
     const th = await (await req("/pulse", { cookie: `${m.cookie}; lang=th` })).text();
     expect(th).toContain("ข้อมูลเมื่อ 14:00");
-    const discover = await (await req("/events?view=list", { cookie: `${m.cookie}; lang=en` })).text();
+    const discover = await (await req("/?view=list", { cookie: `${m.cookie}; lang=en` })).text();
     expect(discover).toContain("as of 14:00");
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();

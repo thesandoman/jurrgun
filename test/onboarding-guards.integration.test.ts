@@ -42,7 +42,7 @@ describe.skipIf(!HAS_DB)("onboarding guards", () => {
       form: { nickname: "Young", birthDate: "2001-01-01", district: "bang_rak", livesInBangkok: "1" },
     });
     expect(r.status).toBe(302);
-    expect(r.headers.get("location")).toBe("/events");
+    expect(r.headers.get("location")).toBe("/");
     const [p] = await db().select({ birthDate: profiles.birthDate, nickname: profiles.nickname }).from(profiles).where(eq(profiles.accountId, m.id));
     expect(p.birthDate).toBe("1985-05-05");
     expect(p.nickname).not.toBe("Young");

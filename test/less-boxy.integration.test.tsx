@@ -163,8 +163,8 @@ describe.skipIf(!HAS_DB)("grouped lists on member pages", () => {
 
   it("Notifications: one list per day", async () => {
     const m = await createMember();
-    await db().insert(notifications).values({ id: newId(), accountId: m.id, kind: "test", titleTh: "ทดสอบ", titleEn: "Test note", link: "/events" });
+    await db().insert(notifications).values({ id: newId(), accountId: m.id, kind: "test", titleTh: "ทดสอบ", titleEn: "Test note", link: "/" });
     const html = await (await req("/notifications?lang=en", { cookie: `${m.cookie}; lang=en` })).text();
-    expect(html).toMatch(/<ul class="glist notif-list notif-page"><li class="unread"><a href="\/events">[\s\S]*?Test note/);
+    expect(html).toMatch(/<ul class="glist notif-list notif-page"><li class="unread"><a href="\/">[\s\S]*?Test note/);
   });
 });

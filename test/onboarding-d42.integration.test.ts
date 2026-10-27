@@ -75,7 +75,7 @@ describe.skipIf(!HAS_DB)("onboarding after D42", () => {
     const m = await createMember();
     for (const next of ["https://evil.example", "//evil.example", "/\\\\evil.example"]) {
       const r = await req(`/onboarding/you?next=${encodeURIComponent(next)}`, { cookie: m.cookie, form: { languages: ["th"], interests: ["food"] } });
-      expect(r.headers.get("location")).toBe("/events");
+      expect(r.headers.get("location")).toBe("/");
     }
   });
 

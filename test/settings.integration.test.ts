@@ -107,7 +107,7 @@ describe.skipIf(!HAS_DB)("settings", () => {
     expect(html).not.toContain("You&#39;ve been to");
     expect(html).toContain("Your next table");
     // Nothing booked: "None yet", and the action line is the link, with an arrow (owner card).
-    expect(html).toMatch(/<a class="card me-next" href="\/events">[\s\S]*?None yet[\s\S]*?<b class="me-next-go">Find one <span aria-hidden="true">→<\/span><\/b>/);
+    expect(html).toMatch(/<a class="card me-next" href="\/">[\s\S]*?None yet[\s\S]*?<b class="me-next-go">Find one <span aria-hidden="true">→<\/span><\/b>/);
     expect(html).not.toMatch(/\d+% there/);
     const left = (h: string) => Number(/Help your table get to know you: (\d+) things? left/.exec(h)?.[1]);
     const before = left(html);

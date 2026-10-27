@@ -11,6 +11,7 @@ import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { BRAND, MARK_SVG } from "../ui/brand";
 import { A11yMenu } from "../ui/a11y";
+import { discoverPage } from "./events/discover";
 import { GOOGLE_SITE_VERIFICATION, llmsTxt, robotsTxt, siteJsonLd, sitemapXml } from "../lib/seo";
 
 export const publicRoutes = new Hono<AppEnv>();
@@ -19,7 +20,8 @@ export const INTRO_COOKIE = "jg_intro";
 
 publicRoutes.get("/", (c) => {
   const { t, user, lang } = view(c);
-  if (user?.profile?.onboardedAt) return c.redirect("/events");
+  // Members get Discover right here (owner, 2026-10-27); /events redirects to /.
+  if (user?.profile?.onboardedAt) return discoverPage(c);
   // First visit: the intro first, once.
   if (!user && !getCookie(c, INTRO_COOKIE)) return c.redirect("/intro");
   return page(
@@ -109,7 +111,7 @@ publicRoutes.get("/", (c) => {
 publicRoutes.get("/intro", (c) => {
   const { t, user, lang } = view(c);
   setCookie(c, INTRO_COOKIE, "seen", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax" });
-  const done = user ? (user.profile?.onboardedAt ? "/events" : "/onboarding") : "/signup";
+  const done = user ? (user.profile?.onboardedAt ? "/" : "/onboarding") : "/signup";
   const slides: { art: string; tone: string; title: string; body: string; note?: string; foot?: string }[] = [
     {
       art: "mark",
@@ -258,7 +260,7 @@ publicRoutes.get("/manifest.webmanifest", (c) =>
       name: "Jurrgun (เจอกัน)",
       short_name: "Jurrgun",
       description: `${BRAND.tagline.en} ${BRAND.meaning.en}.`,
-      start_url: "/events",
+      start_url: "/",
       display: "standalone",
       background_color: "#fff9f0",
       theme_color: "#137f45",

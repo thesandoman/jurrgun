@@ -182,11 +182,11 @@ describe.skipIf(!HAS_DB)("small tables filter", () => {
     const small = await mkEvent({ title: `${word} small`, titleEn: `${word} small`, capacity: 6 });
     const edge = await mkEvent({ title: `${word} edge`, titleEn: `${word} edge`, capacity: SMALL_TABLE_MAX });
     const big = await mkEvent({ title: `${word} big`, titleEn: `${word} big`, capacity: 20 });
-    const all = await page(`/events?view=list&q=${word}`, m);
+    const all = await page(`/?view=list&q=${word}`, m);
     for (const id of [small, edge, big]) expect(all).toContain(`/events/${id}`);
     expect(all).not.toMatch(/name="small" value="1" checked/);
 
-    const list = await page(`/events?view=list&q=${word}&small=1`, m);
+    const list = await page(`/?view=list&q=${word}&small=1`, m);
     expect(list).toContain(`/events/${small}`);
     expect(list).toContain(`/events/${edge}`);
     expect(list).not.toContain(`/events/${big}`);
@@ -194,19 +194,19 @@ describe.skipIf(!HAS_DB)("small tables filter", () => {
     expect(list).toMatch(/name="small" value="1" checked/);
     // The Filters badge counts it like the others (the text search is the other one).
     expect(list).toContain('<span class="count">2</span>');
-    expect(await page("/events?view=list&small=1", m)).toContain('<span class="count">1</span>');
+    expect(await page("/?view=list&small=1", m)).toContain('<span class="count">1</span>');
     // The When tabs and the map switch keep it in the URL.
-    expect(list).toMatch(/href="\/events\?[^"]*small=1[^"]*view=map"/);
+    expect(list).toMatch(/href="\/\?[^"]*small=1[^"]*view=map"/);
 
     // The map view filters the same way.
-    const map = await page(`/events?q=${word}&small=1`, m);
+    const map = await page(`/?q=${word}&small=1`, m);
     const data = JSON.parse(map.split('<script type="application/json" id="dmap-data">')[1].split("</script>")[0]);
     const ids = data.points.map((p: { id: string }) => p.id);
     expect(ids).not.toContain(big);
     expect(map).toContain('class="fd-filters active"');
 
     // Thai first.
-    const th = await (await req(`/events?view=list&small=1`, { cookie: m.cookie })).text();
+    const th = await (await req(`/?view=list&small=1`, { cookie: m.cookie })).text();
     expect(th).toContain(`โต๊ะเล็ก ไม่เกิน ${SMALL_TABLE_MAX} คน`);
   });
 });

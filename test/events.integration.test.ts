@@ -60,7 +60,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     const area = await mkEvent({ district: "bang_bon", tags: ["walk"] });
     const nowhere = await mkEvent({ district: "wang_thonglang" });
     const draft = await mkEvent({ district: "bang_bon", status: "draft" });
-    const r = await req("/events?district=bang_bon", { cookie: m.cookie });
+    const r = await req("/?district=bang_bon", { cookie: m.cookie });
     expect(r.status).toBe(200);
     const html = await r.text();
     expect(html).toContain('/vendor/sv-map.js?v=');
@@ -77,23 +77,23 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(html).toContain('id="discover-list"');
     expect(html).toContain(`EV-${exact.slice(0, 8)}`);
     // Filters survive the switch, and nothing about other people is sent.
-    expect(html).toContain('href="/events?district=bang_bon&amp;view=list"');
+    expect(html).toContain('href="/?district=bang_bon&amp;view=list"');
     expect(JSON.stringify(data)).not.toMatch(/accountId|nickname|attendees|researchId/);
     // Events without a place still appear in the list, with a note.
-    const w = await (await req("/events?district=wang_thonglang", { cookie: `${m.cookie}; lang=en` })).text();
+    const w = await (await req("/?district=wang_thonglang", { cookie: `${m.cookie}; lang=en` })).text();
     expect(w).toContain(`EV-${nowhere.slice(0, 8)}`);
     expect(w).toContain("on the map yet");
     // List view is list only.
-    const l = await (await req("/events?district=bang_bon&view=list", { cookie: m.cookie })).text();
+    const l = await (await req("/?district=bang_bon&view=list", { cookie: m.cookie })).text();
     expect(l).not.toContain('id="dmap-data"');
     expect(l).toContain('name="view" value="list"');
-    expect((await req("/events")).status).toBe(302);
+    expect((await req("/")).status).toBe(302);
   });
 
   it("Discover is a full-screen map with calm chrome: search with filters, two rail buttons, the count on the sheet handle", async () => {
     const m = await createMember();
     const ev = await mkEvent({ district: "bang_bon", tags: ["city_quest"], startsAt: new Date(Date.now() + 2 * HOUR) });
-    const html = await (await req("/events?district=bang_bon", { cookie: `${m.cookie}; lang=en` })).text();
+    const html = await (await req("/?district=bang_bon", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain('class="fullmap-body"');
     // D3: no ticker, no green banner over the map; the week's count sits on the sheet handle.
     expect(html).not.toContain('class="fd-ticker"');
@@ -118,15 +118,15 @@ describe.skipIf(!HAS_DB)("events", () => {
     const hit = await mkEvent({ district: "bang_bon" });
     await db().update(events).set({ venueName: `${tag} Hall` }).where(eq(events.id, hit));
     const miss = await mkEvent({ district: "bang_bon" });
-    const html = await (await req(`/events?q=${tag.toLowerCase()}`, { cookie: m.cookie })).text();
+    const html = await (await req(`/?q=${tag.toLowerCase()}`, { cookie: m.cookie })).text();
     expect(html).toContain(`EV-${hit.slice(0, 8)}`);
     expect(html).not.toContain(`EV-${miss.slice(0, 8)}`);
-    expect((await req("/events?q=%25%25", { cookie: m.cookie })).status).toBe(200); // wildcards are escaped
+    expect((await req("/?q=%25%25", { cookie: m.cookie })).status).toBe(200); // wildcards are escaped
   });
 
   it("shows the map and an empty list section when no events match", async () => {
     const m = await createMember();
-    const html = await (await req("/events?tag=festival&district=bang_bon&when=today&lang=en", { cookie: `${m.cookie}; lang=en` })).text();
+    const html = await (await req("/?tag=festival&district=bang_bon&when=today&lang=en", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain('id="dmap"');
     expect(html).toContain('id="discover-list"');
     expect(html).toContain("No events on the map yet"); // sv-map's own empty line, set in its messages
@@ -148,7 +148,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     const pub = await mkEvent({ district: "nong_chok", startsAt: new Date(Date.now() + 2 * HOUR) });
     const draft = await mkEvent({ district: "nong_chok", status: "draft", startsAt: new Date(Date.now() + 2 * HOUR) });
     const past = await mkEvent({ district: "nong_chok", startsAt: new Date(Date.now() - 2 * DAY) });
-    const r = await req("/events?district=nong_chok", { cookie: m.cookie });
+    const r = await req("/?district=nong_chok", { cookie: m.cookie });
     expect(r.status).toBe(200);
     const html = await r.text();
     expect(html).toContain(`EV-${pub.slice(0, 8)}`);
@@ -163,7 +163,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     const free = await mkEvent({ ...base, tags: ["food"], plusOneAllowed: true, languages: ["th", "en"], intensity: "chill" });
     const paid = await mkEvent({ ...base, costThb: 300, tags: ["run"], ageMin: 60, ageMax: 99 });
     const later = await mkEvent({ ...base, startsAt: new Date(Date.now() + 10 * DAY) });
-    const has = async (q: string, id: string) => (await (await req(`/events?district=thung_khru&${q}`, { cookie: m.cookie })).text()).includes(`EV-${id.slice(0, 8)}`);
+    const has = async (q: string, id: string) => (await (await req(`/?district=thung_khru&${q}`, { cookie: m.cookie })).text()).includes(`EV-${id.slice(0, 8)}`);
     expect(await has("free=1", free)).toBe(true);
     expect(await has("free=1", paid)).toBe(false);
     expect(await has("tag=run", paid)).toBe(true);
@@ -467,7 +467,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     const prio = await mkEvent({ ...base, residentPriority: true });
     const quota = await mkEvent({ ...base, residentQuota: 3 });
     const plain = await mkEvent(base);
-    const html = await (await req("/events?district=lat_krabang&resident=1", { cookie: `${m.cookie}; lang=en` })).text();
+    const html = await (await req("/?district=lat_krabang&resident=1", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain(`EV-${prio.slice(0, 8)}`);
     expect(html).toContain(`EV-${quota.slice(0, 8)}`);
     expect(html).not.toContain(`EV-${plain.slice(0, 8)}`);
@@ -477,7 +477,7 @@ describe.skipIf(!HAS_DB)("events", () => {
 
   it("shows the Bangkok Type card until I take the quiz or hide it", async () => {
     const m = await createMember();
-    const html = async (cookie = m.cookie) => (await req("/events", { cookie: `${cookie}; lang=en` })).text();
+    const html = async (cookie = m.cookie) => (await req("/", { cookie: `${cookie}; lang=en` })).text();
     expect(await html()).toContain("Find your Bangkok Type (16 quick questions, about 3 minutes)");
     const hide = await req("/events/quiz-hint/dismiss", { cookie: m.cookie, method: "POST" });
     expect(hide.status).toBe(302);
@@ -490,7 +490,7 @@ describe.skipIf(!HAS_DB)("events", () => {
   it("lists events before the For you card, which can be hidden, and counts active filters", async () => {
     const m = await createMember();
     const html = async (path: string, cookie = m.cookie) => (await req(path, { cookie: `${cookie}; lang=en` })).text();
-    const list = await html("/events?view=list");
+    const list = await html("/?view=list");
     expect(list).toContain('class="disc-bar"');
     // Three events (when there are three) come before the For you card.
     const firstCard = list.indexOf('class="ev-item"');
@@ -500,9 +500,9 @@ describe.skipIf(!HAS_DB)("events", () => {
     const hide = await req("/events/for-you/dismiss", { cookie: m.cookie, method: "POST" });
     expect(hide.status).toBe(302);
     expect(hide.headers.get("set-cookie") ?? "").toContain("bkk_for_you=hide");
-    expect(await html("/events?view=list", `${m.cookie}; bkk_for_you=hide`)).not.toContain("hint for-you");
-    expect(await html("/events?view=list&free=1&short=1")).toContain('<span class="count">2</span>');
-    expect(await html("/events?view=list")).not.toContain('<span class="count">');
+    expect(await html("/?view=list", `${m.cookie}; bkk_for_you=hide`)).not.toContain("hint for-you");
+    expect(await html("/?view=list&free=1&short=1")).toContain('<span class="count">2</span>');
+    expect(await html("/?view=list")).not.toContain('<span class="count">');
   });
 
   it("offers the next events on My events when nothing is booked", async () => {
@@ -514,7 +514,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(html).toContain(`EV-${soon.slice(0, 8)}`);
     expect(html).toContain("See all events");
     // Mobile audit: the link was a 30px target 4px under the last card. Now a 44px target with room above it.
-    expect(html).toMatch(/<p class="me-all"><a href="\/events\?view=list">/);
+    expect(html).toMatch(/<p class="me-all"><a href="\/\?view=list">/);
     expect(A11Y_CSS).toMatch(/\.me-all\{margin:(1[2-9]|[2-9]\d)px 0 0\}/);
     expect(A11Y_CSS).toMatch(/\.me-all a\{[^}]*min-height:44px/);
     await mkReg(soon, m.id);

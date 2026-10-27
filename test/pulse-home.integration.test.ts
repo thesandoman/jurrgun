@@ -78,11 +78,11 @@ describe.skipIf(!HAS_DB)("City Pulse home", () => {
   it("Discover carries one City Pulse line, and says a question is waiting only when one is", async () => {
     const id = await question({ sortOrder: -2_000_000, segment: { districts: ["thung_khru"] } });
     const m = await createMember({ research: true, district: "thung_khru" });
-    const html = await (await req("/events?view=list&lang=en", { cookie: m.cookie })).text();
+    const html = await (await req("/?view=list&lang=en", { cookie: m.cookie })).text();
     expect(html).toContain('class="cp-line"');
     expect(html).toContain("this week&#39;s question is waiting");
     const off = await createMember({ research: false, district: "thung_khru" });
-    const offHtml = await (await req("/events?view=list&lang=en", { cookie: off.cookie })).text();
+    const offHtml = await (await req("/?view=list&lang=en", { cookie: off.cookie })).text();
     expect(offHtml).toContain('class="cp-line"');
     expect(offHtml).not.toContain("question is waiting");
     await db().update(pulseQuestions).set({ status: "archived" }).where(eq(pulseQuestions.id, id));

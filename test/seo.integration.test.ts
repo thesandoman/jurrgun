@@ -8,7 +8,7 @@ const LIVE = "https://jurrgun.apps.sv-academy.org";
 describe.skipIf(!HAS_DB)("noindex on signed-in pages", () => {
   it("events, settings, chat and my events are noindex with no canonical or JSON-LD", async () => {
     const m = await createMember();
-    for (const path of ["/events", "/settings", "/chat", "/me/events", "/connections"]) {
+    for (const path of ["/", "/settings", "/chat", "/me/events", "/connections"]) {
       const res = await app.request(`${LIVE}${path}`, { headers: { cookie: m.cookie, accept: "text/html" } }, ENV);
       expect(res.status, path).toBe(200);
       const page = await res.text();

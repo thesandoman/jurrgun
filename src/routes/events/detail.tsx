@@ -135,7 +135,7 @@ export function notFound(c: Ctx) {
         )}
       </p>
       <div class="row">
-        <LinkButton href="/events?when=week">{t("กิจกรรมสัปดาห์นี้", "This week's events")}</LinkButton>
+        <LinkButton href="/?when=week">{t("กิจกรรมสัปดาห์นี้", "This week's events")}</LinkButton>
         <LinkButton href="/plan" kind="ghost">{t("แผนสัปดาห์นี้ของฉัน", "My plan this week")}</LinkButton>
       </div>
     </>,

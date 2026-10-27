@@ -77,7 +77,7 @@ onboarding.use("*", requireUser);
 // event age ranges and the private age preference).
 const STEP_PATHS = new Set(["/onboarding/basics", "/onboarding/privacy", "/onboarding/connections", "/onboarding/wellbeing"]);
 onboarding.use("*", async (c, next) => {
-  if (c.var.user?.profile?.onboardedAt && STEP_PATHS.has(new URL(c.req.url).pathname)) return c.redirect("/events");
+  if (c.var.user?.profile?.onboardedAt && STEP_PATHS.has(new URL(c.req.url).pathname)) return c.redirect("/");
   await next();
 });
 
@@ -113,7 +113,7 @@ const TITLE = "Onboarding";
 
 onboarding.get("/", async (c) => {
   const step = await nextStep(c, c.var.user!);
-  return c.redirect(step === "done" ? "/events" : `/onboarding/${step}`);
+  return c.redirect(step === "done" ? "/" : `/onboarding/${step}`);
 });
 
 // ------------------------------------------------------------- helpers --
@@ -698,7 +698,7 @@ function YouForm(props: { v: View; next: string; error?: string; storyHint?: str
   );
 }
 
-const youNext = (c: Context<AppEnv>) => safeNext(c.req.query("next"), c.var.user?.profile?.onboardedAt ? "/events" : "/onboarding");
+const youNext = (c: Context<AppEnv>) => safeNext(c.req.query("next"), c.var.user?.profile?.onboardedAt ? "/" : "/onboarding");
 
 onboarding.get("/you", (c) => {
   if (!c.var.user!.profile) return c.redirect("/onboarding/basics");

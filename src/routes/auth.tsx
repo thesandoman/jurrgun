@@ -166,7 +166,7 @@ function AuthForm(props: {
 authRoutes.get("/signup", (c) => {
   const v = view(c);
   const { t, user } = v;
-  if (user) return c.redirect(user.profile?.onboardedAt ? "/events" : "/onboarding");
+  if (user) return c.redirect(user.profile?.onboardedAt ? "/" : "/onboarding");
   return page(
     c,
     { title: t("สมัครสมาชิก", "Sign up") },
@@ -234,7 +234,7 @@ authRoutes.post("/signup", async (c) => {
 authRoutes.get("/login", (c) => {
   const { t, user } = view(c);
   const next = safeNext(c.req.query("next"), "");
-  if (user) return c.redirect(next || (user.profile?.onboardedAt ? "/events" : "/onboarding"));
+  if (user) return c.redirect(next || (user.profile?.onboardedAt ? "/" : "/onboarding"));
   return page(
     c,
     { title: t("เข้าสู่ระบบ", "Sign in") },
@@ -315,7 +315,7 @@ export async function signIn(c: Context<AppEnv>, acct: Account, next: string, fa
     await audit(db, acct.id, "account.suspension_expired", { type: "account", id: acct.id });
   }
   await startSession(c, acct.id);
-  return c.redirect(next || "/events");
+  return c.redirect(next || "/");
 }
 
 /**

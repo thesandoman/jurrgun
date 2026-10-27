@@ -156,8 +156,8 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
     const readId = newId();
     const unreadId = newId();
     await db().insert(notifications).values([
-      { id: readId, accountId: m.id, kind: "test", titleTh: "อ่านแล้ว", titleEn: "Read", link: "/events", createdAt: old, readAt: old },
-      { id: unreadId, accountId: m.id, kind: "test", titleTh: "ยังไม่อ่าน", titleEn: "Unread", link: "/events", createdAt: old },
+      { id: readId, accountId: m.id, kind: "test", titleTh: "อ่านแล้ว", titleEn: "Read", link: "/", createdAt: old, readAt: old },
+      { id: unreadId, accountId: m.id, kind: "test", titleTh: "ยังไม่อ่าน", titleEn: "Unread", link: "/", createdAt: old },
     ]);
     const auditId = newId();
     await db().insert(auditLog).values({ id: auditId, actor: m.id, action: "test.old", createdAt: new Date(Date.now() - 731 * DAY) });

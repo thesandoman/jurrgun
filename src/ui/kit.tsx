@@ -204,7 +204,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           {t("ข้ามไปที่เนื้อหา", "Skip to content")}
         </a>
         <header class="topbar">
-          <a href={member ? "/events" : "/"} class="brand" aria-label="Jurrgun">
+          <a href="/" class="brand" aria-label="Jurrgun">
             <BrandMark /> Jurrgun <small lang="th">เจอกัน</small>
           </a>
           {/* Prototype notice: a small chip, the full sentence one tap away. */}
@@ -307,7 +307,7 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
   // (your pass lives there), like the Sanroo map's centre action. Bangkok
   // Buddy is a core tab; Learn lives at the top of Me (and the footer).
   const items: [Tab, string, Child, string][] = [
-    ["events", "/events", TAB_ICONS.events, t("ค้นหา", "Discover")],
+    ["events", "/", TAB_ICONS.events, t("ค้นหา", "Discover")],
     ["buddy", "/buddy", TAB_ICONS.buddy, t("บัดดี้", "Buddy")],
     // "นัดของฉัน", not "ของฉัน": it sat next to "ฉัน" (Me) and read as the same word (Phase 3).
     ["mine", "/me/events", TAB_ICONS.mine, t("นัดของฉัน", "My events")],
@@ -373,7 +373,7 @@ function AdminNav(props: { v: View }) {
     ["/admin/feeds", t("ปฏิทินจากข้างนอก", "Outside calendars"), all],
     ["/partner", t("พื้นที่พาร์ตเนอร์", "Partner area"), role === "partner_admin"],
     ["/admin/audit", t("บันทึกการตรวจสอบ", "Audit log"), all],
-    ["/events", t("← แอปสมาชิก", "← Member app"), true],
+    ["/", t("← แอปสมาชิก", "← Member app"), true],
   ];
   return (
     <nav class="adminnav" aria-label={t("เมนูทีมงาน", "Staff menu")}>

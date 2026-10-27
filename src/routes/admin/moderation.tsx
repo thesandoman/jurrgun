@@ -745,7 +745,7 @@ adminModeration.post("/:id/action", async (c) => {
       ops.push(db.update(accounts).set({ status: "active", suspendedUntil: null }).where(eq(accounts.id, target.id)));
       // Any one-time "look again" token goes too, so nothing left over can sign in.
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
-      ops.push(notify(db, target.id, "moderation", LIFT_COPY[0], LIFT_COPY[1], "/events"));
+      ops.push(notify(db, target.id, "moderation", LIFT_COPY[0], LIFT_COPY[1], "/"));
     } else if (action === "warning" && autoSuspend) {
       ops.push(db.update(accounts).set({ status: "suspended", suspendedUntil: until }).where(eq(accounts.id, target.id)));
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));

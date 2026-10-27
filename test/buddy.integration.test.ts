@@ -481,7 +481,7 @@ describe.skipIf(!HAS_DB)("Safety net and the Buddy tab", () => {
 
   it("Bangkok Buddy is a main tab; Learn and Safety sit at the top of Me", async () => {
     const m = await createMember();
-    const html = await (await req("/events?lang=en", { cookie: m.cookie })).text();
+    const html = await (await req("/?lang=en", { cookie: m.cookie })).text();
     const tabbar = html.slice(html.indexOf('class="tabbar"'));
     expect(tabbar).toContain('href="/buddy"');
     expect(tabbar).not.toContain('href="/learn"');

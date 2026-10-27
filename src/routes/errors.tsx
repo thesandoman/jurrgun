@@ -14,8 +14,9 @@ export function wantsHtml(c: Ctx): boolean {
   return !c.req.path.startsWith("/api/") && (c.req.header("accept") ?? "").includes("text/html");
 }
 
-function home(c: Ctx): string {
-  return view(c).user?.profile?.onboardedAt ? "/events" : "/";
+/** Home is / for everyone: members get Discover there, visitors the landing. */
+function home(_c: Ctx): string {
+  return "/";
 }
 
 export function notFoundPage(c: Ctx) {

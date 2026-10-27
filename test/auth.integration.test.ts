@@ -64,7 +64,7 @@ describe.skipIf(!HAS_DB)("sign-up and onboarding", () => {
     r = await req("/guide", { cookie, form: { agree: "0" } });
     expect(r.headers.get("location")).toBe("/guide");
     r = await req("/guide", { cookie, form: { agree: "1" } });
-    expect(r.headers.get("location")).toBe("/events?notice=welcome");
+    expect(r.headers.get("location")).toBe("/?notice=welcome");
     const seen = await db().select().from(consents).where(and(eq(consents.accountId, acct.id), eq(consents.category, "guide")));
     expect(seen).toHaveLength(1);
     // Reopened later from Learn: a plain flow with a close, no onboarding bar.

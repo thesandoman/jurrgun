@@ -915,7 +915,7 @@ for (const answer of ["approve", "decline"] as const) {
           ? notify(db, reg.accountId, "rsvp", `ได้ที่นั่งแล้ว: ${e.title}`, `You're in: ${title}`, `/me/events/${e.id}/pass`)
           : status === "waitlisted"
             ? notify(db, reg.accountId, "waitlist", `ผู้จัดอนุมัติแล้ว อยู่ในคิวสำรอง: ${e.title}`, `Approved, and on the waitlist: ${title}`, `/events/${e.id}`)
-            : notify(db, reg.accountId, "rsvp_declined", `ผู้จัดไม่ได้รับคำขอครั้งนี้: ${e.title}`, `The organiser couldn't take your request: ${title}`, `/events`),
+            : notify(db, reg.accountId, "rsvp_declined", `ผู้จัดไม่ได้รับคำขอครั้งนี้: ${e.title}`, `The organiser couldn't take your request: ${title}`, `/`),
       ]);
       return c.redirect(`${BASE}/${e.id}?notice=saved#requests`);
     }, { roster: true }),

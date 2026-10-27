@@ -148,7 +148,7 @@ describe.skipIf(!HAS_DB)("D53, D54: collab events", () => {
 
     const member = await en(await createMember());
     // Search for it by name: the shared test database holds many other events.
-    const find = `/events?view=list&q=${encodeURIComponent(name)}`;
+    const find = `/?view=list&q=${encodeURIComponent(name)}`;
     expect(await (await req(find, { cookie: member.cookie })).text()).not.toContain(`/events/${out.id}"`);
 
     const [inv] = await db().select().from(eventPartners).where(eq(eventPartners.eventId, out.id));
@@ -195,7 +195,7 @@ describe.skipIf(!HAS_DB)("D56 to D61: entry rules at booking", () => {
     expect((await req(`/events/${out.id}/rsvp`, { cookie: m.cookie, method: "POST", form: {} })).status).toBe(400);
     expect((await req(`/events/${out.id}/rsvp`, { cookie: m.cookie, form: { disclaimer: "1" } })).status).toBe(302);
 
-    const dry = await (await req("/events?view=list&alcoholFree=1", { cookie: m.cookie })).text();
+    const dry = await (await req("/?view=list&alcoholFree=1", { cookie: m.cookie })).text();
     expect(dry).not.toContain("Wine on the river");
   });
 

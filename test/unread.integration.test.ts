@@ -26,14 +26,14 @@ describe.skipIf(!HAS_DB)("clearer unread", () => {
   it("counts unread chats on the My people tab and the Chats chip, with the count in the name", async () => {
     const { a } = await chatWithMessage();
     await db().insert(notifications).values({ id: newId(), accountId: a.id, kind: "rsvp", titleTh: "ยืนยันแล้ว", titleEn: "You're in", link: "/me/events" });
-    const en = await (await req("/events?view=list", { cookie: `${a.cookie}; lang=en` })).text();
+    const en = await (await req("/?view=list", { cookie: `${a.cookie}; lang=en` })).text();
     expect(en).toContain('aria-label="My people, 1 unread chat"');
     // A small dot, not a number (owner, 2026-10-17); the count stays in the accessible name.
     expect(en).toContain('<span class="unread-dot tab-badge" aria-hidden="true"></span>');
     expect(en).not.toMatch(/tab-badge"[^>]*>\d/);
     // The bell counts the RSVP only: the message is counted once, under Chats.
     expect(en).toContain('aria-label="1 unread notification"');
-    const th = await (await req("/events?view=list", { cookie: `${a.cookie}; lang=th` })).text();
+    const th = await (await req("/?view=list", { cookie: `${a.cookie}; lang=th` })).text();
     expect(th).toContain('aria-label="คนรู้จัก แชตยังไม่ได้อ่าน 1"');
     expect(th).toContain('aria-label="การแจ้งเตือน 1 รายการที่ยังไม่อ่าน"');
     const people = await (await req("/connections", { cookie: `${a.cookie}; lang=en` })).text();
@@ -68,7 +68,7 @@ describe.skipIf(!HAS_DB)("clearer unread", () => {
     const list = await (await req("/chat", { cookie: `${a.cookie}; lang=en` })).text();
     expect(list).not.toContain('class="unread"');
     expect(list).not.toContain("unread chat");
-    const page = await (await req("/events?view=list", { cookie: `${a.cookie}; lang=en` })).text();
+    const page = await (await req("/?view=list", { cookie: `${a.cookie}; lang=en` })).text();
     expect(page).not.toContain("unread chat");
   });
 });

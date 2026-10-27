@@ -224,7 +224,7 @@ settingsRoutes.get("/settings", async (c) => {
             </b>
           </a>
         ) : (
-          <a class="card me-next" href="/events">
+          <a class="card me-next" href="/">
             <small>{t("โต๊ะถัดไป", "Your next table")}</small>
             <span>{t("ยังไม่มี", "None yet")}</span>
             <b class="me-next-go">

@@ -70,7 +70,7 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     const e = await latest(m.id);
     expect(e.status).toBe("pending");
     expect(e.hostAccountId).toBe(m.id);
-    expect(await (await req("/events?view=list", { cookie: other.cookie })).text()).not.toContain(`/events/${e.id}"`);
+    expect(await (await req("/?view=list", { cookie: other.cookie })).text()).not.toContain(`/events/${e.id}"`);
     expect((await req(`/events/${e.id}`, { cookie: other.cookie })).status).toBe(404);
     expect((await req(`/events/${e.id}`, { cookie: m.cookie })).status).toBe(200);
 
@@ -82,7 +82,7 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     const [acct] = await db().select({ role: accounts.role, trusted: accounts.trustedHost }).from(accounts).where(eq(accounts.id, m.id));
     expect(acct).toEqual({ role: "circle_head", trusted: false });
     expect(await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), eq(notifications.kind, "host_approved")))).toHaveLength(1);
-    expect(await (await req("/events?view=list", { cookie: other.cookie })).text()).toContain(`/events/${e.id}"`);
+    expect(await (await req("/?view=list", { cookie: other.cookie })).text()).toContain(`/events/${e.id}"`);
   });
 
   it("sending back needs a note; the host sees it, edits, and resubmits", async () => {
@@ -212,7 +212,7 @@ describe.skipIf(!HAS_DB)("community hosting", () => {
     const e = await latest(host.id);
     expect(e.status).toBe("published");
     expect(e.privateToken).toMatch(/^[\w-]{40,}$/);
-    expect(await (await req("/events?view=list", { cookie: stranger.cookie })).text()).not.toContain("Private supper club");
+    expect(await (await req("/?view=list", { cookie: stranger.cookie })).text()).not.toContain("Private supper club");
     expect((await req(`/events/${e.id}`, { cookie: stranger.cookie })).status).toBe(404);
 
     const open = await req(`/events/${e.id}?t=${encodeURIComponent(e.privateToken!)}`, { cookie: `${guest.cookie}; lang=en` });

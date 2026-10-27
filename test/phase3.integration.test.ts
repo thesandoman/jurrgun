@@ -107,7 +107,7 @@ describe.skipIf(!HAS_DB)("people before the app", () => {
       { id: short, title: "Short filter quick coffee", startsAt: start, endsAt: new Date(start.getTime() + 60 * 60_000), venueName: "X", district: "dusit", capacity: 10, status: "published", createdBy: "t" },
       { id: long, title: "Short filter long hike", startsAt: start, endsAt: new Date(start.getTime() + 4 * 3600_000), venueName: "X", district: "dusit", capacity: 10, status: "published", createdBy: "t" },
     ]);
-    const html = await (await req("/events?view=list&short=1&q=Short%20filter", { cookie: m.cookie })).text();
+    const html = await (await req("/?view=list&short=1&q=Short%20filter", { cookie: m.cookie })).text();
     expect(html).toContain("Short filter quick coffee");
     expect(html).not.toContain("Short filter long hike");
   });

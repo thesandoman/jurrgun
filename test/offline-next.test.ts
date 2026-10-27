@@ -110,7 +110,7 @@ describe("offline next table: service worker", () => {
 
   it("never keeps any other page", async () => {
     const sw = await worker(async () => new Response(passHtml(new Date(Date.now() + 86_400_000))));
-    for (const p of ["/events", "/me/events", "/chat/conn:x", "/events/abc/live", "/me/events/abc/pass?show=pass"]) await sw.navigate(p);
+    for (const p of ["/", "/me/events", "/chat/conn:x", "/events/abc/live", "/me/events/abc/pass?show=pass"]) await sw.navigate(p);
     expect(sw.saved().size).toBe(0);
   });
 
@@ -151,7 +151,7 @@ describe("offline next table: service worker", () => {
 
   it("saves the next passes from My events, drops the rest, and forgets everything on sign-out", async () => {
     const sw = await worker(async () => new Response(passHtml(new Date(Date.now() + 86_400_000))));
-    await sw.message({ type: "jurrgun-save-next", urls: ["/me/events/a/pass", "/me/events/b/pass", "/events", "https://evil.example/x"] });
+    await sw.message({ type: "jurrgun-save-next", urls: ["/me/events/a/pass", "/me/events/b/pass", "/", "https://evil.example/x"] });
     expect([...sw.saved().keys()].sort()).toEqual(["/me/events/a/pass", "/me/events/b/pass"]);
     await sw.message({ type: "jurrgun-save-next", urls: ["/me/events/b/pass"], replace: true });
     expect([...sw.saved().keys()]).toEqual(["/me/events/b/pass"]);

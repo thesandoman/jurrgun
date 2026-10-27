@@ -43,7 +43,7 @@ async function gone(c: Ctx, status: 404 | 410, th: string, en: string) {
     <>
       <h1>{status === 404 ? t("ไม่พบลิงก์ชวนนี้", "We couldn't find that invite") : t("ลิงก์ชวนนี้ใช้ไม่ได้แล้ว", "This invite can't be used any more")}</h1>
       <Notice kind="info">{t(th, en)}</Notice>
-      <LinkButton href={user?.profile?.onboardedAt ? "/events" : "/"} kind="ghost">
+      <LinkButton href="/" kind="ghost">
         {user?.profile?.onboardedAt ? t("ดูกิจกรรมอื่น", "See other events") : t("ไปหน้าแรก", "Go to the home page")}
       </LinkButton>
     </>,

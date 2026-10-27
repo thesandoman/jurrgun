@@ -81,7 +81,7 @@ describe.skipIf(!HAS_DB)("Discover: popular picks and the top 10 this week", () 
       week.push(id);
     }
 
-    const html = await (await req("/events?view=list&lang=en", { cookie: m.cookie })).text();
+    const html = await (await req("/?view=list&lang=en", { cookie: m.cookie })).text();
     const picksAt = html.indexOf('class="disc-picks"');
     const topAt = html.indexOf('class="disc-top"');
     const barAt = html.indexOf('class="disc-bar"');
@@ -113,7 +113,7 @@ describe.skipIf(!HAS_DB)("Discover: popular picks and the top 10 this week", () 
     // No score, count of seats or percentage in the ranked sections.
     expect(`${picks}${top}`).not.toMatch(/\d+ ?%|score|seats taken/i);
     // Thai headings.
-    const th = await (await req("/events?view=list&lang=th", { cookie: m.cookie })).text();
+    const th = await (await req("/?view=list&lang=th", { cookie: m.cookie })).text();
     expect(th).toContain("ยอดนิยม");
     expect(th).toContain("10 อันดับสัปดาห์นี้");
   });
@@ -123,12 +123,12 @@ describe.skipIf(!HAS_DB)("Discover: popular picks and the top 10 this week", () 
     const tag = newId().slice(0, 6);
     const big = await mkEvent(`Big ${tag}`);
     await fill(big, 99);
-    const html = await (await req(`/events?view=list&lang=en&q=${tag}`, { cookie: m.cookie })).text();
+    const html = await (await req(`/?view=list&lang=en&q=${tag}`, { cookie: m.cookie })).text();
     expect(html).not.toContain('class="disc-picks"');
     expect(html).not.toContain('class="disc-top"');
     expect(html.slice(html.indexOf('class="disc-bar"'))).toContain(`/events/${big}"`);
     // The For you card still shows on the plain list.
-    const plain = await (await req("/events?view=list&lang=en", { cookie: m.cookie })).text();
+    const plain = await (await req("/?view=list&lang=en", { cookie: m.cookie })).text();
     expect(plain).toContain("hint for-you");
   });
 });

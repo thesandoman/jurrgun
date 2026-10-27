@@ -9,6 +9,7 @@ import { weekKey } from "../../domain/buddy";
 import { cleanBio } from "../../content/profile";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Child } from "hono/jsx";
+import type { Context } from "hono";
 import { and, asc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { ageOn, romanceEligible } from "../../domain/rules";
@@ -165,7 +166,12 @@ function TopWeek(props: { list: Event[]; taken: Map<string, number>; v: View; pi
   );
 }
 
-eventRoutes.get("/events", requireMember, async (c) => {
+/**
+ * Discover, the members' home. It lives at / (owner, 2026-10-27): the root
+ * route calls this for onboarded members, and /events redirects there with its
+ * query, so old links, notices and saved filters keep working.
+ */
+export async function discoverPage(c: Context<AppEnv>) {
   // Arrived from an invite link before signing up: go back to it, once.
   const pending = getCookie(c, INVITE_COOKIE);
   if (pending) {
@@ -256,14 +262,14 @@ eventRoutes.get("/events", requireMember, async (c) => {
   params.delete("notice");
   // Explicit view=map, so a bare /events can restore the last choice (DISCOVER_MEMORY_JS).
   params.set("view", "map");
-  const mapHref = `/events?${params}`;
+  const mapHref = `/?${params}`;
   params.set("view", "list");
-  const listHref = `/events?${params}`;
+  const listHref = `/?${params}`;
   const placed = mapView ? list.map((e) => ({ e, place: eventPlace(e) })) : [];
   const unplaced = placed.filter((x) => !x.place).length;
 
   const filtersForm = (
-    <form method="get" action="/events" class="filters">
+    <form method="get" action="/" class="filters">
       {mapView ? null : <input type="hidden" name="view" value="list" />}
       {q.text ? <input type="hidden" name="q" value={q.text} /> : null}
       <Select label={t("เมื่อไหร่", "When")} name="when" options={WHEN_OPTS} value={q.when} lang={lang} />
@@ -281,7 +287,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
       <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
       <div class="row">
         <Button>{t("ดูกิจกรรม", "Show events")}</Button>
-        {filtered ? <LinkButton href={mapView ? "/events" : "/events?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
+        {filtered ? <LinkButton href={mapView ? "/" : "/?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}
       </div>
     </form>
   );
@@ -361,7 +367,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
             {/* The quiz card used to ride in the ticker; it sits after the third event, as in the list view. */}
             {list.length === 0 ? (
               <>
-                <NoEventsYet t={t} filtered={filtered} clearHref="/events" alert={alert} />
+                <NoEventsYet t={t} filtered={filtered} clearHref="/" alert={alert} />
                 {quizHint}
               </>
             ) : (
@@ -423,7 +429,7 @@ eventRoutes.get("/events", requireMember, async (c) => {
               if (o.value === "all") p.delete("when");
               else p.set("when", o.value);
               return (
-                <a href={`/events?${p}`} class={q.when === o.value ? "on" : undefined} aria-current={q.when === o.value ? "page" : undefined}>
+                <a href={`/?${p}`} class={q.when === o.value ? "on" : undefined} aria-current={q.when === o.value ? "page" : undefined}>
                   {lang === "en" ? o.en : o.th}
                 </a>
               );
@@ -459,12 +465,14 @@ eventRoutes.get("/events", requireMember, async (c) => {
       </div>
     </>,
   );
-});
+}
+
+eventRoutes.get("/events", requireMember, (c) => c.redirect(`/${new URL(c.req.url).search}`));
 
 /** Hide the "For you" card on Discover (per browser). */
 eventRoutes.post("/events/for-you/dismiss", requireMember, (c) => {
   setCookie(c, FOR_YOU_COOKIE, "hide", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax", httpOnly: true });
-  return c.redirect("/events?view=list");
+  return c.redirect("/?view=list");
 });
 
 /**
@@ -476,7 +484,7 @@ eventRoutes.post("/events/for-you/dismiss", requireMember, (c) => {
 eventRoutes.post("/events/district-alert", requireMember, async (c) => {
   const user = me(c);
   const db = getDb(c.env);
-  if (!districtName(user.profile.district, "en")) return c.redirect("/events");
+  if (!districtName(user.profile.district, "en")) return c.redirect("/");
   if (!(await hasConsent(db, user.account.id, NOTIFICATIONS_CONSENT))) return c.redirect(vapidKeys(c.env) ? "/settings#push" : "/settings/consents");
   if (!user.profile.districtAlertOptIn) {
     await batch(c.env, [
@@ -484,7 +492,7 @@ eventRoutes.post("/events/district-alert", requireMember, async (c) => {
       audit(db, user.account.id, DISTRICT_ALERT_ON, { type: "account", id: user.account.id }),
     ]);
   }
-  return c.redirect(safeNext(str((await c.req.parseBody()).back), "/events"));
+  return c.redirect(safeNext(str((await c.req.parseBody()).back), "/"));
 });
 
 /** The alert off: one tap, from the alert itself or Settings. A POST, never a GET. */
@@ -516,7 +524,7 @@ function quizHintCard(t: T) {
 /** Hide the "Find your Bangkok Type" card on Discover (per browser). */
 eventRoutes.post("/events/quiz-hint/dismiss", requireMember, (c) => {
   setCookie(c, QUIZ_HINT_COOKIE, "hide", { path: "/", maxAge: 365 * 86_400, sameSite: "Lax", httpOnly: true });
-  return c.redirect("/events");
+  return c.redirect("/");
 });
 
 // ---------------------------------------------------------- map view --
@@ -603,8 +611,8 @@ function ForYou(props: { v: View; segment: Segment; newcomer?: boolean; dismissa
       t("โต๊ะที่คุยภาษาอังกฤษได้สัปดาห์นี้", "English-friendly this week"),
       t("โต๊ะที่ใช้ภาษาอังกฤษได้และโต๊ะแลกเปลี่ยนภาษา", "English-friendly and language-exchange tables."),
       [
-        ["/events?tag=english_friendly", t("โต๊ะที่ใช้ภาษาอังกฤษได้", "English-friendly tables")],
-        ["/events?tag=language_exchange", t("แลกเปลี่ยนภาษา", "Language exchange")],
+        ["/?tag=english_friendly", t("โต๊ะที่ใช้ภาษาอังกฤษได้", "English-friendly tables")],
+        ["/?tag=language_exchange", t("แลกเปลี่ยนภาษา", "Language exchange")],
       ],
     );
   if (props.segment === "international")
@@ -612,8 +620,8 @@ function ForYou(props: { v: View; segment: Segment; newcomer?: boolean; dismissa
       t("ยินดีต้อนรับสู่กรุงเทพฯ 👋", "Welcome to Bangkok 👋"),
       t("เริ่มจากโต๊ะที่ใช้ภาษาอังกฤษได้และโต๊ะแลกเปลี่ยนภาษา เจอเพื่อนคนไทยได้ ไม่ต้องพูดไทยเก่ง", "Start with English-friendly and language-exchange tables. Make Thai friends, no fluent Thai needed."),
       [
-        ["/events?tag=english_friendly", t("โต๊ะที่ใช้ภาษาอังกฤษได้", "English-friendly tables")],
-        ["/events?tag=language_exchange", t("แลกเปลี่ยนภาษา", "Language exchange")],
+        ["/?tag=english_friendly", t("โต๊ะที่ใช้ภาษาอังกฤษได้", "English-friendly tables")],
+        ["/?tag=language_exchange", t("แลกเปลี่ยนภาษา", "Language exchange")],
         ["/learn/new-to-bangkok", t("คู่มือคนมาใหม่", "New to Bangkok guide")],
       ],
     );
@@ -622,8 +630,8 @@ function ForYou(props: { v: View; segment: Segment; newcomer?: boolean; dismissa
       t("เพิ่งย้ายมากรุงเทพฯ ใช่ไหม? 👋", "New to Bangkok? 👋"),
       t("ลองโต๊ะสำหรับคนมาใหม่ ทุกคนก็มาคนเดียวเหมือนกัน แล้วหาบัดดี้ไว้ตะลุยเมืองด้วยกัน", "Try a newcomer table. Everyone comes alone. Then get a buddy to explore the city with."),
       [
-        ["/events?tag=newcomers", t("โต๊ะสำหรับคนมาใหม่", "Newcomer tables")],
-        ["/events?tag=city_quest", t("ซิตี้เควสต์", "City Quests")],
+        ["/?tag=newcomers", t("โต๊ะสำหรับคนมาใหม่", "Newcomer tables")],
+        ["/?tag=city_quest", t("ซิตี้เควสต์", "City Quests")],
         ["/buddy", t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")],
       ],
     );
@@ -631,8 +639,8 @@ function ForYou(props: { v: View; segment: Segment; newcomer?: boolean; dismissa
     t("กรุงเทพฯ ของคุณ ในมุมใหม่ ✨", "Your Bangkok, new faces ✨"),
     t("เจอคนใหม่ในย่านของคุณเอง ชวนคนที่เคยเจอกลับมาเจอกันอีก หรือลองเป็นโฮสต์ให้คนมาใหม่", "Meet new people in your own district, see people you've met again, or host a table for newcomers."),
     [
-      ["/events?tag=run", t("วิ่งและกีฬา", "Runs and sport")],
-      ["/events?tag=board_game", t("บอร์ดเกม", "Board games")],
+      ["/?tag=run", t("วิ่งและกีฬา", "Runs and sport")],
+      ["/?tag=board_game", t("บอร์ดเกม", "Board games")],
       ["/connections", t("คนรู้จัก", "My people")],
     ],
   );

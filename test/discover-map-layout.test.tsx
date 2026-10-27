@@ -21,18 +21,18 @@ describe("Discover map sheet copy", () => {
     }
     expect(sheetCopy({ total: 0, week: 0, open: 0, filtered: false }, th).title).toBe("ยังไม่มีกิจกรรมเร็ว ๆ นี้");
     expect(sheetCopy({ total: 0, week: 0, open: 0, filtered: false }, en).title).toBe("No events coming up yet");
-    const html = String(<NoEventsYet t={th} filtered={false} clearHref="/events" />);
+    const html = String(<NoEventsYet t={th} filtered={false} clearHref="/" />);
     expect(html).toContain('href="/host/new"');
     expect(html).toContain("เสนอกิจกรรม");
-    expect(String(<NoEventsYet t={en} filtered={false} clearHref="/events" />)).toContain("Suggest an event");
+    expect(String(<NoEventsYet t={en} filtered={false} clearHref="/" />)).toContain("Suggest an event");
   });
 
   it("nothing matches the filters: says so, and offers to clear them", () => {
     const c = sheetCopy({ total: 0, week: 0, open: 0, filtered: true }, en);
     expect(c.empty).toBe("filtered");
-    const html = String(<NoEventsYet t={en} filtered clearHref="/events" />);
+    const html = String(<NoEventsYet t={en} filtered clearHref="/" />);
     expect(html).toContain("No events match these filters yet");
-    expect(html).toContain('href="/events"');
+    expect(html).toContain('href="/"');
     expect(html).not.toContain("/host/new");
   });
 
@@ -57,7 +57,7 @@ describe("Discover map sheet copy", () => {
         const c = sheetCopy(n, t);
         expect(`${c.title} ${c.sub ?? ""}`).not.toMatch(/[–—]/);
       }
-    expect(String(<NoEventsYet t={th} filtered={false} clearHref="/events" />)).not.toMatch(/[–—]/);
+    expect(String(<NoEventsYet t={th} filtered={false} clearHref="/" />)).not.toMatch(/[–—]/);
   });
 });
 
@@ -65,7 +65,7 @@ describe("Discover map sheet copy", () => {
 const SRC = readFileSync("src/ui/discover-map.tsx", "utf8");
 const page = (t = en) =>
   String(
-    <FullDiscover t={t} lang={t === en ? "en" : "th"} points={[]} chips={[]} status={sheetCopy({ total: 0, week: 0, open: 0, filtered: false }, t)} search="" filtered={false} filters={<form class="ff" />} list={<p>list</p>} listHref="/events?view=list" langHref="/lang/th" hasQuests={false} />,
+    <FullDiscover t={t} lang={t === en ? "en" : "th"} points={[]} chips={[]} status={sheetCopy({ total: 0, week: 0, open: 0, filtered: false }, t)} search="" filtered={false} filters={<form class="ff" />} list={<p>list</p>} listHref="/?view=list" langHref="/lang/th" hasQuests={false} />,
   );
 
 describe("Discover map Key", () => {

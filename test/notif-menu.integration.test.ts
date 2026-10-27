@@ -18,7 +18,7 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
       { id: newId(), accountId: m.id, kind: "group", titleTh: "กลุ่ม 2", titleEn: "You're in group 2", link: "https://evil.example" },
     ]);
 
-    let html = await (await req("/events?view=list", { cookie })).text();
+    let html = await (await req("/?view=list", { cookie })).text();
     expect(html).toContain('id="notif"');
     // A small dot, not a number (owner, 2026-10-17); the count stays in the accessible name.
     expect(html).toContain('<span class="unread-dot notif-dot" aria-hidden="true"></span>');
@@ -35,7 +35,7 @@ describe.skipIf(!HAS_DB)("notifications dropdown", () => {
     expect(body).not.toContain("evil.example"); // off-site links are dropped
     expect(await db().select().from(notifications).where(and(eq(notifications.accountId, m.id), isNull(notifications.readAt)))).toHaveLength(0);
 
-    html = await (await req("/events?view=list", { cookie })).text();
+    html = await (await req("/?view=list", { cookie })).text();
     expect(html).not.toContain('notif-dot" aria-hidden');
   });
 

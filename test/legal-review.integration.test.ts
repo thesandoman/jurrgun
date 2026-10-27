@@ -78,7 +78,7 @@ describe.skipIf(!HAS_DB)("members who joined before the Terms box", () => {
     expect(html).toContain('action="/settings/terms"');
     expect(html).toContain("Updated Terms of service");
     // Not a lock: other pages still open.
-    expect((await req("/events", { cookie: m.cookie })).status).toBe(200);
+    expect((await req("/", { cookie: m.cookie })).status).toBe(200);
     const r = await req("/settings/terms", { cookie: m.cookie, method: "POST", form: { agree: "1" } });
     expect(r.headers.get("location")).toBe("/settings?notice=saved");
     expect((await latest(m.id, TERMS_CONSENT)).version).toBe(TERMS_VERSION);

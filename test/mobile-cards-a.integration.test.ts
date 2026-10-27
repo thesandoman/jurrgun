@@ -42,7 +42,7 @@ describe.skipIf(!HAS_DB)("card 1: the language switch and City Pulse in the top 
     expect(menu).toContain('class="a11y-lang-ico"');
     expect(menu).toMatch(/ภาษา<small>เปลี่ยนเป็นภาษาอังกฤษ<\/small><\/span><b lang="en">English<\/b>/);
     expect(th).not.toContain('class="chip lang-chip"');
-    const en = await (await req("/events?view=list", { cookie: `${m.cookie}; lang=en` })).text();
+    const en = await (await req("/?view=list", { cookie: `${m.cookie}; lang=en` })).text();
     expect(a11yMenu(en)).toMatch(/Language<small>Switch to Thai<\/small><\/span><b lang="th">ไทย<\/b>/);
     expect(en).not.toContain('class="chip lang-chip"');
   });

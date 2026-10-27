@@ -213,7 +213,7 @@ export function Cover(props: { e: Event; src?: string | null; lang?: Lang; class
  * back to them. The Map link always says view=map, so it never bounces.
  */
 export const DISCOVER_MEMORY_JS = `(function(){try{var k="bkk-discover",p=new URLSearchParams(location.search);
-if(!location.search){var s=localStorage.getItem(k);if(s&&s!=="view=map")location.replace("/events?"+s);return}
+if(!location.search){var s=localStorage.getItem(k);if(s&&s!=="view=map")location.replace("/?"+s);return}
 if(!p.has("view")&&!p.has("when"))return;var o=new URLSearchParams();o.set("view",p.get("view")==="list"?"list":"map");var w=p.get("when");if(w&&w!=="all")o.set("when",w);
 localStorage.setItem(k,o.toString())}catch(e){}})()`;
 

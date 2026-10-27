@@ -69,7 +69,7 @@ describe.skipIf(!HAS_DB)("no repeats, round two", () => {
     const m = await createMember();
     const id = await event(`Picked walk ${newId().slice(0, 4)}`, 2);
     await db().insert(weeklyPlans).values({ id: newId(), accountId: m.id, week: weekKey(new Date()), picks: [{ kind: "event", ref: id, reasons: [] }] });
-    const html = await (await req("/events?view=list&lang=en", { cookie: m.cookie })).text();
+    const html = await (await req("/?view=list&lang=en", { cookie: m.cookie })).text();
     expect(html).toContain("⭐ Your pick");
   });
 
@@ -83,7 +83,7 @@ describe.skipIf(!HAS_DB)("no repeats, round two", () => {
     await db().insert(events).values({ id, title: `Centenarian walk ${id.slice(0, 4)}`, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3600_000), venueName: "Cafe", district: "bang_rak", capacity: 10, status: "published", createdBy: "t", ageMin: 100, ageMax: 120 });
     await db().insert(weeklyPlans).values({ id: newId(), accountId: m.id, week: weekKey(new Date()), picks: [{ kind: "event", ref: id, reasons: [] }] });
     for (const lang of ["en", "th"] as const) {
-      const html = await (await req(`/events?view=list&lang=${lang}`, { cookie: m.cookie })).text();
+      const html = await (await req(`/?view=list&lang=${lang}`, { cookie: m.cookie })).text();
       const start = html.indexOf('<section class="disc-top"');
       expect(start).toBeGreaterThan(-1);
       const topWeek = html.slice(start, html.indexOf("</section>", start));

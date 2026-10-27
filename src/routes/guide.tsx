@@ -130,5 +130,5 @@ guideRoutes.post("/guide", requireMember, async (c) => {
   const accountId = c.var.user!.account.id;
   const db = getDb(c.env);
   if (!(await guideSeen(c.env, accountId))) await db.insert(consents).values({ id: newId(), accountId, category: "guide", granted: true, version: GUIDE_VERSION });
-  return c.redirect("/events?notice=welcome");
+  return c.redirect("/?notice=welcome");
 });

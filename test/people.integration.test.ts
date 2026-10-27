@@ -275,7 +275,7 @@ describe.skipIf(!HAS_DB)("Bangkok circle, report, block, notifications", () => {
     const m = await member();
     const html = await (await req("/connections", { cookie: en(m) })).text();
     expect(html).toContain("No connections yet");
-    expect(html).toContain('href="/events"');
+    expect(html).toContain('href="/"');
   });
 
   it("shares contacts: I always see mine, they see it once shared; validation and participants only", async () => {

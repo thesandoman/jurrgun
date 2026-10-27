@@ -192,12 +192,12 @@ describe.skipIf(!HAS_DB)("invite a friend", () => {
   it("/events sends a new member with the invite cookie back to the invite, once", async () => {
     const { token } = await setup();
     const m = await createMember();
-    const r = await req("/events", { cookie: `${m.cookie}; bkk_invite=${token}` });
+    const r = await req("/", { cookie: `${m.cookie}; bkk_invite=${token}` });
     expect(r.status).toBe(302);
     expect(loc(r)).toBe(`/invite/${token}`);
     expect(r.headers.get("set-cookie") ?? "").toMatch(/bkk_invite=;/);
     // A junk cookie is just cleared.
-    const junk = await req("/events", { cookie: `${m.cookie}; bkk_invite=..%2F..` });
+    const junk = await req("/", { cookie: `${m.cookie}; bkk_invite=..%2F..` });
     expect(junk.status).toBe(200);
     // A member opening the invite page doesn't get the cookie (no loop back from /events).
     const open = await req(`/invite/${token}`, { cookie: m.cookie });

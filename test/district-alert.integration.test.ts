@@ -115,7 +115,7 @@ describe.skipIf(!HAS_DB)("weekly district alert job", () => {
     expect(got[0].titleTh).toBe("มีกิจกรรมใหม่เปิดในเขตบางรัก");
     expect(got[0].titleEn).toBe("Something new opened in Bang Rak");
     expect(got[0].titleEn).not.toContain(`DAL-${ev.slice(0, 8)}`);
-    expect(got[0].link).toMatch(/^\/events\?district=bang_rak&alert=\d{4}-\d{2}-\d{2}$/);
+    expect(got[0].link).toMatch(/^\/\?district=bang_rak&alert=\d{4}-\d{2}-\d{2}$/);
     expect((await lastSent(m.id))?.getTime()).toBe(NOW.getTime());
   });
 
@@ -227,7 +227,7 @@ describe.skipIf(!HAS_DB)("district alert opt-in and off", () => {
     made.push(m.id);
     const res = await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/events");
+    expect(res.headers.get("location")).toBe("/");
     expect(await flag(m.id)).toBe(true);
     expect((await optIns(m.id)).length).toBe(1);
     await req("/events/district-alert", { cookie: m.cookie, method: "POST", form: { back: "" } });
@@ -246,7 +246,7 @@ describe.skipIf(!HAS_DB)("district alert opt-in and off", () => {
     expect(await flag(m.id)).toBe(false);
     const anon = await req("/events/district-alert", { method: "POST", form: { back: "" } });
     expect(anon.status).toBe(302);
-    expect(anon.headers.get("location")).not.toBe("/events");
+    expect(anon.headers.get("location")).not.toBe("/");
   });
 });
 
@@ -308,7 +308,7 @@ describe.skipIf(!HAS_DB)("district alert switch in Settings", () => {
 describe.skipIf(!HAS_DB)("district alert on Discover's filtered empty state", () => {
   // A search nothing matches, so the filtered view is empty whatever other tests leave behind.
   const none = `zz-no-match-${newId().slice(0, 8)}`;
-  const discover = async (cookie: string, query: string) => (await req(`/events?${query}&q=${none}`, { cookie: `${cookie}; lang=en` })).text();
+  const discover = async (cookie: string, query: string) => (await req(`/?${query}&q=${none}`, { cookie: `${cookie}; lang=en` })).text();
 
   it("filtered to your own district: offered on the map and in the list, and comes back to the same filters", async () => {
     const m = await createMember({ district: "bang_rak" });

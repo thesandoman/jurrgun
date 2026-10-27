@@ -36,7 +36,7 @@ describe.skipIf(!HAS_DB)("/new", () => {
   it("sends members to the event itself", async () => {
     const m = await createMember();
     const html = await (await req("/new", { cookie: m.cookie })).text();
-    expect(html).toContain('href="/events"');
+    expect(html).toContain('href="/"');
   });
 });
 
@@ -101,8 +101,8 @@ describe.skipIf(!HAS_DB)("a page for each person", () => {
     const [intl, local] = await Promise.all([createMember(), createMember()]);
     await db().update(profiles).set({ bio: { story: "expat" } }).where(eq(profiles.accountId, intl.id));
     await db().update(profiles).set({ bio: { story: "local" }, newcomer: false }).where(eq(profiles.accountId, local.id));
-    const a = await (await req("/events?view=list&lang=en", { cookie: intl.cookie })).text();
-    const b = await (await req("/events?view=list&lang=en", { cookie: local.cookie })).text();
+    const a = await (await req("/?view=list&lang=en", { cookie: intl.cookie })).text();
+    const b = await (await req("/?view=list&lang=en", { cookie: local.cookie })).text();
     expect(a).toContain("Welcome to Bangkok");
     expect(b).toContain("Your Bangkok, new faces");
     expect(b).not.toContain("Welcome to Bangkok");
@@ -116,9 +116,9 @@ describe.skipIf(!HAS_DB)("a page for each person", () => {
     const id = newId();
     const startsAt = new Date(Date.now() + 4 * 86_400_000);
     await db().insert(events).values({ id, title: `Women's walk ${tag}`, startsAt, endsAt: new Date(startsAt.getTime() + 2 * 3600_000), venueName: "Park", district: "bang_rak", capacity: 10, status: "published", createdBy: "t", tags: ["women_only"] });
-    expect(await (await req("/events?view=list", { cookie: m.cookie })).text()).not.toContain(`Women's walk ${tag}`);
+    expect(await (await req("/?view=list", { cookie: m.cookie })).text()).not.toContain(`Women's walk ${tag}`);
     expect((await req(`/events/${id}`, { cookie: m.cookie })).status).toBe(404);
-    expect(await (await req("/events?view=list", { cookie: w.cookie })).text()).toContain(`Women&#39;s walk ${tag}`);
+    expect(await (await req("/?view=list", { cookie: w.cookie })).text()).toContain(`Women&#39;s walk ${tag}`);
     const forMan = await (await req("/settings/connections", { cookie: m.cookie })).text();
     const forWoman = await (await req("/settings/connections", { cookie: w.cookie })).text();
     expect(forMan).toMatch(/<div data-women-only[^>]*hidden/);

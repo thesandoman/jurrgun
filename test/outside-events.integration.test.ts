@@ -76,7 +76,7 @@ describe.skipIf(!HAS_DB)("D45/D46: pasted links into the host inbox, then a go-t
 
     // Nothing waiting in the inbox reaches Discover.
     const other = await createMember();
-    expect(await (await req("/events?view=list", { cookie: other.cookie })).text()).not.toContain("River Jazz Night");
+    expect(await (await req("/?view=list", { cookie: other.cookie })).text()).not.toContain("River Jazz Night");
 
     const form = await (await req(loc, { cookie: host.cookie })).text();
     expect(form).toContain("River Jazz Night");
@@ -431,7 +431,7 @@ describe.skipIf(!HAS_DB)("owner cards 2026-10-20: go-together on Discover and th
     const [going, looking] = await Promise.all([createMember(), createMember()]);
     await db().insert(registrations).values({ id: newId(), eventId: id, accountId: going.id, status: "confirmed", passToken: randomToken(18) });
 
-    const list = await (await req("/events?view=list&lang=en", { cookie: looking.cookie })).text();
+    const list = await (await req("/?view=list&lang=en", { cookie: looking.cookie })).text();
     expect(list).toContain("Via Ticketmelon · meet at Café by the hall");
 
     const page = await (await req(`/events/${id}?lang=en`, { cookie: looking.cookie })).text();

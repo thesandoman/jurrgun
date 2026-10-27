@@ -17,24 +17,24 @@ const at = (state: "off" | "on" | "consent") => ({ state, district: "bang_rak", 
 
 describe("district alert in the empty state", () => {
   it("off: a POST form after the primary Suggest an event button", () => {
-    const html = String(<NoEventsYet t={th} filtered={false} clearHref="/events" alert={at("off")} />);
+    const html = String(<NoEventsYet t={th} filtered={false} clearHref="/" alert={at("off")} />);
     expect(html).toContain('<form method="post" action="/events/district-alert"');
     expect(html).toContain("แจ้งฉันเมื่อมีกิจกรรมเปิดในเขตบางรัก");
     expect(html.indexOf('class="btn primary" href="/host/new"')).toBeGreaterThan(-1);
     expect(html.indexOf("/host/new")).toBeLessThan(html.indexOf("/events/district-alert"));
     expect(html).toContain('class="btn ghost"');
     expect(html).not.toContain("<script");
-    expect(String(<NoEventsYet t={en} filtered={false} clearHref="/events" alert={at("off")} />)).toContain("Tell me when an event opens in Bang Rak");
+    expect(String(<NoEventsYet t={en} filtered={false} clearHref="/" alert={at("off")} />)).toContain("Tell me when an event opens in Bang Rak");
   });
 
   it("on: a calm line instead of the button", () => {
-    const html = String(<NoEventsYet t={en} filtered={false} clearHref="/events" alert={at("on")} />);
+    const html = String(<NoEventsYet t={en} filtered={false} clearHref="/" alert={at("on")} />);
     expect(html).toContain("We&#39;ll tell you when an event opens in Bang Rak, at most once a week.");
     expect(html).not.toContain("/events/district-alert");
   });
 
   it("no yes to notifications: a link to Settings, never a form that says yes", () => {
-    const html = String(<NoEventsYet t={en} filtered={false} clearHref="/events" alert={at("consent")} />);
+    const html = String(<NoEventsYet t={en} filtered={false} clearHref="/" alert={at("consent")} />);
     expect(html).toContain('href="/settings#push"');
     expect(html).not.toContain("<form");
   });
@@ -42,29 +42,29 @@ describe("district alert in the empty state", () => {
   it("no dashes", () => {
     for (const s of ["off", "on", "consent"] as const) {
       for (const filtered of [false, true]) {
-        expect(String(<NoEventsYet t={th} filtered={filtered} clearHref="/events" alert={at(s)} />)).not.toMatch(/[–—]/);
+        expect(String(<NoEventsYet t={th} filtered={filtered} clearHref="/" alert={at(s)} />)).not.toMatch(/[–—]/);
       }
     }
   });
 });
 
 describe("district alert in the filtered empty state", () => {
-  const back = "/events?district=bang_rak&view=map";
+  const back = "/?district=bang_rak&view=map";
   const filteredAt = (state: "off" | "on" | "consent") => ({ ...at(state), back });
 
   it("filtered to your own district: offered, after Clear filters", () => {
     expect(alertFitsView({ ownDistrict: "bang_rak", filtered: true, filterDistrict: "bang_rak" })).toBe(true);
-    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={filteredAt("off")} />);
+    const html = String(<NoEventsYet t={en} filtered clearHref="/" alert={filteredAt("off")} />);
     expect(html).toContain('<form method="post" action="/events/district-alert"');
     expect(html).toContain("Tell me when an event opens in Bang Rak");
     expect(html.indexOf("Clear filters")).toBeLessThan(html.indexOf("/events/district-alert"));
     // Back to the same filters once it's on.
-    expect(html).toContain('name="back" value="/events?district=bang_rak&amp;view=map"');
+    expect(html).toContain('name="back" value="/?district=bang_rak&amp;view=map"');
     expect(html).not.toContain("<script");
   });
 
   it("filtered to your own district, already on: the same calm line", () => {
-    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={filteredAt("on")} />);
+    const html = String(<NoEventsYet t={en} filtered clearHref="/" alert={filteredAt("on")} />);
     expect(html).toContain("We&#39;ll tell you when an event opens in Bang Rak, at most once a week.");
     expect(html).not.toContain("<form");
   });
@@ -75,13 +75,13 @@ describe("district alert in the filtered empty state", () => {
     expect(alertFitsView({ ownDistrict: "", filtered: true, filterDistrict: "" })).toBe(false);
     expect(alertFitsView({ ownDistrict: "bang_rak", filtered: false, filterDistrict: "" })).toBe(true);
     // The route then passes no alert: Clear filters alone.
-    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={null} />);
+    const html = String(<NoEventsYet t={en} filtered clearHref="/" alert={null} />);
     expect(html).toContain("Clear filters");
     expect(html).not.toContain("district-alert");
   });
 
   it("filtered, no yes to notifications: the link to Settings, never a form that says yes", () => {
-    const html = String(<NoEventsYet t={en} filtered clearHref="/events" alert={filteredAt("consent")} />);
+    const html = String(<NoEventsYet t={en} filtered clearHref="/" alert={filteredAt("consent")} />);
     expect(html).toContain('href="/settings#push"');
     expect(html).toContain("Turn on notifications in Settings to hear about events in Bang Rak");
     expect(html).not.toContain("<form");
