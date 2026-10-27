@@ -27,6 +27,7 @@ const URGENT_TODAY = sql<boolean>`exists (select 1 from ${notifications} inner j
 )}) and (${events.startsAt} at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)`;
 import { randomToken, sha256 } from "./crypto";
 import { secureCookie } from "./deployed";
+import { deviceKind, isIdle, needsTouch } from "../domain/sessions";
 import type { AppEnv } from "./env";
 import { langFromHeader, pickLang } from "./i18n";
 
@@ -35,10 +36,11 @@ export const SESSION_DAYS = 30;
 
 export async function startSession(c: Context<AppEnv>, accountId: string): Promise<void> {
   const token = randomToken();
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SESSION_DAYS * 86_400_000);
   await getDb(c.env)
     .insert(sessions)
-    .values({ id: await sha256(token), accountId, expiresAt });
+    .values({ id: await sha256(token), accountId, expiresAt, lastSeenAt: now, device: deviceKind(c.req.header("user-agent")) });
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
     secure: secureCookie(c),
@@ -67,6 +69,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     const db = getDb(c.env);
     const rows = await db
       .select({
+        session: { id: sessions.id, lastSeenAt: sessions.lastSeenAt, createdAt: sessions.createdAt },
         account: accounts,
         profile: profiles,
         // Unread count for the bell, in the same trip (no extra query per page).
@@ -83,7 +86,23 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
       .where(and(eq(sessions.id, await sha256(token)), gt(sessions.expiresAt, new Date())))
       .limit(1);
     const row = rows[0];
-    if (row && accountUsable(row.account)) {
+    const now = new Date();
+    if (row && isIdle(row.session, now)) {
+      // 14 days without use (card S4): end it. requireUser sends them to sign in and back here.
+      await db.delete(sessions).where(eq(sessions.id, row.session.id));
+      deleteCookie(c, SESSION_COOKIE, { path: "/" });
+    } else if (row && accountUsable(row.account)) {
+      if (needsTouch(row.session.lastSeenAt, now)) {
+        const touch = db.update(sessions).set({ lastSeenAt: now }).where(eq(sessions.id, row.session.id));
+        let deferred = false;
+        try {
+          c.executionCtx.waitUntil(touch.then(() => undefined));
+          deferred = true;
+        } catch {
+          // No execution context (tests, local scripts): write it now.
+        }
+        if (!deferred) await touch;
+      }
       c.set("user", { account: row.account, profile: row.profile, unread: Number(row.unread ?? 0), chatUnread: Number(row.chatUnread ?? 0), urgentToday: row.urgentToday === true });
       // An explicit ?lang= or language cookie wins; otherwise use the profile's.
       if (!c.req.query("lang") && !getCookie(c, "lang") && row.profile) c.set("lang", pickLang(row.profile.locale));

@@ -260,6 +260,7 @@ settingsRoutes.get("/settings", async (c) => {
         ...(emailEnabled(c.env)
           ? [{ href: "/settings/email", emoji: "✉️", title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), hint: t("เข้าสู่ระบบด้วยรหัสทางอีเมล", "Sign in with a code by email"), tint: "sky" as const, group: gAcct }]
           : []),
+        { href: "/settings/devices", emoji: "📱", title: t("อุปกรณ์ที่เข้าสู่ระบบ", "Signed-in devices"), hint: t("ออกจากระบบในเครื่องอื่นได้", "Sign out on other devices"), tint: "sky" as const, group: gAcct },
         // Google / LINE accounts have no password to change.
         ...(isPasswordless(user.account.username)
           ? []

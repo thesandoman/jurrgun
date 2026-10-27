@@ -4,7 +4,10 @@
  */
 import { EXIT_REASONS } from "../../content/dating";
 import { deleteCookie, getCookie } from "hono/cookie";
-import { and, eq, ne } from "drizzle-orm";
+import type { Context } from "hono";
+import { and, desc, eq, gt, ne } from "drizzle-orm";
+import type { AppEnv } from "../../lib/env";
+import { fmtDay } from "../../lib/i18n";
 import { batch, getDb } from "../../db";
 import { isPasswordless, passwordProblem } from "../../domain/rules";
 import { cleanBio } from "../../content/profile";
@@ -126,14 +129,95 @@ settingsRoutes.post("/settings/password", async (c) => {
   if (password !== confirm) return fail(t("รหัสผ่านไม่ตรงกัน", "Passwords don't match."));
   const { hash, salt } = await hashPassword(password);
   const db = getDb(c.env);
-  const token = getCookie(c, SESSION_COOKIE) ?? "";
-  const thisSession = await sha256(token);
+  const thisSession = await currentSessionId(c);
   await batch(c.env, [
     db.update(accounts).set({ passwordHash: hash, passwordSalt: salt }).where(eq(accounts.id, user.account.id)),
-    // Sign out every OTHER device; keep this one.
-    db.delete(sessions).where(and(eq(sessions.accountId, user.account.id), ne(sessions.id, thisSession))),
+    signOutOthers(db, user.account.id, thisSession),
     audit(db, user.account.id, "account.password_changed", { type: "account", id: user.account.id }),
   ]);
   return c.redirect("/settings?notice=password_changed");
+});
+
+/** This browser's session id (the hash of its cookie). */
+async function currentSessionId(c: Context<AppEnv>): Promise<string> {
+  return sha256(getCookie(c, SESSION_COOKIE) ?? "");
+}
+
+/** Every OTHER session of this account; this device stays signed in. Shared by password change and the devices page. */
+function signOutOthers(db: ReturnType<typeof getDb>, accountId: string, thisSession: string) {
+  return db.delete(sessions).where(and(eq(sessions.accountId, accountId), ne(sessions.id, thisSession)));
+}
+
+// -------------------------------------------------------- signed-in devices (card S4) --
+
+const DEVICE_LABEL: Record<string, [string, string, string]> = {
+  phone: ["📱", "มือถือ", "Phone"],
+  tablet: ["📲", "แท็บเล็ต", "Tablet"],
+  computer: ["💻", "คอมพิวเตอร์", "Computer"],
+};
+
+settingsRoutes.get("/settings/devices", async (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const user = me(c);
+  const thisSession = await currentSessionId(c);
+  const rows = await getDb(c.env)
+    .select({ id: sessions.id, device: sessions.device, createdAt: sessions.createdAt, lastSeenAt: sessions.lastSeenAt })
+    .from(sessions)
+    .where(and(eq(sessions.accountId, user.account.id), gt(sessions.expiresAt, new Date())))
+    .orderBy(desc(sessions.createdAt))
+    .limit(50);
+  const others = rows.filter((r) => r.id !== thisSession).length;
+  return page(
+    c,
+    { title: t("อุปกรณ์ที่เข้าสู่ระบบ", "Signed-in devices"), tab: "me" },
+    <>
+      <p>
+        <a href="/settings">← {t("ฉัน", "Me")}</a>
+      </p>
+      <h1>{t("อุปกรณ์ที่เข้าสู่ระบบ", "Signed-in devices")}</h1>
+      <p class="muted">
+        {t(
+          "เราเก็บแค่ประเภทอุปกรณ์และวันที่ ไม่เก็บ IP หรือตำแหน่ง ถ้าไม่ได้ใช้ 14 วัน จะออกจากระบบให้เอง",
+          "We keep only the kind of device and the dates, never an IP address or location. A device unused for 14 days is signed out by itself.",
+        )}
+      </p>
+      <ul class="list" id="devices">
+        {rows.map((r) => {
+          const [emoji, th, en] = DEVICE_LABEL[r.device ?? ""] ?? ["🔐", "อุปกรณ์", "Device"];
+          return (
+            <li data-device={r.device ?? "unknown"}>
+              <b>
+                <span aria-hidden="true">{emoji}</span> {t(th, en)}
+              </b>
+              {r.id === thisSession ? <> · {t("เครื่องนี้", "This device")}</> : null}
+              <br />
+              <small class="muted">
+                {t("เข้าสู่ระบบ", "Signed in")} {fmtDay(r.createdAt, lang)}
+                {r.lastSeenAt ? ` · ${t("ใช้ล่าสุด", "Last used")} ${fmtDay(r.lastSeenAt, lang)}` : ""}
+              </small>
+            </li>
+          );
+        })}
+      </ul>
+      {others > 0 ? (
+        <form method="post" action="/settings/devices/sign-out-others">
+          <Button kind="ghost">{t(`ออกจากระบบในอุปกรณ์อื่นทั้งหมด (${others})`, `Sign out on all other devices (${others})`)}</Button>
+        </form>
+      ) : (
+        <p class="muted">{t("ไม่มีอุปกรณ์อื่นที่เข้าสู่ระบบอยู่", "No other devices are signed in.")}</p>
+      )}
+    </>,
+  );
+});
+
+settingsRoutes.post("/settings/devices/sign-out-others", async (c) => {
+  const user = me(c);
+  const db = getDb(c.env);
+  await batch(c.env, [
+    signOutOthers(db, user.account.id, await currentSessionId(c)),
+    audit(db, user.account.id, "account.signed_out_others", { type: "account", id: user.account.id }),
+  ]);
+  return c.redirect("/settings/devices?notice=signed_out_others");
 });
 

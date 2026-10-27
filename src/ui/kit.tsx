@@ -101,6 +101,7 @@ const NOTICES: Record<string, [string, string]> = {
   answered: ["ขอบคุณนะ คำตอบของคุณช่วยให้กรุงเทพฯ ดีขึ้นได้จริง ๆ", "Thanks! Your answer helps the city"],
   buddy_round: ["จับคู่บัดดี้แล้ว", "Buddy round complete"],
   password_changed: ["เปลี่ยนรหัสผ่านแล้ว", "Password changed"],
+  signed_out_others: ["ออกจากระบบในอุปกรณ์อื่นแล้ว", "Signed out on your other devices"],
   vibe_saved: ["บันทึกแล้ว", "Saved"],
   stamped: ["ได้แสตมป์เขตใหม่ในพาสปอร์ตแล้ว", "New district stamped in your passport"],
   friendship: ["นี่แหละมิตรภาพ ชวนกันไปเจออีกนะ", "That's a friendship. Go meet again soon."],

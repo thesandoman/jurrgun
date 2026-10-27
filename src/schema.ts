@@ -138,6 +138,10 @@ export const sessions = pgTable(
     id: text("id").primaryKey(),
     accountId: text("account_id").notNull(),
     expiresAt: ts("expires_at").notNull(),
+    /** Refreshed at most once an hour; 14 days without use ends the session (domain/sessions.ts). */
+    lastSeenAt: ts("last_seen_at"),
+    /** "phone", "tablet" or "computer" only, for the signed-in devices list. Never the user agent or IP. */
+    device: text("device"),
     createdAt: created(),
   },
   (t) => [index("identity_sessions_account_idx").on(t.accountId)],
