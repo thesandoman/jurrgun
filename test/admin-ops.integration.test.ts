@@ -398,9 +398,11 @@ describe.skipIf(!HAS_DB)("City Pulse manager", () => {
     const res = await req(`/admin/pulse/${qid}/results`, { cookie: `${admin.cookie}; lang=en` });
     expect(res.status).toBe(200);
     const html = await res.text();
-    // Rounded to 5 (C1): 12 shows as 10, so 15 − 10 doesn't give the hidden 3 away.
-    expect(html).toContain("<td>10</td>");
+    // 12 and 3: with one cell hidden, the other is hidden too and the total goes to the nearest 10 (D2),
+    // so 15 − 12 can't give the hidden 3 away.
+    expect(html).toContain("Respondents: <strong>20</strong>");
     expect(html).not.toContain("<td>12</td>");
+    expect(html).not.toContain("<td>10</td>");
     expect(html).toContain("<td>&lt;10</td>");
     expect(html).not.toContain("<td>3</td>");
     expect(html).toContain("rounded to the nearest 5");
@@ -411,7 +413,8 @@ describe.skipIf(!HAS_DB)("City Pulse manager", () => {
     expect(csv.status).toBe(200);
     expect(csv.headers.get("content-type")).toContain("text/csv");
     const text = await csv.text();
-    expect(text).toContain("overall,all,cost,Cost,10");
+    expect(text).toContain("overall,all,_respondents,Respondents,20");
+    expect(text).toContain("overall,all,cost,Cost,<10");
     expect(text).toContain("meta,all,_snapshot");
     expect(text).toContain("overall,all,time,No time,<10");
     expect(text).not.toMatch(/,3\r?\n/);
@@ -486,7 +489,8 @@ describe.skipIf(!HAS_DB)("City Pulse manager", () => {
     expect(open).toContain("overall,all,_respondents,Respondents,10");
     await db().update(pulseQuestions).set({ status: "archived" }).where(eq(pulseQuestions.id, qid));
     const closed = await (await req(`/admin/pulse/${qid}/export.csv`, { cookie: admin.cookie })).text();
-    expect(closed).toContain("overall,all,_respondents,Respondents,15");
+    // 15 cost, 0 time: "time" is hidden, so "cost" is too and 15 rounds to 20 (D2).
+    expect(closed).toContain("overall,all,_respondents,Respondents,20");
     expect(closed).not.toContain("_snapshot");
   });
 

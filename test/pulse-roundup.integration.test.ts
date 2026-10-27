@@ -50,7 +50,7 @@ describe.skipIf(!HAS_DB)("monthly round-up", () => {
       createdBy: admin.id,
     });
     await db().insert(pulseResponses).values(
-      Array.from({ length: 16 }, (_, i) => ({ id: newId(), questionId: qid, researchId: newId(), answer: i < 13 ? "seats" : "shade", district: "dusit", ageBand: "25-29", createdAt: mid })),
+      Array.from({ length: 25 }, (_, i) => ({ id: newId(), questionId: qid, researchId: newId(), answer: i < 13 ? "seats" : "shade", district: "dusit", ageBand: "25-29", createdAt: mid })),
     );
     await db().insert(pulseSuggestions).values(Array.from({ length: 12 }, () => ({ id: newId(), body: "", topic: "getting_around", status: "sorted", month })));
     const venue = `Roundup Park ${tag}`;
@@ -58,10 +58,10 @@ describe.skipIf(!HAS_DB)("monthly round-up", () => {
 
     const html = await (await req(`/admin/pulse/roundup?lang=en&month=${month}`, { cookie: admin.cookie })).text();
     expect(html).toContain(`Roundup question ${tag}`);
-    // 16 → 15 respondents, 13 → 15 seats, 3 hidden; % from the rounded counts (15 of 15).
-    expect(html).toContain("Respondents: 15");
-    expect(html).toContain("15 · 100%");
-    expect(html).not.toContain("Respondents: 16");
+    // 13 seats, 12 shade: both shown, rounded to 15 and 10 of 25; % from the rounded counts.
+    expect(html).toContain("Respondents: 25");
+    expect(html).toContain("15 · 60%");
+    expect(html).toContain("10 · 40%");
     expect(html).toContain("Topic totals count only suggestions a moderator has sorted");
     expect(html).toContain(venue);
     expect(html).toContain("<td>10</td>");
@@ -70,7 +70,7 @@ describe.skipIf(!HAS_DB)("monthly round-up", () => {
     expect(csv.status).toBe(200);
     const text = await csv.text();
     expect(text).toContain(`${month},question,${qid},seats,More seats,15`);
-    expect(text).toContain(`${month},question,${qid},shade,More shade,<10`);
+    expect(text).toContain(`${month},question,${qid},shade,More shade,10`);
     expect(text).toContain(`${month},topic,getting_around,_sorted,Sorted suggestions,10`);
     const logged = await db().select().from(auditLog).where(and(eq(auditLog.actor, admin.id), eq(auditLog.action, "pulse.roundup_export")));
     expect(logged).toHaveLength(1);

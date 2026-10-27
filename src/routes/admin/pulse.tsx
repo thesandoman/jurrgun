@@ -20,7 +20,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { batch, getDb } from "../../db";
-import { roundedCount, roundedPct, safeCount } from "../../domain/rules";
+import { COARSE_ROUND_TO, K_THRESHOLD, roundedCount, roundedPct, safeCount } from "../../domain/rules";
 import { bkkDayStart, bkkMonth } from "../../domain/pulse-heard";
 import { DISTRICTS, label, districtsAZ } from "../../lib/constants";
 import { newId } from "../../lib/crypto";
@@ -595,6 +595,70 @@ export const mean = (x: Cell, hidden = "-") => {
   return (x.sum / x.n).toFixed(2);
 };
 
+/**
+ * One group's answers as the BMA sees them, safe against subtraction (card D2,
+ * the same rule as safeTable in domain/rules.ts): for single, scale and area
+ * questions the shown counts and the total add up, so a cell nobody can see
+ * (under 10, a column not shown, or answers to an option since removed) must
+ * never be the only one: then the smallest shown cell is hidden too, and the
+ * total is rounded to 10. Multi-choice cells don't add up to the total, so
+ * they are rounded alone.
+ */
+export type CellView = { total: number | null; cell: (v: string) => number | null; pct: (v: string) => number | null };
+
+export function cellView(kind: string, x: Cell, all: Opt[], shown: Opt[] = all, restAlways = false): CellView {
+  if (kind === "multi" || kind === "text") {
+    return {
+      total: roundedCount(x.n),
+      cell: (v) => roundedCount(x.counts.get(v) ?? 0),
+      pct: (v) => roundedPct(x.counts.get(v) ?? 0, x.n),
+    };
+  }
+  const on = new Set(shown.map((o) => o.value));
+  const raw = all.map((o) => x.counts.get(o.value) ?? 0);
+  const rest = Math.max(0, x.n - raw.reduce((a, b) => a + b, 0));
+  const cells = all.map((o, i) => (on.has(o.value) ? roundedCount(raw[i]) : null));
+  // restAlways: answers that are never shown (a place's "ok" and blanks) count as unknown even at 0,
+  // or a row would give away that there were none, and with it the rest's exact size.
+  const restUnknown = restAlways || rest > 0;
+  const unknown = cells.filter((c) => c === null).length + (restUnknown ? 1 : 0);
+  if (unknown === 1) {
+    let j = -1;
+    cells.forEach((c, i) => {
+      if (c !== null && (j < 0 || raw[i] < raw[j])) j = i;
+    });
+    if (j >= 0) cells[j] = null;
+  }
+  const hidden = cells.some((c) => c === null) || restUnknown;
+  const total = safeCount(x.n) === null ? null : hidden ? Math.max(K_THRESHOLD, Math.round(x.n / COARSE_ROUND_TO) * COARSE_ROUND_TO) : roundedCount(x.n);
+  const byValue = new Map(all.map((o, i) => [o.value, cells[i]]));
+  return {
+    total,
+    cell: (v) => byValue.get(v) ?? null,
+    pct: (v) => {
+      const c = byValue.get(v) ?? null;
+      return c === null || !total ? null : Math.min(100, Math.round((c / total) * 100));
+    },
+  };
+}
+
+const showN = (n: number | null) => (n === null ? "<10" : String(n));
+
+const REACH_SHOWN: Opt[] = [{ value: "easy", th: "", en: "" }, { value: "hard", th: "", en: "" }];
+const COMFORT_SHOWN: Opt[] = [{ value: "yes", th: "", en: "" }, { value: "no", th: "", en: "" }];
+
+/**
+ * A place row: answers, easy and hard to reach, shade yes and no. "ok", "some"
+ * and blanks are never shown, so each pair plus its unshown rest adds up to the
+ * answers; cellView keeps any one of them from being worked out (D2).
+ */
+export function placeView(p: { n: number; easy: number; hard: number; cyes: number; cno: number }): (number | null)[] {
+  const reach = cellView("single", { n: p.n, sum: 0, counts: new Map([["easy", p.easy], ["hard", p.hard]]) }, REACH_SHOWN, REACH_SHOWN, true);
+  const comfort = cellView("single", { n: p.n, sum: 0, counts: new Map([["yes", p.cyes], ["no", p.cno]]) }, COMFORT_SHOWN, COMFORT_SHOWN, true);
+  const total = reach.total === comfort.total ? reach.total : safeCount(p.n) === null ? null : Math.max(K_THRESHOLD, Math.round(p.n / COARSE_ROUND_TO) * COARSE_ROUND_TO);
+  return [total, reach.cell("easy"), reach.cell("hard"), comfort.cell("yes"), comfort.cell("no")];
+}
+
 /** Columns for the segment tables: every option, or the top 8 overall when there are many. */
 function segmentColumns(r: Results): Opt[] {
   if (r.options.length <= 8) return r.options;
@@ -613,7 +677,8 @@ adminPulse.get("/:id/results", async (c) => {
   const q = await loadQuestion(c);
   if (!q) return c.text("Not found", 404);
   const r = await aggregate(c, q);
-  const n = roundedCount(r.overall.n);
+  const overallView = cellView(q.kind, r.overall, r.options);
+  const n = overallView.total;
   const otherLabel = t("อื่น ๆ (รวมกลุ่มที่มีไม่ถึง 10 คน)", "Other (groups under 10, combined)");
   const dRows = segmentRows(r.byDistrict, districtLabel(lang), otherLabel);
   const aRows = segmentRows(r.byAge, (k) => (k === "unknown" ? t("ไม่ระบุ", "Unknown") : k), otherLabel);
@@ -640,16 +705,19 @@ adminPulse.get("/:id/results", async (c) => {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr>
-                  <td>{row.label}</td>
-                  <td>{show(row.cell.n)}</td>
-                  {q.kind === "scale" ? <td>{mean(row.cell)}</td> : null}
-                  {columns.map((o) => (
-                    <td>{show(row.cell.counts.get(o.value) ?? 0)}</td>
-                  ))}
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const v = cellView(q.kind, row.cell, r.options, columns);
+                return (
+                  <tr>
+                    <td>{row.label}</td>
+                    <td>{showN(v.total)}</td>
+                    {q.kind === "scale" ? <td>{mean(row.cell)}</td> : null}
+                    {columns.map((o) => (
+                      <td>{showN(v.cell(o.value))}</td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -675,8 +743,8 @@ adminPulse.get("/:id/results", async (c) => {
       </p>
       <Notice kind="info">
         {t(
-          "แสดงเฉพาะผลรวม ตัวเลขปัดเป็นหลัก 5 ที่ใกล้ที่สุด ช่องที่มีน้อยกว่า 10 คนจะแสดงเป็น \"<10\" กลุ่มที่มีไม่ถึง 10 คนจะรวมไว้ใน \"อื่น ๆ\" และไม่แสดงค่าเฉลี่ย (-) ถ้ามีช่องที่ซ่อนอยู่",
-          "Aggregates only. Counts are rounded to the nearest 5. Any cell under 10 shows as \"<10\"; segments under 10 are merged into \"Other\"; a mean shows as \"-\" when a cell is hidden.",
+          "แสดงเฉพาะผลรวม ตัวเลขปัดเป็นหลัก 5 ที่ใกล้ที่สุด ช่องที่มีน้อยกว่า 10 คนจะแสดงเป็น \"<10\" กลุ่มที่มีไม่ถึง 10 คนจะรวมไว้ใน \"อื่น ๆ\" และไม่แสดงค่าเฉลี่ย (-) ถ้ามีช่องที่ซ่อนอยู่ ถ้ามีช่องซ่อนเพียงช่องเดียว จะซ่อนอีกช่องด้วยและปัดยอดรวมเป็นหลัก 10 เพื่อไม่ให้ลบเลขหาค่าที่ซ่อนได้",
+          "Aggregates only. Counts are rounded to the nearest 5. Any cell under 10 shows as \"<10\"; segments under 10 are merged into \"Other\"; a mean shows as \"-\" when a cell is hidden. If only one cell would be hidden, a second is hidden too and the total is rounded to the nearest 10, so no cell can be worked out by subtraction.",
         )}
       </Notice>
       {r.asOf ? (
@@ -723,9 +791,8 @@ adminPulse.get("/:id/results", async (c) => {
               </thead>
               <tbody>
                 {r.options.map((o) => {
-                  const raw = r.overall.counts.get(o.value) ?? 0;
-                  const k = roundedCount(raw);
-                  const pct = roundedPct(raw, r.overall.n);
+                  const k = overallView.cell(o.value);
+                  const pct = overallView.pct(o.value);
                   return (
                     <tr>
                       <td>{optLabel(o)}</td>
@@ -865,11 +932,9 @@ adminPulse.get("/places", async (c) => {
                 <tr>
                   <td>{String(venue)}</td>
                   <td>{label(DISTRICTS, String(district), lang)}</td>
-                  <td>{show(Number(n))}</td>
-                  <td>{show(Number(easy))}</td>
-                  <td>{show(Number(hard))}</td>
-                  <td>{show(Number(cyes))}</td>
-                  <td>{show(Number(cno))}</td>
+                  {placeView({ n: Number(n), easy: Number(easy), hard: Number(hard), cyes: Number(cyes), cno: Number(cno) }).map((x) => (
+                    <td>{showN(x)}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -1050,8 +1115,8 @@ adminPulse.get("/roundup", async (c) => {
       </form>
       <Notice kind="info">
         {t(
-          "เฉพาะเดือนที่จบแล้ว แสดงเฉพาะผลรวมของกลุ่มที่มีอย่างน้อย 10 คน ตัวเลขปัดเป็นหลัก 5 ที่ใกล้ที่สุด ช่องที่น้อยกว่า 10 แสดงเป็น \"<10\"",
-          "Ended months only. Totals from groups of 10 or more; counts are rounded to the nearest 5, and any cell under 10 shows as \"<10\".",
+          "เฉพาะเดือนที่จบแล้ว แสดงเฉพาะผลรวมของกลุ่มที่มีอย่างน้อย 10 คน ตัวเลขปัดเป็นหลัก 5 ที่ใกล้ที่สุด ช่องที่น้อยกว่า 10 แสดงเป็น \"<10\" ถ้ามีช่องซ่อนเพียงช่องเดียว จะซ่อนอีกช่องด้วยและปัดยอดรวมเป็นหลัก 10",
+          "Ended months only. Totals from groups of 10 or more; counts are rounded to the nearest 5, and any cell under 10 shows as \"<10\". If only one cell would be hidden, a second is hidden too and the total is rounded to the nearest 10.",
         )}
       </Notice>
 
@@ -1069,22 +1134,22 @@ adminPulse.get("/roundup", async (c) => {
           <Card>
             <h3 style="margin-top:0">{lang === "en" ? x.q.promptEn : x.q.promptTh}</h3>
             <p class="muted">
-              {t("ผู้ตอบ", "Respondents")}: {show(x.overall.n)}
+              {t("ผู้ตอบ", "Respondents")}: {showN(cellView(x.q.kind, x.overall, x.options).total)}
               {x.q.kind === "scale" ? ` · ${t("ค่าเฉลี่ย", "Mean")} ${mean(x.overall)} / 5` : null}
             </p>
             {x.q.kind === "text"
               ? null
-              : x.options
-                  .map((o) => ({ o, n: x.overall.counts.get(o.value) ?? 0 }))
-                  .sort((a, b) => (roundedCount(b.n) ?? -1) - (roundedCount(a.n) ?? -1))
-                  .slice(0, 8)
-                  .map(({ o, n }) => {
-                    const p = roundedPct(n, x.overall.n);
+              : ((top) => ((v) => top.map((o) => ({ o, s: v.cell(o.value), p: v.pct(o.value) })))(cellView(x.q.kind, x.overall, x.options, top)))(
+                  x.options
+                    .slice()
+                    .sort((a, b) => (roundedCount(x.overall.counts.get(b.value) ?? 0) ?? -1) - (roundedCount(x.overall.counts.get(a.value) ?? 0) ?? -1))
+                    .slice(0, 8),
+                ).map(({ o, s, p }) => {
                     return (
                       <div style="margin:6px 0">
                         <div class="spread">
                           <span>{optLabel(o)}</span>
-                          <small>{p === null ? "<10" : `${show(n)} · ${p}%`}</small>
+                          <small>{p === null ? "<10" : `${s} · ${p}%`}</small>
                         </div>
                         <div class="bar">
                           <i style={`width:${p ?? 0}%`} />
@@ -1150,11 +1215,9 @@ adminPulse.get("/roundup", async (c) => {
                 <tr>
                   <td>{p.venue}</td>
                   <td>{label(DISTRICTS, p.district, lang)}</td>
-                  <td>{show(p.n)}</td>
-                  <td>{show(p.easy)}</td>
-                  <td>{show(p.hard)}</td>
-                  <td>{show(p.cyes)}</td>
-                  <td>{show(p.cno)}</td>
+                  {placeView(p).map((x) => (
+                    <td>{showN(x)}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -1172,14 +1235,16 @@ adminPulse.get("/roundup.csv", async (c) => {
   const r = await loadRoundup(c, month, now);
   const lines: string[][] = [["month", "section", "item", "option", "label", "count"]];
   for (const x of r.questions) {
-    lines.push([month, "question", x.q.id, "_respondents", "Respondents", show(x.overall.n)]);
+    const v = cellView(x.q.kind, x.overall, x.options);
+    lines.push([month, "question", x.q.id, "_respondents", "Respondents", showN(v.total)]);
     if (x.q.kind === "scale") lines.push([month, "question", x.q.id, "_mean", "Mean", mean(x.overall, "hidden")]);
-    if (x.q.kind !== "text") for (const o of x.options) lines.push([month, "question", x.q.id, o.value, o.en, show(x.overall.counts.get(o.value) ?? 0)]);
+    if (x.q.kind !== "text") for (const o of x.options) lines.push([month, "question", x.q.id, o.value, o.en, showN(v.cell(o.value))]);
   }
   for (const x of r.topics) lines.push([month, "topic", x.topic, "_sorted", "Sorted suggestions", show(x.n)]);
   for (const p of r.places) {
     const item = `${p.venue} (${p.district})`;
-    for (const [k, v] of [["_answers", p.n], ["easy", p.easy], ["hard", p.hard], ["shade_yes", p.cyes], ["shade_no", p.cno]] as const) lines.push([month, "place", item, k, k, show(v)]);
+    const shown = placeView(p);
+    ["_answers", "easy", "hard", "shade_yes", "shade_no"].forEach((k, i) => lines.push([month, "place", item, k, k, showN(shown[i])]));
   }
   await audit(getDb(c.env), c.var.user!.account.id, "pulse.roundup_export", { type: "pulse_roundup", id: month }, { rows: lines.length - 1 });
   const body = "﻿" + lines.map((l) => l.map(csvField).join(",")).join("\r\n") + "\r\n";
@@ -1195,10 +1260,11 @@ adminPulse.get("/:id/export.csv", async (c) => {
   const r = await aggregate(c, q);
   const lines: string[][] = [["scope", "group", "option", "option_label", "count"]];
   const emit = (scope: string, group: string, x: Cell) => {
-    lines.push([scope, group, "_respondents", "Respondents", show(x.n)]);
+    const v = cellView(q.kind, x, r.options);
+    lines.push([scope, group, "_respondents", "Respondents", showN(v.total)]);
     if (q.kind === "text") return;
     if (q.kind === "scale") lines.push([scope, group, "_mean", "Mean", mean(x, "hidden")]);
-    for (const o of r.options) lines.push([scope, group, o.value, o.en, show(x.counts.get(o.value) ?? 0)]);
+    for (const o of r.options) lines.push([scope, group, o.value, o.en, showN(v.cell(o.value))]);
   };
   if (r.asOf) lines.push(["meta", "all", "_snapshot", "Open question: answers up to (UTC)", r.asOf.toISOString()]);
   emit("overall", "all", r.overall);
