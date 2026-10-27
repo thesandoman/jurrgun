@@ -1528,4 +1528,7 @@ html.a11y-motion .btn.start-cta:active{transform:none}
 .steps3{list-style:none;counter-reset:step;margin:0;padding:0;display:grid;gap:8px}
 .steps3 li{counter-increment:step;display:flex;gap:10px;align-items:flex-start;line-height:1.45}
 .steps3 li::before{content:counter(step);flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-weight:800;font-size:.9rem}
+/* Landing card 4: flat tiles. One edge per tile and nothing raised inside it: no shadow on the tiles,
+   the start button or the avatars. */
+.landing-bento .tile2,.landing-bento .tile2 *{box-shadow:none}
 `);

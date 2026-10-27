@@ -35,7 +35,7 @@ publicRoutes.get("/", (c) => {
     // The homepage for search: indexable and with site data only signed out (signed in, "/" is Discover, noindex).
     { title: t("เจอเพื่อนใหม่ในกรุงเทพฯ", "Make friends in Bangkok"), description: L(lang, ABOUT), jsonLd: siteJsonLd(lang), publicView: !user },
     <>
-      <Bento>
+      <Bento class="landing-bento">
         <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 7 }} lang={lang}>
           <Pill dot>{t("กรุงเทพฯ · กลุ่มเล็ก", "Bangkok · small groups")}</Pill>
           {/* Each phrase stays whole where it fits (Thai would otherwise split "แล้ว|เจอกันนะ") and wraps where it doesn't;

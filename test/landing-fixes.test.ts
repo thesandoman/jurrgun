@@ -123,6 +123,14 @@ describe("card 1: bigger headline", () => {
   });
 });
 
+describe("card 4: flat tiles", () => {
+  it("drops every shadow on and inside the landing tiles", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    expect(A11Y_CSS).toContain(".landing-bento .tile2,.landing-bento .tile2 *{box-shadow:none}");
+    expect((await bento()).html).toContain('class="bento landing-bento"');
+  });
+});
+
 describe("card 2: one start", () => {
   it("has a single primary, Find my first table, to sign up, with Sign in as the secondary link", async () => {
     const en = (await bento("en")).html;
