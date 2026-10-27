@@ -2,8 +2,10 @@
 //
 //   BASE=http://localhost:8787 node .claude/skills/jurrgun-ui/scripts/shots.mjs '<jobs json>' [outDir]
 //
-// Each job: { name, path, who?, w?, h?, mobile?, mode?: "light"|"dark", lang?: "th"|"en", js?, wait?, full?, check? }
+// Each job: { name, path, who?, firstVisit?, w?, h?, mobile?, mode?: "light"|"dark", lang?: "th"|"en", js?, wait?, full?, check? }
 //   who    seeded username to sign in as (password read from scripts/seed.ts, never printed)
+//   firstVisit  signed out, act like a first-time visitor: "/" sends you to /intro. Without it the
+//          intro counts as seen, so a signed-out "/" shows the landing page itself.
 //   js     expression run before the shot; its value is printed
 //   full   capture the whole page (up to 2400px tall)
 //   check  print layout problems: sideways scroll, gaps between blocks over the spacing cap,
@@ -74,6 +76,8 @@ for (const j of jobs) {
   await send("Network.clearBrowserCookies");
   if (j.who) await send("Network.setCookie", { name: "bkk_sid", value: await login(j.who), domain: "localhost", path: "/" });
   await send("Network.setCookie", { name: "lang", value: j.lang || "th", domain: "localhost", path: "/" });
+  // The intro shows once per browser (jg_intro, src/routes/public.tsx); mark it seen unless the job wants a first visit.
+  if (!j.firstVisit) await send("Network.setCookie", { name: "jg_intro", value: "seen", domain: "localhost", path: "/" });
   await send("Emulation.setDeviceMetricsOverride", { width: w, height: j.h || (w < 768 ? 812 : 900), deviceScaleFactor: 1, mobile: j.mobile ?? w < 768 });
   await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: j.mode || "light" }] });
   await send("Page.navigate", { url: BASE + j.path });
