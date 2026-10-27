@@ -55,7 +55,7 @@ for (const d of DUMMIES) {
   const [found] = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.username, username)).limit(1);
   const id = found?.id ?? newId();
   if (!found) {
-    await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, role: "user", researchId: newId() });
+    await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, role: "user", researchId: newId(), isDemo: true });
     await db.insert(profiles).values({
       accountId: id,
       nickname: d.name,

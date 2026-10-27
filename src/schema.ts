@@ -120,6 +120,12 @@ export const accounts = pgTable(
      * Read only as k >= 10 totals in City Insight.
      */
     signupSource: text("signup_source"),
+    /**
+     * Demo, seed or staff-test account (owner C2, 27 Oct 2026, migration 0033). Set by
+     * the seed scripts and by bma_admin only (audited). Left out of every staff metric
+     * (services/demo.ts) and, before launch, out of seating, Discover and people lists.
+     */
+    isDemo: boolean("is_demo").notNull().default(false),
     createdAt: created(),
   },
   (t) => [uniqueIndex("identity_accounts_username_idx").on(t.username), index("identity_accounts_role_idx").on(t.role)],

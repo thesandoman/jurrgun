@@ -18,7 +18,7 @@
  */
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { COARSE_ROUND_TO, K_THRESHOLD, roundedCount, roundedPct, safeCount } from "../../domain/rules";
 import { bkkDayStart, bkkMonth } from "../../domain/pulse-heard";
@@ -283,7 +283,7 @@ adminPulse.get("/", async (c) => {
     ? await db
         .select({ q: pulseResponses.questionId, n: sql<number>`count(*)`.mapWith(Number) })
         .from(pulseResponses)
-        .where(inArray(pulseResponses.questionId, qs.map((q) => q.id)))
+        .where(and(inArray(pulseResponses.questionId, qs.map((q) => q.id)), sql`${pulseResponses.researchId} not in (select research_id from identity_accounts where is_demo and research_id is not null)`))
         .groupBy(pulseResponses.questionId)
         .limit(200)
     : [];
@@ -501,7 +501,7 @@ async function aggregate(c: Context<AppEnv>, q: Question, now = new Date()): Pro
   const totalsQ = db.execute(sql`
     select district, age_band, count(*) as n
     from research_pulse_responses
-    where question_id = ${q.id} ${before}
+    where question_id = ${q.id} ${before} and research_id not in (select research_id from identity_accounts where is_demo and research_id is not null)
     group by district, age_band
     limit 1000`);
   // Answer values are [a-z0-9_] (or 1–5), so stripping JSON punctuation and
@@ -514,7 +514,7 @@ async function aggregate(c: Context<AppEnv>, q: Question, now = new Date()): Pro
           select e.v, r.district, r.age_band, count(*) as n
           from research_pulse_responses r
           cross join lateral unnest(string_to_array(translate(r.answer::text, '"\\[] ', ''), ',')) as e(v)
-          where r.question_id = ${q.id} ${beforeR}
+          where r.question_id = ${q.id} ${beforeR} and r.research_id not in (select research_id from identity_accounts where is_demo and research_id is not null)
           group by e.v, r.district, r.age_band
           limit 10000`);
   const [totals, vals] = (await Promise.all([totalsQ, valuesQ])) as [unknown[], unknown[]];

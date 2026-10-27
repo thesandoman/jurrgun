@@ -625,6 +625,7 @@ async function createPerson(p: Person): Promise<void> {
     passwordHash: hash,
     passwordSalt: salt,
     role: p.role ?? "user",
+    isDemo: true,
     partnerOrgId: p.partner ? ORG_ID : null,
     status: p.status ?? "active",
     suspendedUntil: p.suspendedUntil ?? null,

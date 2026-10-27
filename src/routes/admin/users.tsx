@@ -37,6 +37,7 @@ const basics = {
   verification: accounts.verification,
   bkkRegistered: accounts.bkkRegistered,
   trustedHost: accounts.trustedHost,
+  isDemo: accounts.isDemo,
   createdAt: accounts.createdAt,
   nickname: profiles.nickname,
   district: profiles.district,
@@ -191,6 +192,10 @@ adminUsers.get("/:id", async (c) => {
               <tr><th scope="row">{t("การยืนยันบัญชี", "Account verification")}</th><td>{L2(verLabel, acct.verification)}</td></tr>
               <tr><th scope="row">{t("ทะเบียนบ้าน กทม.", "Bangkok registration")}</th><td>{L2(bkkLabel, acct.bkkRegistered)}</td></tr>
               <tr>
+                <th scope="row">{t("บัญชีทดลอง", "Demo or test account")}</th>
+                <td>{acct.isDemo ? t("ใช่ ไม่นับในตัวเลขของเจ้าหน้าที่", "Yes: left out of every staff figure") : t("ไม่ใช่", "No")}</td>
+              </tr>
+              <tr>
                 <th scope="row">{t("ผู้จัดที่ไว้ใจ", "Trusted host")}</th>
                 <td>{acct.trustedHost ? t("ใช่ กิจกรรมใหม่ไม่ต้องรอตรวจ", "Yes: new events skip review") : t("ไม่ใช่", "No")}</td>
               </tr>
@@ -253,6 +258,13 @@ adminUsers.get("/:id", async (c) => {
                 {BKK.map((v) => (
                   <option value={v} selected={v === acct.bkkRegistered}>{L2(bkkLabel, v)}</option>
                 ))}
+              </select>
+              <Button kind="ghost">{t("บันทึก", "Save")}</Button>
+            </form>
+            <form method="post" action={`/admin/users/${encodeURIComponent(acct.id)}/demo`} class="row">
+              <select name="value" aria-label={t("บัญชีทดลอง", "Demo or test account")} style="max-width:260px">
+                <option value="no" selected={!acct.isDemo}>{t("บัญชีจริง", "Real account")}</option>
+                <option value="yes" selected={acct.isDemo}>{t("บัญชีทดลอง ไม่นับในตัวเลข", "Demo or test: leave out of figures")}</option>
               </select>
               <Button kind="ghost">{t("บันทึก", "Save")}</Button>
             </form>
@@ -342,3 +354,26 @@ adminUsers.post("/:id/untrust", async (c) => {
   return c.redirect(`/admin/users/${encodeURIComponent(id)}?notice=untrusted`);
 });
 adminUsers.post("/:id/bkk", (c) => setField(c, "bkkRegistered", BKK));
+
+/**
+ * Demo or test account (owner C2, 27 Oct 2026): bma_admin only, every change audited,
+ * like partners.set_role. Flagged accounts are left out of every staff metric.
+ */
+adminUsers.post("/:id/demo", async (c) => {
+  const me = c.var.user!.account;
+  if (!hasRole(me.role, [])) return c.text("Forbidden", 403);
+  const id = c.req.param("id");
+  const value = str((await c.req.parseBody()).value);
+  if (value !== "yes" && value !== "no") return c.text("Bad request", 400);
+  const db = getDb(c.env);
+  const [acct] = await db.select({ id: accounts.id, username: accounts.username, isDemo: accounts.isDemo }).from(accounts).where(eq(accounts.id, id)).limit(1);
+  if (!acct) return c.text("Not found", 404);
+  const to = value === "yes";
+  if (acct.isDemo !== to) {
+    await batch(c.env, [
+      db.update(accounts).set({ isDemo: to }).where(eq(accounts.id, id)),
+      audit(db, me.id, "users.set_demo", { type: "account", id }, { username: acct.username, from: acct.isDemo, to }),
+    ]);
+  }
+  return c.redirect(`/admin/users/${encodeURIComponent(id)}?notice=saved`);
+});

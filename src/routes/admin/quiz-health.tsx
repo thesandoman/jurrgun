@@ -207,27 +207,29 @@ const BLEND = sql`(case when jsonb_typeof(v.blend) = 'string' then (v.blend #>> 
 adminQuizHealth.get("/", async (c) => {
   const { t, lang } = view(c);
   const db = getDb(c.env);
+  // Demo and seed accounts (is_demo, owner C2) are left out; anonymous quiz takers stay in.
   const [feelByType, feelBySegment, picks, retakes, feelByLang, picksByLang, reach] = await Promise.all([
-    db.execute(sql`select v.archetype, ${BLEND}->>'feel', count(*) from social_vibes v where ${BLEND} ? 'feel' group by 1, 2`),
-    db.execute(sql`select ${SEGMENT_SQL}, ${BLEND}->>'feel', count(*) from social_vibes v join social_profiles p on p.account_id = v.account_id where ${BLEND} ? 'feel' group by 1, 2`),
+    db.execute(sql`select v.archetype, ${BLEND}->>'feel', count(*) from social_vibes v where (v.account_id is null or v.account_id not in (select id from identity_accounts where is_demo)) and ${BLEND} ? 'feel' group by 1, 2`),
+    db.execute(sql`select ${SEGMENT_SQL}, ${BLEND}->>'feel', count(*) from social_vibes v join social_profiles p on p.account_id = v.account_id where (v.account_id is null or v.account_id not in (select id from identity_accounts where is_demo)) and ${BLEND} ? 'feel' group by 1, 2`),
     db.execute(sql`
       select e->>0, e->>1, v.archetype, count(*)
       from social_vibes v
       cross join lateral jsonb_array_elements(case when jsonb_typeof(${BLEND}->'picks') = 'array' then ${BLEND}->'picks' else '[]'::jsonb end) e
+      where (v.account_id is null or v.account_id not in (select id from identity_accounts where is_demo))
       group by 1, 2, 3`),
     db.execute(sql`
       select case when p.account_id is null then 'none' else ${SEGMENT_SQL} end, ${BLEND}->'prev'->>'archetype', v.archetype, count(*)
       from social_vibes v
       left join social_profiles p on p.account_id = v.account_id
-      where ${BLEND} ? 'prev'
+      where (v.account_id is null or v.account_id not in (select id from identity_accounts where is_demo)) and ${BLEND} ? 'prev'
         and v.taken_at - (${BLEND}->'prev'->>'at')::timestamptz between ${`${RETAKE_DAYS.min} days`}::interval and ${`${RETAKE_DAYS.max} days`}::interval
       group by 1, 2, 3`),
-    db.execute(sql`select ${BLEND}->>'lang', ${BLEND}->>'feel', count(*) from social_vibes v where ${BLEND} ? 'feel' and ${BLEND} ? 'lang' group by 1, 2`),
+    db.execute(sql`select ${BLEND}->>'lang', ${BLEND}->>'feel', count(*) from social_vibes v where (v.account_id is null or v.account_id not in (select id from identity_accounts where is_demo)) and ${BLEND} ? 'feel' and ${BLEND} ? 'lang' group by 1, 2`),
     db.execute(sql`
       select e->>0, ${BLEND}->>'lang', (e->>1) = 'none', count(*)
       from social_vibes v
       cross join lateral jsonb_array_elements(case when jsonb_typeof(${BLEND}->'picks') = 'array' then ${BLEND}->'picks' else '[]'::jsonb end) e
-      where ${BLEND} ? 'lang'
+      where (v.account_id is null or v.account_id not in (select id from identity_accounts where is_demo)) and ${BLEND} ? 'lang'
       group by 1, 2, 3`),
     db.execute(sql`select segment, question, sum(reached) from social_quiz_reach group by 1, 2`),
   ]);

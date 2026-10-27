@@ -199,14 +199,14 @@ async function cityHeard(c: C, district: string, now = new Date()): Promise<Hear
     db.execute(sql`
       select question_id, (district = ${district}) as mine, count(*) as n
       from research_pulse_responses
-      where question_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})
+      where question_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) and research_id not in (select research_id from identity_accounts where is_demo and research_id is not null)
       group by question_id, mine
       limit 1000`),
     db.execute(sql`
       select r.question_id, e.v, (r.district = ${district}) as mine, count(*) as n
       from research_pulse_responses r
       cross join lateral unnest(string_to_array(translate(r.answer::text, '"\\[] ', ''), ',')) as e(v)
-      where r.question_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})
+      where r.question_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) and r.research_id not in (select research_id from identity_accounts where is_demo and research_id is not null)
       group by r.question_id, e.v, mine
       limit 20000`),
   ])) as unknown as [unknown[], unknown[]];

@@ -7,7 +7,7 @@
  *   admin   — BMA admin         host    — event host
  *   mod     — moderator         ploy, ken, ari, sam, mai, tom — members
  */
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../src/db";
 import { hashPassword, newId } from "../src/lib/crypto";
 import { VISITBANGKOK_ROUTES } from "../src/lib/constants";
@@ -26,7 +26,7 @@ async function ensureAccount(
   if (existing) return existing.id;
   const { hash, salt } = await hashPassword(PASSWORD);
   const id = newId();
-  await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, role, researchId: newId() });
+  await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, role, researchId: newId(), isDemo: true });
   await db.insert(profiles).values({
     accountId: id,
     nickname: profile.nickname,
@@ -190,4 +190,10 @@ if (!anyQ) {
 }
 
 console.log(`Seeded. Logins (password "${PASSWORD}"): admin, host, mod, ploy, ken, ari, sam, mai, tom`);
+// Accounts made by older runs of the seed scripts, before is_demo existed (owner C2): mark them too.
+await db
+  .update(accounts)
+  .set({ isDemo: true })
+  .where(sql`${accounts.username} in ('admin', 'host', 'mod', 'ploy', 'ken', 'ari', 'sam', 'mai', 'tom') or ${accounts.username} like 'demo\\_%'`);
+
 process.exit(0);

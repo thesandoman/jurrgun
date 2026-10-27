@@ -17,6 +17,7 @@ import { asc, and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
 import { K_THRESHOLD, roundedCount, roundedPct, safeCount, safeTable } from "../../domain/rules";
 import { bkkDayStart } from "../../domain/pulse-heard";
+import { notDemo, notDemoEvent, notDemoResearch } from "../../services/demo";
 import { DISTRICTS, label } from "../../lib/constants";
 import type { AppEnv } from "../../lib/env";
 import { requireRole } from "../../lib/session";
@@ -110,15 +111,15 @@ export async function segmentFunnel(db: Db, since: string, until: string, among?
       select ${SEGMENT_SQL} as seg, count(*)
       from identity_accounts a
       join social_profiles p on p.account_id = a.id
-      where a.role = 'user' and a.status = 'active' and p.onboarded_at is not null ${amongSql(sql`a.id`, among)}
+      where a.role = 'user' and a.status = 'active' and p.onboarded_at is not null and not a.is_demo ${amongSql(sql`a.id`, among)}
       group by 1`),
     db.execute(sql`
       select ${SEGMENT_SQL} as seg, count(*),
-             sum(case when exists (select 1 from social_registrations r where r.account_id = a.id) then 1 else 0 end)
+             sum(case when exists (select 1 from social_registrations r where r.account_id = a.id ${notDemoEvent(sql`r.event_id`)}) then 1 else 0 end)
       from identity_accounts a
       join social_profiles p on p.account_id = a.id
       where a.role = 'user' and p.onboarded_at is not null
-        and a.created_at >= ${since}::timestamptz and a.created_at < ${until}::timestamptz ${amongSql(sql`a.id`, among)}
+        and a.created_at >= ${since}::timestamptz and a.created_at < ${until}::timestamptz and not a.is_demo ${amongSql(sql`a.id`, among)}
       group by 1`),
     db.execute(sql`
       select ${SEGMENT_SQL} as seg, count(*),
@@ -131,7 +132,7 @@ export async function segmentFunnel(db: Db, since: string, until: string, among?
       join social_events e on e.id = r.event_id
       join social_profiles p on p.account_id = r.account_id
       where e.ends_at >= ${since}::timestamptz and e.ends_at < ${until}::timestamptz and e.status = 'published'
-        and (r.status = 'confirmed' or r.checked_in_at is not null) ${amongSql(sql`r.account_id`, among)}
+        and (r.status = 'confirmed' or r.checked_in_at is not null) ${notDemo(sql`r.account_id`)} ${notDemoEvent(sql`e.id`)} ${amongSql(sql`r.account_id`, among)}
       group by 1`),
   ]);
   const out = new Map<string, SegmentRow>(
@@ -160,9 +161,9 @@ export const OTHER_SOURCES = "(other)";
 export async function sourceFunnel(db: Db, since: string, until: string, among?: string[]): Promise<SourceCells[]> {
   const rows = await db.execute(sql`
     select coalesce(a.signup_source, ${NO_SOURCE}) as src, count(*),
-           sum(case when exists (select 1 from social_registrations r where r.account_id = a.id) then 1 else 0 end)
+           sum(case when exists (select 1 from social_registrations r where r.account_id = a.id ${notDemoEvent(sql`r.event_id`)}) then 1 else 0 end)
     from identity_accounts a
-    where a.role = 'user' and a.created_at >= ${since}::timestamptz and a.created_at < ${until}::timestamptz ${amongSql(sql`a.id`, among)}
+    where a.role = 'user' and not a.is_demo and a.created_at >= ${since}::timestamptz and a.created_at < ${until}::timestamptz ${amongSql(sql`a.id`, among)}
     group by 1
     order by 2 desc
     limit 500`);
@@ -214,10 +215,10 @@ adminInsights.get("/", async (c) => {
   ] = await Promise.all([
     db.execute(sql`
       select count(*),
-             sum(case when exists (select 1 from social_registrations r where r.account_id = a.id) then 1 else 0 end)
+             sum(case when exists (select 1 from social_registrations r where r.account_id = a.id ${notDemoEvent(sql`r.event_id`)}) then 1 else 0 end)
       from identity_accounts a
       join social_profiles p on p.account_id = a.id
-      where a.role = 'user' and p.onboarded_at is not null and a.created_at >= ${since}::timestamptz`),
+      where a.role = 'user' and not a.is_demo and p.onboarded_at is not null and a.created_at >= ${since}::timestamptz`),
     db.execute(sql`
       select count(*),
              sum(case when r.checked_in_at is not null then 1 else 0 end),
@@ -229,21 +230,21 @@ adminInsights.get("/", async (c) => {
       from social_registrations r
       join social_events e on e.id = r.event_id
       where ${inWindow} and e.status = 'published'
-        and (r.status = 'confirmed' or r.checked_in_at is not null)`),
+        and (r.status = 'confirmed' or r.checked_in_at is not null) ${notDemo(sql`r.account_id`)} ${notDemoEvent(sql`e.id`)}`),
     db.execute(sql`
       select count(*), sum(case when x.c >= 2 then 1 else 0 end), sum(x.c)
       from (
         select r.account_id, count(*) as c
         from social_registrations r
         join social_events e on e.id = r.event_id
-        where r.checked_in_at is not null and ${inWindow}
+        where r.checked_in_at is not null and ${inWindow} ${notDemo(sql`r.account_id`)} ${notDemoEvent(sql`e.id`)}
         group by r.account_id
       ) x`),
     db.execute(sql`
       select count(*)
       from social_connections x
       join social_events e on e.id = x.event_id
-      where ${inWindow}`),
+      where ${inWindow} ${notDemo(sql`x.a_account`)} ${notDemo(sql`x.b_account`)} ${notDemoEvent(sql`e.id`)}`),
     db.execute(sql`
       select count(*),
              count(f.met_new_person), sum(case when f.met_new_person then 1 else 0 end),
@@ -252,27 +253,28 @@ adminInsights.get("/", async (c) => {
              count(f.group_rating), avg(f.group_rating)
       from social_feedback f
       join social_events e on e.id = f.event_id
-      where ${inWindow}`),
+      where ${inWindow} ${notDemo(sql`f.account_id`)} ${notDemoEvent(sql`e.id`)}`),
     db.execute(sql`
       select count(*) from social_reports
-      where created_at >= ${since}::timestamptz and reason in (${sql.join(HARASSMENT_REASONS.map((r) => sql`${r}`), sql`, `)})`),
+      where created_at >= ${since}::timestamptz ${notDemo(sql`reporter`)} and reason in (${sql.join(HARASSMENT_REASONS.map((r) => sql`${r}`), sql`, `)})`),
     db.execute(sql`
       select phase, count(*), avg(q1 + q2 + q3)
       from research_wellbeing
+      where true ${notDemoResearch(sql`research_id`)}
       group by phase
       limit 10`),
     db.execute(sql`
       select e.district, count(distinct e.id), sum(case when r.checked_in_at is not null then 1 else 0 end)
       from social_events e
-      left join social_registrations r on r.event_id = e.id
-      where ${inWindow} and e.status = 'published'
+      left join social_registrations r on r.event_id = e.id ${notDemo(sql`r.account_id`)}
+      where ${inWindow} and e.status = 'published' ${notDemoEvent(sql`e.id`)}
       group by e.district
       limit 100`),
     db.execute(sql`
       select e.district, count(f.felt_safe), avg(f.felt_safe)
       from social_feedback f
       join social_events e on e.id = f.event_id
-      where ${inWindow}
+      where ${inWindow} ${notDemo(sql`f.account_id`)} ${notDemoEvent(sql`e.id`)}
       group by e.district
       limit 100`),
     db
@@ -289,7 +291,7 @@ adminInsights.get("/", async (c) => {
         .select({ q: pulseResponses.questionId, v: answerExpr, n: sql<number>`count(*)`.mapWith(Number) })
         .from(pulseResponses)
         // A daily snapshot, never live: these questions are open, and a refresh after one answer would show it (C1).
-        .where(and(inArray(pulseResponses.questionId, barrierQs.map((q) => q.id)), lt(pulseResponses.createdAt, bkkDayStart(new Date()))))
+        .where(and(inArray(pulseResponses.questionId, barrierQs.map((q) => q.id)), lt(pulseResponses.createdAt, bkkDayStart(new Date())), sql`${pulseResponses.researchId} not in (select research_id from identity_accounts where is_demo and research_id is not null)`))
         .groupBy(pulseResponses.questionId, answerExpr)
         .limit(1000)
     : [];
@@ -466,23 +468,25 @@ adminInsights.get("/", async (c) => {
           )
       )
       select count(*), sum(case when money_flag then 1 else 0 end),
-      (select count(*) from social_reports where target_message is not null and ${winTs} and target_message not in (select id from pinky_msgs))
-      from social_chat_messages where ${winTs} and id not in (select id from pinky_msgs)`),
+      (select count(*) from social_reports where target_message is not null and ${winTs} and target_message not in (select id from pinky_msgs)
+        and target_message not in (select id from social_chat_messages where sender in (select id from identity_accounts where is_demo)))
+      from social_chat_messages where ${winTs} and id not in (select id from pinky_msgs) ${notDemo(sql`sender`)}`),
     db.execute(sql`select count(*), sum(case when answer = 'help' then 1 else 0 end), sum(case when answer is not null then 1 else 0 end)
-      from social_safe_arrivals where ${winTs}`),
+      from social_safe_arrivals where ${winTs} ${notDemo(sql`account_id`)}`),
     db.execute(sql`select count(*), sum(case when status = 'accepted' then 1 else 0 end), sum(case when status = 'skipped' then 1 else 0 end)
-      from social_weekly_plans where ${winTs}`),
-    db.execute(sql`select skip_reason, count(*) from social_weekly_plans where status = 'skipped' and ${winTs} group by skip_reason`),
+      from social_weekly_plans where ${winTs} ${notDemo(sql`account_id`)}`),
+    db.execute(sql`select skip_reason, count(*) from social_weekly_plans where status = 'skipped' and ${winTs} ${notDemo(sql`account_id`)} group by skip_reason`),
     db.execute(sql`select count(*), sum(case when felt_safe >= 4 then 1 else 0 end), avg(felt_heard), count(felt_heard),
       sum(case when would_meet_again then 1 else 0 end), sum(case when showed_up then 1 else 0 end)
-      from social_meet_feedback where ${winTs}`),
-    db.execute(sql`select avg(felt_heard), count(felt_heard) from social_feedback where ${winTs}`),
-    db.execute(sql`select count(*), (select count(*) from social_pitch_joins where ${winTs}) from social_plan_pitches where ${winTs}`),
+      from social_meet_feedback where ${winTs} ${notDemo(sql`account_id`)} ${notDemo(sql`about_account`)}`),
+    db.execute(sql`select avg(felt_heard), count(felt_heard) from social_feedback where ${winTs} ${notDemo(sql`account_id`)}`),
+    db.execute(sql`select count(*), (select count(*) from social_pitch_joins where ${winTs} ${notDemo(sql`account_id`)}) from social_plan_pitches where ${winTs} ${notDemo(sql`account_id`)}`),
     db.execute(sql`select count(*),
       sum(case when a_still is not null then 1 else 0 end) + sum(case when b_still is not null then 1 else 0 end),
       sum(case when a_still then 1 else 0 end) + sum(case when b_still then 1 else 0 end),
-      (select count(*) from social_connections where ${winTs})
-      from social_graduations where ${winTs}`),
+      (select count(*) from social_connections where ${winTs} ${notDemo(sql`a_account`)} ${notDemo(sql`b_account`)})
+      from social_graduations where ${winTs}
+        and connection_id not in (select id from social_connections where a_account in (select id from identity_accounts where is_demo) or b_account in (select id from identity_accounts where is_demo))`),
   ]);
   const [gradN, stillAnswered, stillYes, connsN] = nums(gradRow);
   // Counted here, not in SQL: jsonb arrays may come back as text through the proxy driver.

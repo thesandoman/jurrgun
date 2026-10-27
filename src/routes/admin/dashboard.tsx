@@ -32,6 +32,7 @@ import { photoCleanSummary, runPhotoCleanBatch } from "../../services/photo-clea
 import { moderatorVisible } from "../../services/report-intake";
 import { alias } from "drizzle-orm/pg-core";
 import { connections, events, registrations, reports } from "../../schema";
+import { DEMO_ACCOUNTS, DEMO_EVENTS } from "../../services/demo";
 import { Button, Card, Empty, LinkButton, Notice, page, Stat, Tag, view } from "../../ui/kit";
 import type { Lang } from "../../lib/i18n";
 
@@ -313,14 +314,16 @@ adminDashboard.get("/", async (c) => {
           db
             .select({ n: sql<number>`count(*)`.mapWith(Number) })
             .from(events)
-            .where(and(eq(events.status, "published"), gt(events.startsAt, now))),
+            .where(and(eq(events.status, "published"), gt(events.startsAt, now), sql`${events.id} not in ${DEMO_EVENTS}`)),
           db
             .select({
               recent: sql<number>`sum(case when ${registrations.createdAt} >= ${iso(d7)}::timestamptz then 1 else 0 end)`.mapWith(Number),
               active: sql<number>`count(distinct ${registrations.accountId})`.mapWith(Number),
             })
             .from(registrations)
-            .where(sql`${registrations.createdAt} >= ${iso(d30)}::timestamptz`),
+            .where(
+              sql`${registrations.createdAt} >= ${iso(d30)}::timestamptz and ${registrations.accountId} not in ${DEMO_ACCOUNTS} and ${registrations.eventId} not in ${DEMO_EVENTS}`,
+            ),
           db
             .select({
               expected: sql<number>`count(*)`.mapWith(Number),
@@ -334,6 +337,7 @@ adminDashboard.get("/", async (c) => {
                 sql`${events.endsAt} < ${iso(now)}::timestamptz`,
                 eq(events.status, "published"),
                 or(eq(registrations.status, "confirmed"), sql`${registrations.checkedInAt} is not null`),
+                sql`${registrations.accountId} not in ${DEMO_ACCOUNTS} and ${events.id} not in ${DEMO_EVENTS}`,
               ),
             ),
           weeklyReconnected(db, d7),
@@ -473,11 +477,21 @@ export async function weeklyReconnected(db: ReturnType<typeof getDb>, since: Dat
         or(and(eq(connections.aAccount, r1.accountId), eq(connections.bAccount, r2.accountId)), and(eq(connections.aAccount, r2.accountId), eq(connections.bAccount, r1.accountId))),
       ),
     )
-    .where(and(sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`, among ? inArray(r1.accountId, among) : undefined));
+    .where(and(sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`, northStarScope(r1, r2), among ? inArray(r1.accountId, among) : undefined));
   return row?.n ?? 0;
 }
 
 export type WeekCount = { start: Date; end: Date; n: number };
+
+/**
+ * Who the north star counts (owner C2, 27 Oct 2026): members only (role "user", so no
+ * staff, hosts or partners), never demo accounts, never at a demo-hosted event, and
+ * the person they sat with isn't a demo account either.
+ */
+function northStarScope(r1: { accountId: unknown; eventId: unknown }, r2: { accountId: unknown }): SQL {
+  return sql`${r1.accountId} in (select id from identity_accounts where role = 'user' and not is_demo)
+    and ${r2.accountId} not in ${DEMO_ACCOUNTS} and ${r1.eventId} not in ${DEMO_EVENTS}`;
+}
 
 /**
  * Weekly Reconnected Members per week for the last `weeks` weeks, newest first.
@@ -507,6 +521,7 @@ export async function weeklyReconnectedTrend(db: ReturnType<typeof getDb>, now: 
       and(
         sql`${r1.checkedInAt} >= ${since.toISOString()}::timestamptz`,
         sql`${r1.checkedInAt} < ${now.toISOString()}::timestamptz`,
+        northStarScope(r1, r2),
         among ? inArray(r1.accountId, among) : undefined,
       ),
     )
