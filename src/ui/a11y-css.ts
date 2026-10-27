@@ -1485,4 +1485,14 @@ main .host-form details.host-opt>fieldset>legend{position:absolute;width:1px;hei
    accessibility) is about 1117px wide, so the page scrolled sideways (1.4.10). The wordmark folds to the logo here, as it
    does on phones; its name stays for screen readers. */
 @media (min-width:1024px) and (max-width:1159.98px){.topbar:has(.top-nav) .brand{font-size:0;gap:0}.topbar:has(.top-nav) .brand small{display:none}.topbar:has(.top-nav){gap:12px}}
+/* Wordmarks at large text (1.4.4): the word next to or under the logo folds away when it no longer fits
+   its box, as it already does on narrow screens; the link keeps "Jurrgun" as its name. Each box is a
+   container and the query is in rem, so the threshold follows browser text zoom and the app's own size.
+   At 100% nothing changes (the queries measure inside the bar's side padding): the word shows from a 360px
+   screen and the Thai tag from 381px, as before. */
+.topbar{container:topbar/inline-size}
+@container topbar (width < 21.8rem){.topbar .brand small{display:none}}
+@container topbar (width < 21.25rem){.topbar .brand{font-size:0;gap:0}}
+.fullmap .fd-logo{container-type:inline-size}
+@container (width < 2.8rem){.fullmap .fd-logo small{display:none}}
 `);
