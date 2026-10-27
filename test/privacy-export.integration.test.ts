@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { createMember, db, HAS_DB, req } from "./helpers";
 import { newId } from "../src/lib/crypto";
 import { eq } from "drizzle-orm";
-import { buddyMatches, buddyOptins, chatMessages, consents, datingIntents, meetFeedback, planPitches, profiles, safeArrivals, thanks, weeklyPlans } from "../src/schema";
+import { buddyMatches, buddyOptins, chatMessages, consents, datingIntents, meetFeedback, moderationActions, planPitches, profiles, safeArrivals, thanks, weeklyPlans } from "../src/schema";
 
 describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
   it("includes the member's own chats, dating, buddy, feedback, thanks, plans and safety checks", async () => {
@@ -60,5 +60,21 @@ describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
     expect(data.profile.districtAlertOptIn).toBe(true);
     expect(data.profile.districtAlertLastSentAt).toBe(sent.toISOString());
     await db().update(profiles).set({ districtAlertOptIn: false }).where(eq(profiles.accountId, m.id));
+  });
+
+  it("includes moderation about me, without moderator notes or who acted", async () => {
+    const [m, mod] = await Promise.all([createMember(), createMember({ role: "moderator" })]);
+    await db().insert(moderationActions).values([
+      { id: newId(), accountId: m.id, action: "warning", note: "[harassment] Reporter Nok sent screenshots", by: mod.id },
+      { id: newId(), accountId: m.id, action: "note", note: "internal only", by: mod.id },
+    ]);
+    const text = await (await req("/settings/privacy/export", { cookie: m.cookie })).text();
+    const data = JSON.parse(text);
+    expect(data.moderationAboutMe.actions).toHaveLength(1);
+    expect(data.moderationAboutMe.actions[0]).toMatchObject({ action: "warning", rule: { key: "harassment" } });
+    expect(data.moderationAboutMe.flagsOnRecordNow).toBe(1);
+    expect(text).not.toContain("Nok");
+    expect(text).not.toContain("internal only");
+    expect(text).not.toContain(mod.id);
   });
 });

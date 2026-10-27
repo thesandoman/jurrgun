@@ -7,6 +7,7 @@ import { EXIT_REASONS } from "../../content/dating";
 import { count, desc, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { audit } from "../../lib/records";
+import { moderationHistory } from "../../services/moderation-export";
 import {
   accounts,
   announcements,
@@ -45,6 +46,7 @@ import {
   pulseQuestions,
   pulseResponses,
   registrations,
+  moderationActions,
   reports,
   wellbeing,
 } from "../../schema";
@@ -373,6 +375,19 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     ? await db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, otherIds)).limit(otherIds.length)
     : [];
   const nick = new Map(others.map((o) => [o.id, o.nickname]));
+  // Moderation about me: only what the member was told (services/moderation-export.ts).
+  const [modActions, ownReports] = await Promise.all([
+    db
+      .select({ action: moderationActions.action, until: moderationActions.until, note: moderationActions.note, reportId: moderationActions.reportId, createdAt: moderationActions.createdAt })
+      .from(moderationActions)
+      .where(eq(moderationActions.accountId, id))
+      .limit(1000),
+    db
+      .select({ id: reports.id, reporter: reports.reporter, targetAccount: reports.targetAccount, details: reports.details, status: reports.status, resolvedAt: reports.resolvedAt, createdAt: reports.createdAt })
+      .from(reports)
+      .where(eq(reports.reporter, id))
+      .limit(500),
+  ]);
 
   const data = {
     exportedAt: new Date().toISOString(),
@@ -392,6 +407,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     peopleIBlocked: myBlocks.map((b) => ({ nickname: nick.get(b.blocked) ?? null, createdAt: b.createdAt })),
     feedbackIGave: myFeedback,
     strikes: myStrikes.map(({ waived, ...rest }) => ({ ...rest, waived: !!waived })),
+    moderationAboutMe: moderationHistory(id, modActions, ownReports),
     bangkokType: vibe[0] ?? null,
     invitesICreated: invitesMade.map((x) => ({ event: x.event, used: !!x.used, createdAt: x.createdAt })),
     invitesIAccepted: inviteUsed,
