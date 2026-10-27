@@ -1439,4 +1439,15 @@ h2{margin-top:min(1.8rem,56px)}
 /* Admin: the one clock line under the heading; the whole line is a 44px link down to the clock card. */
 .notice.clock-line{display:flex;align-items:center;gap:8px}
 .notice.clock-line a{display:inline-flex;align-items:center;flex-wrap:wrap;column-gap:4px;min-height:44px;color:inherit;text-decoration:underline;text-underline-offset:3px}
+/* Discover's empty city (owner card 3): the list view gets the map sheet's empty state too, so its base
+   look lives here; how a Table works and the forming Regular Tables read left aligned under the actions. */
+.fd-empty{display:grid;justify-items:center;gap:12px;padding:16px 8px;text-align:center}
+.fd-empty>p{margin:0;color:var(--ink-2);max-width:36ch;line-height:1.5}
+.fd-how,.fd-forming{justify-self:stretch;width:100%;max-width:40ch;margin:4px auto 0;text-align:left}
+.fd-how h3,.fd-forming h3{margin:0 0 8px;font-size:1rem}
+.fd-how ol{margin:0;padding-left:1.4em;display:grid;gap:4px;color:var(--ink-2);line-height:1.5}
+.fd-forming ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fd-forming a{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-decoration:none}
+.fd-forming a strong{min-width:0;overflow-wrap:anywhere}
+.fd-forming a .muted{font-size:.9rem}
 `);

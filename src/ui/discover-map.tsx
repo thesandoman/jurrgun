@@ -145,7 +145,7 @@ export function DistrictAlertOptIn(props: { t: T; alert: DistrictAlertState }) {
  * thing to do. The route passes `alert` only where the alert can cover what
  * the member sees: unfiltered, or filtered to their own district.
  */
-export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string; alert?: DistrictAlertState | null }) {
+export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string; alert?: DistrictAlertState | null; tables?: FormingTable[] }) {
   const { t } = props;
   return props.filtered ? (
     <div class="fd-empty">
@@ -162,7 +162,50 @@ export function NoEventsYet(props: { t: T; filtered: boolean; clearHref: string;
         {t("เสนอกิจกรรม", "Suggest an event")}
       </a>
       {props.alert ? <DistrictAlertOptIn t={t} alert={props.alert} /> : null}
+      <HowATableWorks t={t} />
+      {props.tables?.length ? <FormingTables t={t} tables={props.tables} /> : null}
     </div>
+  );
+}
+
+/** A Regular Table still taking people, as Discover's empty city lists it: the district already in words. */
+export type FormingTable = { id: string; name: string; place: string };
+
+/**
+ * An honest empty city (owner card 3, 2026-10-27): how a Table works, in three lines from the product's
+ * own rules (PRODUCT.md, the guide and /newcomers): 4 to 6 people at a real place with a host, seated
+ * fairly, and the private 72-hour choice afterwards. No sample events.
+ */
+export function HowATableWorks(props: { t: T }) {
+  const { t } = props;
+  return (
+    <section class="fd-how" aria-labelledby="fd-how-h">
+      <h3 id="fd-how-h">{t("โต๊ะที่ Jurrgun เป็นแบบนี้", "How a Table works")}</h3>
+      <ol>
+        <li>{t("โต๊ะละ 4 ถึง 6 คน ที่สถานที่จริงในกรุงเทพฯ มีโฮสต์ดูแล", "4 to 6 people at a real Bangkok place, with a host.")}</li>
+        <li>{t("เราจัดที่นั่งอย่างยุติธรรม ดูจากภาษาและสิ่งที่ชอบ ไม่ใช่หน้าตา", "We seat everyone fairly, by languages and interests, never by looks.")}</li>
+        <li>{t("หลังเจอกัน มีเวลา 72 ชั่วโมงเลือกแบบลับ ๆ ว่าอยากเจอใครอีก ถ้าเลือกตรงกันถึงจะได้รู้จักกันต่อ", "Afterwards you have 72 hours to choose, privately, who to meet again. You connect only if it's mutual.")}</li>
+      </ol>
+    </section>
+  );
+}
+
+/** Up to 3 real Regular Tables still taking people, each a link to its own page. The caller drops it when there are none. */
+export function FormingTables(props: { t: T; tables: FormingTable[] }) {
+  const { t } = props;
+  return (
+    <section class="fd-forming" aria-labelledby="fd-forming-h">
+      <h3 id="fd-forming-h">{t("โต๊ะประจำที่กำลังรวมคน", "Regular Tables forming now")}</h3>
+      <ul>
+        {props.tables.slice(0, 3).map((x) => (
+          <li>
+            <a href={`/tables/${encodeURIComponent(x.id)}`}>
+              <span aria-hidden="true">👥</span> <strong>{x.name}</strong> <span class="muted">{x.place}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -20,7 +20,8 @@ import { eventPlace } from "../../lib/places";
 import { requireMember } from "../../lib/session";
 import { events, profiles, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, safeNext, Select, str, Tag, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
-import { DistrictAlertOptIn, FullDiscover, NoEventsYet, sheetCopy, type DistrictAlertState, type MapChip, type MapPoint } from "../../ui/discover-map";
+import { DistrictAlertOptIn, FullDiscover, NoEventsYet, sheetCopy, type DistrictAlertState, type FormingTable, type MapChip, type MapPoint } from "../../ui/discover-map";
+import { formingTables } from "../../services/regular-tables";
 import { collabNamesFor } from "../../services/collabs";
 import { listableBase } from "../../services/events";
 import { hasConsent, NOTIFICATIONS_CONSENT } from "../../services/consent";
@@ -310,9 +311,23 @@ export async function discoverPage(c: Context<AppEnv>) {
           back: filtered ? (mapView ? mapHref : listHref) : undefined,
         }
       : null;
+  // An honest empty city (owner card 3): with nothing coming up at all, the real Regular Tables still
+  // taking people, up to 3. None means no section at all.
+  const forming: FormingTable[] =
+    list.length === 0 && !filtered
+      ? (await formingTables(db, user.account.id, user.profile)).map((x) => ({ id: x.id, name: x.name, place: label(DISTRICTS, x.district, lang) }))
+      : [];
   // The events, with `extra` (the For you and quiz cards) after the third one, so events come first.
   const cardList = (extra?: Child) => {
     if (rest.length === 0 && above.size) return extra;
+    // The list view's empty city: the same empty state as the map's sheet.
+    if (list.length === 0 && !filtered)
+      return (
+        <>
+          <NoEventsYet t={t} filtered={false} clearHref={listHref} alert={alert} tables={forming} />
+          {extra}
+        </>
+      );
     if (rest.length === 0)
       return (
         <>
@@ -367,7 +382,7 @@ export async function discoverPage(c: Context<AppEnv>) {
             {/* The quiz card used to ride in the ticker; it sits after the third event, as in the list view. */}
             {list.length === 0 ? (
               <>
-                <NoEventsYet t={t} filtered={filtered} clearHref="/" alert={alert} />
+                <NoEventsYet t={t} filtered={filtered} clearHref="/" alert={alert} tables={forming} />
                 {quizHint}
               </>
             ) : (

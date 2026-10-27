@@ -4,13 +4,13 @@
  * table. The rules themselves live in src/domain/regular-tables.ts; the pages
  * in src/routes/tables.tsx.
  */
-import { and, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { newId, randomToken } from "../lib/crypto";
 import { audit, notify } from "../lib/records";
 import { accounts, blocks, circleShares, events, profiles, regularTableConflicts, regularTableMembers, regularTables, registrations, type Event, type RegularTable } from "../schema";
 import { isWoman } from "../domain/rules";
-import { conflictPair, DESCRIPTION_MAX, NAME_MAX } from "../domain/regular-tables";
+import { conflictPair, DESCRIPTION_MAX, MAX_MEMBERS, NAME_MAX, tableVisible } from "../domain/regular-tables";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -104,6 +104,36 @@ export async function myTables(db: Db, me: string): Promise<(RegularTable & { ho
     .limit(60);
   const hidden = await blockedAmong(db, me, [...new Set(rows.filter((r) => r.hostAccountId !== me).map((r) => r.hostAccountId))]);
   return rows.filter((r) => !hidden.has(r.hostAccountId)).map((r) => ({ ...r, hosting: r.hostAccountId === me }));
+}
+
+/**
+ * Regular tables still taking people, for Discover's empty city (owner card 3, 2026-10-27): open, with
+ * room left (under MAX_MEMBERS), newest first, at most `limit`. Leaves out tables `me` hosts or sits at,
+ * and any the viewer can't see on its own page (a block with the host, women-only for someone else).
+ * Real rows only: no tables means an empty list, and the caller shows nothing.
+ */
+export async function formingTables(db: Db, me: string, viewer: { gender?: string | null }, limit = 3): Promise<Pick<RegularTable, "id" | "name" | "district">[]> {
+  const rows = await db
+    .select({ id: regularTables.id, name: regularTables.name, district: regularTables.district, hostAccountId: regularTables.hostAccountId, womenOnly: regularTables.womenOnly })
+    .from(regularTables)
+    .where(and(isNull(regularTables.archivedAt), ne(regularTables.hostAccountId, me)))
+    .orderBy(desc(regularTables.createdAt))
+    .limit(20);
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const [seated, hidden] = await Promise.all([
+    db
+      .select({ tableId: regularTableMembers.tableId, n: sql<number>`count(*)`.mapWith(Number), mine: sql<boolean>`bool_or(${regularTableMembers.accountId} = ${me})` })
+      .from(regularTableMembers)
+      .where(and(inArray(regularTableMembers.tableId, ids), isNull(regularTableMembers.leftAt)))
+      .groupBy(regularTableMembers.tableId),
+    blockedAmong(db, me, [...new Set(rows.map((r) => r.hostAccountId))]),
+  ]);
+  const at = new Map(seated.map((s) => [s.tableId, s]));
+  return rows
+    .filter((r) => !at.get(r.id)?.mine && (at.get(r.id)?.n ?? 0) < MAX_MEMBERS && tableVisible(r, viewer, hidden.has(r.hostAccountId)))
+    .slice(0, limit)
+    .map((r) => ({ id: r.id, name: r.name, district: r.district }));
 }
 
 /** Did `me` go to a hangout with this host (a confirmed seat at one of their events that has started)? */
