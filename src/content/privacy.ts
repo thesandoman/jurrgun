@@ -32,8 +32,8 @@ const CAMPAIGN_COUNT_CHANGE: Text = CAMPAIGN_COUNT;
  */
 export const NOTICE_CHANGES: Text[] = [
   {
-    th: "ใหม่: เกี่ยวก้อย · Pinky ถ้าคุณกับคนที่เคยเจอเลือกกันทั้งสองฝ่าย จะมีแผนนัดและแชตส่วนตัวของสองคน ลบทันทีเมื่อคนใดคนหนึ่งจบ ทีมงานไม่เห็น",
-    en: "New: เกี่ยวก้อย · Pinky. If you and someone you met both choose it, the two of you get a private shared plan and chat. It's deleted as soon as either of you ends it, and staff never see it.",
+    th: "ใหม่: เกี่ยวก้อย · Pinky ถ้าคุณกับคนที่เคยเจอเลือกกันทั้งสองฝ่าย จะมีแผนนัดและแชตส่วนตัวของสองคน เมื่อคนใดคนหนึ่งจบ แผนและข้อความช่วงนั้นจะถูกลบ ทีมงานไม่เห็น",
+    en: "New: เกี่ยวก้อย · Pinky. If you and someone you met both choose it, the two of you get a private shared plan and chat. When either of you ends it, the plan and the messages from that time are deleted. Staff never see it.",
   },
   {
     th: "รูปที่คุณอัปโหลด เราลบข้อมูลตำแหน่ง กล้อง และเวลาที่ถ่ายออกให้แล้ว รูปที่มีอยู่ก่อนหน้าก็ลบให้แล้วเช่นกัน",
@@ -114,14 +114,18 @@ export const RETENTION: RetentionItem[] = [
     keep: { th: "ลบทันทีเมื่อกลับเป็นโหมดเพื่อน หรือถอนความยินยอม", en: "deleted at once when you switch back to friends only or withdraw consent" },
   },
   {
-    what: { th: "เกี่ยวก้อย · Pinky: แผนนัด โน้ตที่เขียนร่วมกัน และข้อความที่ส่งระหว่างนั้น", en: "เกี่ยวก้อย · Pinky: the shared plan, the shared note and the messages sent during it" },
+    what: { th: "เกี่ยวก้อย · Pinky: แผนนัด โน้ตที่เขียนร่วมกัน ใครกดพัก และข้อความที่ส่งช่วงเกี่ยวก้อย", en: "เกี่ยวก้อย · Pinky: the shared plan, the shared note, who paused it, and the messages sent while it lasted" },
     keep: {
-      th: "ลบทันทีเมื่อคนใดคนหนึ่งจบหรือถอยออก ปิด 💘 บล็อก หรือปิดบัญชี ข้อความที่ถูกรายงานเก็บไว้จนกว่าการตรวจสอบจะเสร็จเท่านั้น",
-      en: "deleted at once when either of you ends it or steps back, turns 💘 off, blocks, or closes their account. A reported message stays only until the review ends",
+      th: "ลบทันทีเมื่อคนใดคนหนึ่งจบหรือถอยออก ปิด 💘 บล็อก หรือปิดบัญชี แชตก่อนเกี่ยวก้อยยังอยู่ตามปกติ ถ้าคนใดคนหนึ่งมีรายงานที่ยังเปิดอยู่เกี่ยวกับอีกคน แชตช่วงเกี่ยวก้อยจะเก็บไว้จนกว่ารายงานจะปิด แล้วจึงลบ",
+      en: "deleted at once when either of you ends it or steps back, turns 💘 off, blocks, or closes their account. Your chat from before the Pinky stays as usual. If either of you has an open report about the other, the Pinky chat is kept until the report closes, then deleted",
     },
   },
   {
-    what: { th: "การเกี่ยวก้อยหลังบัดดี้ที่อีกฝ่ายไม่ได้เลือก", en: "A Pinky tap after a buddy pairing that wasn't mutual" },
+    what: { th: "จำนวนไอเดียนัดที่เห็นวันนี้", en: "How many date ideas you were shown today" },
+    keep: { th: "ลบในวันถัดไป", en: "deleted the next day" },
+  },
+  {
+    what: { th: "การเกี่ยวก้อยหลังบัดดี้ที่อีกฝ่ายไม่ได้เลือก และเครื่องหมายกลับเป็นเพื่อนของคู่นั้น", en: "A Pinky tap after a buddy pairing that wasn't mutual, and that pairing's Back to friends marker" },
     keep: { th: "ลบหลังจบการจับคู่", en: "deleted after the pairing ends, within" },
     period: { n: 7, unit: "days" },
     code: "BUDDY_PINKY_DAYS",
