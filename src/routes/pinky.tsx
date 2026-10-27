@@ -170,8 +170,9 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
 
       <section class="pk-sec">
         <a class="btn primary" href={`/chat/conn:${p.connectionId}`}>💬 {t("คุยกัน", "Talk")}</a>{" "}
-        {/* Optional: my own plan to a friend I pick, through my phone. "Who" starts empty; nothing is stored. */}
-        <a class="btn ghost" href={`/safety?where=${shareWhere}&when=${shareWhen}#plan`}>{t("ส่งแผนให้เพื่อนที่ไว้ใจ", "Send my plan to a friend I trust")}</a>
+        {/* Optional: my own plan to a friend I pick, through my phone. "Who" starts empty. Where and when travel in
+            the URL fragment, which never reaches the server, so Jurrgun never receives or stores them. */}
+        <a class="btn ghost" href={`/safety#plan&where=${shareWhere}&when=${shareWhen}`}>{t("ส่งแผนให้เพื่อนที่ไว้ใจ", "Send my plan to a friend I trust")}</a>
         <p class="pinky-safety">
           {t(FIRST_DATE_LINE.th, FIRST_DATE_LINE.en)} <a href="/learn/date-responsibly">{t("เดตอย่างปลอดภัย", "Date safely")}</a>
         </p>

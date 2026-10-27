@@ -37,6 +37,11 @@ const DATE_LINES: [string, { en: string; th: string }][] = [
 
 const SHARE_JS = `(function(){
 var f=document.getElementById("plan");if(!f)return;
+// Pinky Plans hands over where and when in the URL fragment (#plan&where=…&when=…), which browsers
+// never send to the server: fill the form here, then tidy the address back to #plan.
+var h=location.hash;if(h.indexOf("#plan&")===0){var q=new URLSearchParams(h.slice(6));
+["where","when"].forEach(function(n){var v=(q.get(n)||"").slice(0,n==="where"?80:40);if(v&&f.elements[n])f.elements[n].value=v});
+history.replaceState(null,"",location.pathname+"#plan");f.scrollIntoView()}
 function msg(){var g=function(n){return (f.elements[n].value||"").trim()};
 return f.dataset.tpl.replace("{who}",g("who")||"?").replace("{where}",g("where")||"?").replace("{when}",g("when")||"?").replace("{back}",g("back")||"?")}
 f.querySelector("[data-act=share]").addEventListener("click",function(){var m=msg();if(navigator.share){navigator.share({text:m}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(m);this.textContent="✓"}});
@@ -86,11 +91,11 @@ safetyRoutes.get("/safety", (c) => {
           </label>
           <label>
             {t("ที่ไหน", "Where")}
-            <input name="where" maxlength={80} value={(c.req.query("where") ?? "").slice(0, 80)} placeholder={t("เช่น คาเฟ่ในอารีย์", "e.g. a café in Ari")} />
+            <input name="where" maxlength={80} placeholder={t("เช่น คาเฟ่ในอารีย์", "e.g. a café in Ari")} />
           </label>
           <label>
             {t("เมื่อไร", "When")}
-            <input name="when" maxlength={40} value={(c.req.query("when") ?? "").slice(0, 40)} placeholder={t("เช่น เสาร์ 6 โมงเย็น", "e.g. Sat 6 pm")} />
+            <input name="when" maxlength={40} placeholder={t("เช่น เสาร์ 6 โมงเย็น", "e.g. Sat 6 pm")} />
           </label>
           <label>
             {t("จะทักกลับก่อน", "Back by")}

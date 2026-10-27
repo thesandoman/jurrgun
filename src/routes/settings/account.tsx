@@ -17,6 +17,7 @@ import { deleteObject } from "../../storage";
 import { Button, Field, list, Notice, page, str, view, type View } from "../../ui/kit";
 import { researchWithdrawn } from "../../services/consent";
 import { releaseUpcomingSeats } from "../../services/events";
+import { endPinkies } from "../../services/pinky";
 import { settingsRoutes } from "./app";
 import { PrivacyCenter } from "./privacy";
 import { currentConsents, me } from "./shared";
@@ -61,6 +62,9 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.delete(emailLinks).where(eq(emailLinks.accountId, id)),
     // Social links go at once; the switch's history stays with the other consents until deletion.
     db.delete(profileLinks).where(eq(profileLinks.accountId, id)),
+    // Pinky ends at once, not at final deletion: Pinky taps withdrawn, any Pinky goes back to friends,
+    // and its plan and Pinky-period chat are deleted (held while a report between them is open).
+    ...endPinkies(db, id),
     audit(db, id, "account.deactivated", { type: "account", id }),
   ]);
   await releaseUpcomingSeats(c.env, id);

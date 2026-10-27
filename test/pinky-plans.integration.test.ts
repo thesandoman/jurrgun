@@ -173,13 +173,27 @@ describe.skipIf(!HAS_DB)("Pinky Plans", () => {
     expect(await db().select().from(pinkies).where(eq(pinkies.id, two.p.id))).toEqual([]);
   });
 
-  it("the safety share fills where and when from the plan, and who starts empty", async () => {
+  it("the safety share carries where and when in the URL fragment only, so the server never receives them", async () => {
     const { a, p } = await pinkyPair();
     await post(a, `/pinky/${p.id}/plan`, { place: "Ari", district: "phaya_thai", startsAt: "2030-01-12T10:00" });
     const html = await (await space(a, p.id)).text();
-    const href = /href="(\/safety\?[^"]+)"/.exec(html)![1].replaceAll("&amp;", "&");
-    const safety = await (await req(href, { cookie: en(a) })).text();
-    expect(safety).toContain('name="where" maxlength="80" value="Ari"');
+    const href = /href="(\/safety[^"]*)"/.exec(html)![1].replaceAll("&amp;", "&");
+    expect(href.startsWith("/safety#plan&where=Ari&when=")).toBe(true);
+    expect(href).not.toContain("?");
+    // The page itself is plain: who, where and when start empty; the browser fills where and when from the fragment.
+    const safety = await (await req("/safety", { cookie: en(a) })).text();
     expect(safety).toMatch(/<input name="who" maxlength="40" placeholder/);
+    expect(safety).toMatch(/<input name="where" maxlength="80" placeholder/);
+    expect(safety).toContain('h.indexOf("#plan&")===0');
+  });
+
+  it("deactivating an account ends the Pinky at once, with its plan", async () => {
+    const { a, p } = await pinkyPair();
+    await post(a, `/pinky/${p.id}/note`, { note: "see you" });
+    expect((await req("/settings/deactivate", { cookie: a.cookie, form: { confirm: "1" } })).status).toBe(302);
+    expect(await db().select().from(pinkies).where(eq(pinkies.id, p.id))).toEqual([]);
+    expect(await db().select().from(pinkyPlans).where(eq(pinkyPlans.pinkyId, p.id))).toEqual([]);
+    const [conn] = await db().select().from(connections).where(eq(connections.id, p.connectionId));
+    expect(conn.level).toBe("friend");
   });
 });
