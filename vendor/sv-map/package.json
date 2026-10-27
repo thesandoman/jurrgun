@@ -1,0 +1,27 @@
+{
+  "name": "sv-map",
+  "version": "1.0.0",
+  "description": "A ready-made map for any app: pins, filter chips, key, cards, my location. From the Sanroo live map.",
+  "type": "module",
+  "exports": {
+    ".": "./src/sv-map.js",
+    "./places": "./src/places.js",
+    "./presets/bangkok": "./presets/bangkok.js",
+    "./sv-map.css": "./src/sv-map.css"
+  },
+  "files": [
+    "src",
+    "presets",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "demo": "python3 -m http.server 8891"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thesandoman/sv-map.git"
+  }
+}

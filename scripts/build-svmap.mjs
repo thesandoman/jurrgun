@@ -1,13 +1,14 @@
 /**
- * Bundles the browser half of the `sv-map` package (node_modules/sv-map) into
+ * Bundles the browser half of the vendored `sv-map` package (vendor/sv-map) into
  * src/vendor/sv-map.generated.ts, so the Worker can serve it at /vendor/…
- * (Workers have no filesystem at runtime). Re-run after updating the package:
+ * (Workers have no filesystem at runtime). Re-run after updating vendor/sv-map
+ * (see vendor/sv-map/VENDORED.md):
  *
  *   npm run svmap
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-const read = (p) => readFileSync(new URL(`../node_modules/sv-map/${p}`, import.meta.url), "utf8");
+const read = (p) => readFileSync(new URL(`../vendor/sv-map/${p}`, import.meta.url), "utf8");
 const pkg = JSON.parse(read("package.json"));
 // Stored base64-encoded: the deploy pipeline scans the built bundle for
 // `from "./…"` to find extra modules, and sv-map's docs contain exactly that.

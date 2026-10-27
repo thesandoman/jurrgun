@@ -1,0 +1,115 @@
+/*
+ * SV Map styles. Make it look like your app by setting these variables on the map's
+ * element (or any parent), e.g.
+ *
+ *   #map { --svm-brand: #2563eb; --svm-radius: 8px; --svm-height: 70vh; }
+ *
+ * Dark mode follows the device unless you set data-theme="light" / "dark" on the element.
+ */
+.svm {
+  --svm-brand: #0f6b5c;        /* pins, active chip */
+  --svm-brand-ink: #ffffff;    /* text on the brand colour */
+  --svm-highlight: #c08a1e;    /* "mine" pins */
+  --svm-ok: #1f7a4a;  --svm-ok-soft: #e5f4ea;
+  --svm-warn: #9a5b00; --svm-warn-soft: #fff3dc;
+  --svm-surface: #ffffff;      /* sheet, chips, buttons */
+  --svm-surface-2: #f3eee6;    /* quiet fills */
+  --svm-ink: #1d2321;          /* text */
+  --svm-muted: #6e7a75;        /* secondary text */
+  --svm-line: #e4ddd2;         /* borders */
+  --svm-focus: #f5b301;        /* keyboard focus ring */
+  --svm-radius: 14px;
+  --svm-height: min(64vh, 560px);
+  --svm-font: inherit;
+  --svm-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 20px rgba(0,0,0,.08);
+  position: relative;
+  font-family: var(--svm-font);
+  color: var(--svm-ink);
+}
+@media (prefers-color-scheme: dark) {
+  .svm:not([data-theme="light"]) {
+    --svm-surface: #18201d; --svm-surface-2: #1f2925; --svm-ink: #ecf2ef; --svm-muted: #8c9a94; --svm-line: #2b3632;
+    --svm-brand: #3fb59d; --svm-brand-ink: #08221c; --svm-ok: #6fd39c; --svm-ok-soft: #173526; --svm-warn: #f2b45a; --svm-warn-soft: #3a2c14;
+    --svm-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+}
+.svm[data-theme="dark"] {
+  --svm-surface: #18201d; --svm-surface-2: #1f2925; --svm-ink: #ecf2ef; --svm-muted: #8c9a94; --svm-line: #2b3632;
+  --svm-brand: #3fb59d; --svm-brand-ink: #08221c; --svm-ok: #6fd39c; --svm-ok-soft: #173526; --svm-warn: #f2b45a; --svm-warn-soft: #3a2c14;
+}
+.svm *, .svm *::before, .svm *::after { box-sizing: border-box; }
+.svm button { font: inherit; }
+.svm :focus-visible { outline: 3px solid var(--svm-focus); outline-offset: 2px; }
+
+.svm-skip { position: absolute; left: -9999px; }
+.svm-skip:focus { left: 8px; top: 8px; z-index: 6; background: var(--svm-surface); color: var(--svm-ink); padding: 8px 12px; border-radius: 10px; border: 2px solid var(--svm-brand); }
+
+/* chips */
+.svm-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+.svm-chips::-webkit-scrollbar { display: none; }
+.svm-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--svm-line); background: var(--svm-surface); color: var(--svm-ink); font-size: .88rem; font-weight: 600; cursor: pointer; }
+.svm-chip.on { background: var(--svm-brand); border-color: var(--svm-brand); color: var(--svm-brand-ink); }
+
+/* the map box */
+.svm-map { position: relative; height: var(--svm-height); min-height: 320px; border-radius: var(--svm-radius); overflow: hidden;
+  border: 1px solid var(--svm-line); background: var(--svm-surface-2); }
+/* MapLibre sets position: relative on its container; keep it filling the box. */
+.svm-canvas.svm-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.svm-fallback { position: absolute; inset: auto 12px 12px; z-index: 3; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--svm-warn-soft); color: var(--svm-warn); }
+.svm-me { position: absolute; right: 10px; bottom: 12px; z-index: 3; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--svm-line);
+  background: var(--svm-surface); color: var(--svm-brand); font-size: 1.3rem; cursor: pointer; box-shadow: var(--svm-shadow); }
+.svm-count { margin: 6px 2px 0; color: var(--svm-muted); font-size: .86rem; }
+.svm .maplibregl-ctrl-attrib { font-size: .7rem; }
+
+/* key */
+.svm-key { position: absolute; left: 10px; bottom: 12px; z-index: 3; max-width: 62%; padding: 6px 10px; border-radius: 12px; font-size: .8rem;
+  background: color-mix(in srgb, var(--svm-surface) 94%, transparent); border: 1px solid var(--svm-line); box-shadow: var(--svm-shadow); }
+.svm-key summary { cursor: pointer; font-weight: 600; min-height: 28px; }
+.svm-key p { margin: 2px 0; display: flex; align-items: center; gap: 6px; }
+.svm-k { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; font-style: normal; font-size: 10px; flex: 0 0 auto; }
+.svm-k.exact { background: var(--svm-brand); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--svm-brand); }
+.svm-k.area { border: 2px dashed var(--svm-brand); background: color-mix(in srgb, var(--svm-brand) 18%, transparent); }
+.svm-k.highlight { background: var(--svm-highlight); color: #fff; }
+.svm-k.swatch { border-radius: 4px; }
+
+/* pins */
+.svm-pin { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 7px; padding: 0; border-radius: 50%;
+  border: 2px solid #fff; background: var(--svm-brand); color: var(--svm-brand-ink); font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.28); }
+.svm-pin > span { font-size: 18px; line-height: 1; }
+.svm-pin::after { content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top: 7px solid #fff; border-bottom: 0; }
+.svm-pin.area { border: 2px dashed var(--svm-brand); background: color-mix(in srgb, var(--svm-surface) 82%, var(--svm-brand)); color: var(--svm-ink); }
+.svm-pin.muted { opacity: .7; }
+.svm-pin.highlight { background: var(--svm-highlight); color: #fff; }
+.svm-pin i { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--svm-ok); color: #fff; font-style: normal; font-size: 11px; border: 2px solid #fff; }
+.svm-pin:focus-visible { outline-offset: 3px; }
+.svm-dot { width: 18px; height: 18px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(37,99,235,.25); }
+
+/* sheet */
+.svm-sheet { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 4; max-height: 62%; overflow: auto; padding: 14px 14px 8px;
+  border-radius: 16px; background: var(--svm-surface); border: 1px solid var(--svm-line); box-shadow: 0 -6px 30px rgba(0,0,0,.18); }
+.svm-sheet-h { margin: 0 40px 8px 0; font-size: 1.05rem; line-height: 1.35; }
+.svm-sheet-h:focus { outline: none; }
+.svm-x { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--svm-muted); font-size: 1.1rem; cursor: pointer; }
+.svm-card { display: flex; gap: 10px; padding: 10px 4px; border-top: 1px solid var(--svm-line); color: inherit; text-decoration: none; }
+.svm-card:first-child { border-top: 0; }
+.svm-card-media { flex: 0 0 auto; font-size: 1.6rem; line-height: 1.2; }
+.svm-card-media img { display: block; width: 56px; height: 56px; object-fit: cover; border-radius: 10px; }
+.svm-card-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.svm-card b { font-size: .98rem; }
+.svm-card small { color: var(--svm-muted); font-size: .84rem; }
+.svm-badges em { font-style: normal; padding: 1px 8px; border-radius: 999px; background: var(--svm-surface-2); color: var(--svm-ink); }
+.svm-badges em.ok { background: var(--svm-ok-soft); color: var(--svm-ok); }
+.svm-badges em.warn { background: var(--svm-warn-soft); color: var(--svm-warn); }
+.svm-badges em.accent { background: color-mix(in srgb, var(--svm-brand) 16%, transparent); color: var(--svm-brand); }
+.svm-badges em.muted { opacity: .75; }
+.svm-note { font-style: italic; }
+
+/* wide screens: the sheet is a side panel */
+@media (min-width: 900px) {
+  .svm-sheet { left: auto; right: 12px; top: 12px; bottom: auto; width: 360px; max-height: calc(100% - 24px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .svm * { transition: none !important; animation: none !important; }
+}

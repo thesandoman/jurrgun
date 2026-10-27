@@ -11,8 +11,8 @@
  * Wang Thonglang's office is not in OpenStreetMap, so an event there with no
  * map link has no point (it stays in the list) rather than a guessed one.
  */
-import { coordsFromMapUrl as svmCoords, inBounds, placeFor } from "sv-map/places";
-import { BANGKOK_BOUNDS, BANGKOK_CENTER, BANGKOK_DISTRICTS, BANGKOK_PAN_LIMIT } from "sv-map/presets/bangkok";
+import { coordsFromMapUrl as svmCoords, inBounds, placeFor } from "../../vendor/sv-map/src/places.js";
+import { BANGKOK_BOUNDS, BANGKOK_CENTER, BANGKOK_DISTRICTS, BANGKOK_PAN_LIMIT } from "../../vendor/sv-map/presets/bangkok.js";
 
 export type Precision = "exact" | "route" | "area";
 export type Place = { lat: number; lng: number; precision: Precision };

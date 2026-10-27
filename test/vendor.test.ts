@@ -23,10 +23,10 @@ describe("sv-map vendor files", () => {
     expect(gen).not.toMatch(/from "\.\//);
   });
 
-  it("matches the installed package exactly", () => {
-    const pkg = JSON.parse(readFileSync("node_modules/sv-map/package.json", "utf8"));
+  it("matches the vendored package exactly", () => {
+    const pkg = JSON.parse(readFileSync("vendor/sv-map/package.json", "utf8"));
     expect(SV_MAP_VERSION).toBe(pkg.version);
-    expect(svMapJs()).toBe(readFileSync("node_modules/sv-map/src/sv-map.js", "utf8"));
-    expect(svMapCss()).toBe(readFileSync("node_modules/sv-map/src/sv-map.css", "utf8"));
+    expect(svMapJs()).toBe(readFileSync("vendor/sv-map/src/sv-map.js", "utf8"));
+    expect(svMapCss()).toBe(readFileSync("vendor/sv-map/src/sv-map.css", "utf8"));
   });
 });
