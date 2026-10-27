@@ -1516,4 +1516,10 @@ body:not(:has(.tabbar)){padding-bottom:env(safe-area-inset-bottom,0px)}
 .tile2.hero .hero-sub{margin:8px 0 0;font-size:1rem;font-weight:600;line-height:1.45}
 .tile2.hero .pill2{background:var(--surface);color:var(--ink);text-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 .tile2.hero .pill2-dot{background:var(--brand)}
+/* Landing card 2: one start. A 48px pill with the arrow in a nested circle; it presses to .97 with no
+   bounce, and with reduced motion it doesn't scale at all. */
+.btn.start-cta{gap:12px;min-height:48px;padding:6px 6px 6px 22px;border-radius:999px}
+.start-cta .start-arrow{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800;line-height:1}
+@media (prefers-reduced-motion:reduce){.btn.start-cta:active{transform:none}}
+html.a11y-motion .btn.start-cta:active{transform:none}
 `);

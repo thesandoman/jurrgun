@@ -96,6 +96,26 @@ describe("card 1: bigger headline", () => {
   });
 });
 
+describe("card 2: one start", () => {
+  it("has a single primary, Find my first table, to sign up, with Sign in as the secondary link", async () => {
+    const en = (await bento("en")).html;
+    const main = en.slice(en.indexOf("<main"), en.indexOf("</main>"));
+    expect(main.match(/class="btn primary/g)?.length).toBe(1);
+    expect(main).toContain('<a href="/signup" class="btn primary start-cta"><span>Find my first table</span><span class="start-arrow" aria-hidden="true">→</span></a>');
+    expect(main).toContain('<a href="/login" class="hero-link">Sign in</a>');
+    expect(main.match(/href="\/signup"/g)?.length).toBe(1);
+    const th = (await bento("th")).html;
+    expect(th).toContain("<span>หาโต๊ะแรก</span>");
+  });
+
+  it("presses to .97 without bounce, and not at all with reduced motion", async () => {
+    const { A11Y_CSS } = await import("../src/ui/a11y-css");
+    expect(A11Y_CSS).toContain(".btn:active{transform:scale(.97)}");
+    expect(A11Y_CSS).toContain(".btn.start-cta{gap:12px;min-height:48px;");
+    expect(A11Y_CSS).toContain("@media (prefers-reduced-motion:reduce){.btn.start-cta:active{transform:none}}");
+  });
+});
+
 describe("bottom padding", () => {
   it("keeps tab bar room only on pages with a tab bar", async () => {
     const { A11Y_CSS } = await import("../src/ui/a11y-css");

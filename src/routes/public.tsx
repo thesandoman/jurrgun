@@ -46,14 +46,17 @@ publicRoutes.get("/", (c) => {
           <p class="hero-sub">{t("เจอเพื่อนใหม่ในกรุงเทพฯ ไม่ต้องปัดไม่รู้จบ", "Make friends in Bangkok. No endless swiping.")}</p>
           <small class="endorse">🏛️ {L(lang, BRAND.bmaShort)}</small>
           <div class="hero-cta">
+            {/* The page's one start: a pill with the arrow in its own circle. */}
             {user ? (
-              <a href="/onboarding" class="btn primary">
-                {t("ทำโปรไฟล์ต่อ", "Continue setting up")}
+              <a href="/onboarding" class="btn primary start-cta">
+                <span>{t("ทำโปรไฟล์ต่อ", "Continue setting up")}</span>
+                <span class="start-arrow" aria-hidden="true">→</span>
               </a>
             ) : (
               <>
-                <a href="/signup" class="btn primary">
-                  {t("เริ่มเลย", "Get started")}
+                <a href="/signup" class="btn primary start-cta">
+                  <span>{t("หาโต๊ะแรก", "Find my first table")}</span>
+                  <span class="start-arrow" aria-hidden="true">→</span>
                 </a>
                 <a href="/login" class="hero-link">
                   {t("เข้าสู่ระบบ", "Sign in")}
@@ -83,16 +86,6 @@ publicRoutes.get("/", (c) => {
           <small>{t("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป", "Always in public places. Report or block in the app.")}</small>
         </Tile>
       </Bento>
-      <div class="row">
-        {user ? (
-          <LinkButton href="/onboarding">{t("ทำโปรไฟล์ต่อ", "Continue setting up")}</LinkButton>
-        ) : (
-          <>
-            <LinkButton href="/signup">{t("เริ่มเลย", "Get started")}</LinkButton>
-            <a href="/login">{t("เข้าสู่ระบบ", "Sign in")}</a>
-          </>
-        )}
-      </div>
       <div class="rail-wrap">
         <div class="rail" role="list">
           {LEARN_CARDS.map((topic) => (

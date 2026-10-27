@@ -14,7 +14,7 @@ describe("home landing", () => {
     expect(html.match(/<h1[\s>]/g)?.length).toBe(1);
     expect(html).toContain('<h1 class="hero-title">');
     const hero = html.slice(html.indexOf("tile2 hero"), html.indexOf("</h1>") + 600);
-    expect(hero).toContain('href="/signup" class="btn primary"');
+    expect(hero).toContain('href="/signup" class="btn primary start-cta"');
   });
 });
 
