@@ -21,8 +21,8 @@ export const NOTICE_ISO = "2026-10-27";
 
 /** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
 export const CAMPAIGN_COUNT: Text = {
-  th: "การเข้ามาจากลิงก์แคมเปญนับเป็นยอดรายวันต่อลิงก์ ไม่มีข้อมูลของคนที่เข้ามา ไม่มี IP และไม่ใช้คุกกี้",
-  en: "Visits from campaign links are counted per link per day, with nothing about the person: no IP address and no cookie.",
+  th: "ลิงก์แคมเปญนับเป็นจำนวนต่อวัน โดยไม่เก็บข้อมูลใด ๆ ของคนที่เปิด",
+  en: "Campaign links are counted per day, with nothing about the person who opened them.",
 };
 const CAMPAIGN_COUNT_CHANGE: Text = CAMPAIGN_COUNT;
 
