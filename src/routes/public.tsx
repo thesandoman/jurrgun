@@ -53,16 +53,16 @@ publicRoutes.get("/", (c) => {
             )}
           </div>
         </Tile>
-        <Tile href="/buddy" tone="deep" size="tall">
-          <span class="go" aria-hidden="true">↗</span>
+        {/* Visitors only get public links: Buddy and the passport need an account, so those tiles explain without linking. */}
+        <Tile tone="deep" size="tall">
           <AvatarStack items={[{ label: "You", emoji: "🍜", seed: "a" }, { label: "Buddy", emoji: "📜", seed: "b" }]} size={46} />
           <h3>{t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h3>
           <small>{t("1 คน · เควสต์ทุกสัปดาห์", "1 person · weekly quests")}</small>
         </Tile>
-        <Tile href="/events">
+        <Tile href="/learn/making-friends">
           <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />
         </Tile>
-        <Tile tone="gold" href="/buddy/passport">
+        <Tile tone="gold">
           <Big n="50" label={t("เขตให้สะสม", "districts to collect")} />
         </Tile>
         <Tile href="/types">
