@@ -904,7 +904,9 @@ html.a11y-contrast .fd-bar::before{background:var(--surface);-webkit-backdrop-fi
 .fd-map-tools .chip-btn{min-height:44px}
 /* What the pins mean (the Key that used to float on the map): sv-map's own pin marks, in the Filters panel. */
 .fd-legend{margin:8px 0 4px;border:1px solid var(--line);border-radius:12px;padding:0 12px;--svm-brand:var(--brand);--svm-highlight:var(--info)}
-.fd-legend>summary{display:flex;align-items:center;min-height:44px;font-weight:600;cursor:pointer}
+/* The fold's toggle is a full 44px row with its own focus ring (the .fullmap keeps it ahead of the app's summary rules). */
+.fullmap .fd-legend>summary{display:flex;align-items:center;box-sizing:border-box;min-height:44px;margin:0 -12px;padding:10px 12px;border-radius:12px;font-weight:600;line-height:1.4;cursor:pointer}
+.fullmap .fd-legend>summary:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 .fd-legend ul{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
 .fd-legend li{display:flex;align-items:center;gap:10px;line-height:1.4}
 /* A pin that is only a district area says so on its card, with the same dashed mark as the legend. */

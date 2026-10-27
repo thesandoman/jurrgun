@@ -90,6 +90,11 @@ describe("Discover map Key", () => {
     expect(page(en)).toContain("District area: address on the event page");
     expect(FULLMAP_CSS).toContain(".fullmap .svm-note::before{");
   });
+
+  it("its toggle is a 44px target with a visible focus ring", () => {
+    expect(FULLMAP_CSS).toMatch(/\.fullmap \.fd-legend>summary\{display:flex;[^}]*min-height:44px;/);
+    expect(FULLMAP_CSS).toMatch(/\.fullmap \.fd-legend>summary:focus-visible\{outline:3px solid var\(--ink\)/);
+  });
 });
 
 // The chips row's helpers, run as the browser runs them.
