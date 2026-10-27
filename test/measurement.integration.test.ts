@@ -257,7 +257,8 @@ describe.skipIf(!HAS_DB)("City Insight splits", () => {
     const until = new Date(Date.now() + DAY).toISOString();
     const rows = await segmentFunnel(db(), since, until, [...locals, ...newcomers].map((m) => m.id));
     const cells = Object.fromEntries(rows.map((r) => [r.segment, suppressSegment(r)]));
-    expect(cells.local).toEqual({ segment: "local", members: 10, regToRsvp: 30, rsvpToCheckIn: null, mutualRate: null });
+    // 3 of 10 RSVP'd: the 3 is under k, so the rate is hidden too (card D2: percentages come from rounded counts).
+    expect(cells.local).toEqual({ segment: "local", members: 10, regToRsvp: null, rsvpToCheckIn: null, mutualRate: null });
     expect(cells.newcomer).toEqual({ segment: "newcomer", members: null, regToRsvp: null, rsvpToCheckIn: null, mutualRate: null });
     expect(cells.international).toEqual({ segment: "international", members: null, regToRsvp: null, rsvpToCheckIn: null, mutualRate: null });
   });
@@ -272,7 +273,7 @@ describe.skipIf(!HAS_DB)("City Insight splits", () => {
     const until = new Date(Date.now() + DAY).toISOString();
     const rows = await sourceFunnel(db(), since, until, [...big, ...small].map((m) => m.id));
     expect(rows).toEqual([
-      { source: `line_${tag}`, signups: 10, firstRsvp: null, rate: 0 },
+      { source: `line_${tag}`, signups: 10, firstRsvp: null, rate: null },
       { source: OTHER_SOURCES, signups: null, firstRsvp: null, rate: null },
     ]);
     expect(JSON.stringify(rows)).not.toContain(`tiktok_${tag}`);

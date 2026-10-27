@@ -24,7 +24,7 @@ import { getDb } from "../../db";
 import type { AppEnv } from "../../lib/env";
 import { fmtDate } from "../../lib/i18n";
 import { requireRole } from "../../lib/session";
-import { K_THRESHOLD, safeCount } from "../../domain/rules";
+import { K_THRESHOLD, roundedCount } from "../../domain/rules";
 import { lastRetentionRun, runRetention, type RetentionRun } from "../../services/retention";
 import { ensureClock, startClock, stopClock, type ClockHealth } from "../../services/clock";
 import { vapidKeys } from "../../services/push";
@@ -236,7 +236,7 @@ const shortDay = (d: Date, lang: Lang) =>
 /** The north star over 8 weeks as a table with bars (screen readers read the table). */
 function TrendCard(props: { weeks: WeekCount[]; suppress: boolean; t: (th: string, en: string) => string; lang: Lang }) {
   const { weeks, suppress, t, lang } = props;
-  const shown = weeks.map((w) => ({ ...w, value: suppress ? safeCount(w.n) : w.n }));
+  const shown = weeks.map((w) => ({ ...w, value: suppress ? roundedCount(w.n) : w.n }));
   const max = Math.max(1, ...shown.map((w) => w.value ?? 0));
   // Oldest first, so the chart reads left to right in time.
   const rows = [...shown].reverse();
@@ -252,7 +252,7 @@ function TrendCard(props: { weeks: WeekCount[]; suppress: boolean; t: (th: strin
                 "Each row is 7 days: members who checked in and sat with someone they had met at Jurrgun before.",
               )}
               {suppress
-                ? t(` สัปดาห์ที่น้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10"`, ` Weeks under ${K_THRESHOLD} people show as "<10".`)
+                ? t(` ปัดเป็นหลัก 5 สัปดาห์ที่น้อยกว่า ${K_THRESHOLD} คนแสดงเป็น "<10"`, ` Rounded to the nearest 5. Weeks under ${K_THRESHOLD} people show as "<10".`)
                 : t(" ไม่ได้ซ่อนตัวเลข สำหรับเจ้าหน้าที่เท่านั้น", " Not suppressed, staff only.")}
             </caption>
             <thead>

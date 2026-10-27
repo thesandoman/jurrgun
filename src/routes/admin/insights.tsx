@@ -15,7 +15,7 @@ import { EXIT_REASONS } from "../../content/dating";
 import { Hono } from "hono";
 import { asc, and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
-import { K_THRESHOLD, roundedCount, roundedPct, safeCount } from "../../domain/rules";
+import { K_THRESHOLD, roundedCount, roundedPct, safeCount, safeTable } from "../../domain/rules";
 import { bkkDayStart } from "../../domain/pulse-heard";
 import { DISTRICTS, label } from "../../lib/constants";
 import type { AppEnv } from "../../lib/env";
@@ -41,10 +41,13 @@ function table(rows: unknown): unknown[][] {
   return (rows as unknown[]).map((r) => (Array.isArray(r) ? r : Object.values(r as Record<string, unknown>)));
 }
 
-/** k/n as a whole percent, or null when the base is under k. */
+/**
+ * k/n as a whole percent for the BMA: worked out from rounded counts
+ * (roundedPct), so null when either side is under k. A percent from exact
+ * counts would give back a hidden "<10" cell (owner C1, card D2).
+ */
 export function pct(k: number, n: number): number | null {
-  if (safeCount(n) === null || n === 0) return null;
-  return Math.round((k / n) * 100);
+  return roundedPct(k, n);
 }
 
 type Db = ReturnType<typeof getDb>;
@@ -87,7 +90,7 @@ export type SegmentCells = {
 export function suppressSegment(r: SegmentRow): SegmentCells {
   return {
     segment: r.segment,
-    members: safeCount(r.members),
+    members: roundedCount(r.members),
     regToRsvp: pct(r.joinedRsvp, r.joined),
     rsvpToCheckIn: pct(r.checkedIn, r.expected),
     mutualRate: pct(r.withConnection, r.checkedIn),
@@ -173,7 +176,7 @@ export async function sourceFunnel(db: Db, since: string, until: string, among?:
     } else big.push(r);
   }
   if (other.n > 0) big.push(other);
-  return big.map((r) => ({ source: r.source, signups: safeCount(r.n), firstRsvp: safeCount(r.k), rate: pct(r.k, r.n) }));
+  return big.map((r) => ({ source: r.source, signups: roundedCount(r.n), firstRsvp: roundedCount(r.k), rate: pct(r.k, r.n) }));
 }
 
 type Kpi = {
@@ -419,7 +422,7 @@ adminInsights.get("/", async (c) => {
     const met = k.value !== null && k.target ? k.target.met(k.value) : null;
     const hint = [
       k.target ? `${t("เป้าหมาย", "Target")} ${k.target.text}` : null,
-      k.base > 0 && safeCount(k.base) !== null ? `n = ${k.base}` : null,
+      k.base > 0 && roundedCount(k.base) !== null ? `n ≈ ${roundedCount(k.base)}` : null,
       k.hint ?? null,
     ]
       .filter(Boolean)
@@ -681,7 +684,7 @@ adminInsights.get("/", async (c) => {
                 <tr>
                   <td>{r.label}</td>
                   <td>{r.events}</td>
-                  <td>{safeCount(r.checkins) === null ? "<10" : r.checkins}</td>
+                  <td>{roundedCount(r.checkins) ?? "<10"}</td>
                   <td>{safeCount(r.safeN) === null || r.safeAvg === null ? "<10" : r.safeAvg.toFixed(1)}</td>
                 </tr>
               ))}
@@ -696,22 +699,23 @@ adminInsights.get("/", async (c) => {
       ) : (
         barrierQs.map((q) => {
           const m = barrierMap.get(q.id) ?? new Map<string, number>();
-          const total = [...m.values()].reduce((a, b) => a + b, 0);
-          const totalSafe = roundedCount(total);
+          // Answers outside the current options still count toward the total, as one hidden cell.
+          const counts = q.options.map((o) => m.get(o.value) ?? 0);
+          const extra = [...m.values()].reduce((a, b) => a + b, 0) - counts.reduce((a, b) => a + b, 0);
+          const safe = safeTable(extra > 0 ? [...counts, extra] : counts);
+          const totalSafe = safe.total;
           const rows = q.options
-            .map((o) => ({ o, n: m.get(o.value) ?? 0 }))
-            .sort((a, b) => (roundedCount(b.n) ?? -1) - (roundedCount(a.n) ?? -1));
+            .map((o, i) => ({ o, s: safe.cells[i], p: safe.pcts[i] }))
+            .sort((a, b) => (b.s ?? -1) - (a.s ?? -1));
           return (
             <Card>
               <h3>{lang === "en" ? q.promptEn : q.promptTh}</h3>
               <p class="muted">
                 {t("ผู้ตอบ", "Respondents")}: {totalSafe === null ? "<10" : totalSafe}
                 {" · "}
-                {t("ปัดเป็นหลัก 5 นับถึง 00:00 น. วันนี้", "rounded to 5, counted up to 00:00 today")}
+                {t("ปัดเป็นหลัก 5 (ผู้ตอบปัดเป็นหลัก 10 เมื่อมีช่องที่ซ่อน) นับถึง 00:00 น. วันนี้", "rounded to 5 (respondents to 10 when a row is hidden), counted up to 00:00 today")}
               </p>
-              {rows.map(({ o, n }) => {
-                const s = roundedCount(n);
-                const p = roundedPct(n, total);
+              {rows.map(({ o, s, p }) => {
                 return (
                   <div style="margin:6px 0">
                     <div class="spread">

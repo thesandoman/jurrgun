@@ -327,6 +327,39 @@ export function roundedCount(n: number, k: number = K_THRESHOLD): number | null 
   return Math.max(k, Math.round(n / ROUND_TO) * ROUND_TO);
 }
 
+/**
+ * One table of counts shown to the BMA with its total (e.g. answers to one
+ * question), safe against working a hidden cell out by subtraction (card D2):
+ *
+ * - every cell is roundedCount: "<10" under k, else nearest 5;
+ * - complementary suppression: if exactly one cell is hidden, the smallest
+ *   shown cell is hidden too, so "total minus the rest" never isolates one;
+ * - when any cell is hidden, the total is rounded to the nearest 10 instead
+ *   of 5, and percentages use that coarser total.
+ *
+ * test/rules-suppression.test.ts checks by brute force that no hidden cell
+ * can be pinned to one value from what is shown.
+ */
+export const COARSE_ROUND_TO = 10;
+
+export type SafeTable = { cells: (number | null)[]; total: number | null; pcts: (number | null)[] };
+
+export function safeTable(counts: readonly number[], k: number = K_THRESHOLD): SafeTable {
+  const cells = counts.map((n) => roundedCount(n, k));
+  if (cells.filter((x) => x === null).length === 1) {
+    let j = -1;
+    cells.forEach((x, i) => {
+      if (x !== null && (j < 0 || counts[i] < counts[j])) j = i;
+    });
+    if (j >= 0) cells[j] = null;
+  }
+  const sum = counts.reduce((a, b) => a + b, 0);
+  const anyHidden = cells.some((x) => x === null);
+  const total = safeCount(sum, k) === null ? null : anyHidden ? Math.max(k, Math.round(sum / COARSE_ROUND_TO) * COARSE_ROUND_TO) : roundedCount(sum, k);
+  const pcts = cells.map((x) => (x === null || !total ? null : Math.min(100, Math.round((x / total) * 100))));
+  return { cells, total, pcts };
+}
+
 /** A whole-number percentage worked out from rounded counts, or null when either is hidden. */
 export function roundedPct(k: number, n: number): number | null {
   const rk = roundedCount(k);
