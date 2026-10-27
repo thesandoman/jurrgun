@@ -40,12 +40,39 @@ describe("signed-out landing tiles", () => {
     for (const path of MEMBERS_ONLY) expect(b).not.toContain(`href="${path}"`);
   });
 
-  it("shows Buddy and the districts as plain explainers, without the link arrow", async () => {
+  it("shows Buddy as a plain explainer, without the link arrow", async () => {
     const { bento: b } = await bento();
     expect(b).toContain("Bangkok Buddy");
-    expect(b).toContain("districts to collect");
     expect(b).not.toContain('class="go"');
     expect(b).toMatch(/<div class="tile2 tall t-deep[^"]*">/);
+  });
+});
+
+describe("card 3: honest bento", () => {
+  it("has no passport tile", async () => {
+    const { bento: b } = await bento();
+    expect(b).not.toContain("districts to collect");
+    expect(b).not.toContain("/buddy/passport");
+    expect((await bento("th")).bento).not.toContain("เขตให้สะสม");
+  });
+
+  it("explains the three steps, Thai first, with the app's Table Host term", async () => {
+    const steps = (b: string) => [...b.slice(b.indexOf('class="steps3"')).matchAll(/<li>([^<]+)<\/li>/g)].slice(0, 3).map((m) => m[1]);
+    expect(steps((await bento("th")).bento)).toEqual([
+      "เลือกโต๊ะ",
+      "เจอเจ้าภาพโต๊ะที่สถานที่จริง นั่งกัน 4 ถึง 6 คน จัดที่ให้คละกัน",
+      "เลือกเงียบ ๆ ว่าอยากเจอใครอีก",
+    ]);
+    const en = steps((await bento("en")).bento);
+    expect(en).toEqual(["Pick a table", "Meet your Table Host at a real place, 4 to 6 people seated to mix", "Choose quietly who you&#39;d like to see again"]);
+    expect(en.join(" ")).not.toMatch(/[–—]/);
+  });
+
+  it("fills every row: the last two tiles are wide, so four columns end on a full row", async () => {
+    const { bento: b } = await bento();
+    const tiles = [...b.matchAll(/class="tile2 ([a-z]*) /g)].map((m) => m[1]);
+    // hero (4 cells) + Buddy (2) + two singles + two wides (2 each) = 12 cells = 3 full rows of 4, 6 rows of 2.
+    expect(tiles).toEqual(["hero", "tall", "", "", "wide", "wide"]);
   });
 });
 

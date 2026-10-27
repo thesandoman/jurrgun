@@ -17,9 +17,12 @@ function texts(topic: Topic): Text[] {
 describe("FAQ", () => {
   it("keeps the home page visual: a bento hero, Buddy first, big-number tiles and a link to the FAQ", async () => {
     const html = await (await app.request("/?lang=en", { headers: { cookie: "jg_intro=seen" } })).text();
-    const hero = html.indexOf("Small groups. Real Bangkok places. See you there.");
+    // The tagline is set phrase by phrase (one span each).
+    const hero = html.indexOf('<span class="ph">See you there.</span>');
     expect(hero).toBeGreaterThan(-1);
-    expect(html.indexOf('href="/buddy" class="tile2')).toBeGreaterThan(hero);
+    // Buddy needs an account, so for visitors it is an explainer tile, not a link.
+    expect(html.indexOf("Bangkok Buddy")).toBeGreaterThan(hero);
+    expect(html).not.toContain('href="/buddy" class="tile2');
     expect(html).toContain('href="/safety" class="tile2');
     expect(html).toContain('href="/faq"');
     expect(html).not.toContain(FAQ[0].q.en); // the questions live on /faq now

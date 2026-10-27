@@ -65,7 +65,9 @@ publicRoutes.get("/", (c) => {
             )}
           </div>
         </Tile>
-        {/* Visitors only get public links: Buddy and the passport need an account, so those tiles explain without linking. */}
+        {/* Tiles link to public pages only. Buddy needs an account, so it explains without linking.
+            Four columns: hero and Buddy fill rows 1 and 2, the steps and Safety share row 3 (no hole);
+            on phones the two wide tiles each take a full row. */}
         <Tile tone="deep" size="tall">
           <AvatarStack items={[{ label: "You", emoji: "🍜", seed: "a" }, { label: "Buddy", emoji: "📜", seed: "b" }]} size={46} />
           <h3>{t("บัดดี้กรุงเทพฯ", "Bangkok Buddy")}</h3>
@@ -74,13 +76,18 @@ publicRoutes.get("/", (c) => {
         <Tile href="/learn/making-friends">
           <Big n="4-6" label={t("คนต่อโต๊ะ", "per table")} />
         </Tile>
-        <Tile tone="gold">
-          <Big n="50" label={t("เขตให้สะสม", "districts to collect")} />
-        </Tile>
         <Tile href="/types">
           <Big n="16" label={t("ไทป์กรุงเทพฯ", "Bangkok types")} />
         </Tile>
-        <Tile href="/safety" tone="gold">
+        <Tile size="wide" class="steps-tile">
+          <h2>{t("3 ขั้นตอน", "3 steps")}</h2>
+          <ol class="steps3" role="list">
+            <li>{t("เลือกโต๊ะ", "Pick a table")}</li>
+            <li>{t("เจอเจ้าภาพโต๊ะที่สถานที่จริง นั่งกัน 4 ถึง 6 คน จัดที่ให้คละกัน", "Meet your Table Host at a real place, 4 to 6 people seated to mix")}</li>
+            <li>{t("เลือกเงียบ ๆ ว่าอยากเจอใครอีก", "Choose quietly who you'd like to see again")}</li>
+          </ol>
+        </Tile>
+        <Tile href="/safety" tone="gold" size="wide">
           <span class="ico" aria-hidden="true">🛡️</span>
           <h3>{t("ปลอดภัยไว้ก่อน", "Safety first")}</h3>
           <small>{t("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป", "Always in public places. Report or block in the app.")}</small>

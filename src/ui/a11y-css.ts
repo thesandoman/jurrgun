@@ -1522,4 +1522,10 @@ body:not(:has(.tabbar)){padding-bottom:env(safe-area-inset-bottom,0px)}
 .start-cta .start-arrow{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800;line-height:1}
 @media (prefers-reduced-motion:reduce){.btn.start-cta:active{transform:none}}
 html.a11y-motion .btn.start-cta:active{transform:none}
+/* Landing card 3: the three steps, numbered in brand circles; the tile sits at the top, not the bottom. */
+.tile2.steps-tile{justify-content:flex-start;gap:8px}
+.tile2.steps-tile h2{margin:0;font-size:1.15rem}
+.steps3{list-style:none;counter-reset:step;margin:0;padding:0;display:grid;gap:8px}
+.steps3 li{counter-increment:step;display:flex;gap:10px;align-items:flex-start;line-height:1.45}
+.steps3 li::before{content:counter(step);flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-weight:800;font-size:.9rem}
 `);
