@@ -32,7 +32,7 @@ import { photoCleanSummary, runPhotoCleanBatch } from "../../services/photo-clea
 import { moderatorVisible } from "../../services/report-intake";
 import { alias } from "drizzle-orm/pg-core";
 import { connections, events, registrations, reports } from "../../schema";
-import { Button, Card, Empty, LinkButton, page, Stat, Tag, view } from "../../ui/kit";
+import { Button, Card, Empty, LinkButton, Notice, page, Stat, Tag, view } from "../../ui/kit";
 import type { Lang } from "../../lib/i18n";
 
 export const adminDashboard = new Hono<AppEnv>();
@@ -64,12 +64,42 @@ adminDashboard.post("/clock", requireRole("bma_admin"), async (c) => {
   return c.redirect("/admin?notice=done#clock");
 });
 
+/**
+ * The clock card's status tag, worked out once: the card shows it, and the line at the top of /admin
+ * repeats it whenever the clock is not Running (Restarted, Started, Status unavailable, Stopped).
+ */
+export function clockStatus(h: ClockHealth | null, t: (th: string, en: string) => string): { running: boolean; tone: "ok" | "warn" | "muted"; label: string } {
+  if (h?.state === "rearmed") return { running: false, tone: "warn", label: h.lastTick ? t("เพิ่งเริ่มใหม่", "Restarted") : t("เพิ่งเริ่ม", "Started") };
+  if (h?.state === "on_time" && h.next) return { running: true, tone: "ok", label: t("กำลังทำงาน", "Running") };
+  if (h?.state === "unavailable") return { running: false, tone: "muted", label: t("อ่านสถานะไม่ได้", "Status unavailable") };
+  return { running: false, tone: "muted", label: t("หยุดอยู่", "Stopped") };
+}
+
+/**
+ * One calm line at the top of /admin while the clock is not Running (owner card 1, 2026-10-27). It only
+ * points to the card below: no Start button, since staff may have stopped the clock on purpose.
+ */
+export function ClockLine(props: { health: ClockHealth | null; t: (th: string, en: string) => string }) {
+  const { t } = props;
+  const status = clockStatus(props.health, t);
+  if (status.running) return null;
+  return (
+    <Notice kind={status.tone === "warn" ? "warn" : "info"} class="clock-line" icon="🕐">
+      <a href="#clock">
+        {t("นาฬิการายชั่วโมง: ", "Hourly clock: ")}
+        <strong>{status.label}</strong>
+      </a>
+    </Notice>
+  );
+}
+
 function ClockCard(props: { health: ClockHealth | null; push: boolean; t: (th: string, en: string) => string; lang: "th" | "en" }) {
   const { t } = props;
   const h = props.health;
   const when = (ms: number) =>
     new Intl.DateTimeFormat(props.lang === "en" ? "en-GB" : "th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(ms));
   const on = h?.state === "on_time" || h?.state === "rearmed";
+  const status = clockStatus(h, t);
   return (
     <section id="clock">
       <h2>{t("นาฬิการายชั่วโมง", "Hourly clock")}</h2>
@@ -83,7 +113,7 @@ function ClockCard(props: { health: ClockHealth | null; push: boolean; t: (th: s
         <p>
           {h?.state === "rearmed" ? (
             <>
-              <Tag tone="warn">{h.lastTick ? t("เพิ่งเริ่มใหม่", "Restarted") : t("เพิ่งเริ่ม", "Started")}</Tag>{" "}
+              <Tag tone={status.tone}>{status.label}</Tag>{" "}
               {h.lastTick
                 ? t("นาฬิกาพลาดรอบและหยุดไป ระบบเริ่มให้ใหม่แล้ว รอบถัดไป ", "It had missed a run and stopped. It has been restarted; next run ")
                 : t("นาฬิกายังไม่ได้ทำงาน ระบบเริ่มให้แล้ว รอบแรก ", "It wasn't running. It has been started; first run ")}
@@ -91,13 +121,11 @@ function ClockCard(props: { health: ClockHealth | null; push: boolean; t: (th: s
             </>
           ) : h?.state === "on_time" && h.next ? (
             <>
-              <Tag tone="ok">{t("กำลังทำงาน", "Running")}</Tag> {t("รอบถัดไป ", "Next run ")}
+              <Tag tone={status.tone}>{status.label}</Tag> {t("รอบถัดไป ", "Next run ")}
               <strong>{when(h.next)}</strong>
             </>
-          ) : h?.state === "unavailable" ? (
-            <Tag tone="muted">{t("อ่านสถานะไม่ได้", "Status unavailable")}</Tag>
           ) : (
-            <Tag tone="muted">{t("หยุดอยู่", "Stopped")}</Tag>
+            <Tag tone={status.tone}>{status.label}</Tag>
           )}
         </p>
         {h?.lastTick ? (
@@ -349,6 +377,7 @@ adminDashboard.get("/", async (c) => {
     { title: t("ภาพรวมทีมงาน", "Staff overview"), admin: true },
     <>
       <h1>{t("ภาพรวมทีมงาน", "Staff overview")}</h1>
+      {isAdmin ? <ClockLine health={clock} t={t} /> : null}
 
       {isAdmin ? (
         <>

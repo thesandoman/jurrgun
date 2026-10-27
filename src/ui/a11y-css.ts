@@ -1436,4 +1436,7 @@ a[href="/chat"]>.unread-dot{display:inline-block;margin-left:6px;vertical-align:
    200% it passed the spacing cap (40px phones, 56px laptops). It still scales, but never past the cap. */
 h2{margin-top:min(1.8rem,56px)}
 @media (max-width:520px){h2{margin-top:min(1.5rem,40px)}}
+/* Admin: the one clock line under the heading; the whole line is a 44px link down to the clock card. */
+.notice.clock-line{display:flex;align-items:center;gap:8px}
+.notice.clock-line a{display:inline-flex;align-items:center;flex-wrap:wrap;column-gap:4px;min-height:44px;color:inherit;text-decoration:underline;text-underline-offset:3px}
 `);
