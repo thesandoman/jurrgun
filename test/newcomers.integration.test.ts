@@ -46,6 +46,28 @@ describe.skipIf(!HAS_DB)("/new", () => {
     expect(member).toContain('href="/quiz"');
   });
 
+  it("/local is a public front door for Bangkok locals: every public table, no story cookie, the homepage's start", async () => {
+    const tag = newId().slice(0, 6);
+    await table(`Pottery ${tag}`, ["art"]);
+    const res = await req("/local?lang=en&src=poster");
+    expect(res.status).toBe(200);
+    const cookies = res.headers.get("set-cookie") ?? "";
+    expect(cookies).not.toContain("jg_new=");
+    expect(cookies).not.toContain("jg_intl=");
+    expect(cookies).toContain("jg_src=poster");
+    const html = await res.text();
+    expect(html).toContain("Bangkok is home?");
+    expect(html).toContain('<meta name="description" content="For Bangkok locals who want new friends.');
+    expect(html).toContain('<a href="/signup" class="btn primary start-cta"><span>Find my first table</span>');
+    expect(html).toContain('href="/new"');
+    expect(html).toContain('href="/international"');
+    expect(html).not.toContain('href="/buddy/passport"');
+    expect(html).not.toContain('href="/quiz"');
+    expect(html).not.toMatch(/[–—]/);
+    const th = await (await req("/local?lang=th")).text();
+    expect(th).toContain("สำหรับคนกรุงเทพฯ");
+  });
+
   it("sends members to the event itself", async () => {
     const m = await createMember();
     const html = await (await req("/new", { cookie: m.cookie })).text();

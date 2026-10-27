@@ -1531,4 +1531,11 @@ html.a11y-motion .btn.start-cta:active{transform:none}
 /* Landing card 4: flat tiles. One edge per tile and nothing raised inside it: no shadow on the tiles,
    the start button or the avatars. */
 .landing-bento .tile2,.landing-bento .tile2 *{box-shadow:none}
+/* Landing card 5: three doors, full-width rows with a trailing arrow, flat like the tiles. */
+main h2.doors-eyebrow{margin:24px 0 8px}
+.doors3{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.doors3 .door{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:700}
+.doors3 .door:hover{border-color:var(--brand)}
+.doors3 .door-label{flex:1;min-width:0}
+.doors3 .door-go{color:var(--brand);font-weight:800}
 `);

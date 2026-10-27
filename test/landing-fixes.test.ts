@@ -13,7 +13,7 @@ const visitor = (lang: "en" | "th") => ({ headers: { cookie: `jg_intro=seen; lan
 async function bento(lang: "en" | "th" = "en") {
   const html = await (await app.request("/", visitor(lang))).text();
   const start = html.indexOf('class="bento');
-  const end = html.indexOf('class="rail-wrap"');
+  const end = html.indexOf('class="eyebrow doors-eyebrow"');
   expect(start).toBeGreaterThan(-1);
   expect(end).toBeGreaterThan(start);
   return { html, bento: html.slice(start, end) };
@@ -128,6 +128,37 @@ describe("card 4: flat tiles", () => {
     const { A11Y_CSS } = await import("../src/ui/a11y-css");
     expect(A11Y_CSS).toContain(".landing-bento .tile2,.landing-bento .tile2 *{box-shadow:none}");
     expect((await bento()).html).toContain('class="bento landing-bento"');
+  });
+});
+
+describe("card 5: three doors", () => {
+  it("replaces the learn rail and door buttons with three door rows and one Learn more link", async () => {
+    const { html } = await bento("en");
+    const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    expect(main).not.toContain("rail-wrap");
+    expect(main).toContain('<h2 class="eyebrow doors-eyebrow">Where to start</h2>');
+    const doors = [...main.matchAll(/<a href="([^"]+)" class="door">/g)].map((m) => m[1]);
+    expect(doors).toEqual(["/new", "/international", "/local"]);
+    expect(main.match(/class="door-go" aria-hidden="true">→</g)?.length).toBe(3);
+    expect(main).toContain('<a href="/learn">Learn more</a>');
+    // The footer already has these, so the landing doesn't repeat them.
+    for (const dup of ['href="/faq"', 'href="/code-of-conduct"']) expect(main).not.toContain(dup);
+    expect(main).toContain('href="/partner/apply"');
+    const th = (await bento("th")).html;
+    expect(th).toContain("เริ่มจากตรงไหนดี");
+    expect(th).toContain("เรียนรู้เพิ่ม");
+  });
+
+  it("every door and every landing link outside the footer opens for a visitor", async () => {
+    const { html } = await bento("en");
+    const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    const hrefs = [...new Set([...main.matchAll(/<a href="(\/[^"#]*)"/g)].map((m) => m[1]))]// Sign up and sign in are the point; the partner link (kept by the owner) asks organisers to sign in to apply.
+      .filter((h) => !["/signup", "/login", "/partner/apply"].includes(h));
+    for (const href of hrefs) {
+      if (["/new", "/local", "/international"].includes(href)) continue; // these read the database: covered in the integration test
+      const res = await app.request(href, visitor("en"), { NO_EXTERNAL: "1" });
+      expect(res.status, href).toBe(200);
+    }
   });
 });
 

@@ -43,20 +43,43 @@ const NEW_CSS = `
 .new-steps li::marker{color:var(--brand);font-weight:700}
 `;
 
-type Audience = "newcomer" | "international";
+type Audience = "newcomer" | "international" | "local";
 type Copy = { th: string; en: string };
 const c2 = (th: string, en: string): Copy => ({ th, en });
 
 /**
  * One front door per audience (design/reference/customer-profile.md):
- * /new for people new to Bangkok, /international for foreigners living here.
+ * /new for people new to Bangkok, /international for foreigners living here,
+ * /local for people who call Bangkok home and want new friends.
  * Same shape, different promise, tables and first steps.
  */
 const COPY: Record<Audience, {
   title: Copy; pill: Copy; hero: Copy; sub: Copy; listTitle: Copy; tags: string[];
   tile: { href: string; icon: string; title: Copy; body: Copy };
   steps: Copy[];
+  /** The search snippet, from what the page itself says. */
+  description?: Copy;
 }> = {
+  local: {
+    title: c2("คนกรุงเทพฯ อยากมีเพื่อนใหม่? เจอกันที่นี่", "Bangkok local? Make new friends here"),
+    pill: c2("สำหรับคนกรุงเทพฯ", "For Bangkok locals"),
+    hero: c2("อยู่กรุงเทพฯ มานาน?|ยังมีเพื่อนใหม่ได้|ที่โต๊ะเล็ก ๆ|ใกล้บ้านคุณ", "Bangkok is home? Make new friends at a small table near you."),
+    sub: c2("มาคนเดียวได้ ทุกคนก็มาคนเดียว แล้วกลับไปพร้อมคนที่อยากเจออีก", "Come alone, everyone does. Leave with people you'll see again."),
+    listTitle: c2("โต๊ะสัปดาห์นี้", "Tables this week"),
+    // Every public table: locals aren't one kind of table.
+    tags: [],
+    tile: { href: "/learn/making-friends", icon: "👋", title: c2("หาเพื่อนใหม่ในกรุงเทพฯ", "Making friends in Bangkok"), body: c2("เริ่มจากกลุ่มเล็ก ไปตามนัด แล้วนัดกันต่อ", "Start small, show up, then meet again") },
+    steps: [
+      c2("เลือกกิจกรรมใกล้บ้านหรือที่ทำงาน เช่น เดินตลาดเช้า บอร์ดเกมหลังเลิกงาน หรือเดินเล่นย่านเก่า", "Pick something near home or work: a morning market walk, after-work board games or an old-town stroll."),
+      c2("เราจัดโต๊ะละ 4 ถึง 6 คนอย่างยุติธรรม ดูจากภาษาและสิ่งที่ชอบ ไม่ใช่หน้าตา", "We seat 4 to 6 people fairly, by languages and interests, never by looks."),
+      c2("หลังกิจกรรม เลือกเงียบ ๆ ว่าอยากเจอใครอีก จะรู้ก็ต่อเมื่อเลือกตรงกันเท่านั้น", "Afterwards, choose quietly who you'd like to see again. You only hear when it's mutual."),
+      c2("อยากรู้จักย่านที่ยังไม่เคยไป? มีบัดดี้กรุงเทพฯ ไว้ตะลุยครบ 50 เขตด้วยกัน", "Places you've never been? Get a Bangkok Buddy to explore all 50 districts with."),
+    ],
+    description: c2(
+      "คนกรุงเทพฯ ที่อยากมีเพื่อนใหม่ มาคนเดียวได้ โต๊ะละ 4 ถึง 6 คนที่สถานที่จริงใกล้บ้าน จัดที่นั่งอย่างยุติธรรม แล้วเลือกเงียบ ๆ ว่าอยากเจอใครอีก",
+      "For Bangkok locals who want new friends. Come alone to a table of 4 to 6 at a real place near you, seated fairly, then choose quietly who you'd like to see again.",
+    ),
+  },
   newcomer: {
     title: c2("ย้ายมากรุงเทพฯ? เจอเพื่อนใหม่ที่นี่", "New in Bangkok? Make friends here"),
     pill: c2("มาใหม่ในกรุงเทพฯ", "New to Bangkok"),
@@ -93,7 +116,8 @@ async function landing(c: Ctx, audience: Audience) {
   const { t, lang, user } = view(c);
   const k = COPY[audience];
   const L2 = (x: Copy) => t(x.th, x.en);
-  setCookie(c, audience === "international" ? INTERNATIONAL_COOKIE : NEWCOMER_COOKIE, "1", { path: "/", maxAge: 30 * 86_400, sameSite: "Lax" });
+  // Onboarding pre-ticks the newcomer or expat story from these; a local has nothing to pre-tick.
+  if (audience !== "local") setCookie(c, audience === "international" ? INTERNATIONAL_COOKIE : NEWCOMER_COOKIE, "1", { path: "/", maxAge: 30 * 86_400, sameSite: "Lax" });
   const now = new Date();
   const list = await getDb(c.env)
     .select({ id: events.id, title: events.title, titleEn: events.titleEn, startsAt: events.startsAt, district: events.district, costThb: events.costThb })
@@ -103,7 +127,7 @@ async function landing(c: Ctx, audience: Audience) {
         eq(events.status, "published"),
         ne(events.visibility, "private"),
         gt(events.startsAt, now),
-        or(...k.tags.map((tag) => has(events.tags, tag)))!,
+        k.tags.length ? or(...k.tags.map((tag) => has(events.tags, tag))) : undefined,
         sql`not ${has(events.tags, OPEN_TO_MORE_TAG)}`,
         noOpenInvite(),
       ),
@@ -114,10 +138,10 @@ async function landing(c: Ctx, audience: Audience) {
   const join = member ? "/" : "/signup";
   return page(
     c,
-    { title: L2(k.title) },
+    { title: L2(k.title), description: k.description ? L2(k.description) : undefined },
     <>
       <Bento>
-        <Tile size="hero" tone="brand" art={{ tone: audience === "international" ? "afternoon" : "morning", icons: [], seed: audience === "international" ? 17 : 11 }} lang={lang}>
+        <Tile size="hero" tone="brand" art={{ tone: audience === "international" ? "afternoon" : audience === "local" ? "dawn" : "morning", icons: [], seed: audience === "international" ? 17 : audience === "local" ? 23 : 11 }} lang={lang}>
           <Pill dot>{L2(k.pill)}</Pill>
           {/* Phrases stay whole, so Thai never breaks mid-word-group. */}
           <h1>
@@ -187,12 +211,21 @@ async function landing(c: Ctx, audience: Audience) {
       </ol>
 
       <div class="row">
-        <LinkButton href={join}>{member ? t("ดูกิจกรรมทั้งหมด", "See all events") : t("เริ่มเลย ฟรี", "Get started, it's free")}</LinkButton>
+        {audience === "local" && !member ? (
+          // The Local door ends on the homepage's start (owner card 5).
+          <a href={join} class="btn primary start-cta">
+            <span>{t("หาโต๊ะแรก", "Find my first table")}</span>
+            <span class="start-arrow" aria-hidden="true">→</span>
+          </a>
+        ) : (
+          <LinkButton href={join}>{member ? t("ดูกิจกรรมทั้งหมด", "See all events") : t("เริ่มเลย ฟรี", "Get started, it's free")}</LinkButton>
+        )}
         {member ? null : <a href="/login">{t("เข้าสู่ระบบ", "Sign in")}</a>}
       </div>
       <p class="muted">
         {t("ใช้ภาษาไทยหรืออังกฤษก็ได้ สมัครได้ไม่ต้องมีเบอร์ไทย", "Thai or English. No Thai SIM needed to sign up.")} ·{" "}
-        {audience === "international" ? <><a href="/new">{t("ย้ายมาจากต่างจังหวัด?", "Moved from another province?")}</a> · </> : <><a href="/international">{t("ชาวต่างชาติในกรุงเทพฯ?", "From abroad?")}</a> · </>}
+        {audience !== "newcomer" ? <><a href="/new">{t("ย้ายมาจากต่างจังหวัด?", "Moved from another province?")}</a> · </> : null}
+        {audience !== "international" ? <><a href="/international">{t("ชาวต่างชาติในกรุงเทพฯ?", "From abroad?")}</a> · </> : null}
         <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
       </p>
     </>,
@@ -201,6 +234,7 @@ async function landing(c: Ctx, audience: Audience) {
 
 newcomerRoutes.get("/new", (c) => landing(c, "newcomer"));
 // The international door opens in English unless the visitor already chose a language.
+newcomerRoutes.get("/local", (c) => landing(c, "local"));
 newcomerRoutes.get("/international", (c) => (getCookie(c, "lang") || c.req.query("lang") ? landing(c, "international") : c.redirect("/lang/en?back=%2Finternational")));
 
 type Pick = { id: string; title: string; titleEn: string | null; startsAt: Date; district: string; costThb: number };

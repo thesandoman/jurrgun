@@ -5,7 +5,7 @@ import { FAIR_PROCESS } from "../content/accountability";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env";
-import { ABOUT, LEARN_CARDS } from "../content/learn";
+import { ABOUT } from "../content/learn";
 import { L } from "../lib/i18n";
 import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
@@ -18,6 +18,13 @@ import { Script } from "../ui/kit";
 export const publicRoutes = new Hono<AppEnv>();
 
 export const INTRO_COOKIE = "jg_intro";
+
+/** The landing's three front doors (owner card 5): public pages, one per kind of visitor. */
+export const DOORS = [
+  { href: "/new", icon: "👋", label: { th: "เพิ่งย้ายมากรุงเทพฯ", en: "New to Bangkok" } },
+  { href: "/international", icon: "🌏", label: { th: "ชาวต่างชาติในกรุงเทพฯ", en: "From abroad, living here" } },
+  { href: "/local", icon: "🏙️", label: { th: "คนกรุงเทพฯ", en: "Bangkok local" } },
+] as const;
 
 /** The tagline's phrases: Thai separates them with spaces, English with full stops. */
 export function taglinePhrases(text: string, lang: string): string[] {
@@ -93,22 +100,21 @@ publicRoutes.get("/", (c) => {
           <small>{t("นัดในที่สาธารณะเสมอ รายงานหรือบล็อกได้ในแอป", "Always in public places. Report or block in the app.")}</small>
         </Tile>
       </Bento>
-      <div class="rail-wrap">
-        <div class="rail" role="list">
-          {LEARN_CARDS.map((topic) => (
-            <a href={`/learn/${topic.slug}`} role="listitem">
-              <b aria-hidden="true">{topic.icon}</b>
-              <strong>{L(lang, topic.title)}</strong>
+      {/* Three doors, one per kind of visitor; the FAQ, Learn and Code of conduct links live in the footer. */}
+      <h2 class="eyebrow doors-eyebrow">{t("เริ่มจากตรงไหนดี", "Where to start")}</h2>
+      <ul class="doors3" role="list">
+        {DOORS.map((d) => (
+          <li>
+            <a href={d.href} class="door">
+              <span aria-hidden="true">{d.icon}</span>
+              <span class="door-label">{L(lang, d.label)}</span>
+              <span class="door-go" aria-hidden="true">→</span>
             </a>
-          ))}
-        </div>
-      </div>
-      <div class="row doors">
-        <LinkButton href="/new" kind="ghost">👋 {t("เพิ่งย้ายมากรุงเทพฯ", "New to Bangkok")}</LinkButton>
-        <LinkButton href="/international" kind="ghost">🌏 {t("ชาวต่างชาติในกรุงเทพฯ", "From abroad, living here")}</LinkButton>
-      </div>
-      <p class="muted">
-        <a href="/faq">{t("คำถามที่พบบ่อย", "FAQ")}</a> · <a href="/learn">{t("เรียนรู้", "Learn")}</a> · <a href="/code-of-conduct">{t("หลักปฏิบัติ", "Code of conduct")}</a>
+          </li>
+        ))}
+      </ul>
+      <p>
+        <a href="/learn">{t("เรียนรู้เพิ่ม", "Learn more")}</a>
       </p>
       <p class="muted">
         <a href="/partner/apply">{t("ผู้จัดงานและสถานที่: สมัครเป็นพาร์ตเนอร์", "For organisers and venues: become a partner")}</a>

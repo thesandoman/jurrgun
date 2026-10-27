@@ -1,7 +1,7 @@
 /**
  * Placement tracking (admin only): which link first brought someone in.
  *
- * A public landing (/, /new, /international, /types/:slug, /signup, /quiz) or
+ * A public landing (/, /new, /local, /international, /types/:slug, /signup, /quiz) or
  * an event page (/events/:id, even when it sends a signed-out visitor to sign
  * in first) opened with
  * `?src=` (or `utm_source`, with `utm_campaign` appended) remembers that value
