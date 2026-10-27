@@ -63,6 +63,15 @@ describe("homepage", () => {
     expect(locs.indexOf(`${LIVE}/intro`)).toBeGreaterThan(locs.indexOf(`${LIVE}/international?lang=en`));
   });
 
+  it("/local is indexable and sits right after /international in the sitemap and llms.txt", async () => {
+    expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/local" }).canonical).toBe(`${LIVE}/local`);
+    const xml = await (await get(`${LIVE}/sitemap.xml`)).text();
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(locs.indexOf(`${LIVE}/local`)).toBe(locs.indexOf(`${LIVE}/international?lang=en`) + 1);
+    const txt = await (await get(`${LIVE}/llms.txt`)).text();
+    expect(txt).toContain(`- [Bangkok locals](${LIVE}/local): `);
+  });
+
   it('"/" is noindex unless the render says it is the public page', () => {
     expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/" }).robots).toBe("noindex");
     expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/", publicView: true }).canonical).toBe(`${LIVE}/`);
