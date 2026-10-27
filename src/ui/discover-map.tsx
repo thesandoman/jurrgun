@@ -280,6 +280,15 @@ export const LAPTOP_OPEN_MQ = "(min-width: 1024px) and (min-height: 600px)";
 /** Runs right after the panel is parsed, so it opens before the first paint rather than jumping open later. */
 export const LAPTOP_OPEN_JS = `try{if(matchMedia("${LAPTOP_OPEN_MQ}").matches)document.getElementById("discover-sheet").open=true}catch(e){}`;
 
+/**
+ * The Filters button's name with the number of filters on (owner card 5): "Filters (2)", or just "Filters"
+ * with none. It is the button's accessible name everywhere; landscape phones at large text also show it,
+ * since there the chips row folds behind this button.
+ */
+export function filtersLabel(n: number, t: T): string {
+  return n > 0 ? t(`ตัวกรอง (${n})`, `Filters (${n})`) : t("ตัวกรอง", "Filters");
+}
+
 /** The Show all pill. ดูทุกจุด ("see every spot"): ดูทั้งหมด is kept for the notifications' See all. */
 export function showAllWord(t: T): string {
   return t("ดูทุกจุด", "Show all");
@@ -298,6 +307,8 @@ export function FullDiscover(props: {
   status: SheetCopy;
   search: string;
   filtered: boolean;
+  /** How many of the Filters panel's own filters are on (not the search, which has its own box). */
+  filterCount?: number;
   /** The filter form (same as the list view's). */
   filters: Child;
   /** Event cards for the list sheet. */
@@ -361,13 +372,14 @@ export function FullDiscover(props: {
         </form>
         {/* Every filter, the City Quests switch and the map style live in this one sheet (D3). */}
         <details class={`fd-filters ${props.filtered ? "active" : ""}`} id="fd-filters">
-          <summary aria-label={props.filtered ? t("ตัวกรอง (มีตัวกรองอยู่)", "Filters (on)") : t("ตัวกรอง", "Filters")}>
+          <summary aria-label={filtersLabel(props.filterCount ?? 0, t)}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
               <circle cx="16" cy="7" r="2" />
               <circle cx="10" cy="17" r="2" />
             </svg>
             <span class="fd-filters-word">{t("ตัวกรอง", "Filters")}</span>
+            {props.filterCount ? <span class="fd-filters-n"> ({props.filterCount})</span> : null}
             {props.filtered ? <b class="fd-dot" aria-hidden="true" /> : null}
           </summary>
           <div class="fd-filters-body">
@@ -659,7 +671,9 @@ function announce(text) { const live = document.getElementById("fd-live"); if (!
 function refit(points, instant = false) {
   const map = api?.map;
   if (!map || !points.length) return;
-  const top = (document.querySelector(".svm-chips")?.getBoundingClientRect().bottom ?? 220) + 24;
+  // Folded chips (large text in landscape) leave the header as the top edge.
+  const chipsEl = document.querySelector(".svm-chips");
+  const top = ((isShown(chipsEl) ? chipsEl : document.querySelector(".fd-top"))?.getBoundingClientRect().bottom ?? 220) + 24;
   const rail = document.querySelector(".fd-rail")?.getBoundingClientRect();
   const sr = sheetEl.getBoundingClientRect();
   // A side panel that is open takes the left of the map; closed, only its handle sits in the bottom-left corner.
@@ -941,5 +955,19 @@ body.fullmap-body .tabbar{z-index:var(--z-tab)}
   .fullmap .maplibregl-ctrl-attrib{font-size:min(.75rem,12px)}
   .fullmap .fd-rail-btn{font-size:min(.7rem,14px)}
   .fullmap .fd-rail-btn b{font-size:min(1.2rem,22px)}
+}
+/*
+ * Landscape phones at large text (owner card 5): the chips row folds behind the Filters button, which then
+ * says how many filters are on ("Filters (2)"); the panel still holds every category. The map is a
+ * container and the query is in rem, which in a container query is the page's real root size, so it
+ * follows browser text zoom and the app's own text size alike. 19rem of height is 304px at 100%: no
+ * phone held sideways is that short, and at 150% it takes phones up to 456px tall. Portrait never matches.
+ */
+.fullmap{container:fdmap/size}
+.fd-filters-n{display:none}
+@container fdmap (orientation:landscape) and (height < 19rem){
+  .fullmap .svm-chips,.fullmap .fd-more{display:none}
+  .fd-filters-word,.fd-filters-n{display:inline}
+  .fd-filters>summary .fd-dot{display:none}
 }
 `;

@@ -355,6 +355,8 @@ export async function discoverPage(c: Context<AppEnv>) {
     );
   };
   const filterCount = [q.district, q.tag, q.free, q.short, q.small, q.alcoholFree, q.smokeFree, q.language, q.intensity, q.plusOne, q.fitsAge, q.resident, q.text].filter(Boolean).length;
+  // The map's Filters button counts what its own panel holds (When is in it; the search has its own box).
+  const mapFilterCount = filterCount - (q.text ? 1 : 0) + (q.when !== "all" ? 1 : 0);
   const forYouHidden = getCookie(c, FOR_YOU_COOKIE) === "hide";
   const quizHint = myVibe.length === 0 ? quizHintCard(t) : null;
 
@@ -375,6 +377,7 @@ export async function discoverPage(c: Context<AppEnv>) {
         status={status}
         search={q.text}
         filtered={filtered}
+        filterCount={mapFilterCount}
         filters={filtersForm}
         list={
           <>
