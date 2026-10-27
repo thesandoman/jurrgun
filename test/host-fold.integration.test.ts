@@ -39,16 +39,13 @@ describe("folded sections: the summary line", () => {
     );
     expect(sumLine([...parts], { costThb: "0", freeSeats: "0", paymentUrl: "", safetyInfo: "" }, "en", "Free", "Not set")).toBe("Cost: Free");
   });
-  it("says Not set when nothing is filled in or ticked, and names the station in the page's language", () => {
+  it("says Not set when nothing is filled in, and names the station in the page's language", () => {
     const venue = [
       { n: "nearestStation", k: "sel", l: "" },
       { n: "walkMinutes", k: "num", l: "{n} min walk" },
     ] as const;
     expect(sumLine([...venue], { nearestStation: "", walkMinutes: "" }, "en", "Free", "Not set")).toBe("Not set");
     expect(sumLine([...venue], { nearestStation: "bts_asok", walkMinutes: "5" }, "en", "Free", "Not set")).toBe("Asok · 5 min walk");
-    expect(sumLine([{ n: "alcoholServed", k: "flag", l: "Alcohol served" }, { n: "requirements", k: "lines", l: "{n} to know" }], { alcoholServed: true, requirements: "water\n\nticket" }, "en", "", "Not set")).toBe(
-      "Alcohol served · 2 to know",
-    );
   });
 });
 
@@ -63,14 +60,14 @@ describe("folded sections: the CSS", () => {
 });
 
 describe.skipIf(!HAS_DB)("folded sections: the form", () => {
-  it("a new event: the three optional sections are closed with Not set or Free; the required ones stay open cards", async () => {
+  it("a new event: the two optional sections are closed with Not set or Free; the required ones stay open cards", async () => {
     const m = await createMember({ role: "circle_head" });
     const en = await (await req("/host/new?lang=en", { cookie: m.cookie })).text();
     const f = folds(en);
-    expect(f.map((x) => x.title)).toEqual(["Finding the table (optional)", "Entry rules (optional)", "Cost and safety"]);
+    expect(f.map((x) => x.title)).toEqual(["Finding the table (optional)", "Cost and safety"]);
     expect(f.every((x) => !x.open)).toBe(true);
-    expect(f.map((x) => x.now)).toEqual(["Not set", "Not set", "Cost: Free"]);
-    expect(f[2].cls).toBe("card host-opt");
+    expect(f.map((x) => x.now)).toEqual(["Not set", "Cost: Free"]);
+    expect(f[1].cls).toBe("card host-opt");
     // Required sections are plain open cards, never folded.
     for (const h of ["What&#39;s the plan?", "When and where", "Who it&#39;s for"]) expect(en).toContain(`<h2>${h}</h2>`);
     const folded = [...en.matchAll(/<details class="[^"]*host-opt[\s\S]*?<\/details>/g)].map((x) => x[0]).join("");
@@ -78,14 +75,20 @@ describe.skipIf(!HAS_DB)("folded sections: the form", () => {
       expect(en).toContain(`name="${n}"`);
       expect(folded).not.toContain(`name="${n}"`);
     }
+    // Entry rules stay open: an unticked "Alcohol served" makes the event alcohol-free and moves the age gate.
+    for (const n of ["alcoholServed", "smokingArea", "openEntry", "approvalRequired", "requirements", "groupLabel", "groupJoinCode"]) {
+      expect(en).toContain(`name="${n}"`);
+      expect(folded).not.toContain(`name="${n}"`);
+    }
+    expect(en).toContain("<legend>Entry rules</legend>");
     // The fields are still inside, and the sticky Send bar is still there.
     expect(en).toContain('name="costThb"');
     expect(en).toContain('name="nearestStation"');
     expect(en).toContain('class="row end pf-save host-send"');
     // Thai first.
     const th = folds(await (await req("/host/new?lang=th", { cookie: m.cookie })).text());
-    expect(th.map((x) => x.now)).toEqual(["ยังไม่ได้ตั้ง", "ยังไม่ได้ตั้ง", "ค่าใช้จ่าย: ฟรี"]);
-    expect(th[2].title).toBe("ค่าใช้จ่ายและความปลอดภัย");
+    expect(th.map((x) => x.now)).toEqual(["ยังไม่ได้ตั้ง", "ค่าใช้จ่าย: ฟรี"]);
+    expect(th[1].title).toBe("ค่าใช้จ่ายและความปลอดภัย");
   });
 
   it("editing: each closed summary reads the event's current values", async () => {
@@ -100,7 +103,7 @@ describe.skipIf(!HAS_DB)("folded sections: the form", () => {
         costThb: 350, freeSeats: 2, paymentNote: "PromptPay at the door", nearestStation: "bts_asok", walkMinutes: 5, alcoholServed: true, approvalRequired: true,
       });
     const f = folds(await (await req(`/host/${id}/edit`, { cookie: `${host.cookie}; lang=en` })).text());
-    expect(f.map((x) => x.now)).toEqual(["Asok · 5 min walk", "Alcohol served · You approve places", "Cost: ฿350 · 2 pay-it-forward · Pay: PromptPay at the door"]);
+    expect(f.map((x) => x.now)).toEqual(["Asok · 5 min walk", "Cost: ฿350 · 2 pay-it-forward · Pay: PromptPay at the door"]);
     expect(f.every((x) => !x.open)).toBe(true);
   });
 
@@ -123,7 +126,7 @@ describe.skipIf(!HAS_DB)("folded sections: the form", () => {
     const r = await req("/host/new?lang=en", { cookie: m.cookie, form: { title: "", description: "" } });
     expect(r.status).toBe(400);
     const f = folds(await r.text());
-    expect(f).toHaveLength(3);
+    expect(f).toHaveLength(2);
     expect(f.every((x) => x.open)).toBe(true);
   });
 });

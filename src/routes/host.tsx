@@ -493,11 +493,9 @@ el.setAttribute("aria-describedby",(el.getAttribute("aria-describedby")||"").spl
 f.addEventListener("input",clear);f.addEventListener("change",clear);
 function cut(s){return s.length>${SUM_CUT}?s.slice(0,${SUM_CUT - 1}).replace(/\\s+$/,"")+"…":s}
 function now(d){var o=[];JSON.parse(d.dataset.sum).forEach(function(p){var el=f.elements.namedItem(p.n);if(el&&!el.tagName)el=el[0];if(!el)return;
-var v=el.type==="checkbox"?el.checked:String(el.value||"").trim();
-if(p.k==="flag"){if(v===true)o.push(p.l);return}
+var v=String(el.value||"").trim();
 if(p.k==="cost")o.push(p.l+": "+(+v>0?"฿"+(+v):d.dataset.free));
 else if(p.k==="num"){if(+v>0)o.push(p.l.replace("{n}",String(+v)))}
-else if(p.k==="lines"){var n=v.split("\\n").filter(function(x){return x.trim()}).length;if(n)o.push(p.l.replace("{n}",String(n)))}
 else if(p.k==="sel"){if(v&&el.selectedIndex>=0)o.push(el.options[el.selectedIndex].text)}
 else if(p.k==="has"){if(v)o.push(p.l)}
 else if(v)o.push(p.l?p.l+": "+cut(v):cut(v))});
@@ -516,24 +514,17 @@ if(vv)vv.addEventListener("resize",typing)})()`;
  * from the same parts, or says Not set. Required sections stay open, and Send
  * opens any folded section with an error in it (show() and go() above).
  */
-type SumPart = { n: string; k: "cost" | "num" | "text" | "has" | "flag" | "sel" | "lines"; l: string };
+type SumPart = { n: string; k: "cost" | "num" | "text" | "has" | "sel"; l: string };
 const cut = (s: string) => (s.length > SUM_CUT ? `${s.slice(0, SUM_CUT - 1).trimEnd()}…` : s);
 
 export function sumLine(parts: SumPart[], d: Record<string, unknown>, lang: string, free: string, none: string): string {
   const out: string[] = [];
   for (const p of parts) {
     const raw = d[p.n];
-    if (p.k === "flag") {
-      if (raw === true) out.push(p.l);
-      continue;
-    }
     const v = typeof raw === "string" ? raw.trim() : "";
     if (p.k === "cost") out.push(`${p.l}: ${Number(v) > 0 ? `฿${Number(v)}` : free}`);
     else if (p.k === "num") {
       if (Number(v) > 0) out.push(p.l.replace("{n}", String(Number(v))));
-    } else if (p.k === "lines") {
-      const n = v.split("\n").filter((x) => x.trim()).length;
-      if (n) out.push(p.l.replace("{n}", String(n)));
     } else if (p.k === "sel") {
       const st = stationByKey(v);
       if (st) out.push(lang === "en" ? st.en : st.th);
@@ -668,24 +659,8 @@ function ProposalForm(props: {
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Guests can bring a friend (+1)")} checked={d.plusOneAllowed} />
         <Select label={t("ใครเห็นกิจกรรมนี้", "Who can see it")} name="visibility" options={visOpts} value={d.visibility} lang={lang} />
-        <Fold
-          v={v}
-          d={d}
-          open={fold}
-          title={t("กติกาการเข้าร่วม (ไม่บังคับ)", "Entry rules (optional)")}
-          parts={[
-            { n: "alcoholServed", k: "flag", l: t("มีแอลกอฮอล์", "Alcohol served") },
-            { n: "smokingArea", k: "flag", l: t("มีที่สูบบุหรี่", "Smoking area") },
-            { n: "openEntry", k: "flag", l: t("เข้างานได้เลย", "Open entry") },
-            { n: "approvalRequired", k: "flag", l: t("ผู้จัดอนุมัติที่นั่ง", "You approve places") },
-            ...(props.talk ? [{ n: "talkMode", k: "flag", l: t("วงพูดคุยส่วนตัว", "Private talk") } as SumPart] : []),
-            { n: "requirements", k: "lines", l: t("ต้องรู้ก่อนจอง {n} ข้อ", "{n} to know before booking") },
-            { n: "groupLabel", k: "text", l: t("เฉพาะ", "Only for") },
-            { n: "groupJoinCode", k: "has", l: t("มีรหัสเข้าร่วม", "Join code") },
-          ]}
-        >
-          <EntryRuleFields t={t} d={{ ...emptyEntryRules(), ...d, requirements: d.requirements ?? "", groupLabel: d.groupLabel ?? "", groupJoinCode: d.groupJoinCode ?? "" } as EntryRuleDraft} talk={!!props.talk} />
-        </Fold>
+        {/* Owner card 4: Entry rules stay open; unticked "Alcohol served" makes the event alcohol-free and moves the age gate, so it must never be hidden. */}
+        <EntryRuleFields t={t} d={{ ...emptyEntryRules(), ...d, requirements: d.requirements ?? "", groupLabel: d.groupLabel ?? "", groupJoinCode: d.groupJoinCode ?? "" } as EntryRuleDraft} talk={!!props.talk} />
         {props.table ? (
           <Select
             label={t("ชวนใคร", "Who's it for")}
