@@ -113,6 +113,17 @@ describe.skipIf(!HAS_DB)("folded sections: the form", () => {
     // Each failing field's section opens (show), and the first one is opened, focused and scrolled to (go).
     expect(html).toContain('function show(el){var od=el.closest("details");if(od)od.open=true;');
     expect(html).toContain('function go(el){var d=el.closest("details");if(d)d.open=true;el.focus({preventScroll:true});');
+    // Errors in the page's language, not the browser's: out of range, too short or long, a bad link, not a number.
+    expect(html).toContain('data-over="Up to {n}."');
+    expect(html).toContain("if(v.rangeOverflow)return m(\"over\",el.max);if(v.rangeUnderflow)return m(\"under\",el.min);");
+    expect(html).toContain("if(v.tooShort)return m(\"short\",el.minLength)");
+    expect(html).toContain('el.type==="url"?m("url","")');
+    // Still wrong after an edit: the message follows the new problem; right again: it goes.
+    expect(html).toContain("if(!el.validity.valid){show(el);return}s.remove();");
+    const th = await (await req("/host/new?lang=th", { cookie: m.cookie })).text();
+    expect(th).toContain('data-over="ใส่ได้ไม่เกิน {n}"');
+    expect(th).toContain('data-under="ใส่อย่างน้อย {n}"');
+    expect(th).toContain('data-url="ใส่ลิงก์เต็ม ขึ้นต้นด้วย https://"');
     // Live: the same parts as the server, read back from the fields.
     expect(html).toContain('f.addEventListener("input",live);f.addEventListener("change",live);');
     expect(html).toMatch(/data-sum="\[\{&quot;n&quot;:&quot;costThb&quot;,&quot;k&quot;:&quot;cost&quot;/);

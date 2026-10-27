@@ -479,7 +479,12 @@ const SUM_CUT = 24;
  */
 const HOST_FORM_JS = `(function(){var f=document.currentScript&&document.currentScript.closest("form[data-first-error]");if(!f||f._fe)return;f._fe=1;
 var due=false;
-function say(el){if(el.validity.valueMissing)return el.tagName==="SELECT"?f.dataset.pick:f.dataset.miss;return el.validationMessage}
+function say(el){var v=el.validity,m=function(k,n){return (f.dataset[k]||el.validationMessage).replace("{n}",n)};
+if(v.valueMissing)return el.tagName==="SELECT"?f.dataset.pick:f.dataset.miss;
+if(v.rangeOverflow)return m("over",el.max);if(v.rangeUnderflow)return m("under",el.min);
+if(v.tooShort)return m("short",el.minLength);if(v.tooLong)return m("long",el.maxLength);
+if(v.typeMismatch)return el.type==="url"?m("url",""):el.type==="email"?m("email",""):el.validationMessage;
+if(v.badInput||v.stepMismatch)return m("num","");return el.validationMessage}
 function show(el){var od=el.closest("details");if(od)od.open=true;if(!el.id)return;var id=el.id+"-verr",s=document.getElementById(id);
 if(!s){s=document.createElement("small");s.className="field-err";s.id=id;(el.closest(".field")||el.parentNode).appendChild(s);
 var d=(el.getAttribute("aria-describedby")||"").split(" ").filter(Boolean);d.push(id);el.setAttribute("aria-describedby",d.join(" "))}
@@ -488,7 +493,7 @@ function go(el){var d=el.closest("details");if(d)d.open=true;el.focus({preventSc
 el.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
 f.addEventListener("invalid",function(e){e.preventDefault();show(e.target);if(due)return;due=true;
 setTimeout(function(){due=false;var first=[].filter.call(f.elements,function(x){return x.willValidate&&!x.checkValidity()})[0];if(first)go(first)},0)},true);
-function clear(e){var el=e.target;if(!el||!el.id||!el.validity||!el.validity.valid)return;var s=document.getElementById(el.id+"-verr");if(!s)return;s.remove();
+function clear(e){var el=e.target;if(!el||!el.id||!el.validity)return;var s=document.getElementById(el.id+"-verr");if(!s)return;if(!el.validity.valid){show(el);return}s.remove();
 el.setAttribute("aria-describedby",(el.getAttribute("aria-describedby")||"").split(" ").filter(function(x){return x&&x!==s.id}).join(" "));el.removeAttribute("aria-invalid")}
 f.addEventListener("input",clear);f.addEventListener("change",clear);
 function cut(s){return s.length>${SUM_CUT}?s.slice(0,${SUM_CUT - 1}).replace(/\\s+$/,"")+"…":s}
@@ -582,6 +587,13 @@ function ProposalForm(props: {
       data-first-error
       data-miss={t("กรอกช่องนี้ก่อนส่ง", "Fill this in before sending.")}
       data-pick={t("เลือกก่อนส่ง", "Choose one before sending.")}
+      data-over={t("ใส่ได้ไม่เกิน {n}", "Up to {n}.")}
+      data-under={t("ใส่อย่างน้อย {n}", "At least {n}.")}
+      data-short={t("พิมพ์อย่างน้อย {n} ตัวอักษร", "At least {n} characters.")}
+      data-long={t("พิมพ์ได้ไม่เกิน {n} ตัวอักษร", "Up to {n} characters.")}
+      data-url={t("ใส่ลิงก์เต็ม ขึ้นต้นด้วย https://", "Enter a full link, starting with https://")}
+      data-email={t("ใส่อีเมลให้ถูกต้อง", "Enter a valid email address.")}
+      data-num={t("ใส่เป็นจำนวนเต็ม", "Enter a whole number.")}
     >
       {props.errors?.length ? (
         <Notice kind="error">

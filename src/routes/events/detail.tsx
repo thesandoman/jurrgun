@@ -774,14 +774,23 @@ function RsvpBar(props: StripProps) {
 }
 
 /**
- * Hides the RSVP bar while typing (keyboard up or a text field focused) or while My registration or the strip is in view.
+ * The controls that do the bar's job elsewhere on the page: My registration's RSVP or waitlist button, its Accept,
+ * its pass and live-page links, and the status strip's action. The bar hides only while one of them is in view, so
+ * there are never two RSVPs on screen and never none (owner, 2026-10-27: with the whole card observed, the bar hid
+ * on tablets while the card's button was still below the fold).
+ */
+const RSVP_CONTROLS = '#rsvp [type=submit],#offer button[value=accept],.ev-reg .reg-pass .btn,.ev-reg a.btn[href$="/live"],.ev-strip .btn';
+
+/**
+ * Hides the RSVP bar while typing (keyboard up or a text field focused) or while one of RSVP_CONTROLS is in view.
  * "In view" means above the tab bar and the bar itself (the bottom 180px) and below the top bar (72px), so an edge peeking behind either doesn't count.
  */
 const RSVP_BAR_JS = `(function(){var b=document.getElementById("sticky-rsvp");if(!b)return;
+var RSVP_CTL=${JSON.stringify(RSVP_CONTROLS)};
 var seen=new Map(),typing=false,TXT='input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]),textarea,[contenteditable="true"]';
 var vv=window.visualViewport;function kb(){return !!vv&&vv.height<window.innerHeight*0.75}
 function sync(){var on=typing||kb();seen.forEach(function(x){if(x)on=true});b.classList.toggle("is-off",on);if(on)b.setAttribute("inert","");else b.removeAttribute("inert")}
-if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});sync()},{rootMargin:"-72px 0px -180px 0px"});document.querySelectorAll(".ev-reg,.ev-strip").forEach(function(s){io.observe(s)})}
+if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){seen.set(e.target,e.isIntersecting)});sync()},{rootMargin:"-72px 0px -180px 0px"});document.querySelectorAll(RSVP_CTL).forEach(function(s){io.observe(s)})}
 document.addEventListener("focusin",function(e){typing=!!(e.target&&e.target.matches&&e.target.matches(TXT));sync()});
 document.addEventListener("focusout",function(){typing=false;setTimeout(sync,50)});
 if(vv)vv.addEventListener("resize",sync);

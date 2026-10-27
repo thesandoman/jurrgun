@@ -111,6 +111,7 @@ describe.skipIf(!HAS_DB)("event page: the status strip", () => {
     const html = await (await req(`/events/${ev}?lang=en`, { cookie: m.cookie })).text();
     expect(html.indexOf('class="ev-strip')).toBeLessThan(html.indexOf('<h2 id="reg-h" tabindex="-1">My registration</h2>'));
     expect(html).toContain('id="sticky-rsvp"');
-    expect(html).toContain('document.querySelectorAll(".ev-reg,.ev-strip")');
+    expect(html).toContain('document.querySelectorAll(RSVP_CTL)');
+    expect(html).toContain('var RSVP_CTL="#rsvp [type=submit],#offer button[value=accept],.ev-reg .reg-pass .btn,.ev-reg a.btn[href$=\\"/live\\"],.ev-strip .btn";');
   });
 });

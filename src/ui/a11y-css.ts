@@ -1481,4 +1481,8 @@ main .host-form details.host-opt>fieldset>legend{position:absolute;width:1px;hei
 @media (min-width:700px) and (max-width:1023.98px){body:not(.fullmap-body) .tabbar{left:0;right:0;margin:0 auto;transform:none}}
 /* The booking disclaimer tick box: the whole line is a 44px target (2.5.8). */
 #rsvp label.check{display:flex;align-items:center;gap:8px;min-height:44px}
+/* Small laptops (1024 to 1159px): the header row (wordmark, Prototype, City Pulse, the five menu links, bell and
+   accessibility) is about 1117px wide, so the page scrolled sideways (1.4.10). The wordmark folds to the logo here, as it
+   does on phones; its name stays for screen readers. */
+@media (min-width:1024px) and (max-width:1159.98px){.topbar:has(.top-nav) .brand{font-size:0;gap:0}.topbar:has(.top-nav) .brand small{display:none}.topbar:has(.top-nav){gap:12px}}
 `);

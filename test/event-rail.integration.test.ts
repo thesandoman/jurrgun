@@ -82,6 +82,12 @@ describe("laptop event page, one RSVP (owner card 2): the CSS", () => {
   });
 });
 
+describe("small laptops: the header fits (1.4.10)", () => {
+  it("from 1024 to 1159px the wordmark folds to the logo, so the header row never scrolls sideways", () => {
+    expect(A11Y_CSS).toContain("@media (min-width:1024px) and (max-width:1159.98px){.topbar:has(.top-nav) .brand{font-size:0;gap:0}.topbar:has(.top-nav) .brand small{display:none}");
+  });
+});
+
 describe.skipIf(!HAS_DB)("laptop event page, one RSVP (owner card 2): the markup", () => {
   // The rail, up to the phone and tablet bar (hidden on laptops).
   const railOf = (html: string) => html.slice(html.indexOf('<div class="ev-rail">'), html.indexOf('id="sticky-rsvp"'));

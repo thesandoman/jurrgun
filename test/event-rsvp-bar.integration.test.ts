@@ -75,7 +75,10 @@ describe.skipIf(!HAS_DB)("RSVP bar: the markup and its states", () => {
     // The script hides it for the keyboard, focused text fields and My registration in view.
     expect(html).toContain("visualViewport");
     expect(html).toContain('addEventListener("focusin"');
-    expect(html).toContain('document.querySelectorAll(".ev-reg,.ev-strip")');
+    // It watches the RSVP controls themselves, not the whole card: never two RSVPs on screen, and never none.
+    expect(html).toContain('document.querySelectorAll(RSVP_CTL)');
+    expect(html).not.toContain('".ev-reg,.ev-strip"');
+    expect(html).toContain('var RSVP_CTL="#rsvp [type=submit],#offer button[value=accept],.ev-reg .reg-pass .btn,.ev-reg a.btn[href$=\\"/live\\"],.ev-strip .btn";');
     // Thai first.
     const th = bar(await page(ev, m.cookie, "th"));
     expect(th).toContain("เหลือ 10 ที่");
