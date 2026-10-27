@@ -11,6 +11,8 @@ import { headLinks, ldJson } from "../src/lib/seo";
 const LIVE = "https://jurrgun.apps.sv-academy.org";
 const html = { headers: { accept: "text/html" } };
 const get = (url: string, init = html) => app.request(url, init);
+// A signed-out visitor at "/" (the cookie only matters while "/" still sends first visits to the intro).
+const home = { headers: { accept: "text/html", cookie: "jg_intro=seen" } };
 
 describe("robots.txt", () => {
   it("allows the live site, blocks private areas and names the sitemap", async () => {
@@ -48,7 +50,34 @@ describe("sitemap.xml", () => {
   });
 });
 
+describe("homepage", () => {
+  it('signed-out "/" is indexable with its own canonical and site data, and first in the sitemap', async () => {
+    const page = await (await get(`${LIVE}/`, home)).text();
+    expect(page).not.toContain('name="robots"');
+    expect(page).toContain(`<link rel="canonical" href="${LIVE}/"/>`);
+    expect(page).toContain("application/ld+json");
+    const xml = await (await get(`${LIVE}/sitemap.xml`)).text();
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(locs[0]).toBe(`${LIVE}/`);
+    // The front doors come before the intro.
+    expect(locs.indexOf(`${LIVE}/intro`)).toBeGreaterThan(locs.indexOf(`${LIVE}/international?lang=en`));
+  });
+
+  it('"/" is noindex unless the render says it is the public page', () => {
+    expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/" }).robots).toBe("noindex");
+    expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: "/", publicView: true }).canonical).toBe(`${LIVE}/`);
+  });
+});
+
 describe("llms.txt", () => {
+  it("Start here leads with the homepage, then the intro", async () => {
+    const txt = await (await get(`${LIVE}/llms.txt`)).text();
+    const start = txt.slice(txt.indexOf("## Start here"), txt.indexOf("## Learn"));
+    const links = [...start.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1]);
+    expect(links[0]).toBe(`${LIVE}/`);
+    expect(links[1]).toBe(`${LIVE}/intro`);
+  });
+
   it("states the site's own facts and links", async () => {
     const txt = await (await get(`${LIVE}/llms.txt`)).text();
     expect(txt).toContain("# Jurrgun (เจอกัน)");
@@ -136,8 +165,8 @@ describe("JSON-LD", () => {
     for (const q of faq.mainEntity) expect(page).toContain(`<summary>${q.name.replace(/'/g, "&#39;")}</summary>`);
   });
 
-  it("/intro carries Organization and WebSite data with the BMA line word for word", async () => {
-    const page = await (await get(`${LIVE}/intro?lang=en`)).text();
+  it("the signed-out homepage carries Organization and WebSite data with the BMA line word for word", async () => {
+    const page = await (await get(`${LIVE}/?lang=en`, home)).text();
     const all = blocks(page);
     const org = all.find((b) => b["@type"] === "Organization");
     expect(org.url).toBe(LIVE);
@@ -154,7 +183,7 @@ describe("JSON-LD", () => {
   });
 
   it("the Thai Organization description has no full stop after Thai text, and the logo is a PNG", async () => {
-    const org = blocks(await (await get(`${LIVE}/intro?lang=th`)).text()).find((b) => b["@type"] === "Organization");
+    const org = blocks(await (await get(`${LIVE}/?lang=th`, home)).text()).find((b) => b["@type"] === "Organization");
     expect(org.description.endsWith(BRAND.bma.th)).toBe(true);
     expect(org.logo).toMatch(new RegExp(`^${LIVE}/assets/.+\\.png$`));
   });
@@ -163,6 +192,12 @@ describe("JSON-LD", () => {
     const out = ldJson({ text: "</script><script>alert(1)</script>" });
     expect(out).not.toContain("</script");
     expect(JSON.parse(out).text).toBe("</script><script>alert(1)</script>");
+  });
+
+  it("/intro has no JSON-LD but keeps its own canonical", async () => {
+    const page = await (await get(`${LIVE}/intro?lang=en`)).text();
+    expect(page).not.toContain("application/ld+json");
+    expect(page).toContain(`<link rel="canonical" href="${LIVE}/intro?lang=en"/>`);
   });
 
   it("only /faq has FAQ data", async () => {

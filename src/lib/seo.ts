@@ -38,6 +38,7 @@ const TYPE_PATHS = Object.keys(assets)
 
 /** Pages a visitor can open without signing in, and that may be indexed. */
 const INDEXABLE = new Set<string>([
+  "/",
   "/intro",
   "/new",
   "/international",
@@ -54,14 +55,22 @@ const INDEXABLE = new Set<string>([
   "/terms",
 ]);
 
+/**
+ * Paths that show a public page to visitors and a member page to members:
+ * indexable only when the render says it is the public page. "/" is the
+ * visitor landing signed out and Discover signed in (noindex).
+ */
+const PUBLIC_ONLY_WHEN_SAID = new Set<string>(["/"]);
+
 /** /international redirects visitors with no language choice, so its default is the English page. */
 const DEFAULT_LANG: Record<string, "en"> = { "/international": "en" };
 
-/** Sitemap order: front doors first, then what the app is, then help. */
+/** Sitemap order: the homepage, the front doors, the intro, then what the app is, then help. */
 const SITEMAP: string[] = [
-  "/intro",
+  "/",
   "/new",
   "/international",
+  "/intro",
   "/faq",
   "/types",
   ...TYPE_PATHS,
@@ -99,9 +108,10 @@ export type HeadLinks = {
  * the ?lang= the URL itself carries (not a cookie), so the Thai and English
  * views of a page each have their own canonical.
  */
-export function headLinks(opts: { host: string | undefined | null; path: string; explicitLang?: string | null; status?: number }): HeadLinks {
+export function headLinks(opts: { host: string | undefined | null; path: string; explicitLang?: string | null; status?: number; publicView?: boolean }): HeadLinks {
   const path = normPath(opts.path);
-  const ok = (opts.status ?? 200) === 200 && isLiveHost(opts.host) && isIndexable(path);
+  const ok =
+    (opts.status ?? 200) === 200 && isLiveHost(opts.host) && isIndexable(path) && (!PUBLIC_ONLY_WHEN_SAID.has(path) || opts.publicView === true);
   if (!ok) return { robots: "noindex", canonical: null, alternates: [] };
   const lang = opts.explicitLang === "th" || opts.explicitLang === "en" ? opts.explicitLang : DEFAULT_LANG[path] ?? null;
   const at = (l: string | null) => SITE_ORIGIN + path + (l ? `?lang=${l}` : "");
@@ -138,7 +148,7 @@ const xmlEscape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").
 
 export function sitemapXml(): string {
   const urls = SITEMAP.map((path) => {
-    const links = headLinks({ host: SITE_HOST, path });
+    const links = headLinks({ host: SITE_HOST, path, publicView: true });
     const alts = links.alternates
       .map((a) => `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${xmlEscape(a.href)}"/>`)
       .join("\n");
@@ -163,6 +173,7 @@ export function llmsTxt(): string {
     "",
     "## Start here",
     "",
+    `- [Jurrgun](${SITE_ORIGIN}/): the homepage, what Jurrgun is and how to start`,
     `- [Intro](${SITE_ORIGIN}/intro): what Jurrgun is, in five short slides`,
     `- [New to Bangkok](${SITE_ORIGIN}/new): for people who moved to the city recently`,
     `- [From abroad](${SITE_ORIGIN}/international?lang=en): for international residents, in English`,
@@ -186,7 +197,7 @@ export function llmsTxt(): string {
 
 type Lang = "th" | "en";
 
-/** Organization and WebSite, for the intro page. */
+/** Organization and WebSite, for the signed-out homepage. */
 export function siteJsonLd(lang: Lang): object[] {
   return [
     {

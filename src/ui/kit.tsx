@@ -59,6 +59,8 @@ export type PageOpts = {
   description?: string;
   /** Structured data for this page (src/lib/seo.ts). Facts already on the page only. */
   jsonLd?: object[];
+  /** This render is the public view of a path members see differently ("/" signed out), so it may be indexed. */
+  publicView?: boolean;
 };
 
 /**
@@ -172,7 +174,7 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
       opts={opts}
       origin={new URL(c.req.url).origin}
       url={new URL(c.req.url).origin + new URL(c.req.url).pathname}
-      seo={headLinks({ host: new URL(c.req.url).host, path: new URL(c.req.url).pathname, explicitLang: c.req.query("lang"), status: opts.status ?? 200 })}
+      seo={headLinks({ host: new URL(c.req.url).host, path: new URL(c.req.url).pathname, explicitLang: c.req.query("lang"), status: opts.status ?? 200, publicView: opts.publicView })}
     >
       {notice ? (
         <Notice kind="ok" class={PARTY.has(noticeKey) ? "toast party" : "toast"}>
