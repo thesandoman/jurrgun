@@ -11,6 +11,7 @@ import { hashPassword, hmacSha256, newId, verifyPassword } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDay } from "../lib/i18n";
 import { audit } from "../lib/records";
+import { isDeployed } from "../lib/deployed";
 import { accountUsable, endSession, startSession } from "../lib/session";
 import { accounts, loginAttempts, type Account } from "../schema";
 import { emailEnabled } from "../services/email-code";
@@ -39,10 +40,15 @@ export const SIGNUP_MAX_PER_IP = 10;
 export const SIGNUP_PREFIX = "signup:";
 const UNKNOWN_IP = "unknown";
 
-/** The client IP as Cloudflare reports it, or "unknown" (local dev, tests). */
-function clientIp(c: Context<AppEnv>): string {
+/**
+ * The client IP as Cloudflare reports it, or "unknown" (local dev, tests).
+ * x-forwarded-for is read on local hosts only: deployed, the client can write
+ * that header itself, so trusting it would let anyone pick a fresh IP per try.
+ */
+export function clientIp(c: Context<AppEnv>): string {
   const cf = c.req.header("cf-connecting-ip")?.trim();
   if (cf) return cf;
+  if (isDeployed(c)) return UNKNOWN_IP;
   const xff = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
   return xff || UNKNOWN_IP;
 }

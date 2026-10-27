@@ -17,6 +17,7 @@
 import { signupSource } from "../lib/source";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { secureCookie } from "../lib/deployed";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../db";
 import { b64url, fromB64url, hashPassword, newId, randomToken } from "../lib/crypto";
@@ -101,7 +102,7 @@ oauthRoutes.get("/auth/:provider", async (c) => {
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tx.verifier))));
   setCookie(c, TX_COOKIE, b64url(new TextEncoder().encode(JSON.stringify(tx))), {
     httpOnly: true,
-    secure: new URL(c.req.url).protocol === "https:",
+    secure: secureCookie(c),
     sameSite: "Lax",
     path: "/auth",
     maxAge: 600,

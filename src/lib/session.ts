@@ -25,6 +25,7 @@ const URGENT_TODAY = sql<boolean>`exists (select 1 from ${notifications} inner j
   sql`, `,
 )}) and (${events.startsAt} at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)`;
 import { randomToken, sha256 } from "./crypto";
+import { secureCookie } from "./deployed";
 import type { AppEnv } from "./env";
 import { langFromHeader, pickLang } from "./i18n";
 
@@ -39,7 +40,7 @@ export async function startSession(c: Context<AppEnv>, accountId: string): Promi
     .values({ id: await sha256(token), accountId, expiresAt });
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: new URL(c.req.url).protocol === "https:",
+    secure: secureCookie(c),
     sameSite: "Lax",
     path: "/",
     maxAge: SESSION_DAYS * 86_400,

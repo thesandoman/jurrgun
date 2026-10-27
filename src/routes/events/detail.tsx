@@ -10,6 +10,7 @@ import { IcebreakerCard } from "../../ui/icebreakers";
 import { icebreakerWindow } from "../../content/icebreakers";
 import { OPEN_TO_MORE_TAG, romanceEventOk, womenOnlyEventVisible } from "../../domain/rules";
 import { getCookie, setCookie } from "hono/cookie";
+import { secureCookie } from "../../lib/deployed";
 import type { Child } from "hono/jsx";
 import { and, count, eq, inArray, isNotNull, isNull, lt } from "drizzle-orm";
 import { getDb } from "../../db";
@@ -94,7 +95,7 @@ export async function visibleEvent(c: Ctx, id: string): Promise<Event | null> {
     return event.status === "published" && (await seatedFor(db, event, a.id)) ? event : null;
   }
   if (fromLink && event.visibility === "private" && event.privateToken && fromLink === event.privateToken) {
-    setCookie(c, privateCookie(id), fromLink, { path: `/events/${id}`, httpOnly: true, sameSite: "Lax", secure: new URL(c.req.url).protocol === "https:", maxAge: 60 * 86_400 });
+    setCookie(c, privateCookie(id), fromLink, { path: `/events/${id}`, httpOnly: true, sameSite: "Lax", secure: secureCookie(c), maxAge: 60 * 86_400 });
   }
   return event;
 }

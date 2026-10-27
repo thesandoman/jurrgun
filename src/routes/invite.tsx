@@ -15,6 +15,7 @@
  */
 import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
+import { secureCookie } from "../lib/deployed";
 import { and, eq, isNull, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { DISTRICTS, label } from "../lib/constants";
@@ -128,7 +129,7 @@ inviteRoutes.get("/invite/:token", async (c) => {
       maxAge: COOKIE_DAYS * 86_400,
       httpOnly: true,
       sameSite: "Lax",
-      secure: new URL(c.req.url).protocol === "https:",
+      secure: secureCookie(c),
     });
   }
   const back = `/invite/${token}`;

@@ -15,6 +15,7 @@
  */
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
+import { secureCookie } from "./deployed";
 import type { AppEnv } from "./env";
 
 export const SOURCE_COOKIE = "jg_src";
@@ -66,7 +67,7 @@ export const captureSource: MiddlewareHandler<AppEnv> = async (c, next) => {
     maxAge: SOURCE_MAX_AGE,
     sameSite: "Lax",
     httpOnly: true,
-    secure: new URL(c.req.url).protocol === "https:",
+    secure: secureCookie(c),
   });
 };
 
