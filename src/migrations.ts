@@ -400,5 +400,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "ALTER TABLE \"social_pinkies\" ADD COLUMN \"ended_at\" timestamp with time zone;"
     ]
+  },
+  {
+    "id": "0033_demo_flag_and_landings",
+    "statements": [
+      "CREATE TABLE \"social_src_landings\" (\n\t\"day\" date NOT NULL,\n\t\"code\" text NOT NULL,\n\t\"n\" integer DEFAULT 0 NOT NULL\n);",
+      "ALTER TABLE \"identity_accounts\" ADD COLUMN \"is_demo\" boolean DEFAULT false NOT NULL;",
+      "CREATE UNIQUE INDEX \"social_src_landings_day_code_idx\" ON \"social_src_landings\" (\"day\",\"code\");"
+    ]
   }
 ];
