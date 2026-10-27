@@ -1495,4 +1495,13 @@ main .host-form details.host-opt>fieldset>legend{position:absolute;width:1px;hei
 @container topbar (width < 21.25rem){.topbar .brand{font-size:0;gap:0}}
 .fullmap .fd-logo{container-type:inline-size}
 @container (width < 2.8rem){.fullmap .fd-logo small{display:none}}
+/* Public pages (no tab bar): the page's bottom padding, the last block's margin and the footer's own
+   margin added up to 90 to 110px of empty cream above the footer. The last block now sits within the
+   spacing cap of the footer line (40px phones, 56px laptops), and the page ends with the footer instead
+   of the tab bar's 104px of room. Pages with the tab bar, or a floating call to action that needs room to scroll clear, keep theirs. */
+body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)){padding-bottom:env(safe-area-inset-bottom,0px)}
+body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) main.wrap{padding-bottom:16px}
+body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) main.wrap>:last-child{margin-bottom:0}
+body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) .foot{margin-top:8px}
+@media (min-width:1024px){body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) main.wrap{padding-bottom:24px}body:not(.admin,.bare,.fullmap-body):not(:has(.tabbar,.sticky-cta)) .foot{margin-top:16px}}
 `);
