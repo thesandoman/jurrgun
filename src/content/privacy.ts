@@ -320,12 +320,6 @@ export const PROCESSORS: Processor[] = [
     sees: { th: "สิ่งที่คุณทำใน Google Maps ตามนโยบายของ Google", en: "What you do in Google Maps, under Google's own policy" },
   },
   {
-    name: "Google Fonts",
-    group: "own",
-    does: { th: "ฟอนต์อ่านง่ายในการตั้งค่าการเข้าถึง โหลดมาพร้อมทุกหน้า", en: "The easier-to-read font in the accessibility settings, loaded with every page" },
-    sees: { th: "IP ของคุณและเบราว์เซอร์ที่ใช้ ตอนโหลดฟอนต์", en: "Your IP address and browser, when the font loads" },
-  },
-  {
     name: "Open-Meteo",
     group: "own",
     does: { th: "สภาพอากาศและฝุ่นในกรุงเทพฯ", en: "Bangkok weather and air quality" },

@@ -15,8 +15,12 @@ export type FontFile = keyof typeof FONT_FILES;
 
 export const fontUrl = (f: FontFile) => `/fonts/${f}.${FONT_FILES[f].hash}.woff2`;
 
-const face = (family: string, f: FontFile, weight: number) =>
-  `@font-face{font-family:'${family}';src:url(${fontUrl(f)}) format("woff2");font-weight:${weight};font-display:swap}`;
+const face = (family: string, f: FontFile, weight: number, range?: string) =>
+  `@font-face{font-family:'${family}';src:url(${fontUrl(f)}) format("woff2");font-weight:${weight};font-display:swap${range ? `;unicode-range:${range}` : ""}}`;
+
+/** Fontsource's Latin and Latin Extended ranges for Atkinson Hyperlegible: the browser fetches a file only when the page needs it. */
+const LATIN = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";
+const LATIN_EXT = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF";
 
 export const FONT_CSS = [
   face("Sao Chingcha", "saochingcha-400", 400),
@@ -25,6 +29,12 @@ export const FONT_CSS = [
   face("Anuphan", "anuphan-500", 500),
   face("Anuphan", "anuphan-600", 600),
   face("Anuphan", "anuphan-700", 700),
+  // The "easier to read" font in the accessibility menu (card S2: self-hosted, no longer from Google Fonts).
+  // Only loaded when a page uses it, i.e. when a member turns that setting on.
+  face("Atkinson Hyperlegible", "atkinson-400", 400, LATIN),
+  face("Atkinson Hyperlegible", "atkinson-700", 700, LATIN),
+  face("Atkinson Hyperlegible", "atkinson-ext-400", 400, LATIN_EXT),
+  face("Atkinson Hyperlegible", "atkinson-ext-700", 700, LATIN_EXT),
 ].join("");
 
 /** Fonts the first paint needs: worth a preload. */

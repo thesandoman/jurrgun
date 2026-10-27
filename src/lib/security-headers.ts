@@ -11,6 +11,8 @@
  *                               map's Locate button (both this site only); no
  *                               microphone, payment or USB
  *
+ * Fonts are all our own (src/ui/fonts.ts), so no font host is allowed.
+ *
  * Report-only for two weeks, then enforced (CSP_ENFORCE):
  *   Content-Security-Policy     scripts only with this response's nonce, from
  *                               us, or MapLibre on jsDelivr; map tiles from Esri
@@ -36,8 +38,8 @@ export function cspFor(nonce: string): string {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' ${MAP_CODE}`,
     // Inline <style> blocks and style attributes are everywhere; styles can't run code.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     // Photos and assets come from signed storage URLs; tiles from the map hosts.
     "img-src 'self' data: blob: https:",
     `connect-src 'self' ${MAP_TILES.join(" ")} ${MAP_CODE}`,

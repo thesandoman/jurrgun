@@ -201,10 +201,6 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         {PRELOAD_FONTS.map((f) => <link rel="preload" href={fontUrl(f)} as="font" type="font/woff2" crossorigin="" />)}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-        {/* Only the accessibility "easier to read" font comes from Google; the brand fonts are ours (ui/fonts.ts). */}
-        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
         <style dangerouslySetInnerHTML={{ __html: ALL_CSS }} />
         <Script
           dangerouslySetInnerHTML={{

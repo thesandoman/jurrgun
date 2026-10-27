@@ -164,15 +164,16 @@ describe("the new notice and Terms lines", () => {
     const forUs = PROCESSORS.filter((p) => p.group === "for_us").map((p) => p.name).join(" · ");
     const own = PROCESSORS.filter((p) => p.group === "own").map((p) => p.name).join(" · ");
     for (const n of ["SV Cloud", "Cloudflare", "Resend", "Postmark", "Apple", "Mozilla", "Microsoft"]) expect(forUs).toContain(n);
-    for (const n of ["Google · LINE", "Esri", "OpenStreetMap", "jsDelivr", "Google Maps", "Google Fonts", "Open-Meteo"]) expect(own).toContain(n);
+    for (const n of ["Google · LINE", "Esri", "OpenStreetMap", "jsDelivr", "Google Maps", "Open-Meteo"]) expect(own).toContain(n);
     const en = words(await get("/privacy", "en"));
     expect(en).toContain("Work for us");
     expect(en).toContain("Their own services, under their own policies");
     expect(words(await get("/privacy", "th"))).toContain("บริการของเขาเอง ภายใต้นโยบายของเขา");
   });
 
-  it("every outside font or stylesheet the page shell loads is named", () => {
+  it("the page shell loads no outside fonts or stylesheets (card S2: fonts are self-hosted)", () => {
     const kit = readFileSync("src/ui/kit.tsx", "utf8");
-    if (/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(kit)) expect(PROCESSORS.map((p) => p.name)).toContain("Google Fonts");
+    expect(kit).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/);
+    expect(kit).not.toMatch(/<link[^>]+rel="stylesheet"[^>]+href="https?:/);
   });
 });

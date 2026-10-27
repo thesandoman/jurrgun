@@ -6,6 +6,7 @@ From the BMA type system sheet (`BMA_Type system.pdf`, supplied by the owner on 
 |---|---|---|---|
 | Headings | Sao Chingcha (เสาชิงช้า), BMA's custom typeface | `saochingcha-400`, `-700` | Bangkok Metropolitan Administration; embedding allowed (OS/2 fsType 8) |
 | Subheadings, UI labels, buttons and body text | Anuphan (Cadson Demak) | `anuphan-400`, `-500`, `-600`, `-700` | SIL Open Font License 1.1 |
+| The "easier to read" accessibility font | Atkinson Hyperlegible (Braille Institute) | `atkinson-400`, `-700` (Latin), `atkinson-ext-400`, `-700` (Latin Extended) | SIL Open Font License 1.1, see `OFL-atkinson-hyperlegible.txt` |
 
 The sheet sets body text in TH Sarabun New. We use Anuphan instead: Sarabun New
 reads as an official document on screen and draws small (x-height 0.34 em
@@ -24,3 +25,11 @@ npm run fonts   # rebuilds src/vendor/fonts.generated.ts
 They are served by the Worker at `/fonts/NAME.HASH.woff2` (see `src/ui/fonts.ts`),
 not through `design/assets/`: that route redirects to storage on another origin,
 and fonts loaded across origins need CORS headers.
+
+## Atkinson Hyperlegible (self-hosted since 2026-10-27, card S2)
+
+The files are unchanged from `@fontsource/atkinson-hyperlegible` 5.3.0
+(`files/atkinson-hyperlegible-latin[-ext]-{400,700}-normal.woff2`), renamed. They
+are not re-subset: the Latin and Latin Extended split, with `unicode-range` in
+`src/ui/fonts.ts`, means a browser fetches them only when the setting is on and
+the text needs them. Before this, the font came from Google Fonts on every page.

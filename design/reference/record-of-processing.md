@@ -73,7 +73,7 @@ Section 41 requires a DPO when the core activity is (a) regular and systematic m
 | Resend or Postmark | Sign-in code email, once switched on | Open item: which one, and its signed terms |
 | Google, Apple, Mozilla, Microsoft push services | Deliver encrypted push | Open item: standard terms only; no direct contract |
 
-Google and LINE sign-in, Esri, OpenStreetMap, jsDelivr, Google Maps, Google Fonts and Open-Meteo are listed in the notice as their own services under their own policies (`PROCESSORS` group `own`), not processors.
+Google and LINE sign-in, Esri, OpenStreetMap, jsDelivr, Google Maps and Open-Meteo are listed in the notice as their own services under their own policies (`PROCESSORS` group `own`), not processors.
 
 ## 6. Cross-border transfers · การส่งข้อมูลไปต่างประเทศ (มาตรา 28 และ 29)
 

@@ -156,7 +156,6 @@ describe("privacy notice: who else is involved", () => {
     [/cdn\.jsdelivr\.net/, "jsDelivr"],
     [/google\.com\/maps/, "Google Maps"],
     [/open-meteo\.com/, "Open-Meteo"],
-    [/fonts\.(googleapis|gstatic)\.com/, "Google Fonts"],
   ];
   const outbound = [
     ...FILES.filter((f) => /src\/(services|lib)\/|routes\/(oauth|events)\.tsx/.test(f.path)).flatMap((f) => [...f.text.matchAll(/https:\/\/[a-z0-9.-]+\.[a-z]{2,}(?:\/maps)?/g)].map((m) => m[0])),
