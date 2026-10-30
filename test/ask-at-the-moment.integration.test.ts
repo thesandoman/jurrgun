@@ -61,6 +61,10 @@ describe.skipIf(!HAS_DB)("card D3 B1: gender at the women-only RSVP", () => {
     let b = bar(await page(ev, m.cookie));
     expect(b).toContain('<a href="#rsvp" class="btn primary">One question first</a>');
     expect(b).not.toContain('form="rsvp"');
+    // The laptop rail says the same, and the bar's jump focuses the question (the select), not Save.
+    const full = await page(ev, m.cookie);
+    expect(full).toMatch(/<a href="#reg-h" class="ev-jump-link">One question first/);
+    expect(full).toContain('f.querySelector("select,input:not([type=hidden]),textarea,button")');
     await req(`/events/${ev}/ask-gender`, { cookie: m.cookie, form: { ask: "women_only_gender", do: "later" } });
     const html = await page(ev, m.cookie);
     b = bar(html);

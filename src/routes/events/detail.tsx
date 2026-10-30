@@ -746,7 +746,7 @@ function SeatJump(props: StripProps & { class?: string; text: string; tone: stri
         )}
       </p>
       <a href="#reg-h" class="ev-jump-link">
-        {left > 0 ? t("เลือกที่นั่ง", "Choose your seat") : t("ต่อคิวสำรอง", "Join the waitlist")}
+        {genderAsk(event, props.v) === "ask" ? t("ตอบ 1 คำถามก่อนจอง", "One question first") : left > 0 ? t("เลือกที่นั่ง", "Choose your seat") : t("ต่อคิวสำรอง", "Join the waitlist")}
         <span aria-hidden="true"> ↓</span>
       </a>
       <Script dangerouslySetInnerHTML={{ __html: SEAT_JUMP_JS }} />
@@ -823,7 +823,7 @@ if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es
 document.addEventListener("focusin",function(e){typing=!!(e.target&&e.target.matches&&e.target.matches(TXT));sync()});
 document.addEventListener("focusout",function(){typing=false;setTimeout(sync,50)});
 if(vv)vv.addEventListener("resize",sync);
-var a=b.querySelector('a[href="#rsvp"]'),f=document.getElementById("rsvp");if(a&&f)a.addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("input:not([type=hidden]),button");if(c)c.focus({preventScroll:true})},350)})})()`;
+var a=b.querySelector('a[href="#rsvp"]'),f=document.getElementById("rsvp");if(a&&f)a.addEventListener("click",function(){setTimeout(function(){var c=f.querySelector("select,input:not([type=hidden]),textarea,button");if(c)c.focus({preventScroll:true})},350)})})()`;
 
 /** A confirmed attendee of a +1 event, without a +1 yet, before the start. */
 export function canInvite(event: Event, reg: Registration | null, now = new Date()): boolean {
