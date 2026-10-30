@@ -422,24 +422,24 @@ describe.skipIf(!HAS_DB)("City Pulse copy", () => {
 });
 
 describe.skipIf(!HAS_DB)("Here for dating", () => {
-  it("dating members answer why and what's hard; answers are kept privately until consent, then saved", async () => {
+  it("dating members set their private preferences (no 'why' or 'what's hard' since D3-urgent); kept privately until consent, then saved", async () => {
     const m = await createMember();
     const r = await req("/onboarding/welcome", { cookie: m.cookie, form: { mode: "dating_only" } });
     expect(r.headers.get("location")).toBe("/onboarding/dating");
     const q = await (await req("/onboarding/dating?lang=en", { cookie: m.cookie })).text();
-    expect(q).toContain("Why are you here for dating?");
-    expect(q).toContain("What makes dating in Bangkok hard?");
+    expect(q).not.toContain("Why are you here for dating?");
+    expect(q).not.toContain("What makes dating in Bangkok hard?");
+    expect(q).toContain('href="/safety"');
     const res = await req("/onboarding/dating?lang=en", {
       cookie: `${m.cookie}; bkk_intent=dating_only`,
-      form: { reasons: ["long_term", "slow", "real_things", "new_city", "bogus"], challenges: ["safety", "ghosting", "nope"] },
+      // An old form may still send reasons and challenges: they're ignored.
+      form: { goal: "long_term", reasons: ["long_term", "slow"], challenges: ["safety"] },
     });
-    const done = await res.text();
-    expect(done).toContain("We hear you");
-    expect(done).toContain("No ghosting");
-    expect(done).toContain('href="/safety"');
+    expect(res.headers.get("location")).toBe("/onboarding/quiz");
     // R1: nothing is saved before the romance_data consent.
     expect(await db().select().from(datingIntents).where(eq(datingIntents.accountId, m.id))).toEqual([]);
     const pending = /bkk_dating_pending=[^;]+/.exec(res.headers.get("set-cookie") ?? "")![0];
+    expect(decodeURIComponent(pending)).not.toMatch(/reasons|challenges/);
     await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, m.id));
     await req("/onboarding/connections", {
       cookie: `${m.cookie}; bkk_intent=dating_only; ${pending}`,
@@ -447,8 +447,8 @@ describe.skipIf(!HAS_DB)("Here for dating", () => {
     });
     const [row] = await db().select().from(datingIntents).where(eq(datingIntents.accountId, m.id));
     expect(row.mode).toBe("dating_only");
-    expect(row.reasons).toEqual(["long_term", "slow", "real_things"]); // up to three, unknown dropped
-    expect(row.challenges).toEqual(["safety", "ghosting"]);
+    expect(row.reasons).toEqual([]);
+    expect(row.challenges).toEqual([]);
   });
 
   it("Bangkok Buddy is friends only: no dating choices, and old 'open' or 'dating' posts are saved as friends", async () => {

@@ -27,7 +27,8 @@ describe("journey bar", () => {
         chapter = j.chapter;
       }
     }
-    expect(journeyAt("guide", true).total).toBe(39);
+    // D3-urgent: the two dating questions and the "We hear you" screen are gone (39 → 36).
+    expect(journeyAt("guide", true).total).toBe(36);
     expect(journeyPct(journeyAt("guide", true), 5)).toBe(100);
   });
 });
