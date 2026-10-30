@@ -48,7 +48,7 @@ describe.skipIf(!HAS_DB)("card S4: sessions", () => {
     expect(html).toContain('data-device="phone"');
     expect(html).toContain("This device");
     expect(html).toContain("Sign out on all other devices (1)");
-    const r = await req("/settings/devices/sign-out-others", { cookie: m.cookie, form: {} });
+    const r = await req("/settings/devices/sign-out-others", { cookie: m.cookie, method: "POST", form: { go: "1" } });
     expect(r.headers.get("location")).toBe("/settings/devices?notice=signed_out_others");
     expect((await req("/settings", { cookie: m.cookie })).status).toBe(200);
     expect((await req("/settings", { cookie: phone })).status).toBe(302);
