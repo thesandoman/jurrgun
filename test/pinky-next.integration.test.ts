@@ -90,6 +90,9 @@ describe.skipIf(!HAS_DB)("Pinky Plans follow-ups (P-N1 to P-N3)", () => {
     expect(card).toContain("Back to friends (no message is sent)");
     const html = await (await req(`/pinky/${p.id}`, { cookie: en(a) })).text();
     expect(html).not.toMatch(/btn danger|btn ghost danger/);
+    // Block sits next to Report, plainly labelled, behind one confirm step.
+    expect(html).toContain('class="row pk-safety-acts"');
+    expect(html).toContain("Yes, block");
     const after = await (await req(`/connections?notice=back_to_friends`, { cookie: en(a) })).text();
     expect(after).toContain('class="notice ok stay"');
     expect(after).toContain("Nobody did anything wrong.");

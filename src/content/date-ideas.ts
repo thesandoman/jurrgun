@@ -35,7 +35,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Late afternoon, as the heat breaks", "บ่ายแก่ ๆ ตอนแดดเริ่มอ่อน"),
     why: t(
       "Do one slow lap of the lake, then sit by the water and watch the monitor lizards mind their own business.",
-      "เดินรอบบึงช้า ๆ สักรอบ แล้วนั่งริมน้ำดูตัวเงินตัวทองเดินผ่านไปแบบไม่สนใจใคร",
+      "เดินรอบบึงช้า ๆ สักรอบ แล้วนั่งริมน้ำดูตัวเงินตัวทองเดินผ่านไปแบบไม่แยแสใคร",
     ),
   },
   {
@@ -68,7 +68,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("A late morning, not Monday", "ช่วงสาย ๆ (ปิดวันจันทร์)"),
     why: t(
       "A museum you're meant to touch and play with, so laughing together comes easily. The river is a short walk away after.",
-      "พิพิธภัณฑ์ที่ให้ลองจับลองเล่น หัวเราะด้วยกันได้ง่าย ออกมาแล้วเดินไปริมน้ำต่อได้ไม่ไกล",
+      "พิพิธภัณฑ์ที่ให้ลองจับลองเล่น หัวเราะด้วยกันได้ง่าย ออกมาแล้วเดินต่อไปริมน้ำได้ ไม่ไกล",
     ),
   },
   {
@@ -79,7 +79,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("A weekend morning, after 10", "สายวันหยุด หลังสิบโมง"),
     why: t(
       "Old shophouses, painted walls and riverside cafés hidden down the lanes. Get a little lost on purpose.",
-      "ตึกแถวเก่า ผนังที่มีภาพวาด และคาเฟ่ริมน้ำที่ซ่อนอยู่ในซอย ลองหลงทางด้วยกันแบบตั้งใจ",
+      "ตึกแถวเก่า ภาพวาดบนกำแพง และคาเฟ่ริมน้ำที่ซ่อนอยู่ตามซอย ลองตั้งใจหลงทางด้วยกันดูสักหน่อย",
     ),
   },
   {
@@ -90,7 +90,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("After dark (some stalls rest on Mondays)", "หลังฟ้ามืด (บางร้านหยุดวันจันทร์)"),
     why: t(
       "Share three small dishes from three stalls instead of one big meal. Walking between them does half the talking for you.",
-      "แบ่งกันกินสามร้านสามจานเล็ก แทนมื้อใหญ่มื้อเดียว เดินจากร้านไปร้าน แล้วเรื่องคุยจะมาเอง",
+      "ตระเวนกินสามร้าน ร้านละจานเล็ก ๆ แทนมื้อใหญ่มื้อเดียว เดินจากร้านไปร้าน เดี๋ยวเรื่องคุยก็มาเอง",
     ),
   },
   {
@@ -101,7 +101,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Lunchtime on a weekday", "มื้อกลางวันวันธรรมดา"),
     why: t(
       "Take the cross-river ferry from Tha Chang, snack your way through the market, and ferry back. The boat ride is half the date.",
-      "นั่งเรือข้ามฟากจากท่าช้าง เดินกินไปเรื่อย ๆ ในตลาด แล้วนั่งเรือกลับ แค่นั่งเรือก็เป็นครึ่งหนึ่งของเดตแล้ว",
+      "นั่งเรือข้ามฟากจากท่าช้าง เดินกินไปเรื่อย ๆ ในตลาด แล้วนั่งเรือกลับ แค่นั่งเรือก็สนุกไปครึ่งเดตแล้ว",
     ),
   },
   {
@@ -112,7 +112,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Late evening", "ค่ำ ๆ"),
     why: t(
       "The flower market is busiest at night: bright, fragrant, and nobody minds if you only look. One small bunch is plenty.",
-      "ตลาดดอกไม้คึกคักที่สุดตอนกลางคืน สีสด กลิ่นหอม เดินดูเฉย ๆ ก็ไม่มีใครว่า ดอกไม้กำเล็ก ๆ กำเดียวก็พอ",
+      "ตลาดดอกไม้คึกคักที่สุดตอนกลางคืน สีสด กลิ่นหอม เดินดูเฉย ๆ ก็ไม่มีใครว่า ซื้อดอกไม้กำเล็ก ๆ สักกำก็พอ",
     ),
   },
   {
@@ -120,10 +120,10 @@ export const DATE_IDEAS: DateIdea[] = [
     kind: "activity",
     district: "sathon",
     place: t("Chao Phraya Express Boat from Sathorn pier", "เรือด่วนเจ้าพระยา จากท่าสาทร"),
-    when: t("A weekday at golden hour (last boat around 6 pm)", "วันธรรมดา ช่วงแดดทอง (เรือเที่ยวสุดท้ายราวหกโมงเย็น)"),
+    when: t("A weekday at golden hour (last boat around 6 pm)", "วันธรรมดา ช่วงแดดเย็นสีทอง (เรือเที่ยวสุดท้ายราวหกโมงเย็น)"),
     why: t(
       "Ride the orange-flag boat upriver for a few stops. It's cheap and breezy, and the city looks its best from the water. At weekends the yellow flag runs instead.",
-      "นั่งเรือธงส้มทวนน้ำขึ้นไปสักสองสามท่า ค่าเรือไม่แพง ลมเย็น และกรุงเทพฯ สวยที่สุดเมื่อมองจากแม่น้ำ วันหยุดจะเป็นเรือธงเหลืองแทน",
+      "นั่งเรือธงส้มทวนน้ำขึ้นไปสักสองสามท่า ค่าเรือไม่แพง ลมเย็น และมองกรุงเทพฯ จากแม่น้ำสวยที่สุดแล้ว วันหยุดใช้เรือธงเหลืองแทน",
     ),
   },
   {
@@ -145,7 +145,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("A weekend morning", "เช้าวันหยุด"),
     why: t(
       "Choose one small café. If the first coffee goes well, walk to a second one. If it doesn't, the BTS is right there.",
-      "เลือกคาเฟ่เล็ก ๆ สักร้าน ถ้าแก้วแรกคุยกันถูกคอ ค่อยเดินไปร้านที่สอง ถ้าไม่ BTS ก็อยู่ใกล้ ๆ",
+      "เลือกคาเฟ่เล็ก ๆ สักร้าน ถ้าแก้วแรกคุยกันถูกคอ ค่อยเดินไปร้านที่สอง ถ้าไม่ปัง BTS ก็อยู่แค่นี้เอง",
     ),
   },
   {
@@ -156,7 +156,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Early evening", "หัวค่ำ"),
     why: t(
       "A park built to catch the rain, with a gentle green slope to climb and the city all around you at the top.",
-      "สวนที่ออกแบบมาให้รับน้ำฝน มีเนินหญ้าเขียว ๆ ให้เดินขึ้นไป แล้วเห็นเมืองรอบตัวจากข้างบน",
+      "สวนที่ออกแบบมาให้รับน้ำฝน มีเนินหญ้าเขียว ๆ ให้เดินขึ้นไป ถึงข้างบนแล้วเห็นเมืองรอบตัว",
     ),
   },
   {
@@ -167,7 +167,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Late afternoon, not Monday", "บ่ายแก่ ๆ (หลายที่ปิดวันจันทร์)"),
     why: t(
       "Small galleries along the old road, most of them free. Let whoever spots the strangest poster choose where you go in.",
-      "แกลเลอรีเล็ก ๆ ตลอดถนนเก่า ส่วนใหญ่เข้าฟรี ใครเจอโปสเตอร์แปลกที่สุดก่อน คนนั้นได้เลือกว่าจะเข้าร้านไหน",
+      "แกลเลอรีเล็ก ๆ ตลอดถนนเก่า ส่วนใหญ่เข้าฟรี ใครเจอโปสเตอร์ที่แปลกที่สุด คนนั้นได้เลือกว่าจะเข้าแกลเลอรีไหน",
     ),
   },
   {
@@ -189,7 +189,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Lunch, before 1 pm", "มื้อกลางวัน ก่อนบ่ายโมง"),
     why: t(
       "One of the city's oldest markets, still full of old-style sweets. Go hungry and let the vendors choose for you.",
-      "ตลาดเก่าแก่ที่สุดแห่งหนึ่งของเมือง ยังมีขนมแบบโบราณให้เลือกเพียบ ไปตอนท้องว่าง แล้วให้แม่ค้าช่วยเลือกให้",
+      "ตลาดเก่าแก่ที่สุดแห่งหนึ่งของเมือง ยังมีขนมแบบโบราณให้เลือกเพียบ ไปตอนหิว ๆ แล้วให้ร้านช่วยเลือกให้",
     ),
   },
   {
@@ -211,7 +211,7 @@ export const DATE_IDEAS: DateIdea[] = [
     when: t("Around 8 am, as it opens", "ราวแปดโมงเช้า ตอนวัดเพิ่งเปิด"),
     why: t(
       "Go early, while it's still quiet. The temple glows while the light is low, and the riverside is calmer before the day gets going.",
-      "ไปแต่เช้าตอนยังเงียบ ๆ วัดจะดูเรืองแสงตอนแดดยังอ่อน และริมน้ำยังสงบก่อนวันจะเริ่มวุ่น",
+      "ไปแต่เช้าตอนยังเงียบ ๆ วัดจะดูเป็นประกายตอนแดดยังอ่อน และริมน้ำยังสงบก่อนคนจะเริ่มเยอะ",
     ),
   },
 ];

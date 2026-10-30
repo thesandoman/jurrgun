@@ -760,6 +760,11 @@ main .me-hero .me-blob,main .me-hero .me-avatar{animation:none}
 .pk-sec .pinky-safety a{color:var(--brand)}
 .pk-out form{margin:8px 0}
 .pk-tag{text-decoration:none}
+.pk-safety-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.pk-block{flex:1 1 220px}
+.pk-block summary{list-style:none;display:inline-flex}
+.pk-block summary::-webkit-details-marker{display:none}
+.pk-block form{margin-top:8px}
 .pinky-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .pinky-actions form{margin:0}
 .pinky .btn{min-height:44px}

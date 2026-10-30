@@ -224,13 +224,24 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
             <Button kind="ghost">{t("จบอย่างใจดี", "End kindly")}</Button>
           </form>
         </details>
-        <p class="row muted">
-          <a href={`/report?account=${encodeURIComponent(them)}`}>{t("รายงาน", "Report")}</a>
-        </p>
-        <form method="post" action={`/block/${them}`}>
-          <input type="hidden" name="back" value="/connections" />
-          <button class="btn ghost">⛔ {t("บล็อก", "Block")}</button>
-        </form>
+        {/* Report and Block side by side, plainly labelled and never in a menu (Branding). Block is neutral, not
+            red (red here would read as part of dating), and takes one confirm step before it acts. */}
+        <div class="row pk-safety-acts">
+          <a class="btn ghost" href={`/report?account=${encodeURIComponent(them)}`}>{t("รายงาน", "Report")}</a>
+          <details class="how pk-block">
+            <summary class="btn ghost">{t("บล็อก", "Block")}</summary>
+            <form method="post" action={`/block/${them}`}>
+              <input type="hidden" name="back" value="/connections" />
+              <p class="muted">
+                {t(
+                  `บล็อก ${name} แล้ว เกี่ยวก้อยนี้จะจบ และคุณสองคนจะไม่เห็นกันอีก`,
+                  `Block ${name}? This Pinky ends and you won't see each other again.`,
+                )}
+              </p>
+              <Button kind="ghost">{t("บล็อกเลย", "Yes, block")}</Button>
+            </form>
+          </details>
+        </div>
       </section>
     </>,
   );
