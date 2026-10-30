@@ -680,7 +680,7 @@ function YouForm(props: { v: View; next: string; error?: string; storyHint?: str
           <legend>{t("เรื่องของฉันกับกรุงเทพฯ", "My Bangkok story")}</legend>
           <OptRadios v={props.v} name="story" options={BKK_STORY} value={bio.story ?? props.storyHint} />
         </fieldset>
-        <p class="muted small">{t("งาน การเรียน สรรพนาม และเรื่องอื่น ๆ ใส่ได้ที่ ฉัน แล้วโปรไฟล์ เมื่อไหร่ก็ได้ แสดงแค่ในโปรไฟล์ของคุณ", "Work, study, pronouns and more can go on your profile any time, under Me. They only show on your profile card.")}</p>
+        <p class="muted small">{t("งาน การเรียน สรรพนาม และเรื่องอื่น ๆ ใส่ได้ที่ ฉัน › โปรไฟล์ เมื่อไหร่ก็ได้ แสดงแค่ในโปรไฟล์ของคุณ", "Work, study, pronouns and more can go on your profile any time, at Me › Profile. They only show on your profile card.")}</p>
       </FlowStep>
     </Flow>
     <ProfileFormScript />
