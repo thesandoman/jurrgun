@@ -16,7 +16,6 @@
  * The about-you questions (languages, interests, how you like to meet...) come
  * after the first RSVP as "Help your table get to know you" (/onboarding/you).
  */
-import { educationLookup } from "../services/universities";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, desc, eq } from "drizzle-orm";
@@ -63,8 +62,8 @@ import { AnswerCard, Flow, FlowStep } from "../ui/flow";
 import { Choices, Field, list, Notice, page, Select, str, Toggle, view, type View } from "../ui/kit";
 import { INTERNATIONAL_COOKIE, NEWCOMER_COOKIE } from "./newcomers";
 import { GROUP_SIZES, groupSizeOrLegacy, SIZE_STYLES, TIME_WINDOWS, timesOrLegacy, withGroupStyle } from "../content/profile";
-import { cleanBio, COMM_STYLES, INTEREST_VALUES, isResidency, MAX_COMM, MAX_INTERESTS, parseBangkok, RESIDENCY, parseEducation, parseOccupation, withoutDating } from "../content/profile";
-import { BangkokStory, CommPicker, EducationPicker, InterestPicker, OccupationPicker, OptChecks, OptRadios, ProfileFormScript } from "../ui/profile-form";
+import { BKK_STORY, cleanBio, INTEREST_VALUES, isResidency, MAX_INTERESTS, parseBangkok, withoutDating } from "../content/profile";
+import { InterestPicker, OptChecks, OptRadios, ProfileFormScript } from "../ui/profile-form";
 import { safeNext } from "../ui/table-intro";
 import { loadVibe, quizQuestions, quizSeed, QuizFlow, ResultView } from "./quiz";
 import { INTENT_COOKIE, journeyFor, JourneyTop, type Journey } from "../ui/journey";
@@ -391,13 +390,6 @@ function BasicsForm(props: { v: View; j: Journey; values?: Record<string, string
         <Field label={t("อยากให้เพื่อนเรียกว่าอะไร (ชื่อเล่น)", "What should people call you? (nickname)")} name="nickname" value={val.nickname ?? p?.nickname} required maxlength={30} autocomplete="nickname" />
         <BirthDateFields v={props.v} value={val.birthDate ?? p?.birthDate} />
         <Select label={t("ส่วนใหญ่อยู่เขตไหน", "Where do you spend your week? (district)")} name="district" options={districtsAZ(lang)} value={val.district ?? p?.district} lang={lang} required blank={t("เลือกเขต", "Choose a district")} />
-        <p class="field-label" id="residency-h">{t("ตอนนี้คุณอยู่กรุงเทพฯ แบบไหน", "You and Bangkok right now")}</p>
-        <p class="muted small">{t("ใครอยู่ในหรือรอบ ๆ กรุงเทพฯ ก็มาร่วมได้ ไม่ว่าทะเบียนบ้านจะอยู่ที่ไหน", "Anyone in or around Bangkok can join. Your household registration can be anywhere.")}</p>
-        <div class="answers" role="radiogroup" aria-labelledby="residency-h">
-          {RESIDENCY.map((o) => (
-            <AnswerCard name="residency" value={o.value} label={lang === "en" ? o.en : o.th} emoji={o.emoji} required checked={(val.residency ?? cleanBio(p?.bio).residency ?? (p ? "lives" : "")) === o.value} />
-          ))}
-        </div>
         <Toggle name="newcomer" label={t("ฉันเพิ่งมาถึงกรุงเทพฯ", "I'm new in town")} checked={val.newcomer === "1" || !!p?.newcomer} />
       </FlowStep>
     </Flow>
@@ -488,10 +480,11 @@ onboarding.post("/basics", async (c) => {
   const age = ageOn(vals.birthDate);
   if (!(age >= MIN_AGE && age < 120)) return fail(t("Jurrgun เปิดให้ใช้เฉพาะคนอายุ 18 ปีขึ้นไป", "Jurrgun is for adults aged 18 and over."), 1);
   if (!values(DISTRICTS).includes(vals.district)) return fail(t("เลือกเขต", "Please choose a district."), 2);
-  if (!isResidency(vals.residency)) return fail(t("เลือกว่าตอนนี้คุณอยู่กรุงเทพฯ แบบไหน", "Please pick how you're in Bangkok right now."), 3);
+  // Card D3 (owner, 2026-10-30): residency is no longer asked here. It only shows on the profile card,
+  // so it's optional in Settings. An old page that still sends it is kept when valid.
 
   const db = getDb(c.env);
-  const bio = { ...cleanBio(user.profile?.bio), residency: vals.residency };
+  const bio = { ...cleanBio(user.profile?.bio), ...(isResidency(vals.residency) ? { residency: vals.residency } : {}) };
   const data = { nickname: vals.nickname, birthDate: vals.birthDate, district: vals.district, newcomer: vals.newcomer === "1", bio, locale: v.lang, updatedAt: new Date() };
   if (user.profile) await db.update(profiles).set(data).where(eq(profiles.accountId, user.account.id));
   // Languages start on the app language; the table intro after the first RSVP asks properly.
@@ -661,15 +654,13 @@ function YouForm(props: { v: View; next: string; error?: string; storyHint?: str
       error={props.error ? <Notice kind="error">{props.error}</Notice> : undefined}
       extra={<a class="skip" href={props.next}>{t("ข้ามไปก่อน", "Skip for now")}</a>}
     >
-      <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} hint={t("ช่วยให้โต๊ะรู้จักคุณ 5 คำถามสั้น ๆ", "Help your table get to know you. 5 quick questions.")} need={1} needText={t("เลือกอย่างน้อย 1 ภาษา", "Pick at least one")}>
+      <FlowStep emoji="🗣️" title={t("พูดภาษาอะไรได้บ้าง?", "Which languages do you speak?")} hint={t("ช่วยให้โต๊ะรู้จักคุณ 4 คำถามสั้น ๆ เราใช้ภาษาเพื่อจัดให้นั่งกับคนที่คุยกันได้", "Help your table get to know you. 4 quick questions. We use your languages to seat you with people you can talk to.")} need={1} needText={t("เลือกอย่างน้อย 1 ภาษา", "Pick at least one")}>
         <Pills name="languages" options={LANGUAGES} values={p?.languages.length ? p.languages : [lang]} lang={lang} />
-        <PronounField v={props.v} value={p?.pronouns} />
-        <Toggle name="showPronouns" label={t("แสดงในโปรไฟล์", "Show on my profile")} checked={!!p?.showPronouns} />
       </FlowStep>
       <FlowStep
         emoji="🍜"
         title={t("สนใจอะไรบ้าง?", "What are you into?")}
-        hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ค้นหาได้`, `Pick 1 to ${MAX_INTERESTS}. You can search.`)}
+        hint={t(`เลือก 1 ถึง ${MAX_INTERESTS} อย่าง ค้นหาได้ เราใช้เพื่อให้โต๊ะมีเรื่องคุยร่วมกัน`, `Pick 1 to ${MAX_INTERESTS}. You can search. We use them so your table has something in common.`)}
         need={1}
         needText={t("เลือกอย่างน้อย 1", "Pick at least one")}
       >
@@ -684,14 +675,12 @@ function YouForm(props: { v: View; next: string; error?: string; storyHint?: str
         <p class="field-label">{t("มาที่นี่เพื่อ…", "I'm here for…")}</p>
         <Pills name="intents" options={INTENTS} values={p?.intents.filter((i) => i !== "romance").length ? p.intents : ["friends"]} lang={lang} />
       </FlowStep>
-      <FlowStep emoji="🛺" title={t("คุณกับกรุงเทพฯ", "You and Bangkok")} hint={t("คนกรุงเทพฯ คนต่างจังหวัด หรือมาจากแดนไกล ยินดีต้อนรับทุกคน ไม่บังคับ", "Locals, people from the provinces, from abroad: everyone's welcome. Optional.")}>
-        <BangkokStory v={props.v} story={bio.story ?? props.storyHint} time={bio.bkkTime} hometown={bio.hometown} compact />
-      </FlowStep>
-      <FlowStep emoji="💼" title={t("งาน การเรียน และการติดต่อ", "Work, study and keeping in touch")} hint={t("ไม่บังคับ ข้ามได้", "Optional. You can skip this.")}>
-        <OccupationPicker v={props.v} value={bio.occupation} other={bio.occupationOther} />
-        <EducationPicker v={props.v} bio={bio} />
-        <p class="field-label">{t(`ปกติติดต่อกับเพื่อนแบบไหน? (สูงสุด ${MAX_COMM} แบบ)`, `How do you like to keep in touch? (up to ${MAX_COMM})`)}</p>
-        <CommPicker v={props.v} values={bio.comm} />
+      <FlowStep emoji="🛺" title={t("คุณกับกรุงเทพฯ", "You and Bangkok")} hint={t("คนกรุงเทพฯ คนต่างจังหวัด หรือมาจากแดนไกล ยินดีต้อนรับทุกคน เราใช้เพื่อคละคนในโต๊ะ ไม่บังคับ", "Locals, people from the provinces, from abroad: everyone's welcome. We use it to mix your table. Optional.")}>
+        <fieldset class="choices">
+          <legend>{t("เรื่องของฉันกับกรุงเทพฯ", "My Bangkok story")}</legend>
+          <OptRadios v={props.v} name="story" options={BKK_STORY} value={bio.story ?? props.storyHint} />
+        </fieldset>
+        <p class="muted small">{t("งาน การเรียน สรรพนาม และเรื่องอื่น ๆ ใส่ได้ที่ ฉัน แล้วโปรไฟล์ เมื่อไหร่ก็ได้ แสดงแค่ในโปรไฟล์ของคุณ", "Work, study, pronouns and more can go on your profile any time, under Me. They only show on your profile card.")}</p>
       </FlowStep>
     </Flow>
     <ProfileFormScript />
@@ -716,21 +705,19 @@ onboarding.post("/you", async (c) => {
   const pickAll = (key: string, allowed: string[]) => list(body[key]).filter((x) => allowed.includes(x));
   const languages = pickAll("languages", values(LANGUAGES));
   const interests = [...new Set(pickAll("interests", INTEREST_VALUES))];
-  const comm = [...new Set(pickAll("comm", COMM_STYLES.map((x) => x.value)))];
   const groupSize = GROUP_SIZES.some((g) => g.value === str(body.groupSize)) ? str(body.groupSize) : undefined;
   const times = [...new Set(pickAll("times", TIME_WINDOWS.map((x) => x.value)))];
   // Small / big group follow the group size answer (seating reads them).
   const socialStyles = withGroupStyle(pickAll("socialStyles", values(SOCIAL_STYLES)), groupSize);
   const intents = pickAll("intents", values(INTENTS)).filter((i) => i !== "romance");
-  const pronouns = str(body.pronouns).slice(0, 30) || null;
   if (languages.length === 0 || interests.length === 0) {
     return page(c, { title: TITLE, status: 400, bare: true }, <YouForm v={v} next={next} error={v.t("เลือกภาษาและความสนใจอย่างน้อยอย่างละ 1", "Pick at least one language and one interest.")} />);
   }
-  if (interests.length > MAX_INTERESTS || comm.length > MAX_COMM) {
+  if (interests.length > MAX_INTERESTS) {
     return page(
       c,
       { title: TITLE, status: 400, bare: true },
-      <YouForm v={v} next={next} error={v.t(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง และช่องทางติดต่อได้ไม่เกิน ${MAX_COMM} แบบ`, `Pick at most ${MAX_INTERESTS} interests and ${MAX_COMM} ways to keep in touch.`)} />,
+      <YouForm v={v} next={next} error={v.t(`เลือกความสนใจได้ไม่เกิน ${MAX_INTERESTS} อย่าง`, `Pick at most ${MAX_INTERESTS} interests.`)} />,
     );
   }
   // Keep romance if it was already on; this form only edits non-romance intents.
@@ -741,10 +728,13 @@ onboarding.post("/you", async (c) => {
       languages,
       interests,
       socialStyles,
-      pronouns,
-      showPronouns: !!pronouns && str(body.showPronouns) === "1",
       intents: [...(intents.length ? intents : ["friends"]), ...keepRomance],
-      bio: { ...cleanBio(user.profile.bio), comm, groupSize, times, ...parseOccupation(str(body.occupation), str(body.occupationOther)), ...parseEducation({ level: str(body.education), detail: str(body.educationDetail), university: str(body.university), universityName: str(body.universityName), gradYear: str(body.gradYear) }, undefined, await educationLookup(c.env, { university: str(body.university), universityName: str(body.universityName) })), ...parseBangkok(str(body.story), str(body.bkkTime), str(body.hometown), str(body.guide)) },
+      // Card D3: this flow asks only what seating uses. Work, study, keeping in touch, time in Bangkok,
+      // hometown and pronouns live in Settings now, so what's stored there is kept as it is.
+      bio: (() => {
+        const old = cleanBio(user.profile.bio);
+        return { ...old, groupSize, times, ...parseBangkok(str(body.story), old.bkkTime ?? "", old.hometown ?? "", old.guide ? "1" : "") };
+      })(),
       updatedAt: new Date(),
     })
     .where(eq(profiles.accountId, user.account.id));

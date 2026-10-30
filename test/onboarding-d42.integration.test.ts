@@ -63,12 +63,16 @@ describe.skipIf(!HAS_DB)("onboarding after D42", () => {
     const page = await req("/onboarding/you?lang=en&next=%2Fme%2Fevents", { cookie: m.cookie });
     expect(page.status).toBe(200);
     expect(await page.text()).toContain("Skip for now");
-    const r = await req("/onboarding/you?next=%2Fme%2Fevents", { cookie: m.cookie, form: { languages: ["th", "en"], interests: ["food", "art"], pronouns: "she/her", showPronouns: "1" } });
+    // Card D3: pronouns and the card-only fields live in Settings; saving here leaves them as they were.
+    await db().update(profiles).set({ pronouns: "she/her", showPronouns: true, bio: { occupation: "student", hometown: "Chiang Mai" } }).where(eq(profiles.accountId, m.id));
+    const r = await req("/onboarding/you?next=%2Fme%2Fevents", { cookie: m.cookie, form: { languages: ["th", "en"], interests: ["food", "art"], story: "province" } });
     expect(r.headers.get("location")).toBe("/me/events");
     const [p] = await db().select().from(profiles).where(eq(profiles.accountId, m.id));
     expect(p.interests).toEqual(["food", "art"]);
     expect(p.pronouns).toBe("she/her");
     expect(p.showPronouns).toBe(true);
+    const bio = (typeof p.bio === "string" ? JSON.parse(p.bio) : p.bio) as Record<string, unknown>;
+    expect(bio).toMatchObject({ occupation: "student", hometown: "Chiang Mai", story: "province" });
   });
 
   it("the table intro never redirects off the site", async () => {

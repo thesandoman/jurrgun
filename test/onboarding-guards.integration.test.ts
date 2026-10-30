@@ -21,11 +21,12 @@ describe.skipIf(!HAS_DB)("onboarding guards", () => {
     expect(p.onboardedAt).toBeNull();
   });
 
-  it("lets people near, moving to or visiting Bangkok join, and still accepts the old checkbox", async () => {
+  it("card D3: residency isn't asked at sign-up; an old page that still sends it is kept when valid", async () => {
     const m = await createMember();
     await db().update(profiles).set({ onboardedAt: null }).where(eq(profiles.accountId, m.id));
     const post = (form: Record<string, string>) => req("/onboarding/basics", { cookie: m.cookie, form: { nickname: "Lek", birthDate: "1995-05-05", district: "bang_rak", ...form } });
-    expect((await post({ residency: "from_mars" })).status).toBe(400);
+    expect((await post({})).headers.get("location")).toBe("/onboarding/privacy");
+    expect((await post({ residency: "from_mars" })).headers.get("location")).toBe("/onboarding/privacy");
     for (const residency of ["nearby", "moving", "visiting", "passing", "lives"]) {
       const r = await post({ residency });
       expect(r.headers.get("location")).toBe("/onboarding/privacy");

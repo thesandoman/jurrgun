@@ -25,10 +25,11 @@ describe.skipIf(!HAS_DB)("identity fields", () => {
     expect(await bioOf(m.id)).toEqual({ gender: "woman", genderSelf: undefined });
   });
 
-  it("offers pronoun quick picks next to the pronoun box", async () => {
+  it("offers pronoun quick picks next to the pronoun box, in Settings (card D3: no longer in the table intro)", async () => {
     const m = await createMember();
-    const html = await (await req("/onboarding/you?lang=en", { cookie: m.cookie })).text();
+    const html = await (await req("/settings/profile?lang=en", { cookie: m.cookie })).text();
     for (const p of ["she/her", "he/him", "they/them", "use my name"]) expect(html).toContain(`data-pronoun="${p}"`);
+    expect(await (await req("/onboarding/you?lang=en", { cookie: m.cookie })).text()).not.toContain("data-pronoun=");
   });
 
   it("a self-described dating identity is kept privately while romance is on, and deleted with it", async () => {
