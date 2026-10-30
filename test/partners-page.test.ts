@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
-import { headLinks } from "../src/lib/seo";
+import { headLinks, isIndexable } from "../src/lib/seo";
 import { PARTNERS_COPY, PARTNERS_DESCRIPTION } from "../src/routes/partners";
 
 const LIVE = "https://jurrgun.apps.sv-academy.org";
@@ -63,7 +63,8 @@ describe("/partners", () => {
   });
 
   it("keeps Partners' copy guards in both languages", async () => {
-    const banned = [/free forever/i, /official/i, /\bAPI\b/, /TCDC/i, /BACC/i, /\bBMA\b/, /กทม/, /ฟรีตลอด/, /[–—]/, /testimonial/i];
+    // No named institution and no dating side on this page (Partners, 2026-10-30).
+    const banned = [/free forever/i, /official/i, /\bAPI\b/, /TCDC/i, /BACC/i, /\bBMA\b/, /กทม/, /ฟรีตลอด/, /[–—]/, /testimonial/i, /จุฬา/, /Chula/i, /💘/];
     for (const s of allCopy()) for (const b of banned) expect(s, String(b)).not.toMatch(b);
     for (const lang of ["th", "en"] as const) {
       const main = decode(mainOf((await partners(lang)).html));
@@ -98,8 +99,24 @@ describe("/partners SEO", () => {
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     expect(locs.indexOf(`${LIVE}/partners`)).toBe(locs.indexOf(`${LIVE}/local`) + 1);
     expect(locs.indexOf(`${LIVE}/intro`)).toBe(locs.indexOf(`${LIVE}/partners`) + 1);
+    // In its own section right after Start here, which stays for people looking for friends.
     const txt = await (await app.request(`${LIVE}/llms.txt`)).text();
-    expect(txt).toContain(`- [Partners](${LIVE}/partners): `);
+    const start = txt.slice(txt.indexOf("## Start here"), txt.indexOf("## For organisers and venues"));
+    expect(start).not.toContain("/partners");
+    const orgs = txt.slice(txt.indexOf("## For organisers and venues"), txt.indexOf("## Learn"));
+    expect(txt.indexOf("## Start here")).toBeLessThan(txt.indexOf("## For organisers and venues"));
+    expect(orgs).toContain(`- [Partners](${LIVE}/partners): `);
+  });
+
+  it("the gated /partner and /partner/apply stay out of the index and the sitemap", async () => {
+    for (const p of ["/partner", "/partner/apply"]) {
+      expect(isIndexable(p), p).toBe(false);
+      expect(headLinks({ host: "jurrgun.apps.sv-academy.org", path: p }).robots, p).toBe("noindex");
+    }
+    const xml = await (await app.request(`${LIVE}/sitemap.xml`)).text();
+    expect(xml).not.toContain(`${LIVE}/partner<`);
+    expect(xml).not.toContain(`${LIVE}/partner/`);
+    expect(xml).not.toContain(`${LIVE}/partner?`);
   });
 
   it("its description is the page's own words, under 155 characters in each language", async () => {

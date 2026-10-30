@@ -99,8 +99,8 @@ export const PARTNERS_COPY = {
     ],
     ["มีรหัสแนะนำของแต่ละงาน", "Get a referral code for each event."],
     [
-      "ตั้งเงื่อนไขเข้างาน: ผู้จัดอนุมัติก่อน กลุ่มที่เข้าด้วยรหัส (เช่น นิสิตจุฬาฯ) สิ่งที่ต้องเตรียมหรือควรรู้ มีแอลกอฮอล์ (งานจะเป็น 20+) ปลอดบุหรี่หรือมีที่สูบ หรือเข้างานได้ทุกคนพร้อมกลุ่มไปด้วยกัน",
-      "Set entry rules: organiser approval, a join-code group (for example, Chula students), things to bring or know, alcohol served (the event becomes 20+), smoke-free or a smoking area, or open entry with go-together groups.",
+      "ตั้งเงื่อนไขเข้างาน: ผู้จัดอนุมัติก่อน กลุ่มที่เข้าด้วยรหัส (เช่น นักศึกษามหาวิทยาลัยพาร์ตเนอร์) สิ่งที่ต้องเตรียมหรือควรรู้ มีแอลกอฮอล์ (งานจะเป็น 20+) ปลอดบุหรี่หรือมีที่สูบ หรือเข้างานได้ทุกคนพร้อมกลุ่มไปด้วยกัน",
+      "Set entry rules: organiser approval, a join-code group (for example, students of a partner university), things to bring or know, alcohol served (the event becomes 20+), smoke-free or a smoking area, or open entry with go-together groups.",
     ],
   ] as Two[],
   privacyTitle: ["ความเป็นส่วนตัวของสมาชิก หมายถึงอะไรสำหรับคุณ", "What members' privacy means for you"] as Two,
@@ -136,7 +136,6 @@ export const PARTNERS_COPY = {
     ],
     ["งานสุขภาพให้ข้อมูลเท่านั้น: ฟรี ไม่มีลิงก์ขายบัตรหรือชำระเงิน และไม่ขายอะไร", "Health events are information only: free, with no ticket or payment link, and nothing sold."],
     ["งานสำหรับผู้หญิงและนอนไบนารีเท่านั้น ต้องมีเจ้าภาพเป็นผู้หญิงหรือนอนไบนารี", "Women and non-binary only events need a woman or non-binary host."],
-    ["งาน 💘 จำกัดเฉพาะกลุ่มที่เข้าด้วยรหัสไม่ได้", "💘 events can't be limited to a join-code group."],
   ] as Two[],
   conduct: ["อ่านหลักปฏิบัติ", "Read the code of conduct"] as Two,
   cta: ["สมัครเป็นพาร์ตเนอร์", "Apply"] as Two,
