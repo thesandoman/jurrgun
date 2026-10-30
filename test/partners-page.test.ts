@@ -74,6 +74,17 @@ describe("/partners", () => {
     }
   });
 
+  it("says co-host invitations lapse (owner P4), not that the event waits for every partner", async () => {
+    const en = decode(mainOf((await partners("en")).html));
+    expect(en).toContain("Invitations stay open for 3 days and close a day before the event; if a partner doesn't answer, the event goes ahead without them.");
+    expect(en).not.toContain("once each accepts");
+    const th = mainOf((await partners("th")).html);
+    expect(th).toContain("คำเชิญเปิดไว้ 3 วัน และปิดก่อนวันงาน 1 วัน ถ้าพาร์ตเนอร์ไม่ตอบ งานจะเดินหน้าต่อโดยไม่มีพาร์ตเนอร์รายนั้น");
+    expect(th).not.toContain("งานจะขึ้นเมื่อทุกรายตอบรับ");
+    // Thai copy carries no semicolons.
+    for (const s of allCopy().filter((x) => /[฀-๿]/.test(x))) expect(s).not.toContain(";");
+  });
+
   it("the landing links organisers here, not straight to the form", async () => {
     const main = mainOf(await (await app.request("/", visitor("en"))).text());
     expect(main).toContain('href="/partners"');

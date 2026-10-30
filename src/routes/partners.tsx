@@ -94,8 +94,8 @@ export const PARTNERS_COPY = {
     ["ลงงานจากระบบของคุณเองด้วยคีย์ที่ Jurrgun ให้ และยกเลิกคีย์ได้", "Post events from your own system with a key Jurrgun gives you. The key can be revoked."],
     ["เพิ่มฟีดปฏิทินของคุณ พร้อมหมายเหตุว่าข้อกำหนดของแหล่งที่มาอนุญาตอะไรบ้าง", "Add your calendar feed, with a note on what the source's terms allow."],
     [
-      "ชวนพาร์ตเนอร์ที่ยืนยันแล้วอีกไม่เกิน 2 รายมาร่วมจัด งานจะขึ้นเมื่อทุกรายตอบรับ ทุกพาร์ตเนอร์มีชื่อบนงาน และเห็นตัวเลขเดียวกัน",
-      "Invite up to 2 other verified partners to co-host. The event shows once each accepts, every partner is named, and all see the same counts.",
+      "ชวนพาร์ตเนอร์ที่ยืนยันแล้วอีกไม่เกิน 2 รายมาร่วมจัด คำเชิญเปิดไว้ 3 วัน และปิดก่อนวันงาน 1 วัน ถ้าพาร์ตเนอร์ไม่ตอบ งานจะเดินหน้าต่อโดยไม่มีพาร์ตเนอร์รายนั้น ทุกพาร์ตเนอร์มีชื่อบนงาน และเห็นตัวเลขเดียวกัน",
+      "Invite up to 2 other verified partners to co-host. Invitations stay open for 3 days and close a day before the event; if a partner doesn't answer, the event goes ahead without them. Every partner is named and all see the same counts.",
     ],
     ["มีรหัสแนะนำของแต่ละงาน", "Get a referral code for each event."],
     [
