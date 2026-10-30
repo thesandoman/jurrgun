@@ -13,7 +13,7 @@
  */
 import { Hono } from "hono";
 import { count, eq, sql } from "drizzle-orm";
-import { getDb, unlockTables } from "../db";
+import { batch, getDb, unlockTables } from "../db";
 import type { AppEnv } from "../lib/env";
 import { safeEqual } from "../lib/crypto";
 import { MIGRATIONS } from "../migrations";
@@ -41,23 +41,71 @@ setup.use("*", async (c, next) => {
   await next();
 });
 
-setup.post("/migrate", async (c) => {
-  const db = getDb(c.env);
+type Migration = { id: string; statements: string[] };
+export type MigrateResult =
+  | { ok: true; applied: { id: string; mode: "transaction" | "stepwise" }[]; alreadyApplied: string[] }
+  | { ok: false; error: string; migration: string; statement?: string; detail: string; applied: string[] };
+
+/** A raw statement in the shape batch() takes. */
+const raw = (text: string, params: unknown[] = []) => ({ toSQL: () => ({ sql: text, params }) });
+
+/** Statements Postgres refuses inside a transaction. */
+const NO_TRANSACTION = /\bCONCURRENTLY\b/i;
+
+/**
+ * True when a transaction failed only because the platform's schema lock refused a change to a table
+ * (new tables start locked, and only the platform can unlock them, between statements). Such a
+ * migration is applied step by step instead, unlocking as it goes.
+ */
+export function isSchemaLockError(err: unknown): boolean {
+  const e = err as { cause?: unknown; message?: unknown };
+  return /schema change is disallowed because table .* is locked|schema[_ ]locked/i.test(`${String(e?.message ?? "")} ${String(e?.cause ?? "")} ${String(err)}`);
+}
+
+/**
+ * Apply every migration not yet recorded in app_migrations. Each one runs as ONE transaction (batch():
+ * one atomic call deployed, BEGIN/COMMIT locally), its app_migrations row included, so a migration is
+ * all or nothing and nobody can catch it half applied. Statements stay IF NOT EXISTS, so a re-run is safe.
+ *
+ * Two exceptions run step by step, as before (unlock, retry, record last): a migration with a statement
+ * Postgres refuses in a transaction (CONCURRENTLY), and one the platform refuses as a whole because a
+ * table it changes is schema locked (the refused transaction rolled back, so nothing was half applied).
+ * Any other failure is returned with nothing applied for that migration.
+ */
+export async function applyMigrations(env: AppEnv["Bindings"], migrations: Migration[]): Promise<MigrateResult> {
+  const db = getDb(env);
   await db.execute(
     sql`CREATE TABLE IF NOT EXISTS app_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`,
   );
   const done = new Set((await db.execute<{ id: string }>(sql`SELECT id FROM app_migrations LIMIT 1000`)).map((r) => (Array.isArray(r) ? String(r[0]) : r.id)));
-  const applied: string[] = [];
-  for (const m of MIGRATIONS) {
+  const applied: { id: string; mode: "transaction" | "stepwise" }[] = [];
+  const record = (id: string) => raw("INSERT INTO app_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [id]);
+  const fail = (m: Migration, err: unknown, statement?: string): MigrateResult => {
+    const e = err as { cause?: unknown };
+    return { ok: false, error: "migration failed", migration: m.id, statement: statement?.slice(0, 200), detail: String(e?.cause ?? err), applied: applied.map((a) => a.id) };
+  };
+  for (const m of migrations) {
     if (done.has(m.id)) continue;
+    if (!m.statements.some((s) => NO_TRANSACTION.test(s))) {
+      try {
+        // Existing tables this migration changes must be unlocked before the transaction starts.
+        await unlockTables(env);
+        await batch(env, [...m.statements.map((s) => raw(resumable(s))), record(m.id)]);
+        applied.push({ id: m.id, mode: "transaction" });
+        continue;
+      } catch (err) {
+        if (!isSchemaLockError(err)) return fail(m, err);
+        // Refused as a whole by the schema lock: nothing was applied; go step by step below.
+      }
+    }
     for (const statement of m.statements) {
       const isCreateTable = /^CREATE TABLE/i.test(statement);
       // New tables start schema-locked, and the database may re-lock after a
-      // schema change, so unlock before every non-table step and retry once.
+      // schema change, so unlock before every non-table step and retry.
       let lastErr: unknown = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
-          if (!isCreateTable) await unlockTables(c.env);
+          if (!isCreateTable) await unlockTables(env);
           await db.execute(sql.raw(resumable(statement)));
           lastErr = null;
           break;
@@ -65,18 +113,20 @@ setup.post("/migrate", async (c) => {
           lastErr = err;
         }
       }
-      if (lastErr) {
-        // Guarded route, owner-only: return the database's own message so a
-        // failed step can be diagnosed, and stop before marking it applied.
-        const e = lastErr as { cause?: unknown };
-        return c.json({ error: "migration step failed", migration: m.id, statement: statement.slice(0, 200), detail: String(e.cause ?? lastErr) }, 500);
-      }
+      if (lastErr) return fail(m, lastErr, statement);
     }
-    await unlockTables(c.env);
-    await db.execute(sql`INSERT INTO app_migrations (id) VALUES (${m.id})`);
-    applied.push(m.id);
+    await unlockTables(env);
+    await batch(env, [record(m.id)]);
+    applied.push({ id: m.id, mode: "stepwise" });
   }
-  return c.json({ applied, alreadyApplied: [...done] });
+  return { ok: true, applied, alreadyApplied: [...done] };
+}
+
+setup.post("/migrate", async (c) => {
+  const result = await applyMigrations(c.env, MIGRATIONS);
+  // Guarded route, owner-only: a failure returns the database's own message so it can be diagnosed.
+  if (!result.ok) return c.json(result, 500);
+  return c.json({ applied: result.applied.map((a) => a.id), modes: Object.fromEntries(result.applied.map((a) => [a.id, a.mode])), alreadyApplied: result.alreadyApplied });
 });
 
 /** Promote an existing account to BMA admin (bootstraps the first staff user). */
