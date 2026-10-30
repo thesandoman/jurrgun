@@ -35,7 +35,7 @@ DRAFT, held for the owner's OK. Nothing here is published.
 
 ## App footage
 
-- If any app screen appears, **every frame** that shows it carries the on-screen label **"ข้อมูลตัวอย่าง · Demo profiles, fictional"**, not just the caption. We'll send you labelled screen clips. Please use those instead of recording your own screen.
+- If any app screen appears, **every frame** that shows it carries the on-screen label **"ข้อมูลตัวอย่างสมมติ · Fictional demo profiles" (cuts with a demo chat: "ข้อมูลและบทสนทนาสมมติ · Fictional demo profiles and chat")**, not just the caption. We'll send you labelled screen clips. Please use those instead of recording your own screen.
 - Don't film your real account, other members' profiles, chats, People I Met choices or anything in Open to something more.
 
 ## Filming people at your table

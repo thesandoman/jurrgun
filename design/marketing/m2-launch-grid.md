@@ -5,7 +5,7 @@ DRAFT, held for the owner's OK. Nothing here is published.
 
 *Marketing, 2026-10-26. This is a 3x3 grid of the first nine posts as they'd sit on the profile, **not a posting schedule**. Order of posting is set once there's a launch date. Film files are in `~/jurgun-films/exports`. Codes are in `m4-link-register.md`.*
 
-**Every film tile carries the on-screen label** "ข้อมูลตัวอย่าง · Demo profiles, fictional" in every frame that shows app data or people, not just in the caption. Every caption ends with the tagline and the BMA line:
+**Every film tile carries the on-screen label** "ข้อมูลตัวอย่างสมมติ · Fictional demo profiles" (cuts with a demo chat: "ข้อมูลและบทสนทนาสมมติ · Fictional demo profiles and chat") in every frame that shows app data or people, not just in the caption. Every caption ends with the tagline and the BMA line:
 
 > กลุ่มเล็ก สถานที่จริง แล้วเจอกันนะ · Small groups. Real Bangkok places. See you there.
 > 🏛️ แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล / An independent app, hosted and overseen by the Bangkok Metropolitan Administration
@@ -76,15 +76,6 @@ No 💘 tile in the launch grid. Film 02 stays for its own opt-in placements (la
 
 ## Which cuts already carry the on-screen demo label
 
-Judged from `~/jurgun-films/exports/CHANGELOG.md` (G12: "every frame with demo data carries ข้อมูลตัวอย่าง · Demo profiles"). **Not checked frame by frame.**
+Films & Media re-rendered every cut in use on 26 Oct with the label above (film kit, CHANGELOG "Label (owner M2)"): 01, 02, 03, the 04 reel (pun, 15 s, BMA cuts), 05 (30 s, 1:1, 9:16) and 06 v2. The 6 s bumper and 04-nomusic are not used here and were not re-rendered.
 
-| Cut | Label per changelog | Needed from Films & Media |
-|---|---|---|
-| `jurrgun-01-bangkok-together.mp4` | Yes, on demo-data frames | Add "fictional" to the English |
-| `jurrgun-02-open-to-more.mp4` | Yes, plus "demo chat" | Add "fictional" |
-| `jurrgun-03-regular-tables.mp4` | Yes | Add "fictional"; a 20 s IG chapter |
-| `jurrgun-04-reel-9x16*.mp4` (4 cuts) | Yes | Add "fictional" |
-| `jurrgun-05-promo-*` and `-bumper-6s` | Yes, on demo frames | Add "fictional"; check the bumper (may show no data) |
-| `jurrgun-06-journey.mp4` (v2) | Not stated in the changelog | Confirm a label on every screen frame; add "fictional"; 60 s / 9:16 cut |
-
-The owner's rule is a "fictional" label on every cut. The current label reads "Demo profiles" without "fictional", so every cut needs a small re-render. That's a Films & Media task.
+Still to build, once the owner OKs this grid: a 20 s IG chapter of film 03, and a 60 s or 9:16 cut of film 06 (Films & Media).

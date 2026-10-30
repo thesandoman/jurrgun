@@ -7,10 +7,11 @@ DRAFT, held for the owner's OK. Nothing here is published.
 
 ## How codes work (from `src/lib/source.ts`)
 
-- Add `?src=<code>` to a page that records it: `/`, `/new`, `/international`, `/signup`, `/types/<slug>`, and since 459c806 `/quiz` and `/events/<id>` (kept through the sign-in redirect). `/events` (Discover) and `/quiz/result` don't record it.
+- Add `?src=<code>` to a page that records it: `/`, `/new`, `/international`, `/signup`, `/types/<slug>`, `/local` (once live), and since 459c806 `/quiz` and `/events/<id>` (kept through the sign-in redirect). `/events` (Discover) and `/quiz/result` don't record it.
 - A single table can be shared as `/events/<id>?src=<channel code>`. The code still names the channel, never the event or a person.
 - Codes are lower case `a-z`, `0-9`, `-` and `_`, at most 32 characters. Anything else becomes `_`. A run of 6 or more digits is dropped, so codes never carry dates or numbers like `20261107`.
 - The first code wins for 30 days. City Insight shows sign-ups and first RSVPs by code, only as totals of 10 or more.
+- **The allow-list is `src/content/src-codes.ts`** (Marketing owns it). A code must be in both this register and that file, or Insights shows it as "other".
 - **One code per channel, film cut or poster. Never per person.** Creators share one code (`creator`), not one each.
 
 **Scheme:** `<channel>-<placement>`, for example `ig-reel04`. Short, no dates.
@@ -19,7 +20,7 @@ DRAFT, held for the owner's OK. Nothing here is published.
 
 | Code | Where it's used | Landing | Notes |
 |---|---|---|---|
-| `line-rich-tables` | LINE OA rich menu: Tables this week | `/new` | |
+| `line-rich-tables` | LINE OA rich menu: Tables this week | `/` | Members get Discover at `/` |
 | `line-rich-new` | LINE OA rich menu: New to Bangkok | `/new` | |
 | `line-rich-intl` | LINE OA rich menu: From abroad | `/international` | |
 | `line-rich-quiz` | LINE OA rich menu: Take the quiz | `/quiz` | |
@@ -42,6 +43,7 @@ DRAFT, held for the owner's OK. Nothing here is published.
 | `creator` | All creator posts (one shared code) | `/new` | Never one code per creator |
 | `poster-new` | QR poster, New to Bangkok | `/new` | |
 | `poster-intl` | QR poster, From abroad | `/international` | |
+| `poster-local` | QR poster, Bangkok locals | `/local` | Once UI/UX's /local page is live |
 | `poster-uni` | QR poster at universities | `/new` | Same art, own code |
 | `poster-cowork` | QR poster at coworking spaces | `/new` | |
 | `bma-district` | BMA district pages, if approved | `/` | Only after BMA approval |

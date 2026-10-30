@@ -34,14 +34,14 @@ DRAFT, held for the owner's OK. Nothing here is published.
 
 | Tile | Thai label | English label | Link |
 |---|---|---|---|
-| 1 | โต๊ะสัปดาห์นี้ | Tables this week | `/new?src=line-rich-tables` |
+| 1 | โต๊ะสัปดาห์นี้ | Tables this week | `/?src=line-rich-tables` |
 | 2 | เพิ่งย้ายมากรุงเทพฯ | New to Bangkok | `/new?src=line-rich-new` |
 | 3 | มาจากต่างประเทศ | From abroad | `/international?src=line-rich-intl` |
 | 4 | ทำควิซ หาโต๊ะแรก | Quiz to your first table | `/quiz?src=line-rich-quiz` |
 
 - No "news", "rewards" or feed tiles. Every tile ends at a table.
 - Tile 4 goes straight to `/quiz`: since 459c806 it records the code, also when a signed-out visitor is sent to sign in first.
-- Tiles 1 and 2 share `/new` for now. If Website adds a "this week" anchor on `/new`, point tile 1 at it.
+- Tile 1 goes to `/`: members get Discover there (since 5b21b00), visitors the landing.
 
 ## Broadcasts (short set; none outside 08:00 to 21:00)
 
