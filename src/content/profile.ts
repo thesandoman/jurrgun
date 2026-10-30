@@ -1314,6 +1314,8 @@ export type Bio = {
   genderSelf?: string;
   /** Asked "Still new to Bangkok?" (six months in) and answered: don't ask again. */
   newcomerAsked?: boolean;
+  /** Card D3: AskCard questions the member answered "Not now" to. Never asked again there; still editable in Settings. */
+  dismissedAsks?: string[];
   /** Romance data, with the dating gender identity "self": the member's own words. Private, deleted with romance mode. */
   datingGenderSelf?: string;
   comm?: string[];
@@ -1448,6 +1450,11 @@ export function rankFromPositions(p: Prompt, positions: Record<string, string>):
 }
 
 /** Keep only well-formed fields of a stored bio (jsonb from the database). */
+/** Card D3: the AskCard keys, one per question and place. */
+export type AskKey = "women_only_gender";
+export const askDismissed = (bio: Bio, key: AskKey) => !!bio.dismissedAsks?.includes(key);
+export const withAskDismissed = (bio: Bio, key: AskKey): Bio => ({ ...bio, dismissedAsks: [...new Set([...(bio.dismissedAsks ?? []), key])] });
+
 export function cleanBio(raw: unknown): Bio {
   // Some drivers hand jsonb back as a JSON string (seen with local wrangler dev); read it rather than lose the bio.
   if (typeof raw === "string") {
@@ -1478,6 +1485,7 @@ export function cleanBio(raw: unknown): Bio {
   if (s(b.hometown)) out.hometown = s(b.hometown);
   if (s(b.genderSelf)) out.genderSelf = s(b.genderSelf)!.slice(0, 30);
   if (b.newcomerAsked === true) out.newcomerAsked = true;
+  if (strs(b.dismissedAsks)) out.dismissedAsks = strs(b.dismissedAsks)!.slice(0, 50);
   if (s(b.datingGenderSelf)) out.datingGenderSelf = s(b.datingGenderSelf)!.slice(0, 30);
   if (b.guide === true) out.guide = true;
   if (s(b.learning)) out.learning = s(b.learning);

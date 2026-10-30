@@ -8,14 +8,15 @@ import { TableIntroPrompt } from "../../ui/table-intro";
 import { SaveNext } from "../../ui/offline-next";
 import { IcebreakerCard } from "../../ui/icebreakers";
 import { icebreakerWindow } from "../../content/icebreakers";
-import { OPEN_TO_MORE_TAG, romanceEventOk, womenOnlyEventVisible } from "../../domain/rules";
+import { OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../../domain/rules";
 import { getCookie, setCookie } from "hono/cookie";
 import { secureCookie } from "../../lib/deployed";
 import type { Child } from "hono/jsx";
 import { and, count, eq, inArray, isNotNull, isNull, lt } from "drizzle-orm";
 import { getDb } from "../../db";
 import { isLateCancel, strikeStanding, type StrikeStanding } from "../../domain/rules";
-import { DISTRICTS, EVENT_TAGS, INTENSITY, label } from "../../lib/constants";
+import { DISTRICTS, EVENT_TAGS, GENDER_IDENTITIES, INTENSITY, label } from "../../lib/constants";
+import { askDismissed, cleanBio } from "../../content/profile";
 import type { CurrentUser } from "../../lib/env";
 import { fmtDate, fmtParts, type T } from "../../lib/i18n";
 import { seeAgain } from "../../services/see-again";
@@ -23,7 +24,7 @@ import { SeeAgainCard } from "../../ui/see-again";
 import { requireMember } from "../../lib/session";
 import { accounts, buddyPairs, events, invites, profiles, registrations, type Event, type Registration } from "../../schema";
 import { refreshWaitlist, runBuddyRound, seatState } from "../../services/events";
-import { Button, Card, Field, LinkButton, Notice, page, Tag, TextArea, Toggle, view, type View, FactIcon, FactTiles } from "../../ui/kit";
+import { AskCard, Button, Card, Field, LinkButton, Notice, page, Select, Tag, TextArea, Toggle, view, type View, FactIcon, FactTiles } from "../../ui/kit";
 import { canView, isReviewer, ownsEvent, PAUSED_LINE } from "../../domain/hosting";
 import { eventAnnouncements } from "../../services/announcements";
 import { AnnouncementList } from "../../ui/announcements";
@@ -964,6 +965,29 @@ function RegistrationBox(props: {
 
   if (event.status !== "published" || started) {
     return <p class="muted">{started ? t("กิจกรรมเริ่มแล้ว ปิดรับลงทะเบียน", "This event has started, so registration is closed.") : t("ปิดรับลงทะเบียน", "Registration is closed.")}</p>;
+  }
+
+  // Card D3 (owner, 2026-10-30): a women-only event asks for the private gender right here, at the moment
+  // it's needed, instead of at sign-up. The ask is the #rsvp form, so the RSVP bar treats its Save as the
+  // card's RSVP control (one RSVP on screen, never none). "Not now" is remembered: then a plain line.
+  const prof = v.user?.profile;
+  if (prof && event.tags.includes(WOMEN_ONLY_TAG) && !womenOnlyEventOk(event.tags, prof) && (!prof.gender || prof.gender === "prefer_not")) {
+    return askDismissed(cleanBio(prof.bio), "women_only_gender") ? (
+      <p class="muted">
+        {t("กิจกรรมนี้สำหรับผู้หญิงและคนนอนไบนารี ถ้าตรงกับคุณ ตั้งเพศได้ที่ ฉัน › ตั้งค่าการรู้จักกันหลังกิจกรรม (เป็นความลับ)", "This event is for women and non-binary people. If that's you, set your gender at Me › Connection preferences (it stays private).")}
+      </p>
+    ) : (
+      <AskCard
+        v={v}
+        id="rsvp"
+        action={`${base}/ask-gender`}
+        askKey="women_only_gender"
+        question={["กิจกรรมนี้สำหรับผู้หญิงและคนนอนไบนารี คุณเป็นเพศไหน", "This event is for women and non-binary people. What's your gender?"]}
+        why={["เราถามเพราะกิจกรรมนี้เปิดเฉพาะผู้หญิงและคนนอนไบนารี เป็นความลับ ไม่แสดงต่อใคร ทีมงานก็ไม่เห็น", "We ask because this event is only for women and non-binary people. It stays private: nobody sees it, staff included."]}
+      >
+        <Select label={t("เพศของคุณ", "Your gender")} name="gender" options={GENDER_IDENTITIES} lang={lang} required blank="-" />
+      </AskCard>
+    );
   }
 
   return (

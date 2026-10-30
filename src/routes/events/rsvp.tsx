@@ -4,7 +4,9 @@
  */
 import { DEFAULT_RHYTHM, isPaused, MAX_UPCOMING, romanceEventOk, womenOnlyEventOk } from "../../domain/rules";
 import { weekKey } from "../../domain/buddy";
-import { cleanBio } from "../../content/profile";
+import { cleanBio, withAskDismissed } from "../../content/profile";
+import { GENDER_IDENTITIES } from "../../lib/constants";
+import { privateFieldConsents } from "../../services/consent";
 import { and, eq, gt, inArray, ne, notInArray } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { ageOn, seatAvailable, seatsOverbooked, strikeStanding, USERNAME_RE, normalizeUsername, withinRange } from "../../domain/rules";
@@ -207,6 +209,32 @@ export async function commitRsvp(
   if (freed) await refreshWaitlist(c.env, id);
   return status;
 }
+
+/**
+ * Card D3: the women-only event's gender question (AskCard in RegistrationBox). Saving sets the private gender
+ * with its consent row (gender_data), the same as Settings; "Not now" is remembered and never asked here again.
+ * Either way, back to the registration card.
+ */
+eventRoutes.post("/events/:id/ask-gender", requireMember, async (c) => {
+  const user = me(c);
+  const id = c.req.param("id");
+  const event = await visibleEvent(c, id);
+  if (!event || !user.profile) return notFound(c);
+  const db = getDb(c.env);
+  const body = await c.req.parseBody();
+  const back = `/events/${encodeURIComponent(id)}#reg-h`;
+  if (str(body.do) === "later") {
+    await db.update(profiles).set({ bio: withAskDismissed(cleanBio(user.profile.bio), "women_only_gender"), updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id));
+    return c.redirect(back);
+  }
+  const gender = str(body.gender);
+  if (!GENDER_IDENTITIES.some((g) => g.value === gender) || gender === "prefer_not") return c.redirect(back);
+  await batch(c.env, [
+    db.update(profiles).set({ gender, updatedAt: new Date() }).where(eq(profiles.accountId, user.account.id)),
+    ...(await privateFieldConsents(db, user.account.id, { gender })),
+  ]);
+  return c.redirect(back);
+});
 
 eventRoutes.post("/events/:id/rsvp", requireMember, async (c) => {
   const { t } = view(c);

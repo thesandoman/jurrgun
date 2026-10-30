@@ -714,6 +714,35 @@ export function btnClass(kind: ButtonKind = "primary", extra?: string): string {
   return extra ? `btn ${k} ${extra}` : `btn ${k}`;
 }
 
+/**
+ * Card D3 "ask at the moment" (pattern agreed with UI/UX, 2026-10-30): one question where a feature needs
+ * it, with a short Thai-first "why we ask" line, Save, and "ไว้ก่อน / Not now". Both buttons post the same
+ * form with do=save or do=later; the handler records "later" per question (bio.dismissedAsks), so it is
+ * never asked again there and stays editable in Settings. No badges, counters or re-ask timers.
+ * `id` lets a page observe the Save button (the event page's RSVP bar watches #rsvp).
+ */
+export function AskCard(props: { v: View; action: string; askKey: string; question: [string, string]; why: [string, string]; id?: string; children: Child }) {
+  const { t } = props.v;
+  return (
+    <Card class="ask-card">
+      <form method="post" action={props.action} id={props.id}>
+        <input type="hidden" name="ask" value={props.askKey} />
+        <h2 class="h3">{t(props.question[0], props.question[1])}</h2>
+        {props.children}
+        <p class="muted small">{t(props.why[0], props.why[1])}</p>
+        <div class="row">
+          <button type="submit" class="btn primary" name="do" value="save">
+            {t("บันทึก", "Save")}
+          </button>
+          <button type="submit" class="btn ghost" name="do" value="later" formnovalidate>
+            {t("ไว้ก่อน", "Not now")}
+          </button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
 export function Button(props: { children: Child; kind?: ButtonKind; class?: string; name?: string; value?: string; formaction?: string }) {
   return (
     <button type="submit" class={btnClass(props.kind, props.class)} name={props.name} value={props.value} formaction={props.formaction}>
