@@ -20,3 +20,24 @@ export const notDemo = (col: SQL): SQL => sql`and ${col} not in ${DEMO_ACCOUNTS}
 export const notDemoEvent = (col: SQL): SQL => sql`and ${col} not in ${DEMO_EVENTS}`;
 /** `and <col> is not a demo research code`. */
 export const notDemoResearch = (col: SQL): SQL => sql`and ${col} not in ${DEMO_RESEARCH_IDS}`;
+
+/**
+ * For member-facing services (Dating & Pinky, Discover, people lists): true when an
+ * account is real, false for a demo or test one, or one that doesn't exist. Filter
+ * where accounts enter a pool, so a row never depends on the other person's status.
+ * A viewer who is demo themselves should still see demo accounts (seenBy below).
+ */
+export async function isRealAccount(db: ReturnType<typeof import("../db").getDb>, id: string): Promise<boolean> {
+  const rows = (await db.execute(sql`select is_demo from identity_accounts where id = ${id} limit 1`)) as unknown as unknown[];
+  const first = rows[0] as Record<string, unknown> | unknown[] | undefined;
+  if (!first) return false;
+  const v = Array.isArray(first) ? first[0] : Object.values(first)[0];
+  return !(v === true || v === "t" || v === "true");
+}
+
+/**
+ * `and <col> is visible to this viewer`: demo accounts are hidden from real
+ * viewers and signed-out visitors, while a demo viewer sees everything (so local
+ * demos and screenshot runs keep their demo world).
+ */
+export const seenBy = (col: SQL, viewerIsDemo: boolean): SQL => (viewerIsDemo ? sql`` : notDemo(col));

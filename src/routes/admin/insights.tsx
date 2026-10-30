@@ -356,6 +356,12 @@ adminInsights.get("/", async (c) => {
       .limit(5),
   ]);
 
+  // Table fill (Main, 27 Oct 2026): seats on published tables that ended in the window, never demo-hosted.
+  const seatsRow = await db.execute(sql`
+    select coalesce(sum(e.capacity), 0) from social_events e
+    where ${inWindow} and e.status = 'published' ${notDemoEvent(sql`e.id`)}`);
+  const [seatsN] = nums(seatsRow);
+
   const answerExpr = sql<string>`translate(${pulseResponses.answer}::text, '"\\', '')`;
   const barrierCounts = barrierQs.length
     ? await db
@@ -385,6 +391,14 @@ adminInsights.get("/", async (c) => {
       hint: t("สมาชิกที่สมัครในช่วงนี้", "members who joined in this window"),
     },
     { label: t("ลงทะเบียน → เช็กอิน", "RSVP → check-in"), value: pct(checkedIn, expected), unit: "%", base: expected, target: pctTarget(70) },
+    {
+      label: t("ที่นั่งที่มีคนจอง (จอง ÷ ที่นั่ง)", "Table fill (RSVPs ÷ seats)"),
+      value: roundedPct(expected, seatsN),
+      unit: "%",
+      base: seatsN,
+      target: pctTarget(60),
+      hint: t("ที่นั่งของโต๊ะที่จบในช่วงนี้ ปัดเป็นหลัก 5", "seats on tables that ended in this window, rounded to 5"),
+    },
     {
       label: t("อัตราไม่มาตามนัด", "No-show rate"),
       value: pct(expected - checkedIn, expected),

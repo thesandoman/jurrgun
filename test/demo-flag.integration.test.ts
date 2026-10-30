@@ -11,6 +11,7 @@ import { accounts, auditLog, connections, events, registrations } from "../src/s
 import { newId, randomToken } from "../src/lib/crypto";
 import { weeklyReconnected } from "../src/routes/admin/dashboard";
 import { segmentFunnel } from "../src/routes/admin/insights";
+import { isRealAccount } from "../src/services/demo";
 
 const DAY = 86_400_000;
 
@@ -78,5 +79,16 @@ describe.skipIf(!HAS_DB)("demo and test accounts", () => {
     expect(rows[0].detail).toMatchObject({ from: false, to: true });
     const page = await (await req(`/admin/users/${m.id}?lang=en`, { cookie: admin.cookie })).text();
     expect(page).toContain("Yes: left out of every staff figure");
+  });
+
+  it("shows table fill in City Insight, and tells real accounts from demo ones", async () => {
+    const viewer = await createMember({ role: "insight_viewer" });
+    const html = await (await req("/admin/insights?lang=en&days=30", { cookie: viewer.cookie })).text();
+    expect(html).toContain("Table fill (RSVPs ÷ seats)");
+    const [real, demo] = await Promise.all([createMember(), createMember()]);
+    await db().update(accounts).set({ isDemo: true }).where(eq(accounts.id, demo.id));
+    expect(await isRealAccount(db(), real.id)).toBe(true);
+    expect(await isRealAccount(db(), demo.id)).toBe(false);
+    expect(await isRealAccount(db(), "nobody")).toBe(false);
   });
 });
