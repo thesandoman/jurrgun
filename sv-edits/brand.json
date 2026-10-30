@@ -64,6 +64,20 @@
    "hex": "#e23744",
    "use": "dating mode only",
    "source": "src/ui/palette.ts PRIMITIVES.love[500]"
+  },
+  {
+   "role": "accent",
+   "name": "Headline teal",
+   "hex": "#8ff2ea",
+   "use": "the second headline line on green outdoor ads, instead of mango; large text only (3.9:1 on #137f45)",
+   "source": "src/ui/palette.ts PRIMITIVES.teal[200]"
+  },
+  {
+   "role": "accent",
+   "name": "Love red ink, dark mode",
+   "hex": "#ff6b74",
+   "use": "dating text in dark mode (red, not pink); not on surface-2",
+   "source": "src/ui/palette.ts dark theme love-ink"
   }
  ],
  "fonts": [
@@ -85,5 +99,5 @@
   "file": "sv-edits/logo-source.svg",
   "source": "src/ui/brand.tsx:26"
  },
- "palette_note": "Follows the app palette of 2026-10-17 (src/ui/palette.ts). Coral is retired."
+ "palette_note": "Follows the app palette of 2026-10-17 (src/ui/palette.ts). Coral is retired. Since 2026-10-26: teal-200 for the second headline line on green outdoor ads, and #ff6b74 for dark-mode dating text."
 }

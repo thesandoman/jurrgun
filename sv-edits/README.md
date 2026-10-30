@@ -1,6 +1,6 @@
 # Jurrgun brand kit (SV Edits)
 
-Built 16 Oct 2026 with the SV Edits skill (photo 0.5.0, vector 0.5.0) and SV Blender on Blender 5.2.2, from the app's own brand (`src/ui/brand.tsx`, `src/ui/warm.ts`) with the natural-thumb mark (e570540). `brand.json` lists every colour and font with its source. Colours follow the app palette of 17 Oct 2026 (`src/ui/palette.ts`): green acts, cream is only the page, mango only for My events and warnings, Chao Phraya sky for info and the river, canal teal for food and nights, love red only for dating mode. Coral is retired.
+Built 16 Oct 2026 with the SV Edits skill (photo 0.5.0, vector 0.5.0) and SV Blender on Blender 5.2.2, from the app's own brand (`src/ui/brand.tsx`, `src/ui/warm.ts`) with the natural-thumb mark (e570540). `brand.json` lists every colour and font with its source. Colours follow the app palette of 17 Oct 2026 (`src/ui/palette.ts`): green acts, cream is only the page, mango only for My events and warnings, Chao Phraya sky for info and the river, canal teal for food and nights, love red only for dating mode. Coral is retired. Since 26 Oct 2026: teal-200 `#8ff2ea` is the second headline line ("แล้วเจอกันนะ") on green outdoor ads instead of mango, and dark-mode dating text uses `#ff6b74` so it reads red, not pink.
 
 | Folder | What |
 | --- | --- |

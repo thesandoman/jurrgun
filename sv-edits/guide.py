@@ -2,6 +2,8 @@
 # Colours follow the app's palette (src/ui/palette.ts, owner direction 2026-10-17):
 # green acts, cream is the page, mango only for My events and warnings, Chao Phraya sky for info and the
 # river, canal teal for food and nights, love red only for dating mode. Coral is retired.
+# Since 26 Oct: teal-200 #8ff2ea is the second headline line on green outdoor ads (not mango), and
+# dark-mode dating text is #ff6b74 (red, not pink).
 #   python3 guide.py   (writes guide/jurrgun-brand-guide.ai, .pdf, .png)
 import json
 import os
@@ -89,9 +91,11 @@ text(620, 672, "5  หลักใช้งาน · House rules", 15, style="Se
 rules = ["• เขียวคือปุ่มและการกระทำ ครีมคือพื้นหน้าเท่านั้น · Green acts. Cream is only the page.",
          "• มะม่วงเฉพาะนัดของฉันและคำเตือน · Mango only for My events and warnings.",
          "• แดงเฉพาะโหมดเปิดใจ คู่กับเขียว · Red only for dating mode, beside green.",
-         "• อย่าวาดโลโก้ใหม่ ยืด หมุน หรือเปลี่ยนสี · Never redraw, stretch or recolour the mark."]
+         "• อย่าวาดโลโก้ใหม่ ยืด หมุน หรือเปลี่ยนสี · Never redraw, stretch or recolour the mark.",
+         "• พาดหัวบรรทัดสองบนพื้นเขียว ใช้ฟ้าเทอร์ควอยซ์ #8FF2EA · Second headline line on green: teal #8FF2EA.",
+         "• โหมดมืด ตัวอักษรเปิดใจใช้แดง #FF6B74 · Dark mode dating text: red #FF6B74, never pink."]
 for i, r in enumerate(rules):
-    text(620, 694 + i * 18, r, 10.5)
+    text(620, 692 + i * 15, r, 10)
 # footer
 rect(48, 782, 1094.55, 1.5, "#f0e2cc")
 text(48, 806, "แอปอิสระ มีกรุงเทพมหานครเป็นเจ้าภาพและผู้กำกับดูแล · An independent app, hosted and overseen by the Bangkok Metropolitan Administration", 10.5, color=SUB)
