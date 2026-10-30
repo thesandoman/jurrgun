@@ -2,13 +2,14 @@
  * Staff events, follow-up part (split from routes/admin/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
-import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { batch, getDb } from "../../../db";
 import { strikeExpiry } from "../../../domain/rules";
 import { newId } from "../../../lib/crypto";
 import { batchAll, chunks, keysetAll } from "../../../lib/bulk";
 import { audit, notify, notifyMany } from "../../../lib/records";
-import { events, registrations, reports, strikes } from "../../../schema";
+import { accounts, events, profiles, registrations, reports, strikes } from "../../../schema";
+import { noteNamesSomeone, WAIVE_NOTE_MAX, WAIVE_NOTE_REFUSED } from "../../../domain/waive-note";
 import { refreshWaitlist, runBuddyRound } from "../../../services/events";
 import { blockedAmong } from "../../../services/regular-tables";
 import { announceOpen, postAnnouncement, type AnnounceInput } from "../../../services/announcements";
@@ -274,6 +275,25 @@ adminEvents.post(
   }, { roster: true }),
 );
 
+
+/** Nicknames and usernames of everyone else registered for this event, plus its host and creator. */
+async function otherNamesAt(db: ReturnType<typeof getDb>, e: { id: string; hostAccountId: string | null; createdBy: string }, accountId: string): Promise<string[]> {
+  const ids = await db
+    .select({ id: registrations.accountId })
+    .from(registrations)
+    .where(and(eq(registrations.eventId, e.id), ne(registrations.accountId, accountId)))
+    .limit(5000);
+  const all = [...new Set([...ids.map((r) => r.id), e.hostAccountId, e.createdBy].filter((x): x is string => !!x && x !== accountId))];
+  if (!all.length) return [];
+  const rows = await db
+    .select({ username: accounts.username, nickname: profiles.nickname })
+    .from(accounts)
+    .leftJoin(profiles, eq(profiles.accountId, accounts.id))
+    .where(inArray(accounts.id, all))
+    .limit(all.length);
+  return rows.flatMap((r) => [r.username, r.nickname ?? ""]);
+}
+
 adminEvents.post(
   "/:id/strikes/:who/waive",
   withEvent(async (c, e, db) => {
@@ -289,7 +309,9 @@ adminEvents.post(
     if (!reg && rosterAccess(me(c), e) !== "names") return refuse(c, e, t("ไม่พบใบเตือนนี้", "Strike not found"), 404);
     const accountId = reg?.accountId ?? who;
     const reason = str((await c.req.parseBody()).reason);
-    if (!reason || reason.length > 200) return refuse(c, e, t("ระบุเหตุผล (ไม่เกิน 200 ตัวอักษร)", "Give a reason (max 200 characters)"));
+    if (!reason || reason.length > WAIVE_NOTE_MAX) return refuse(c, e, t("ระบุเหตุผล (ไม่เกิน 200 ตัวอักษร)", "Give a reason (max 200 characters)"));
+    // D1: the member sees this note in their data export, so it never names anyone else at the event.
+    if (noteNamesSomeone(reason, await otherNamesAt(db, e, accountId))) return refuse(c, e, t(WAIVE_NOTE_REFUSED[0], WAIVE_NOTE_REFUSED[1]));
     const [s] = await db
       .select()
       .from(strikes)

@@ -412,6 +412,11 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     expect((await kinds(came.id, "strike")).length).toBe(0);
 
     expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "" } })).status).toBe(400);
+    // D1: the note goes into the member's export, so naming someone else at the event (or a phone number) is refused.
+    const named = await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: `${host.cookie}; lang=en`, form: { reason: `Came with ${came.username}, who vouched` } });
+    expect(named.status).toBe(400);
+    expect(await named.text()).toContain("names someone else");
+    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "call 081-234-5678" } })).status).toBe(400);
     const w = await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "Was ill" } });
     expect(w.status).toBe(302);
     const [s] = await db().select().from(strikes).where(eq(strikes.eventId, past)).limit(1);
