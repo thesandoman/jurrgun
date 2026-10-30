@@ -214,5 +214,5 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
     const [fb] = await db().select().from(feedback).where(eq(feedback.accountId, m.id));
     expect(fb?.comment ?? "").toBe("");
     expect(acct.username).not.toContain(m.username ?? "@@none@@");
-  });
+  }, 30_000); // touches every table that holds a person: about 6 s locally, over vitest's 5 s default
 });
