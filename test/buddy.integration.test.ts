@@ -38,6 +38,21 @@ describe.skipIf(!HAS_DB)("Bangkok Buddy", () => {
   });
   beforeEach(() => undefined);
 
+  it("never pairs a real member with a demo or test account (owner C2)", async () => {
+    const [r1, r2, d1, d2] = await Promise.all([createMember(), createMember(), createMember(), createMember()]);
+    for (const m of [r1, r2, d1, d2]) {
+      await withType(m, "BDSH");
+      await optIn(m);
+    }
+    await db().update(accounts).set({ isDemo: true }).where(inArray(accounts.id, [d1.id, d2.id]));
+    await only(r1, r2, d1, d2);
+    await roundIfDue(env, nextRoundDate());
+    const [m1] = await matchOf(r1);
+    expect(m1 && [m1.aAccount, m1.bAccount].sort()).toEqual([r1.id, r2.id].sort());
+    const [m2] = await matchOf(d1);
+    expect(m2 && [m2.aAccount, m2.bAccount].sort()).toEqual([d1.id, d2.id].sort());
+  });
+
   it("asks for the Bangkok Type first, then lets you opt in privately", async () => {
     const m = await createMember();
     const html = await (await req("/buddy?lang=en", { cookie: m.cookie })).text();

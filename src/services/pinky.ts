@@ -19,7 +19,7 @@ import { romanceCompatible } from "../domain/rules";
 import { peopleWindow } from "../domain/rules";
 import { newId } from "../lib/crypto";
 import { notify } from "../lib/records";
-import { blocks, buddyMatches, buddyQuests, connectionChoices, connections, events, profiles, registrations, type Profile } from "../schema";
+import { accounts, blocks, buddyMatches, buddyQuests, connectionChoices, connections, events, profiles, registrations, type Profile } from "../schema";
 
 type Db = ReturnType<typeof getDb>;
 type Env = Parameters<typeof batch>[0];
@@ -92,6 +92,12 @@ export async function endedWith(db: Db, me: string, others: string[], key: strin
   return new Set(rows.map((r) => (r.from === me ? r.to : r.from)));
 }
 
+/** Real and demo accounts never unlock a Pinky together (owner C2). Checked silently, only at unlock. */
+async function sameWorld(db: Db, x: string, y: string): Promise<boolean> {
+  const rows = await db.select({ id: accounts.id, isDemo: accounts.isDemo }).from(accounts).where(inArray(accounts.id, [x, y])).limit(2);
+  return rows.length === 2 && rows[0].isDemo === rows[1].isDemo;
+}
+
 type Ctx = { event: { id: string; endsAt: Date }; open: boolean; mutual: boolean; conn: Awaited<ReturnType<typeof pinkyConnection>> };
 
 /**
@@ -135,7 +141,7 @@ export async function tapPinky(env: Env, db: Db, me: Profile, otherId: string): 
     .values({ id: newId(), eventId, fromAccount: me.accountId, toAccount: otherId, choice: "romance" })
     .onConflictDoUpdate({ target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount], set: { choice: "romance" } });
   const [[them], theirs] = await Promise.all([db.select().from(profiles).where(eq(profiles.accountId, otherId)).limit(1), myChoice(db, eventId, otherId, me.accountId)]);
-  if (!them) return;
+  if (!them || !(await sameWorld(db, me.accountId, otherId))) return;
   const unlocked = pinkyUnlocked({
     taps: [true, theirs?.choice === "romance"],
     sides: [me, them],
@@ -285,7 +291,7 @@ export async function tapBuddyPinky(env: Env, db: Db, me: Profile, m: MatchRow):
     .values({ id: newId(), eventId: ctx.key, fromAccount: me.accountId, toAccount: ctx.otherId, choice: "romance" })
     .onConflictDoUpdate({ target: [connectionChoices.eventId, connectionChoices.fromAccount, connectionChoices.toAccount], set: { choice: "romance" } });
   const [[them], theirs] = await Promise.all([db.select().from(profiles).where(eq(profiles.accountId, ctx.otherId)).limit(1), myChoice(db, ctx.key, ctx.otherId, me.accountId)]);
-  if (!them || theirs?.choice !== "romance") return;
+  if (!them || theirs?.choice !== "romance" || !(await sameWorld(db, me.accountId, ctx.otherId))) return;
   const unlocked = romanceUnlocked({ eligible: [pinkyOn(me), pinkyOn(them)], compatible: romanceCompatible(me, them), blocked: false, finishedQuests: ctx.quests });
   if (!unlocked) return;
   const [a, b] = pair(me.accountId, ctx.otherId);

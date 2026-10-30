@@ -167,11 +167,16 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
       ),
     ]);
   }
-  const pool = await loadPool(db, now);
-  if (pool.length < 2) return;
-  const result = clearBuddies(pool, round);
-  const writes: Write[] = [db.update(buddyRounds).set({ method: result.method, pool: pool.length, pairs: result.pairs.length }).where(eq(buddyRounds.week, round))];
-  for (const [a, b] of result.pairs) {
+  // Demo and test accounts (identity_accounts.is_demo, owner C2) live in their own world: a real
+  // member is only ever paired with a real member, and demo accounts only with each other.
+  const [realPool, demoPool] = await Promise.all([loadPool(db, now, false), loadPool(db, now, true)]);
+  const realResult = realPool.length >= 2 ? clearBuddies(realPool, round) : null;
+  const demoResult = demoPool.length >= 2 ? clearBuddies(demoPool, round) : null;
+  if (!realResult && !demoResult) return;
+  const pairs = [...(realResult?.pairs ?? []), ...(demoResult?.pairs ?? [])];
+  // The round's figures count real members only.
+  const writes: Write[] = [db.update(buddyRounds).set({ method: realResult?.method ?? "empty", pool: realPool.length, pairs: realResult?.pairs.length ?? 0 }).where(eq(buddyRounds.week, round))];
+  for (const [a, b] of pairs) {
     writes.push(
       db.insert(buddyMatches).values({ id: newId(), aAccount: a, bAccount: b, week, state: "proposed", createdAt: now }),
       notify(db, a, "buddy_match", "คุณมีบัดดี้กรุงเทพฯ คนใหม่แล้ว", "You have a new Bangkok Buddy", "/buddy"),
@@ -192,7 +197,7 @@ export async function roundIfDue(env: AppEnv["Bindings"], now = new Date()): Pro
  * (PoolMember.datesWith and datingPrefs stay unset). Buddy-to-partner Pinky
  * (owner card C4) decides romance on its own, after the pairing.
  */
-async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
+async function loadPool(db: Db, now: Date, demo = false): Promise<PoolMember[]> {
   const optins = await db.select().from(buddyOptins).where(eq(buddyOptins.active, true)).orderBy(desc(buddyOptins.updatedAt)).limit(POOL_LIMIT);
   const ids = optins.map((o) => o.accountId);
   if (ids.length < 2) return [];
@@ -238,6 +243,8 @@ async function loadPool(db: Db, now: Date): Promise<PoolMember[]> {
   for (const { account, profile } of people) {
     const code = types.get(account.id);
     if (!code || busy.has(account.id) || !isActiveAccount(account, now) || !profile.onboardedAt || isPaused(profile, now)) continue;
+    // Real and demo accounts never meet in the pool (owner C2).
+    if (account.isDemo !== demo) continue;
     const availableFrom = Math.max(since.get(account.id) ?? now.getTime(), lastEnded.get(account.id) ?? 0);
     // The reservation bar eases weekly (domain/buddy.ts reservation), even though rounds are daily.
     pool.push({
@@ -1075,9 +1082,14 @@ async function deckState(c: Ctx) {
   const now = new Date();
   const [[optin], match] = await Promise.all([db.select().from(buddyOptins).where(eq(buddyOptins.accountId, me)).limit(1), currentMatch(db, me)]);
   if (!optin?.active || match) return null;
-  const [pool, mine] = await Promise.all([
-    loadPool(db, now),
+  const [[viewer], mineRows] = await Promise.all([
+    db.select({ isDemo: accounts.isDemo }).from(accounts).where(eq(accounts.id, me)).limit(1),
     db.select({ targetId: buddySwipes.targetId, createdAt: buddySwipes.createdAt }).from(buddySwipes).where(eq(buddySwipes.accountId, me)).limit(5000),
+  ]);
+  // The deck shows the viewer's own world: real members never see a demo account, and the other way round.
+  const [pool, mine] = await Promise.all([
+    loadPool(db, now, !!viewer?.isDemo),
+    Promise.resolve(mineRows),
   ]);
   const self = pool.find((p) => p.accountId === me);
   const today = dayKey(now);

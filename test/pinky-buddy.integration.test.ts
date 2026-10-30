@@ -31,7 +31,14 @@ async function buddies(opts: { quests?: number; state?: string; endedAt?: Date; 
   }
   return { a, b, id };
 }
-const page = (m: Member) => req("/buddy?pinky=open", { cookie: en(m) }).then((r) => r.text());
+/**
+ * buddy.integration.test.ts switches off every other opt-in to isolate its rounds, and it can run
+ * alongside this file, so each page load first switches this member's own opt-in back on.
+ */
+async function page(m: Member) {
+  await db().update(buddyOptins).set({ active: true }).where(eq(buddyOptins.accountId, m.id));
+  return req("/buddy?pinky=open", { cookie: en(m) }).then((r) => r.text());
+}
 function row(html: string): string {
   const i = html.indexOf('<section class="pinky"');
   return i < 0 ? "" : html.slice(i, html.indexOf("</section>", i));

@@ -281,6 +281,8 @@ async function loadPeople(c: Ctx, eventId: string): Promise<PeopleState> {
   const myAge = { age: ageOn(myProfile.birthDate), ageMin: myProfile.ageMin, ageMax: myProfile.ageMax };
   const candidates = rows
     .filter((r) => isActive(r.account))
+    // Demo and test accounts never appear to a real member (owner C2); a demo viewer still sees its demo world.
+    .filter((r) => me.account.isDemo || !r.account.isDemo)
     .filter((r) => !blocked.has(r.account.id))
     .filter((r) => mutualAgeOk(myAge, { age: ageOn(r.profile.birthDate), ageMin: r.profile.ageMin, ageMax: r.profile.ageMax }))
     .map((r) => ({ accountId: r.account.id, profile: r.profile, resident: showsResidentBadge(r.account, r.profile) }));
