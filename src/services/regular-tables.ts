@@ -4,7 +4,7 @@
  * table. The rules themselves live in src/domain/regular-tables.ts; the pages
  * in src/routes/tables.tsx.
  */
-import { DEMO_ACCOUNTS } from "./demo";
+import { DEMO_ACCOUNTS, demoAmong } from "./demo";
 import { and, desc, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { newId, randomToken } from "../lib/crypto";
@@ -104,7 +104,10 @@ export async function myTables(db: Db, me: string): Promise<(RegularTable & { ho
     .orderBy(desc(regularTables.createdAt))
     .limit(60);
   const hidden = await blockedAmong(db, me, [...new Set(rows.filter((r) => r.hostAccountId !== me).map((r) => r.hostAccountId))]);
-  return rows.filter((r) => !hidden.has(r.hostAccountId)).map((r) => ({ ...r, hosting: r.hostAccountId === me }));
+  // Tables hosted by a demo account don't count for a real member (owner C2); demo viewers keep theirs.
+  const demoHosts = await demoAmong(db, [...new Set(rows.map((r) => r.hostAccountId)), me]);
+  const meDemo = demoHosts.has(me);
+  return rows.filter((r) => !hidden.has(r.hostAccountId) && (meDemo || !demoHosts.has(r.hostAccountId))).map((r) => ({ ...r, hosting: r.hostAccountId === me }));
 }
 
 /**

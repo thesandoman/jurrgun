@@ -6,6 +6,7 @@
  * and Secure. Combined with the Origin check in `sameOrigin`, that covers CSRF
  * for form posts.
  */
+import { DEMO_CHAT_LINKS } from "../services/demo";
 import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, eq, gt, sql } from "drizzle-orm";
@@ -72,7 +73,8 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
         // Chats count on their own (the My people tab and the Chats chip): one waiting
         // "new message" notification per chat, read when that chat is opened.
         unread: sql<number>`(select count(*) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} <> ${CHAT_KIND})`.mapWith(Number),
-        chatUnread: sql<number>`(select count(distinct ${notifications.link}) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} = ${CHAT_KIND})`.mapWith(Number),
+        // A real member's count leaves out chats with a demo account (owner C2); demo viewers keep theirs.
+        chatUnread: sql<number>`(select count(distinct ${notifications.link}) from ${notifications} where ${notifications.accountId} = ${accounts.id} and ${notifications.readAt} is null and ${notifications.createdAt} <= now() and ${notifications.kind} = ${CHAT_KIND} and (${accounts.isDemo} or ${notifications.link} not in ${DEMO_CHAT_LINKS}))`.mapWith(Number),
         urgentToday: URGENT_TODAY,
       })
       .from(sessions)

@@ -7,9 +7,10 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { accounts, events } from "../src/schema";
+import { accounts, connections, events } from "../src/schema";
+import { and, or, sql } from "drizzle-orm";
 import { newId } from "../src/lib/crypto";
-import { realPeopleFor } from "../src/services/demo";
+import { DEMO_CHAT_LINKS, pairSeenBy, realPeopleFor } from "../src/services/demo";
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -53,5 +54,26 @@ describe.skipIf(!HAS_DB)("demo accounts in member views", () => {
     expect(await realPeopleFor(db(), realHost.id, [a.id, b.id, d.id])).toEqual([a.id, b.id]);
     const { host } = await demoHostedEvent();
     expect(await realPeopleFor(db(), host.id, [a.id, b.id, d.id])).toEqual([a.id, b.id, d.id]);
+  });
+
+  it("leaves connections and chats with demo accounts out of a real member's counts, not a demo viewer's", async () => {
+    const [real, demo, other] = await Promise.all([createMember(), createMember(), createMember()]);
+    await db().update(accounts).set({ isDemo: true }).where(eq(accounts.id, demo.id));
+    const pair = (x: string, y: string) => (x < y ? [x, y] : [y, x]);
+    const [a1, b1] = pair(real.id, demo.id);
+    const [a2, b2] = pair(demo.id, other.id);
+    const c1 = newId();
+    await db().insert(connections).values([
+      { id: c1, aAccount: a1, bAccount: b1, level: "friend", eventId: newId() },
+      { id: newId(), aAccount: a2, bAccount: b2, level: "friend", eventId: newId() },
+    ]);
+    const seen = async (me: string) =>
+      (await db().select({ id: connections.id }).from(connections).where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), pairSeenBy(sql`${connections.aAccount}`, sql`${connections.bAccount}`, me)))).length;
+    expect(await seen(real.id)).toBe(0);
+    expect(await seen(demo.id)).toBe(2);
+    const links = (await db().execute(sql`select 1 from (select ${`/chat/conn:${c1}`} as l) x where x.l in ${DEMO_CHAT_LINKS}`)) as unknown as unknown[];
+    expect(links).toHaveLength(1);
+    const html = await (await req("/me/month?lang=en", { cookie: real.cookie })).text();
+    expect(html.length).toBeGreaterThan(0);
   });
 });

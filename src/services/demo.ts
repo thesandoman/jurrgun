@@ -70,3 +70,18 @@ export const eventSeenBy = (eventId: SQL, viewerId: string | null): SQL =>
   viewerId
     ? sql`(${eventId} not in ${DEMO_EVENTS} or ${viewerId} in ${DEMO_ACCOUNTS})`
     : sql`${eventId} not in ${DEMO_EVENTS}`;
+
+/**
+ * Viewer-aware in SQL for a pair of accounts (a connection, a buddy match): visible
+ * when neither is demo, or when the viewer is a demo account (owner C2, 30 Oct 2026:
+ * Me-page counts and chat unread counts follow the same rule as people lists).
+ */
+export const pairSeenBy = (a: SQL, b: SQL, viewerId: SQL | string): SQL =>
+  sql`(${viewerId} in ${DEMO_ACCOUNTS} or (${a} not in ${DEMO_ACCOUNTS} and ${b} not in ${DEMO_ACCOUNTS}))`;
+
+/** Chat links (/chat/conn:<id>, /chat/buddy:<id>) whose two people include a demo account. */
+export const DEMO_CHAT_LINKS = sql`(
+  select '/chat/conn:' || c.id from social_connections c where c.a_account in ${DEMO_ACCOUNTS} or c.b_account in ${DEMO_ACCOUNTS}
+  union all
+  select '/chat/buddy:' || b.id from social_buddy_matches b where b.a_account in ${DEMO_ACCOUNTS} or b.b_account in ${DEMO_ACCOUNTS}
+)`;

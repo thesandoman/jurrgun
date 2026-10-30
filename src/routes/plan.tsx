@@ -10,7 +10,7 @@
  * The plan is made once a week, on the first visit (like buddy rounds), and
  * kept, so it doesn't reshuffle every time the page loads.
  */
-import { eventSeenBy } from "../services/demo";
+import { eventSeenBy, pairSeenBy } from "../services/demo";
 import { Hono, type Context } from "hono";
 import { and, count, countDistinct, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
@@ -449,7 +449,7 @@ planRoutes.get("/me/month", requireMember, async (c) => {
     db
       .select({ id: connections.id })
       .from(connections)
-      .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), gte(connections.createdAt, since)))
+      .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), gte(connections.createdAt, since), pairSeenBy(sql`${connections.aAccount}`, sql`${connections.bAccount}`, me)))
       .limit(200),
     db.select({ id: contactShares.id }).from(contactShares).where(and(eq(contactShares.accountId, me), gte(contactShares.createdAt, since))).limit(200),
     db.select({ district: passportStamps.district }).from(passportStamps).where(and(eq(passportStamps.accountId, me), gte(passportStamps.createdAt, since))).limit(60),
@@ -459,7 +459,7 @@ planRoutes.get("/me/month", requireMember, async (c) => {
     db
       .select({ n: countDistinct(sql`case when ${connections.aAccount} = ${me} then ${connections.bAccount} else ${connections.aAccount} end`), crews: countDistinct(connections.eventId) })
       .from(connections)
-      .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), isNull(connections.removedAt))),
+      .where(and(or(eq(connections.aAccount, me), eq(connections.bAccount, me)), isNull(connections.removedAt), pairSeenBy(sql`${connections.aAccount}`, sql`${connections.bAccount}`, me))),
     db
       .select({ n: count() })
       .from(registrations)
