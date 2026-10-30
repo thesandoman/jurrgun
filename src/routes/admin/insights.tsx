@@ -16,6 +16,9 @@ import { Hono } from "hono";
 import { asc, and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../db";
 import { K_THRESHOLD, roundedCount, roundedPct, safeCount, safeTable } from "../../domain/rules";
+import { bkkDay } from "../../services/landings";
+import { bkkWeekStart } from "../../domain/pulse-heard";
+import { OTHER_CODE, allowedCode, channelOf } from "../../content/src-codes";
 import { bkkDayStart } from "../../domain/pulse-heard";
 import { notDemo, notDemoEvent, notDemoResearch } from "../../services/demo";
 import { DISTRICTS, label } from "../../lib/constants";
@@ -178,6 +181,74 @@ export async function sourceFunnel(db: Db, since: string, until: string, among?:
   }
   if (other.n > 0) big.push(other);
   return big.map((r) => ({ source: r.source, signups: roundedCount(r.n), firstRsvp: roundedCount(r.k), rate: pct(r.k, r.n) }));
+}
+
+export type LandingRow = {
+  kind: "channel" | "code";
+  channel: string;
+  code: string;
+  landings: number | null;
+  /** Channel rows only: sign-ups are people, so code rows never show them (a channel minus its codes would). */
+  signups: number | null;
+  /** Sign-ups per 100 landings, channel rows only. */
+  per100: number | null;
+};
+
+/** The Monday (YYYY-MM-DD, Bangkok) of the last `n` weeks, newest first, this week included. */
+export function landingWeeks(now: Date, n = 8): string[] {
+  const start = bkkWeekStart(now).getTime();
+  return Array.from({ length: n }, (_, i) => bkkDay(new Date(start - i * 7 * 86_400_000)));
+}
+
+/**
+ * Landings per campaign code for one Bangkok week, Monday to Sunday (owner C3,
+ * Marketing 27 Oct 2026). Stored per day, shown per week. Codes are only the
+ * allow-listed ones (content/src-codes.ts; anything else was stored as "other").
+ * Each channel gets a roll-up row, counted even when its codes are each under 10,
+ * with the sign-ups it brought (first touch, members only, never demo) and
+ * sign-ups per 100 landings. Code rows show landings only, 10 or more. Every
+ * figure goes through roundedCount / roundedPct.
+ */
+export async function landingWeek(db: Db, monday: string): Promise<LandingRow[]> {
+  const start = new Date(`${monday}T00:00:00+07:00`);
+  const end = new Date(start.getTime() + 7 * 86_400_000);
+  const [landRows, signRows] = await Promise.all([
+    db.execute(sql`
+      select code, sum(n) from social_src_landings
+      where day >= ${monday}::date and day < (${monday}::date + 7)
+      group by code
+      limit 500`),
+    db.execute(sql`
+      select a.signup_source, count(*) from identity_accounts a
+      where a.role = 'user' and not a.is_demo and a.signup_source is not null
+        and a.created_at >= ${start.toISOString()}::timestamptz and a.created_at < ${end.toISOString()}::timestamptz
+      group by 1
+      limit 500`),
+  ]);
+  const byChannel = new Map<string, { landings: number; signups: number; codes: { code: string; landings: number }[] }>();
+  const at = (ch: string) => {
+    let x = byChannel.get(ch);
+    if (!x) byChannel.set(ch, (x = { landings: 0, signups: 0, codes: [] }));
+    return x;
+  };
+  for (const [code, n] of table(landRows)) {
+    const c = allowedCode(String(code));
+    const x = at(channelOf(c));
+    x.landings += Number(n ?? 0);
+    const prev = x.codes.find((y) => y.code === c);
+    if (prev) prev.landings += Number(n ?? 0);
+    else x.codes.push({ code: c, landings: Number(n ?? 0) });
+  }
+  for (const [src, n] of table(signRows)) at(channelOf(allowedCode(String(src)))).signups += Number(n ?? 0);
+  const out: LandingRow[] = [];
+  const channels = [...byChannel.entries()].sort((a, b) => (a[0] === OTHER_CODE ? 1 : b[0] === OTHER_CODE ? -1 : b[1].landings - a[1].landings || a[0].localeCompare(b[0])));
+  for (const [channel, x] of channels) {
+    out.push({ kind: "channel", channel, code: channel, landings: roundedCount(x.landings), signups: roundedCount(x.signups), per100: roundedPct(x.signups, x.landings) });
+    for (const c of x.codes.filter((y) => safeCount(y.landings) !== null && y.code !== OTHER_CODE).sort((a, b) => b.landings - a.landings || a.code.localeCompare(b.code))) {
+      out.push({ kind: "code", channel, code: c.code, landings: roundedCount(c.landings), signups: null, per100: null });
+    }
+  }
+  return out;
 }
 
 type Kpi = {
@@ -437,7 +508,10 @@ adminInsights.get("/", async (c) => {
     );
   };
 
-  const [segRows, sources] = await Promise.all([segmentFunnel(db, since, until), sourceFunnel(db, since, until)]);
+  const weeks = landingWeeks(now);
+  // Default: the last full week (Monday to Sunday); this week so far can be picked too.
+  const landingMonday = weeks.includes(String(c.req.query("lweek"))) ? String(c.req.query("lweek")) : weeks[1];
+  const [segRows, sources, landings] = await Promise.all([segmentFunnel(db, since, until), sourceFunnel(db, since, until), landingWeek(db, landingMonday)]);
   const segCells = segRows.map(suppressSegment);
   const SEG_LABEL: Record<Segment, [string, string]> = {
     local: ["คนกรุงเทพฯ", "Local"],
@@ -625,6 +699,66 @@ adminInsights.get("/", async (c) => {
                   <td>{cell(r.rate, "%")}</td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2 id="landings">{t("การเข้าชมจากลิงก์แคมเปญ ต่อสัปดาห์", "Campaign landings, by week")}</h2>
+      <p class="muted">
+        {t(
+          "นับทุกครั้งที่มีคนเปิดลิงก์ที่มี ?src= (เปิดซ้ำก็นับ) จึงเป็นจำนวนการเข้าชม ไม่ใช่จำนวนคน และไม่เก็บข้อมูลของคนที่เปิด นับเฉพาะรหัสในทะเบียนลิงก์ รหัสอื่นนับเป็น \"อื่น ๆ\" สัปดาห์คือจันทร์ถึงอาทิตย์ เวลากรุงเทพฯ ยอดรวมช่องทางนับแม้แต่ละรหัสจะไม่ถึง 10 ตัวเลขปัดเป็นหลัก 5 การสมัครแสดงเฉพาะระดับช่องทาง",
+          "Every opening of a link with ?src= counts, a reload too, so these are landings, not people, and nothing is kept about who opened it. Only codes in the link register count; anything else counts as \"other\". Weeks run Monday to Sunday, Bangkok time. A channel's row counts even when its codes are each under 10. Counts are rounded to 5, and sign-ups show per channel only.",
+        )}
+      </p>
+      <form method="get" action="/admin/insights#landings" class="row" style="align-items:end;flex-wrap:wrap">
+        <input type="hidden" name="days" value={String(days)} />
+        <div class="field">
+          <label for="f-lweek">{t("สัปดาห์ที่เริ่ม", "Week starting")}</label>
+          <select id="f-lweek" name="lweek">
+            {weeks.map((w, i) => (
+              <option value={w} selected={w === landingMonday}>
+                {w}
+                {i === 0 ? t(" (สัปดาห์นี้ ยังไม่จบ)", " (this week, so far)") : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" class="btn ghost">{t("แสดง", "Show")}</button>
+      </form>
+      {landings.length === 0 ? (
+        <Empty>{t("ยังไม่มีการเข้าชมจากลิงก์แคมเปญในสัปดาห์นี้", "No campaign landings this week")}</Empty>
+      ) : (
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{t("ช่องทาง / รหัส", "Channel / code")}</th>
+                <th scope="col">{t("การเข้าชม", "Landings")}</th>
+                <th scope="col">{t("สมัคร (ลิงก์แรก)", "Sign-ups (first link)")}</th>
+                <th scope="col">{t("สมัครต่อการเข้าชม 100 ครั้ง", "Sign-ups per 100 landings")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {landings.map((r) =>
+                r.kind === "channel" ? (
+                  <tr data-channel={r.channel}>
+                    <th scope="row">{r.channel === OTHER_CODE ? t("อื่น ๆ", "Other") : r.channel}</th>
+                    <td>
+                      <strong>{cell(r.landings)}</strong>
+                    </td>
+                    <td>{cell(r.signups)}</td>
+                    <td>{cell(r.per100)}</td>
+                  </tr>
+                ) : (
+                  <tr data-code={r.code}>
+                    <th scope="row" style="font-weight:normal;padding-left:24px">{r.code}</th>
+                    <td>{cell(r.landings)}</td>
+                    <td aria-label={t("ไม่แสดงระดับรหัส", "Not shown per code")}>·</td>
+                    <td>·</td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         </div>

@@ -115,6 +115,7 @@ import {
   pulseResponses,
   placeChecks,
   pulseSuggestions,
+  srcLandings,
   registrations,
   reports,
   sessions,
@@ -153,6 +154,8 @@ export const DEACTIVATED_RETENTION_DAYS = 30;
 export const LOGIN_ATTEMPT_RETENTION_HOURS = 24;
 export const CHECKIN_RETENTION_DAYS = 365;
 export const RESEARCH_RETENTION_DAYS = 730;
+/** Landings per campaign code (owner C3): day counters with no person, deleted after this. */
+export const LANDING_RETENTION_DAYS = 730;
 /**
  * Suggested City Pulse questions no moderator has sorted: words and row are
  * deleted this long after their month ends (owner C2, 26 Oct 2026), so free
@@ -415,6 +418,9 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .update(profiles)
     .set({ bio: sql`${bio} - 'pulseSuggestWeek'` })
     .where(sql`${bio}->>'pulseSuggestWeek' < ${bkkWeekKey(now)}`);
+
+  // Landings per campaign code (C3): day counters, gone after LANDING_RETENTION_DAYS.
+  await db.delete(srcLandings).where(lt(srcLandings.day, new Date(now.getTime() - LANDING_RETENTION_DAYS * DAY).toISOString().slice(0, 10)));
 
   // Anonymous questions at a private talk go 30 days after it (D52). Kept out of the batch above, whose results are read by position.
   await db.delete(talkQuestions).where(inArray(talkQuestions.eventId, endedBefore(new Date(now.getTime() - 30 * DAY))));

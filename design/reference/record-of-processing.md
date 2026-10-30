@@ -40,6 +40,7 @@ Every constant exported from `src/services/retention.ts`, with its current value
 | `LOGIN_ATTEMPT_RETENTION_HOURS` | 24 hours | Login attempt rows |
 | `CHECKIN_RETENTION_DAYS` | 365 days | Table number, check-in detail, +1 links and event buddy pairs |
 | `RESEARCH_RETENTION_DAYS` | 730 days | City Pulse and wellbeing answers |
+| `LANDING_RETENTION_DAYS` | 730 days | Landings per campaign code (day, code, count; no person): deleted after 24 months (C3) |
 | `SUGGESTION_RETENTION_DAYS` | 60 days | Suggested City Pulse questions no moderator has sorted: words and entry deleted 60 days after their month ends (C2) |
 | `CHAT_RETENTION_DAYS` | 180 days | Chat messages, chat photos and "home safe?" answers |
 | `ANNOUNCEMENT_RETENTION_DAYS` | 180 days | Host announcements, after their event ends |

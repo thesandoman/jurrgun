@@ -1604,3 +1604,18 @@ export const pinkyIdeaViews = pgTable(
 );
 export type Pinky = typeof pinkies.$inferSelect;
 export type PinkyPlan = typeof pinkyPlans.$inferSelect;
+
+/**
+ * Landings per campaign code (owner C3, 27 Oct 2026, migration 0033): one counter
+ * per Bangkok day and ?src= code. No person, no IP, no user agent, no cookie.
+ * Counts hits, not people. Read only through roundedCount in City Insight.
+ */
+export const srcLandings = pgTable(
+  "social_src_landings",
+  {
+    day: date("day").notNull(),
+    code: text("code").notNull(),
+    n: integer("n").notNull().default(0),
+  },
+  (t) => [uniqueIndex("social_src_landings_day_code_idx").on(t.day, t.code)],
+);

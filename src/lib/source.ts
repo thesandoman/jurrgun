@@ -16,6 +16,8 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { secureCookie } from "./deployed";
+import { countLanding, looksHuman } from "../services/landings";
+import { allowedCode } from "../content/src-codes";
 import type { AppEnv } from "./env";
 
 export const SOURCE_COOKIE = "jg_src";
@@ -23,7 +25,7 @@ export const SOURCE_MAX_AGE = 30 * 86_400;
 const PART_MAX = 32;
 
 /** Paths whose query may carry a placement source. */
-const LANDING = /^\/(?:new|international|signup|quiz|types\/[^/]+|events\/[^/]+)?\/?$/;
+const LANDING = /^\/(?:new|local|international|signup|quiz|types\/[^/]+|events\/[^/]+)?\/?$/;
 
 function slug(raw: string | undefined | null): string {
   if (!raw) return "";
@@ -55,13 +57,26 @@ export function cleanSource(raw: string | undefined | null): string | null {
   return campaign ? `${source}/${campaign}` : source;
 }
 
-/** Remembers the first placement source seen on a public landing (GET only). */
+/**
+ * Remembers the first placement source seen on a public landing (GET only), and
+ * counts the landing for its code and Bangkok day (owner C3, services/landings.ts):
+ * every landing counts, not only the first, and nothing about the person is kept.
+ */
 export const captureSource: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
   if (c.req.method !== "GET" || !LANDING.test(c.req.path) || c.res.status >= 400) return;
-  if (getCookie(c, SOURCE_COOKIE)) return;
   const source = sourceFromQuery({ src: c.req.query("src"), utm_source: c.req.query("utm_source"), utm_campaign: c.req.query("utm_campaign") });
   if (!source) return;
+  if (looksHuman(c.req.header("user-agent"), c.req.header("sec-purpose") ?? c.req.header("purpose"))) {
+    // Only register codes are stored; anything typed into ?src= (a name, say) is counted as "other".
+    const counted = countLanding(c.env, allowedCode(source)).catch(() => {});
+    try {
+      c.executionCtx.waitUntil(counted);
+    } catch {
+      await counted; // No execution context (tests, local runs): count before answering.
+    }
+  }
+  if (getCookie(c, SOURCE_COOKIE)) return;
   setCookie(c, SOURCE_COOKIE, source, {
     path: "/",
     maxAge: SOURCE_MAX_AGE,
