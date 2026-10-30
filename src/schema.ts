@@ -1487,7 +1487,7 @@ export const eventPartners = pgTable(
     id: text("id").primaryKey(),
     eventId: text("event_id").notNull(),
     partnerOrgId: text("partner_org_id").notNull(),
-    /** invited | accepted | declined */
+    /** invited | accepted | declined | lapsed (unanswered in time, owner P4) */
     status: text("status").notNull().default("invited"),
     invitedBy: text("invited_by"),
     respondedAt: ts("responded_at"),

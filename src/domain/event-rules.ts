@@ -22,6 +22,15 @@ export type Lang2 = { th: string; en: string };
 export const DRINKING_AGE = 20;
 /** At most this many co-hosts besides the lead partner (D53). */
 export const MAX_COHOSTS = 2;
+/** A co-host invite lapses this long after it was sent (owner P4, 30 Oct 2026)... */
+export const INVITE_LAPSE_MS = 72 * 3_600_000;
+/** ...or this long before the event starts, whichever comes first. */
+export const INVITE_CLOSE_BEFORE_START_MS = 24 * 3_600_000;
+
+/** When an unanswered co-host invite lapses: 72 hours after it was sent, or 24 hours before the start if that's sooner. */
+export const inviteLapsesAt = (sentAt: Date, startsAt: Date): Date =>
+  new Date(Math.min(sentAt.getTime() + INVITE_LAPSE_MS, startsAt.getTime() - INVITE_CLOSE_BEFORE_START_MS));
+
 /** Partners see a private talk's numbers only from this many people up (D52). */
 export const TALK_TOTALS_MIN = 10;
 export const REQUIREMENTS_MAX = 5;

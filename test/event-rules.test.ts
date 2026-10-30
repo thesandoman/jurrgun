@@ -6,6 +6,7 @@ import {
   collabReady,
   effectiveAgeMin,
   isAdminOnlyKind,
+  inviteLapsesAt,
   joinCodeMatches,
   needsDisclaimer,
   talkSafeCount,
@@ -63,6 +64,13 @@ describe("event rules (D51 to D61)", () => {
     expect(checkEventRules(group, { partnerKind: "dating" }).errors).toHaveLength(1);
     expect(checkEventRules(group, { partnerKind: "community" }).errors).toHaveLength(0);
     expect(checkEventRules({ tags: ["open_to_more", "women_only", "lgbtq_community"] }, { partnerKind: "dating" }).errors).toHaveLength(0);
+  });
+
+  it("a co-host invite lapses after 72 hours, or 24 hours before the start if sooner (owner P4)", () => {
+    const H = 3_600_000;
+    const sent = new Date("2030-01-01T00:00:00Z");
+    expect(inviteLapsesAt(sent, new Date(sent.getTime() + 30 * 24 * H)).getTime()).toBe(sent.getTime() + 72 * H);
+    expect(inviteLapsesAt(sent, new Date(sent.getTime() + 48 * H)).getTime()).toBe(sent.getTime() + 24 * H);
   });
 
   it("matches join codes without case or spaces", () => {

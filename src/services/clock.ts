@@ -56,6 +56,7 @@ import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
 import { runPhotoCleanBatch } from "./photo-clean";
 import { retentionIfDue } from "./retention";
+import { lapseInvites } from "./collabs";
 import { readDueFeeds } from "./outside-events";
 import { refreshCityNow } from "./city-now";
 import { consentsFor, NOTIFICATIONS_CONSENT } from "./consent";
@@ -224,6 +225,8 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   out.city = city.weather || city.sanroo;
   // Outside calendar feeds into the host inbox, each at most once a day (D46). Quiet hours don't matter: nobody is messaged.
   out.feeds = await readDueFeeds(env, now);
+  // Co-host invites nobody answered in time lapse, and the lead partner hears (owner P4). In-app only, so any hour.
+  await lapseInvites(env, now).catch((err) => createLogger(env).warn("co-host invite lapse failed", { error: String(err) }));
   // One-time clean of photos stored before uploads were stripped (owner, 2026-10-26): a batch an hour until done.
   await runPhotoCleanBatch(env).catch((err) => createLogger(env).warn("photo clean batch failed", { error: String(err) }));
   if (quietHours(now)) {

@@ -366,7 +366,7 @@ async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 
 /** Co-hosts of one event: names and status, and for the lead an invite form (D53). */
 function CohostCell(props: { v: View; eventId: string; lead: boolean; list: { inviteId: string; orgId: string; name: string; status: string }[]; invitable: { id: string; name: string }[] }) {
   const { t } = props.v;
-  const live = props.list.filter((x) => x.status !== "declined");
+  const live = props.list.filter((x) => x.status === "invited" || x.status === "accepted");
   const taken = new Set(live.map((x) => x.orgId));
   const options = props.invitable.filter((o) => !taken.has(o.id));
   if (!props.lead && !live.length) return null;

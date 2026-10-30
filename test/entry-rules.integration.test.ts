@@ -8,9 +8,10 @@ import { and, eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, ENV, req } from "./helpers";
 import { newId, randomToken } from "../src/lib/crypto";
 import app from "../src/index";
-import { accounts, eventPartners, events, partnerOrgs, profiles, registrations, talkQuestions } from "../src/schema";
+import { accounts, eventPartners, events, notifications, partnerOrgs, profiles, registrations, talkQuestions } from "../src/schema";
 import { createPartnerKey } from "../src/services/partner-keys";
 import { runRetention } from "../src/services/retention";
+import { invitationsFor, lapseInvites } from "../src/services/collabs";
 
 const DAY = 86_400_000;
 const isoIn = (days: number, hour: number) => {
@@ -334,3 +335,51 @@ describe.skipIf(!HAS_DB)("owner P2: a 💘 event is never limited to a group", (
     expect(await db().select().from(eventPartners).where(eq(eventPartners.eventId, out.id))).toHaveLength(0);
   });
 });
+
+describe.skipIf(!HAS_DB)("owner P4: co-host invites lapse", () => {
+  it("an unanswered invite lapses after 72 hours: the event shows without them, the lead is told, and they can be invited again", async () => {
+    const lead = await partner("venue", `Lead ${randomToken(4)}`);
+    const co = await partner("events", `Quiet ${randomToken(4)}`);
+    const name = `Lapse supper ${randomToken(6)}`;
+    const out = (await (await api(lead.key, "POST", body(lead.username, { title: name }))).json()) as { id: string };
+    await req(`/partner/events/${out.id}/cohosts`, { cookie: lead.admin.cookie, form: { orgId: co.orgId } });
+    const [inv] = await db().select().from(eventPartners).where(eq(eventPartners.eventId, out.id));
+    const member = await en(await createMember());
+    const find = `/events?view=list&q=${encodeURIComponent(name)}`;
+    expect(await (await req(find, { cookie: member.cookie })).text()).not.toContain(`/events/${out.id}"`);
+
+    // 73 hours later, before the clock has run: already off the co-host's list, and the event shows.
+    await db().update(eventPartners).set({ createdAt: new Date(Date.now() - 73 * 3_600_000) }).where(eq(eventPartners.id, inv.id));
+    expect((await invitationsFor(ENV, co.orgId)).map((i) => i.inviteId)).not.toContain(inv.id);
+    expect(await (await req(find, { cookie: member.cookie })).text()).toContain(`/events/${out.id}"`);
+    await req(`/partner/invites/${inv.id}/accept`, { cookie: co.admin.cookie, method: "POST" });
+    expect((await db().select().from(eventPartners).where(eq(eventPartners.id, inv.id)))[0].status).toBe("invited");
+
+    // The clock writes it down and tells the lead in plain words.
+    expect(await lapseInvites(ENV)).toBeGreaterThan(0);
+    expect((await db().select().from(eventPartners).where(eq(eventPartners.id, inv.id)))[0].status).toBe("lapsed");
+    const told = await db().select().from(notifications).where(eq(notifications.accountId, lead.admin.id));
+    expect(told.map((n) => n.titleEn).join("\n")).toContain(`${co.name} didn't answer your co-host invitation in time, so your event shows without them`);
+
+    // The lead can ask again.
+    await req(`/partner/events/${out.id}/cohosts`, { cookie: lead.admin.cookie, form: { orgId: co.orgId } });
+    const again = await db().select().from(eventPartners).where(eq(eventPartners.eventId, out.id));
+    expect(again.map((r) => r.status)).toEqual(["invited"]);
+  });
+
+  it("an invite lapses 24 hours before the start, and none can be sent inside that", async () => {
+    const lead = await partner("venue");
+    const co = await partner("community");
+    const soon = (await (await api(lead.key, "POST", body(lead.username, { starts_at: isoIn(3, 18), ends_at: isoIn(3, 20) }))).json()) as { id: string };
+    await req(`/partner/events/${soon.id}/cohosts`, { cookie: lead.admin.cookie, form: { orgId: co.orgId } });
+    const [inv] = await db().select().from(eventPartners).where(eq(eventPartners.eventId, soon.id));
+    expect(inv.status).toBe("invited");
+    // Two days later it would be inside 24 hours of the start: move the event instead.
+    await db().update(events).set({ startsAt: new Date(Date.now() + 20 * 3_600_000), endsAt: new Date(Date.now() + 22 * 3_600_000) }).where(eq(events.id, soon.id));
+    expect((await invitationsFor(ENV, co.orgId)).map((i) => i.inviteId)).not.toContain(inv.id);
+    await db().delete(eventPartners).where(eq(eventPartners.id, inv.id));
+    await req(`/partner/events/${soon.id}/cohosts`, { cookie: lead.admin.cookie, form: { orgId: co.orgId } });
+    expect(await db().select().from(eventPartners).where(eq(eventPartners.eventId, soon.id))).toHaveLength(0);
+  });
+});
+
