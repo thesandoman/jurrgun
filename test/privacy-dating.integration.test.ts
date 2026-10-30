@@ -31,8 +31,10 @@ describe.skipIf(!HAS_DB)("R1: dating intents only with the romance_data consent"
   it("the welcome answer and the dating questions save nothing before consent", async () => {
     const m = await createMember();
     await req("/onboarding/welcome", { cookie: m.cookie, form: { mode: "dating" } });
-    const res = await req("/onboarding/dating", { cookie: `${m.cookie}; bkk_intent=dating`, form: { reasons: ["long_term"], challenges: ["safety"], kids: "want" } });
-    expect(res.status).toBe(200);
+    const res = await req("/onboarding/dating", { cookie: `${m.cookie}; bkk_intent=dating`, form: { kids: "want" } });
+    // D3-urgent: no "We hear you" screen any more; the welcome goes straight on.
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/onboarding/quiz");
     expect(await intents(m.id)).toEqual([]);
     // The answers wait in a private, httpOnly cookie on the member's own device.
     expect(res.headers.get("set-cookie")).toMatch(/bkk_dating_pending=.*HttpOnly/i);
@@ -40,7 +42,7 @@ describe.skipIf(!HAS_DB)("R1: dating intents only with the romance_data consent"
 
   it("answers are dropped, never saved, when the member says no to Open to something more", async () => {
     const m = await createMember();
-    const res = await req("/onboarding/dating", { cookie: `${m.cookie}; bkk_intent=dating`, form: { reasons: ["long_term"] } });
+    const res = await req("/onboarding/dating", { cookie: `${m.cookie}; bkk_intent=dating`, form: { kids: "want" } });
     const pending = /bkk_dating_pending=[^;]+/.exec(res.headers.get("set-cookie") ?? "")![0];
     await notOnboarded(m);
     const r = await req("/onboarding/connections", { cookie: `${m.cookie}; bkk_intent=dating; ${pending}`, form: { relationship: "single", ageMin: "18", ageMax: "99" } });
@@ -60,8 +62,18 @@ describe.skipIf(!HAS_DB)("R1: dating intents only with the romance_data consent"
       form: { relationship: "single", romanceOn: "1", romanceConsent: "1", romanceOpenTo: "everyone", ageMin: "18", ageMax: "99" },
     });
     const [row] = await intents(m.id);
-    expect([row.mode, row.reasons, row.challenges, row.prefs]).toEqual(["dating", ["long_term"], ["safety"], { kids: "want" }]);
+    // D3-urgent: "why" and "what makes it hard" are never kept, even if an old form still sends them.
+    expect([row.mode, row.reasons, row.challenges, row.prefs]).toEqual(["dating", [], [], { kids: "want" }]);
     expect(await rows(m.id, "romance_data")).toEqual([true]);
+  });
+
+  it("D3-urgent: the 💘 welcome no longer asks why or what makes dating hard, and links the safety net", async () => {
+    const m = await createMember();
+    const html = await (await req("/onboarding/dating?lang=en", { cookie: `${m.cookie}; bkk_intent=dating` })).text();
+    expect(html).not.toContain('name="reasons"');
+    expect(html).not.toContain('name="challenges"');
+    expect(html).toContain('href="/safety"');
+    expect(html).toContain('name="kids"');
   });
 
   it("dating preferences in Settings are not saved without the consent", async () => {

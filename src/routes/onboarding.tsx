@@ -41,18 +41,14 @@ import { CONSENT_CATEGORIES, NOT_A_CONSENT, RESEARCH_HINT } from "../content/pri
 import { L } from "../lib/i18n";
 import { TermsAgree } from "./policies";
 import {
-  CHALLENGE_ANSWERS,
   cleanPrefs,
-  DATING_CHALLENGES,
   DATING_DISTANCE,
   DATING_FIRST,
   DATING_GOALS,
   DATING_KIDS,
   DATING_PACE,
-  DATING_REASONS,
   isMode,
   MAX_FIRST,
-  MAX_REASONS,
   MODE_OPTS,
   offeredMode,
   ROMANCE_EXPLAINER,
@@ -194,7 +190,6 @@ onboarding.post("/welcome", async (c) => {
   return c.redirect(mode === "friends" ? "/onboarding/quiz" : "/onboarding/dating");
 });
 
-const pick = (keys: string[], allowed: { value: string }[]) => [...new Set(keys)].filter((k) => allowed.some((o) => o.value === k));
 const prefOpts = (list: { value: string; emoji: string; label: { th: string; en: string } }[]) => list.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }));
 
 /** The private dating preference steps, shared by onboarding and /settings/dating. */
@@ -231,14 +226,16 @@ export function prefsFromBody(body: Record<string, unknown>) {
 /** Onboarding dating answers waiting for the romance_data consent (R1). Never sent anywhere. */
 export const DATING_PENDING_COOKIE = "bkk_dating_pending";
 
-type DatingValues = { mode?: string; reasons?: string[]; challenges?: string[]; prefs?: Record<string, unknown> };
+type DatingValues = { mode?: string; prefs?: Record<string, unknown> };
 
 /** Insert or update the member's dating intents. Only in the same batch as, or after, a romance_data yes. */
 function datingIntentUpsert(db: ReturnType<typeof getDb>, accountId: string, v: DatingValues) {
   return db
     .insert(datingIntents)
-    .values({ accountId, mode: v.mode ?? "dating", reasons: v.reasons ?? [], challenges: v.challenges ?? [], prefs: v.prefs ?? {}, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: datingIntents.accountId, set: { ...v, updatedAt: new Date() } });
+    // D3-urgent (owner, 30 Oct): "why you're here" and "what makes dating hard" are no longer asked or kept.
+    // Every write empties them, and Privacy & Security's retention step wipes any older rows.
+    .values({ accountId, mode: v.mode ?? "dating", reasons: [], challenges: [], prefs: v.prefs ?? {}, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: datingIntents.accountId, set: { ...v, reasons: [], challenges: [], updatedAt: new Date() } });
 }
 
 /** R1: dating intents are saved only while the member's newest romance_data answer is yes. */
@@ -258,17 +255,15 @@ export function pendingDatingIntent(c: Context<AppEnv>, db: ReturnType<typeof ge
   const mode = getCookie(c, INTENT_COOKIE);
   if (raw) deleteCookie(c, DATING_PENDING_COOKIE, { path: "/" });
   if (!raw && mode !== "dating" && mode !== "dating_only") return null;
-  let saved: { reasons?: unknown; challenges?: unknown; prefs?: unknown } = {};
+  // An older cookie may still hold reasons and challenges: they're ignored.
+  let saved: { prefs?: unknown } = {};
   try {
     saved = raw ? JSON.parse(raw) : {};
   } catch {
     saved = {};
   }
-  const strs = (x: unknown) => (Array.isArray(x) ? x.filter((y): y is string => typeof y === "string") : []);
   return datingIntentUpsert(db, accountId, {
     mode: mode === "dating_only" ? "dating_only" : "dating",
-    reasons: pick(strs(saved.reasons), DATING_REASONS).slice(0, MAX_REASONS),
-    challenges: pick(strs(saved.challenges), DATING_CHALLENGES),
     prefs: cleanPrefs(saved.prefs),
   });
 }
@@ -278,7 +273,10 @@ export function dropPendingDating(c: Context<AppEnv>) {
   if (getCookie(c, DATING_PENDING_COOKIE)) deleteCookie(c, DATING_PENDING_COOKIE, { path: "/" });
 }
 
-/** Two quick questions for dating members: why, and what makes it hard. */
+/**
+ * The 💘 welcome: the private preference steps only (D3-urgent, owner 30 Oct: the "why" and
+ * "what makes it hard" questions are gone). The safety net is linked right here, first.
+ */
 onboarding.get("/dating", (c) => {
   const v = view(c);
   const { t, lang } = v;
@@ -286,63 +284,25 @@ onboarding.get("/dating", (c) => {
     c,
     { title: TITLE, bare: true },
     <Flow v={v} action="/onboarding/dating" submit={t("ต่อไป", "Next")} journey={journeyFor(c, "dating")}>
-      <FlowStep emoji="💘" title={t("อะไรทำให้อยากมาเดตที่นี่?", "Why are you here for dating?")} hint={t(`เลือกได้สูงสุด ${MAX_REASONS} ข้อ เป็นความลับ`, `Pick up to ${MAX_REASONS}. Private.`)}>
-        <Pills name="reasons" options={DATING_REASONS.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
-        <Script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var b=[].slice.call(document.querySelectorAll('input[name=reasons]'));function u(){var n=b.filter(function(x){return x.checked}).length;b.forEach(function(x){x.disabled=!x.checked&&n>=${MAX_REASONS}})}b.forEach(function(x){x.addEventListener("change",u)});u()})()`,
-          }}
-        />
-      </FlowStep>
-      <FlowStep emoji="🏙️" title={t("อะไรทำให้การเดตในกรุงเทพฯ ยาก?", "What makes dating in Bangkok hard?")} hint={t("เลือกได้หลายข้อ", "Pick any.")}>
-        <Pills name="challenges" options={DATING_CHALLENGES.map((o) => ({ value: o.value, th: `${o.emoji} ${o.label.th}`, en: `${o.emoji} ${o.label.en}` }))} lang={lang} />
-      </FlowStep>
+      <p class="muted">
+        🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัยเวลาไปเดต", "Your dating safety net")}</a>
+      </p>
       <DatingPrefSteps t={t} lang={lang} />
     </Flow>,
   );
 });
 
 onboarding.post("/dating", async (c) => {
-  const v = view(c);
-  const { t, lang } = v;
   const body = await c.req.parseBody({ all: true });
-  const reasons = pick(list(body.reasons), DATING_REASONS).slice(0, MAX_REASONS);
-  const challenges = pick(list(body.challenges), DATING_CHALLENGES);
   const prefs = prefsFromBody(body);
   const me = c.var.user!.account.id;
-  // Not saved yet (R1): the answers wait in a private cookie until the romance_data consent is
+  // Not saved yet (R1): the preferences wait in a private cookie until the romance_data consent is
   // given at "Open to something more?", and are dropped if it isn't. Saved now only when it already was.
-  setCookie(c, DATING_PENDING_COOKIE, JSON.stringify({ reasons, challenges, prefs }), { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
-  await saveDatingIntent(getDb(c.env), me, { mode: getCookie(c, INTENT_COOKIE) === "dating_only" ? "dating_only" : "dating", reasons, challenges, prefs });
-  // Answer what they told us, briefly.
-  const answers = challenges.map((ch) => ({ emoji: DATING_CHALLENGES.find((o) => o.value === ch)!.emoji, text: CHALLENGE_ANSWERS[ch] })).filter((a) => a.text);
-  return page(
-    c,
-    { title: TITLE, bare: true },
-    <>
-      <JourneyTop v={v} j={journeyFor(c, "heard")} />
-      <div class="splash">
-        <div class="splash-mark" aria-hidden="true">💚</div>
-        <h1>{t("เราเข้าใจนะ", "We hear you")}</h1>
-      </div>
-      {answers.length ? (
-        <ul class="spots">
-          {answers.map((a) => (
-            <li>
-              <b aria-hidden="true">{a.emoji}</b>
-              <div>{lang === "en" ? a.text.en : a.text.th}</div>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <p>
-        🛡️ <a href="/safety">{t("ตัวช่วยความปลอดภัยเวลาไปเดต", "Your dating safety net")}</a>
-      </p>
-      <div class="flow-bar">
-        <a class="btn primary" href="/onboarding/quiz">{t("ต่อไป: ไทป์กรุงเทพฯ ของคุณ", "Next: your Bangkok Type")}</a>
-      </div>
-    </>,
-  );
+  setCookie(c, DATING_PENDING_COOKIE, JSON.stringify({ prefs }), { path: "/", maxAge: 30 * 86_400, sameSite: "Lax", httpOnly: true });
+  await saveDatingIntent(getDb(c.env), me, { mode: getCookie(c, INTENT_COOKIE) === "dating_only" ? "dating_only" : "dating", prefs });
+  // The "We hear you" screen answered the "what makes it hard" question, which is gone, so
+  // the welcome goes straight on (its safety-net link is on the step itself now).
+  return c.redirect("/onboarding/quiz");
 });
 
 // ---------------------------------------------------------------- quiz --

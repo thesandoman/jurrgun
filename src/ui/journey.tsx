@@ -28,15 +28,16 @@ export type JourneyStep = "welcome" | "dating" | "heard" | "quiz" | "type" | "ba
 
 /** The quiz's 16 questions; follow-ups (up to MAX_FOLLOW_UPS) come straight after. */
 export const QUIZ_MAIN = 16;
-const DATING_STEPS = 7;
+/** The five private preference steps (D3-urgent, 30 Oct: the "why" and "what makes it hard" questions are gone). */
+const DATING_STEPS = 5;
 const GUIDE_STEPS = 6;
 
-/** Dating members get the two dating questions (and preferences), a "we hear you" screen and the 💘 step. */
+/** Dating members get the private preference steps and the 💘 step. ("heard" is kept as a type for old links; it has no steps now.) */
 export function journeyAt(step: JourneyStep, dating: boolean): Journey {
   const order: [JourneyStep, number, number][] = [
     ["welcome", 1, 1],
     ["dating", dating ? DATING_STEPS : 0, 1],
-    ["heard", dating ? 1 : 0, 1],
+    ["heard", 0, 1],
     ["quiz", QUIZ_MAIN + MAX_FOLLOW_UPS, 1],
     ["type", 1, 1],
     ["basics", 1, 2],
