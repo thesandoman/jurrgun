@@ -200,7 +200,12 @@ async function landing(c: Ctx, audience: Audience) {
           ))}
         </ul>
       ) : (
-        <Empty>{t("โต๊ะใหม่กำลังมา สมัครไว้แล้วเราจะแจ้งเมื่อเปิด", "New tables are on the way. Sign up and we'll tell you when they open.")}</Empty>
+        <Empty>
+          {t(
+            "โต๊ะใหม่กำลังมา สมัครแล้วกดรับแจ้งเตือนเมื่อมีกิจกรรมเปิดในเขตของคุณได้",
+            "New tables are on the way. Once you've signed up, you can ask to be told when an event opens in your district.",
+          )}
+        </Empty>
       )}
 
       <h2>{t("โต๊ะแรกของคุณเป็นแบบนี้", "What your first table is like")}</h2>

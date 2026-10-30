@@ -337,7 +337,12 @@ function PeopleForm(props: { v: View; event: Event; candidates: Candidate[]; min
         )}
       </Notice>
       {props.candidates.length === 0 ? (
-        <Empty>{t("ยังไม่มีใครให้เลือกในกลุ่มของคุณ", "There's nobody to show from your group.")}</Empty>
+        <>
+          <Empty>{t("ยังไม่มีใครให้เลือกในกลุ่มของคุณ", "There's nobody to show from your group.")}</Empty>
+          <p class="empty-next">
+            <a href="/?view=list">{t("หาโต๊ะถัดไป", "Find your next table")} →</a>
+          </p>
+        </>
       ) : (
         <form method="post">
           {props.candidates.map((p) => (

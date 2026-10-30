@@ -1545,4 +1545,7 @@ main h2.doors-eyebrow{margin:24px 0 8px}
 .doors-more a{display:inline-flex;align-items:center;min-height:44px}
 /* Landing card 6: the BMA is one quiet line under the start, not a chip. */
 .tile2.hero p.trust-line{margin:12px 0 0;font-size:.875rem;font-weight:500;line-height:1.45;opacity:.95}
+/* Empty states end in one next step (owner, W1): a plain link under the line, a 44px target. */
+.empty-next{margin:-4px 0 16px;text-align:center}
+.empty-next a{display:inline-flex;align-items:center;min-height:44px;font-weight:700}
 `);

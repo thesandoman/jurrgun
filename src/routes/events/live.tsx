@@ -102,7 +102,12 @@ eventRoutes.get("/events/:id/live", requireMember, async (c) => {
               <Tag tone="accent">{t(`โต๊ะ ${reg.groupNo}`, `Table ${reg.groupNo}`)}</Tag>
             </p>
             {mates.length === 0 ? (
-              <Empty>{t("ยังไม่มีใครอื่นที่โต๊ะของคุณ", "No one else at your table yet.")}</Empty>
+              <>
+                <Empty>{t("ยังไม่มีใครอื่นที่โต๊ะของคุณ", "No one else at your table yet.")}</Empty>
+                <p class="empty-next">
+                  <a href={`/me/events/${event.id}/pass`}>{t("เปิดบัตรเข้างานและจุดนัดพบ", "Open your pass and the meeting point")} →</a>
+                </p>
+              </>
             ) : (
               <ul class="people">
                 {mates.map((m) => (

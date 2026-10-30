@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { faqJsonLd } from "../lib/seo";
 import { ABOUT, FAQ, HELPLINES, LAST_CHECKED, LEARN_CARDS, LEARN_GROUPS, REVIEW_NOTE, TOPICS, TYPES_CARD, groupCards, type Block, type LearnCard, type Source, type Topic } from "../content/learn";
+import { canHost } from "../domain/hosting";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
 import { Card, Notice, page, view } from "../ui/kit";
@@ -148,6 +149,11 @@ learnRoutes.get("/learn", (c) => {
       <a href="/safety" class="feature" style="margin:10px 0">
         <b aria-hidden="true">🛡️</b>
         <strong>{t("ปลอดภัยไว้ก่อน: สายด่วนและแชร์แผนนัด", "Safety net: helplines and share your plans")}</strong>
+      </a>
+      {/* Hosting (owner, W3): a plain link only, no prompt. Hosts go to ideas; everyone else to how a Regular Table works. */}
+      <a href={c.var.user && canHost(c.var.user.account, !!c.var.user.profile?.onboardedAt) ? "/host/ideas" : "/circles/lead"} class="feature" style="margin:10px 0">
+        <b aria-hidden="true">🪑</b>
+        <strong>{t("อยากเป็นเจ้าภาพโต๊ะ? ดูว่าทำอย่างไร", "Thinking of hosting a table? See how it works")}</strong>
       </a>
       {LEARN_GROUPS.map((g) => (
         <section id={g.key}>

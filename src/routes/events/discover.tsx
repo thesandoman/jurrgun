@@ -334,12 +334,16 @@ export async function discoverPage(c: Context<AppEnv>) {
     if (rest.length === 0)
       return (
         <>
-          <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้ แวะมาดูใหม่นะ", "No events match these filters yet. Check back soon.")}</Empty>
-          {/* The list view's filtered empty state: the same opt-in, when filtered to the member's own district. */}
+          <Empty>{t("ยังไม่มีกิจกรรมที่ตรงกับตัวกรองนี้", "No events match these filters yet.")}</Empty>
+          {/* One next step (owner, W1): the district alert when filtered to the member's own district, otherwise clear the filters. */}
           {!mapView && filtered && alert ? (
             <div class="empty-alert">
               <DistrictAlertOptIn t={t} alert={alert} />
             </div>
+          ) : filtered ? (
+            <p class="empty-next">
+              <a href={mapView ? "/" : "/?view=list"}>{t("ล้างตัวกรองแล้วดูทุกกิจกรรม", "Clear filters and see every event")} →</a>
+            </p>
           ) : null}
           {extra}
         </>

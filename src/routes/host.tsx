@@ -358,7 +358,12 @@ hostRoutes.get("/host", async (c) => {
         <p class="muted">{t("ถ้าอยากแก้ไขหรือยกเลิกกิจกรรมที่เผยแพร่แล้ว ติดต่อทีมงานได้เลย", "To change or cancel a live event, contact the team.")}</p>
       ) : null}
       {mine.length === 0 ? (
-        <Empty>{t("ยังไม่มีกิจกรรมที่คุณจัด", "You haven't hosted anything yet.")}</Empty>
+        <>
+          <Empty>{t("ยังไม่มีกิจกรรมที่คุณจัด", "You haven't hosted anything yet.")}</Empty>
+          <p class="empty-next">
+            <a href="/host/ideas">{t("ดูไอเดียสำหรับกิจกรรมแรก", "See ideas for a first event")} →</a>
+          </p>
+        </>
       ) : (
         mine.map((e) => (
           <Card>
