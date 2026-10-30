@@ -8,7 +8,8 @@
 //   js     expression run before the shot; its value is printed
 //   full   capture the whole page (up to 2400px tall)
 //   check  print layout problems: sideways scroll, gaps between blocks over the spacing cap,
-//          tap targets under 44px, text under 12px
+//          tap targets under 44px tall or wide (links in running text, inside p, li, dd or small,
+//          are exempt), primary buttons (.btn.primary) under 48px tall, text under 12px
 // Local only: refuses any BASE that isn't localhost or 127.0.0.1.
 import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -60,7 +61,12 @@ const CHECK = (cap) => `(() => {
     if (!shown(e) && !e.matches("input")) continue;
     const t = e.matches("input") ? (e.closest("label") || e) : e;
     const r = t.getBoundingClientRect();
-    if (r.height > 0 && r.height < 24 && !e.closest("p,li,dd,small")) out.push("small tap " + Math.round(r.width) + "x" + Math.round(r.height) + ": " + name(t) + " " + (t.textContent || "").trim().slice(0, 24));
+    if (r.height <= 0) continue;
+    const size = Math.round(r.width) + "x" + Math.round(r.height) + ": " + name(t) + " " + (t.textContent || "").trim().slice(0, 24);
+    // Links inside running text are exempt (WCAG 2.5.8 inline exception); everything else needs 44 x 44.
+    if ((r.height < 44 || r.width < 44) && !e.closest("p,li,dd,small")) out.push("small tap " + size);
+    // The page's main action is taller still.
+    if (t.matches(".btn.primary") && r.height < 48) out.push("short primary " + size);
   }
   for (const e of main.querySelectorAll("p,span,small,a,li,label,dd,dt")) {
     if (!shown(e) || !e.textContent.trim() || e.children.length) continue;

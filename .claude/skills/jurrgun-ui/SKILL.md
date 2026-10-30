@@ -27,7 +27,7 @@ BASE=http://localhost:8787 node .claude/skills/jurrgun-ui/scripts/shots.mjs '[{"
 
 ### 2. Check
 
-`"check": true` prints sideways scroll, gaps over the spacing cap, tap targets under 24 px and text under 12 px. Then review by eye with these lenses (the installed skills hold the full frameworks; load them when you need the detail):
+`"check": true` prints sideways scroll, gaps over the spacing cap, tap targets under 44 px tall or wide (links in running text exempt), primary buttons under 48 px tall, and text under 12 px. Then review by eye with these lenses (the installed skills hold the full frameworks; load them when you need the detail):
 
 - **ux-heuristics-review**: the 10 heuristics; above all status (H1), consistency (H4), error prevention (H5) and minimalism (H8).
 - **cognitive-load-conversion**: cut clutter, use familiar patterns, ask less, remember for the member.
