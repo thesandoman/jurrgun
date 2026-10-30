@@ -5,7 +5,8 @@
  * All timers are LAZY: these run when someone loads or changes the event,
  * comparing timestamps — no cron, no polling (SVAGENTS hard rule 10).
  */
-import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { DEMO_EVENTS, realPeopleFor } from "./demo";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { buddyRound, type Attendee } from "../domain/matching";
 import { ageOn, OFFER_HOURS, reliableAttender, romanceEligible, seatAvailable, strikeStanding, waitlistOrder } from "../domain/rules";
@@ -27,8 +28,11 @@ export const SEAT_STATUSES = ["confirmed", "offered"] as const;
  * events open only through their link), not over yet, and no open co-host
  * invite (D53). Discover and the empty-district alert both start here.
  */
-export function listableBase(now: Date) {
-  return [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now), noOpenInvite()];
+export function listableBase(now: Date, viewerIsDemo = false) {
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.endsAt, now), noOpenInvite()];
+  // Demo-hosted tables are listed only to demo accounts (owner C2): real members and visitors never see them.
+  if (!viewerIsDemo) where.push(sql`${events.id} not in ${DEMO_EVENTS}`);
+  return where;
 }
 
 /** Seats currently held (confirmed + offered), split by resident status. */
@@ -295,7 +299,8 @@ export async function runBuddyRound(
     .from(registrations)
     .where(and(eq(registrations.eventId, event.id), eq(registrations.status, "confirmed"), eq(registrations.wantsBuddy, true)))
     .limit(2000);
-  const people = await loadAttendees(db, regs.map((r) => r.accountId), now);
+  // Never pair a demo account with a real member (owner C2).
+  const people = await loadAttendees(db, await realPeopleFor(db, event.hostAccountId ?? event.createdBy, regs.map((r) => r.accountId)), now);
   const round = buddyRound(people);
   const queries = [];
   for (const g of round.groups) {

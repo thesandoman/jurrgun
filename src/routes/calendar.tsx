@@ -13,6 +13,7 @@
  * own calendar an Open to something more event shows as a plain "Jurrgun
  * table", as on lock screens. No two-way sync: nothing is read back.
  */
+import { DEMO_EVENTS } from "../services/demo";
 import { Hono, type Context } from "hono";
 import { and, asc, eq, gte, inArray, isNull, lt, not, sql } from "drizzle-orm";
 import { getDb } from "../db";
@@ -168,6 +169,8 @@ async function publicEvents(c: C): Promise<CalEvent[]> {
         not(sql`${events.tags} @> ${JSON.stringify([OPEN_TO_MORE_TAG])}::jsonb`),
         // Private talks never appear in a public feed (D52); collabs only once every co-host answered (D53).
         eq(events.talkMode, false),
+        // Demo-hosted tables never reach the public feed (owner C2).
+        sql`${events.id} not in ${DEMO_EVENTS}`,
         noOpenInvite(),
       ),
     )

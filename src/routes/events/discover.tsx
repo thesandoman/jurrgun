@@ -70,8 +70,8 @@ const WHEN_OPTS = [
  * women-only events are listed only for women and non-binary members (and
  * anyone who hasn't said).
  */
-function listable(profile: Profile, now: Date) {
-  const where = listableBase(now);
+function listable(profile: Profile, now: Date, viewerIsDemo = false) {
+  const where = listableBase(now, viewerIsDemo);
   if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
   if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   return where;
@@ -106,12 +106,14 @@ async function discoverPicks(env: AppEnv["Bindings"], db: Db, user: CurrentUser 
   const candidates = await db
     .select()
     .from(events)
-    .where(and(...listable(user.profile, now), gt(events.startsAt, now), lte(events.ageMin, age), gte(events.ageMax, age)))
+    .where(and(...listable(user.profile, now, user.account.isDemo), gt(events.startsAt, now), lte(events.ageMin, age), gte(events.ageMax, age)))
     .orderBy(asc(events.startsAt))
     .limit(200);
   const ids = candidates.map((e) => e.id);
-  const [taken, going] = await Promise.all([
+  // Seats left count every booking; the ranking counts only real members' seats for real viewers (owner C2).
+  const [taken, popular, going] = await Promise.all([
     takenCounts(db, ids),
+    takenCounts(db, ids, !user.account.isDemo),
     ids.length
       ? db
           .select({ eventId: registrations.eventId })
@@ -123,10 +125,10 @@ async function discoverPicks(env: AppEnv["Bindings"], db: Db, user: CurrentUser 
   const mine = new Set(going.map((r) => r.eventId));
   const ranked = rankPopular(
     candidates.filter((e) => !mine.has(e.id)),
-    taken,
+    popular,
   );
   // A pick is popular: someone has to be going already.
-  const picks = ranked.filter((e) => (taken.get(e.id) ?? 0) > 0).slice(0, PICKS);
+  const picks = ranked.filter((e) => (popular.get(e.id) ?? 0) > 0).slice(0, PICKS);
   const shown = new Set(picks.map((e) => e.id));
   const week = ranked.filter((e) => !shown.has(e.id) && e.startsAt.getTime() < now.getTime() + WEEK_MS).slice(0, TOP_WEEK);
   const covers = new Map(await Promise.all(picks.filter((e) => e.coverKey).map(async (e) => [e.id, await coverSrc(env, e)] as const)));
@@ -203,7 +205,7 @@ export async function discoverPage(c: Context<AppEnv>) {
   };
   const mapView = c.req.query("view") !== "list"; // the map is the default
 
-  const where = listable(user.profile, now);
+  const where = listable(user.profile, now, user.account.isDemo);
   const win = whenWindow(q.when, now);
   if (win) where.push(gte(events.startsAt, win[0]), lt(events.startsAt, win[1]));
   if (values(DISTRICTS).includes(q.district)) where.push(eq(events.district, q.district));
@@ -316,7 +318,7 @@ export async function discoverPage(c: Context<AppEnv>) {
   // taking people, up to 3. None means no section at all.
   const forming: FormingTable[] =
     list.length === 0 && !filtered
-      ? (await formingTables(db, user.account.id, user.profile)).map((x) => ({ id: x.id, name: x.name, place: label(DISTRICTS, x.district, lang) }))
+      ? (await formingTables(db, user.account.id, user.profile, 3, user.account.isDemo)).map((x) => ({ id: x.id, name: x.name, place: label(DISTRICTS, x.district, lang) }))
       : [];
   // The events, with `extra` (the For you and quiz cards) after the third one, so events come first.
   const cardList = (extra?: Child) => {

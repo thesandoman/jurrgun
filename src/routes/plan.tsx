@@ -10,6 +10,7 @@
  * The plan is made once a week, on the first visit (like buddy rounds), and
  * kept, so it doesn't reshuffle every time the page loads.
  */
+import { eventSeenBy } from "../services/demo";
 import { Hono, type Context } from "hono";
 import { and, count, countDistinct, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
@@ -77,7 +78,7 @@ async function planFor(c: C) {
     db
       .select()
       .from(events)
-      .where(and(eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * DAY)), noOpenInvite()))
+      .where(and(eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), lt(events.startsAt, new Date(now.getTime() + 14 * DAY)), noOpenInvite(), eventSeenBy(sql`${events.id}`, me)))
       .limit(200),
     db.select({ eventId: registrations.eventId, checkedInAt: registrations.checkedInAt }).from(registrations).where(eq(registrations.accountId, me)).limit(500),
   ]);

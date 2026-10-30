@@ -41,3 +41,32 @@ export async function isRealAccount(db: ReturnType<typeof import("../db").getDb>
  * demos and screenshot runs keep their demo world).
  */
 export const seenBy = (col: SQL, viewerIsDemo: boolean): SQL => (viewerIsDemo ? sql`` : notDemo(col));
+
+/** The demo accounts among these ids (one query). */
+export async function demoAmong(db: ReturnType<typeof import("../db").getDb>, ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const rows = (await db.execute(
+    sql`select id from identity_accounts where is_demo and id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})`,
+  )) as unknown as unknown[];
+  return new Set(rows.map((r) => String(Array.isArray(r) ? r[0] : Object.values(r as Record<string, unknown>)[0])));
+}
+
+/**
+ * Who may share a group or a buddy round at this event (owner C2): at a demo-hosted
+ * event everyone, anywhere else only real accounts, so a demo account is never
+ * seated with, or paired to, a real member. Those left out stay unplaced.
+ */
+export async function realPeopleFor(db: ReturnType<typeof import("../db").getDb>, hostId: string | null, ids: string[]): Promise<string[]> {
+  const demo = await demoAmong(db, hostId ? [...ids, hostId] : ids);
+  if (hostId && demo.has(hostId)) return ids;
+  return ids.filter((id) => !demo.has(id));
+}
+
+/**
+ * Viewer-aware in SQL, for services that only hold the viewer's id: an event is
+ * visible when it isn't demo-hosted, or when the viewer is a demo account.
+ */
+export const eventSeenBy = (eventId: SQL, viewerId: string | null): SQL =>
+  viewerId
+    ? sql`(${eventId} not in ${DEMO_EVENTS} or ${viewerId} in ${DEMO_ACCOUNTS})`
+    : sql`${eventId} not in ${DEMO_EVENTS}`;

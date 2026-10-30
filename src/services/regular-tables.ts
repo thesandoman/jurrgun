@@ -4,6 +4,7 @@
  * table. The rules themselves live in src/domain/regular-tables.ts; the pages
  * in src/routes/tables.tsx.
  */
+import { DEMO_ACCOUNTS } from "./demo";
 import { and, desc, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { newId, randomToken } from "../lib/crypto";
@@ -112,11 +113,12 @@ export async function myTables(db: Db, me: string): Promise<(RegularTable & { ho
  * and any the viewer can't see on its own page (a block with the host, women-only for someone else).
  * Real rows only: no tables means an empty list, and the caller shows nothing.
  */
-export async function formingTables(db: Db, me: string, viewer: { gender?: string | null }, limit = 3): Promise<Pick<RegularTable, "id" | "name" | "district">[]> {
+export async function formingTables(db: Db, me: string, viewer: { gender?: string | null }, limit = 3, viewerIsDemo = false): Promise<Pick<RegularTable, "id" | "name" | "district">[]> {
   const rows = await db
     .select({ id: regularTables.id, name: regularTables.name, district: regularTables.district, hostAccountId: regularTables.hostAccountId, womenOnly: regularTables.womenOnly })
     .from(regularTables)
-    .where(and(isNull(regularTables.archivedAt), ne(regularTables.hostAccountId, me)))
+    // Tables hosted by demo accounts are shown only to demo accounts (owner C2).
+    .where(and(isNull(regularTables.archivedAt), ne(regularTables.hostAccountId, me), viewerIsDemo ? undefined : sql`${regularTables.hostAccountId} not in ${DEMO_ACCOUNTS}`))
     .orderBy(desc(regularTables.createdAt))
     .limit(20);
   if (!rows.length) return [];

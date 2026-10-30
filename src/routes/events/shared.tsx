@@ -2,6 +2,7 @@
  * Events, shared part (split from routes/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { eventSeenBy } from "../../services/demo";
 import { HELLO_MAX, helloPrompt } from "../../domain/hello";
 import { isGoTogether, ViaLine } from "../../ui/go-together";
 import { OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, womenOnlyEventVisible } from "../../domain/rules";
@@ -313,7 +314,7 @@ export function statusLabel(status: string, t: T): string {
 
 /** The next `n` public events this member may see, with seats taken and covers, for an empty My events. */
 export async function nextEvents(env: AppEnv["Bindings"], db: Db, profile: Profile, now: Date, n: number) {
-  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), noOpenInvite()];
+  const where = [eq(events.status, "published"), eq(events.visibility, "public"), gt(events.startsAt, now), noOpenInvite(), eventSeenBy(sql`${events.id}`, profile.accountId)];
   if (!romanceEligible(profile)) where.push(sql`not ${jsonHas(events.tags, OPEN_TO_MORE_TAG)}`);
   if (!womenOnlyEventVisible([WOMEN_ONLY_TAG], profile)) where.push(sql`not ${jsonHas(events.tags, WOMEN_ONLY_TAG)}`);
   const list = await db.select().from(events).where(and(...where)).orderBy(asc(events.startsAt)).limit(n);
@@ -325,13 +326,14 @@ export async function nextEvents(env: AppEnv["Bindings"], db: Db, profile: Profi
 }
 
 /** Seats held (confirmed + offered) per event, in ONE grouped query. */
-export async function takenCounts(db: Db, ids: string[]): Promise<Map<string, number>> {
+/** Seats held per event. `realOnly`: leave demo accounts' seats out (rankings for real members, owner C2). */
+export async function takenCounts(db: Db, ids: string[], realOnly = false): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (ids.length === 0) return out;
   const rows = await db
     .select({ eventId: registrations.eventId, n: count() })
     .from(registrations)
-    .where(and(inArray(registrations.eventId, ids), inArray(registrations.status, [...SEAT_STATUSES])))
+    .where(and(inArray(registrations.eventId, ids), inArray(registrations.status, [...SEAT_STATUSES]), realOnly ? sql`${registrations.accountId} not in (select id from identity_accounts where is_demo)` : undefined))
     .groupBy(registrations.eventId)
     .limit(ids.length);
   for (const r of rows) out.set(r.eventId, Number(r.n));

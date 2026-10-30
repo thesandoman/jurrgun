@@ -2,6 +2,7 @@
  * Staff events, groups part (split from routes/admin/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { realPeopleFor } from "../../../services/demo";
 import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { batch } from "../../../db";
 import { suggestGroups } from "../../../domain/matching";
@@ -79,7 +80,9 @@ adminEvents.post(
     // Profiles in slices, so no single query carries more ids than it can.
     const attendees = [];
     const now = new Date();
-    for (const part of chunks(checked.map((r) => r.accountId), KEYSET_CHUNK)) attendees.push(...(await loadAttendees(db, part, now, e.id)));
+    // A demo account is never seated with real members (owner C2): at a real event they stay unplaced.
+    const seatable = await realPeopleFor(db, e.hostAccountId ?? e.createdBy, checked.map((r) => r.accountId));
+    for (const part of chunks(seatable, KEYSET_CHUNK)) attendees.push(...(await loadAttendees(db, part, now, e.id)));
     const result = suggestGroups(attendees, { seed: e.id, minSize: e.groupMin, maxSize: e.groupMax, keepTogether, romance: e.tags.includes(OPEN_TO_MORE_TAG) });
     const blockedMap = new Map(attendees.map((x) => [x.accountId, new Set(x.blocked)]));
     const blockedLeft = separateBlocked(result.groups, blockedMap, keepTogether);

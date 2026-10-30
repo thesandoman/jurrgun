@@ -5,9 +5,10 @@
  * person's name must never reach the database or BMA Insights, so any code
  * not listed here is counted and shown as "other".
  *
- * Marketing keeps this file in line with the register; changes go through QA.
+ * Seeded from Marketing's list (30 Oct 2026: 29 codes). Marketing keeps this file in
+ * line with the register; changes go through QA.
  */
-export type SrcChannel = "line" | "ig" | "tt" | "fb" | "yt" | "poster" | "creator" | "bio" | "founder" | "bma" | "press";
+export type SrcChannel = "line" | "ig" | "tt" | "fb" | "yt" | "poster" | "creator" | "bma" | "press" | "founder";
 
 export const SRC_CODES: { code: string; channel: SrcChannel }[] = [
   { code: "line-rich-tables", channel: "line" },
@@ -18,11 +19,11 @@ export const SRC_CODES: { code: string; channel: SrcChannel }[] = [
   { code: "line-bc-eve", channel: "line" },
   { code: "line-bc-reminder", channel: "line" },
   { code: "line-voom", channel: "line" },
-  { code: "ig-bio", channel: "bio" },
+  { code: "ig-bio", channel: "ig" },
   { code: "ig-reel04", channel: "ig" },
   { code: "ig-promo05-1x1", channel: "ig" },
   { code: "ig-promo05-9x16", channel: "ig" },
-  { code: "tt-bio", channel: "bio" },
+  { code: "tt-bio", channel: "tt" },
   { code: "tt-reel04", channel: "tt" },
   { code: "fb-page", channel: "fb" },
   { code: "fb-promo05", channel: "fb" },
@@ -33,6 +34,7 @@ export const SRC_CODES: { code: string; channel: SrcChannel }[] = [
   { code: "creator", channel: "creator" },
   { code: "poster-new", channel: "poster" },
   { code: "poster-intl", channel: "poster" },
+  { code: "poster-local", channel: "poster" },
   { code: "poster-uni", channel: "poster" },
   { code: "poster-cowork", channel: "poster" },
   { code: "bma-district", channel: "bma" },

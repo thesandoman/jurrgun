@@ -460,6 +460,8 @@ export async function runDistrictAlerts(env: Bindings, now: Date): Promise<numbe
         and(
           eq(profiles.districtAlertOptIn, true),
           usable(now),
+          // Demo accounts get no district alerts (owner C2).
+          eq(accounts.isDemo, false),
           or(isNull(profiles.districtAlertLastSentAt), lte(profiles.districtAlertLastSentAt, weekAgo)),
           // The newest notifications answer is yes (no row means no); checked again per batch below.
           sql`(select ${consents.granted} from ${consents} where ${consents.accountId} = ${profiles.accountId} and ${consents.category} = ${NOTIFICATIONS_CONSENT} order by ${consents.createdAt} desc limit 1) = true`,
