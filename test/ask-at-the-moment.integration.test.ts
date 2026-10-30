@@ -18,6 +18,7 @@ async function womenOnlyEvent() {
   return id;
 }
 const page = async (ev: string, cookie: string) => (await req(`/events/${ev}?lang=en`, { cookie })).text();
+const bar = (html: string) => html.match(/<div class="sticky-cta rsvp-bar[^"]*" id="sticky-rsvp">[\s\S]*?<script/)?.[0] ?? "";
 
 describe.skipIf(!HAS_DB)("card D3 B1: gender at the women-only RSVP", () => {
   it("asks inside My registration, saves it privately with its consent, then shows the RSVP", async () => {
@@ -26,7 +27,7 @@ describe.skipIf(!HAS_DB)("card D3 B1: gender at the women-only RSVP", () => {
     const ev = await womenOnlyEvent();
     let html = await page(ev, m.cookie);
     expect(html).toContain(`<form method="post" action="/events/${ev}/ask-gender" id="rsvp">`);
-    expect(html).toContain("We ask because this event is only for women and non-binary people");
+    expect(html).toContain("We ask because this event is only for women and non-binary people. Used for women-only tables and buddies. Never shown to anyone.");
     expect(html).toContain("Not now");
     const r = await req(`/events/${ev}/ask-gender`, { cookie: m.cookie, form: { ask: "women_only_gender", do: "save", gender: "woman" } });
     expect(r.headers.get("location")).toBe(`/events/${ev}#reg-h`);
@@ -51,5 +52,33 @@ describe.skipIf(!HAS_DB)("card D3 B1: gender at the women-only RSVP", () => {
     expect(p.gender).toBeNull();
     const bio = (typeof p.bio === "string" ? JSON.parse(p.bio) : p.bio) as { dismissedAsks?: string[] };
     expect(bio.dismissedAsks).toContain("women_only_gender");
+  });
+
+  it("the phone bar scrolls to the question instead of submitting it, and offers no RSVP after Not now", async () => {
+    const m = await createMember();
+    await db().update(profiles).set({ gender: null }).where(eq(profiles.accountId, m.id));
+    const ev = await womenOnlyEvent();
+    let b = bar(await page(ev, m.cookie));
+    expect(b).toContain('<a href="#rsvp" class="btn primary">One question first</a>');
+    expect(b).not.toContain('form="rsvp"');
+    await req(`/events/${ev}/ask-gender`, { cookie: m.cookie, form: { ask: "women_only_gender", do: "later" } });
+    const html = await page(ev, m.cookie);
+    b = bar(html);
+    expect(b).toContain("For women and non-binary people");
+    expect(b).not.toContain('class="btn primary"');
+    expect(html).not.toContain(`class="ev-jump-link"`);
+  });
+
+  it("never offers 'prefer not to say' in the ask, and a stored one counts as Not now (no loop)", async () => {
+    const m = await createMember();
+    await db().update(profiles).set({ gender: null }).where(eq(profiles.accountId, m.id));
+    const ev = await womenOnlyEvent();
+    const html = await page(ev, m.cookie);
+    const ask = html.slice(html.indexOf("/ask-gender"), html.indexOf("Not now"));
+    expect(ask).not.toContain('value="prefer_not"');
+    await db().update(profiles).set({ gender: "prefer_not" }).where(eq(profiles.accountId, m.id));
+    const after = await page(ev, m.cookie);
+    expect(after).not.toContain("/ask-gender");
+    expect(after).toContain("set your gender at Me › Connection preferences");
   });
 });

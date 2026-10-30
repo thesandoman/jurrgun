@@ -610,6 +610,17 @@ type StripProps = {
  * status strip and the phone RSVP bar. "book" marks the RSVP or waitlist action.
  * Its buttons drive the forms in My registration (form="rsvp", form="offer").
  */
+/**
+ * Card D3 B1: whether My registration asks for the private gender on this women-only event ("ask"), the member
+ * said "Not now" or chose "prefer not to say" ("dismissed": a plain line, no RSVP), or neither (null).
+ */
+function genderAsk(event: Event, v: View): "ask" | "dismissed" | null {
+  const prof = v.user?.profile;
+  if (!prof || !event.tags.includes(WOMEN_ONLY_TAG) || womenOnlyEventOk(event.tags, prof)) return null;
+  if (prof.gender === "prefer_not" || askDismissed(cleanBio(prof.bio), "women_only_gender")) return "dismissed";
+  return prof.gender ? null : "ask";
+}
+
 function stripParts(props: StripProps): { tone: string; text: string; sub: string | null; action: Child | null; book: boolean; choices: boolean } | null {
   const { event, reg, left, started, ended } = props;
   const { t, lang } = props.v;
@@ -651,6 +662,22 @@ function stripParts(props: StripProps): { tone: string; text: string; sub: strin
   if (started) return null;
   if (props.standing.blockedUntil) {
     return part("muted", t("ยังลงทะเบียนไม่ได้", "You can't RSVP yet"), t(`ได้อีกครั้งหลัง ${fmtDate(props.standing.blockedUntil, lang)}`, `Again after ${fmtDate(props.standing.blockedUntil, lang)}`), null);
+  }
+  // Card D3 B1: the gender question comes first, so the bar scrolls to it (it never submits the ask form);
+  // after "Not now" there's no RSVP to offer, only who the event is for.
+  const ask = genderAsk(event, props.v);
+  if (ask === "dismissed") return part("muted", t("สำหรับผู้หญิงและคนนอนไบนารี", "For women and non-binary people"), null, null);
+  if (ask === "ask") {
+    return part(
+      left > 0 ? "open" : "full",
+      left > 0 ? t(`เหลือ ${left} ที่`, `${left} spot${left === 1 ? "" : "s"} left`) : t("เต็มแล้ว", "Full"),
+      null,
+      <a href="#rsvp" class="btn primary">
+        {t("ตอบ 1 คำถามก่อนจอง", "One question first")}
+      </a>,
+      true,
+      true,
+    );
   }
   // With choices to make first (+1, buddy, a free seat) the button takes you to them; otherwise it RSVPs at once.
   const choices = event.plusOneAllowed || event.buddyEnabled || (event.freeSeats > 0 && event.costThb > 0) || !!event.groupJoinCode || needsDisclaimer(event);
@@ -970,9 +997,9 @@ function RegistrationBox(props: {
   // Card D3 (owner, 2026-10-30): a women-only event asks for the private gender right here, at the moment
   // it's needed, instead of at sign-up. The ask is the #rsvp form, so the RSVP bar treats its Save as the
   // card's RSVP control (one RSVP on screen, never none). "Not now" is remembered: then a plain line.
-  const prof = v.user?.profile;
-  if (prof && event.tags.includes(WOMEN_ONLY_TAG) && !womenOnlyEventOk(event.tags, prof) && (!prof.gender || prof.gender === "prefer_not")) {
-    return askDismissed(cleanBio(prof.bio), "women_only_gender") ? (
+  const ask = genderAsk(event, v);
+  if (ask) {
+    return ask === "dismissed" ? (
       <p class="muted">
         {t("กิจกรรมนี้สำหรับผู้หญิงและคนนอนไบนารี ถ้าตรงกับคุณ ตั้งเพศได้ที่ ฉัน › ตั้งค่าการรู้จักกันหลังกิจกรรม (เป็นความลับ)", "This event is for women and non-binary people. If that's you, set your gender at Me › Connection preferences (it stays private).")}
       </p>
@@ -983,9 +1010,10 @@ function RegistrationBox(props: {
         action={`${base}/ask-gender`}
         askKey="women_only_gender"
         question={["กิจกรรมนี้สำหรับผู้หญิงและคนนอนไบนารี คุณเป็นเพศไหน", "This event is for women and non-binary people. What's your gender?"]}
-        why={["เราถามเพราะกิจกรรมนี้เปิดเฉพาะผู้หญิงและคนนอนไบนารี เป็นความลับ ไม่แสดงต่อใคร ทีมงานก็ไม่เห็น", "We ask because this event is only for women and non-binary people. It stays private: nobody sees it, staff included."]}
+        why={["เราถามเพราะกิจกรรมนี้เปิดเฉพาะผู้หญิงและคนนอนไบนารี ใช้กับโต๊ะและบัดดี้สำหรับผู้หญิงเท่านั้น ไม่แสดงให้ใครเห็น", "We ask because this event is only for women and non-binary people. Used for women-only tables and buddies. Never shown to anyone."]}
       >
-        <Select label={t("เพศของคุณ", "Your gender")} name="gender" options={GENDER_IDENTITIES} lang={lang} required blank="-" />
+        {/* "Not now" is the opt-out here, so "prefer not to say" isn't offered (it would ask again on every visit). */}
+        <Select label={t("เพศของคุณ", "Your gender")} name="gender" options={GENDER_IDENTITIES.filter((g) => g.value !== "prefer_not")} lang={lang} required blank="-" />
       </AskCard>
     );
   }
