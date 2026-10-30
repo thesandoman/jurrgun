@@ -161,4 +161,31 @@ describe.skipIf(!HAS_DB)("who staff and partners see at an event", () => {
     expect(counts.get(id)?.booked).toBe(10);
     expect(counts.get(id)?.checked_in).toBeNull();
   });
+
+  it("demo and test accounts never count in partner figures, except at a demo-hosted event (owner P3)", async () => {
+    const admin = await createMember({ role: "bma_admin" });
+    const id = await mkEvent(admin.id);
+    const love = await mkEvent(admin.id, { tags: ["open_to_more"], startsAt: new Date(Date.now() + 3 * DAY) });
+    const before = new Date(bkkDayStart(new Date()).getTime() - HOUR);
+    const real = await Promise.all(Array.from({ length: 10 }, () => createMember()));
+    const demo = await Promise.all(Array.from({ length: 5 }, () => createMember()));
+    for (const d of demo) await db().update(accounts).set({ isDemo: true }).where(eq(accounts.id, d.id));
+    for (const m of [...real, ...demo]) {
+      await register(id, m.id);
+      await register(love, m.id, { createdAt: before });
+    }
+    const counts = await partnerCounts(ENV as never, [
+      { id, talkMode: false, tags: [] },
+      { id: love, talkMode: false, tags: ["open_to_more"] },
+    ]);
+    expect(counts.get(id)?.booked).toBe(10);
+    expect(counts.get(love)?.booked).toBe(10);
+    expect((await frozenCounts(db(), [love])).get(love)?.booked).toBe(10);
+
+    // At an event a demo account hosts, the demo's own numbers stand.
+    const demoHost = demo[0];
+    const demoEvent = await mkEvent(admin.id, { hostAccountId: demoHost.id });
+    for (const m of [...real, ...demo]) await register(demoEvent, m.id);
+    expect((await partnerCounts(ENV as never, [{ id: demoEvent, talkMode: false, tags: [] }])).get(demoEvent)?.booked).toBe(15);
+  });
 });

@@ -24,7 +24,7 @@ import { batch, getDb } from "../db";
 import { checkProposal, toBangkokInput, type ProposalInput } from "../domain/hosting";
 import { canBeWomenOnly, lateOrLong, partnerEventTags, WOMEN_ONLY_TAG } from "../domain/rules";
 import { partnerCountPolicy, shownCount } from "../domain/roster";
-import { frozenCounts } from "../services/roster";
+import { countsForPartners, frozenCounts } from "../services/roster";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, values } from "../lib/constants";
 import { newId, randomToken } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
@@ -231,7 +231,7 @@ export async function partnerCounts(
   );
 }
 
-/** Booked seats and check-ins per event: totals only, never who (D47). */
+/** Booked seats and check-ins per event: totals only, never who (D47), and never demo or test accounts (P3). */
 export async function bookingCounts(env: AppEnv["Bindings"], ids: string[]): Promise<Map<string, { booked: number; checked_in: number }>> {
   if (!ids.length) return new Map();
   const rows = await getDb(env)
@@ -241,7 +241,7 @@ export async function bookingCounts(env: AppEnv["Bindings"], ids: string[]): Pro
       checkedIn: sql<number>`count(${registrations.checkedInAt})`,
     })
     .from(registrations)
-    .where(and(inArray(registrations.eventId, ids), isNotNull(registrations.eventId)))
+    .where(and(inArray(registrations.eventId, ids), isNotNull(registrations.eventId), countsForPartners()))
     .groupBy(registrations.eventId)
     .limit(ids.length);
   return new Map(rows.map((r) => [r.eventId, { booked: Number(r.booked), checked_in: Number(r.checkedIn) }]));

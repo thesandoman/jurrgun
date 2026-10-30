@@ -7,6 +7,14 @@ import { bkkDayStart } from "../domain/pulse-heard";
 import { seatCode } from "../domain/roster";
 import { chunks, KEYSET_CHUNK } from "../lib/bulk";
 import { registrations } from "../schema";
+import { DEMO_ACCOUNTS, DEMO_EVENTS } from "./demo";
+
+/**
+ * Bookings that count in partner figures (owner P3, 30 Oct 2026, after C2): a
+ * demo or test account's place never counts, except at an event a demo account
+ * hosts, where everyone is demo and the numbers are the demo's own.
+ */
+export const countsForPartners = () => sql`(${registrations.accountId} not in ${DEMO_ACCOUNTS} or ${registrations.eventId} in ${DEMO_EVENTS})`;
 
 type Db = ReturnType<typeof getDb>;
 
@@ -18,7 +26,8 @@ type Db = ReturnType<typeof getDb>;
  * still show: a re-booking (the row keeps its old createdAt), a waitlist place
  * filled today, and a place waitlisted at midnight and cancelled today. Shown
  * counts are "under 10" or rounded to 5, which blunts them. A true snapshot
- * would need a daily table (a migration).
+ * would need a daily table (a migration). Demo and test accounts never count
+ * (countsForPartners).
  */
 export async function frozenCounts(db: Db, eventIds: string[], now = new Date()): Promise<Map<string, { booked: number; checkedIn: number }>> {
   const out = new Map<string, { booked: number; checkedIn: number }>();
@@ -38,6 +47,7 @@ export async function frozenCounts(db: Db, eventIds: string[], now = new Date())
           lt(registrations.createdAt, cutoff),
           or(isNull(registrations.cancelledAt), gte(registrations.cancelledAt, cutoff)),
           notInArray(registrations.status, ["waitlisted", "requested", "offered"]),
+          countsForPartners(),
         ),
       )
       .groupBy(registrations.eventId)
