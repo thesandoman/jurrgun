@@ -76,6 +76,8 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
   const place = idea ? (lang === "en" ? idea.place.en : idea.place.th) : plan?.placeName;
   const ready = !!plan && !!place && !!plan.startsAt;
   const past = !!plan?.startsAt && plan.startsAt.getTime() < Date.now();
+  // The home-safe check takes a time of day and asks at its next occurrence, so it's offered from 20 hours before the date.
+  const dateDay = !!plan?.startsAt && !past && plan.startsAt.getTime() - Date.now() <= 20 * 3_600_000;
   const shareWhere = place ? encodeURIComponent(place) : "";
   const shareWhen = plan?.startsAt ? encodeURIComponent(fmtDate(plan.startsAt, lang)) : "";
 
@@ -126,8 +128,9 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
             {bothConfirmed(plan) ? (
               <>
                 <p class="pk-confirmed">✓ {t("ยืนยันทั้งคู่แล้ว", "Both confirmed")}</p>
-                {/* The existing private check (owner P-N2): only whoever sets it sees it, and it isn't tied to this Pinky. */}
-                <SafeArrivalForm v={v} context="self" />
+                {/* The existing private check (owner P-N2): only whoever sets it sees it, and it isn't tied to this Pinky.
+                    It asks at the next time of day it's set for, so it's offered only on the day of the date. */}
+                {dateDay ? <SafeArrivalForm v={v} context="self" /> : null}
               </>
             ) : iConfirmed ? (
               <p class="muted">{t("คุณยืนยันแล้ว", "You've confirmed")}</p>
@@ -140,7 +143,8 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
         ) : (
           <p class="muted">{t("ยังไม่มีแผน เลือกไอเดียด้านล่าง หรือใส่ที่ของคุณเอง", "No plan yet. Pick an idea below or add your own place.")}</p>
         )}
-        {paused ? null : (
+        {/* A past plan already offers "Plan the next one", which opens this form: no second way in until then. */}
+        {paused || (past && c.req.query("edit") !== "1") ? null : (
           // Open after "Use this place", so the chosen place and the time field are in view (QA, on phones).
           <details class="how" id="pk-form" open={c.req.query("edit") === "1"}>
             <summary>{ready ? t("เปลี่ยนแผน", "Change the plan") : t("ใส่แผนเอง", "Add a plan")}</summary>

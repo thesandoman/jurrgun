@@ -66,14 +66,21 @@ describe.skipIf(!HAS_DB)("Pinky Plans follow-ups (P-N1 to P-N3)", () => {
     await post(b, `/pinky/${p.id}/confirm`);
     const upcoming = await (await req(`/pinky/${p.id}`, { cookie: en(a) })).text();
     expect(upcoming).toContain("Both confirmed");
-    expect(upcoming).toContain('action="/safety/arrival"');
-    expect(upcoming).toContain('name="context" value="self"');
+    // Weeks away: no home-safe check yet (it asks at the next time of day it's set for).
+    expect(upcoming).not.toContain('action="/safety/arrival"');
+    // On the day of the date it's offered, privately, under the plain "self" context.
+    await db().update(pinkyPlans).set({ startsAt: new Date(Date.now() + 6 * HOUR) }).where(eq(pinkyPlans.pinkyId, p.id));
+    const today = await (await req(`/pinky/${p.id}`, { cookie: en(a) })).text();
+    expect(today).toContain('action="/safety/arrival"');
+    expect(today).toContain('name="context" value="self"');
     await db().update(pinkyPlans).set({ startsAt: new Date(Date.now() - 2 * 24 * HOUR) }).where(eq(pinkyPlans.pinkyId, p.id));
     const past = await (await req(`/pinky/${p.id}`, { cookie: en(a) })).text();
     expect(past).toContain("Last time");
     expect(past).toContain("Plan the next one");
     expect(past).not.toContain("Both confirmed");
     expect(past).not.toMatch(/\d+(st|nd|rd|th)? date/i);
+    // One way on from a past plan: no separate "Change the plan" box until it's chosen.
+    expect(past).not.toContain('id="pk-form"');
   });
 
   it("P-N3: no invitation line once mutual, a clear label, neutral buttons, and the friends message stays", async () => {
