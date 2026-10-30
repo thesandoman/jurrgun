@@ -1,6 +1,7 @@
 /**
  * Partners and vendors (D47).
  *
+ *   GET  /partners                        the public explainer (owner U2), one Apply button
  *   GET  /partner/apply   POST …          a signed-in member applies for their organisation
  *   GET  /partner                         the partner area (partner admins)
  *   POST /partner/feeds                   add the partner's own calendar feed (terms note required)
@@ -31,6 +32,7 @@ import { partnerCounts, partnerEvents } from "./partner-api";
 import { cohostsFor, invitablePartners, invitationsFor, inviteCohost, removeCohost, respondToInvite } from "../services/collabs";
 import { MAX_COHOSTS } from "../domain/event-rules";
 import { Button, Card, Empty, Field, LinkButton, Notice, page, str, Tag, TextArea, view, type View } from "../ui/kit";
+import { Bento, Pill, Tile } from "../ui/visual";
 
 export const partnerRoutes = new Hono<AppEnv>();
 type C = Context<AppEnv>;
@@ -46,6 +48,179 @@ export const KIND_TEXT: Record<PartnerKind, [string, string]> = {
 const isKind = (k: string): k is PartnerKind => (PARTNER_KINDS as readonly string[]).includes(k);
 /** Types a member can apply for. Health and public sector are set up by an admin only (D51, D55). */
 const APPLY_KINDS = PARTNER_KINDS.filter((k) => !isAdminOnlyKind(k));
+
+/** The apply form's two intro paragraphs; /partners opens with the first. */
+export const APPLY_INTRO: [[string, string], [string, string]] = [
+  [
+    "ผู้จัดงาน สถานที่ ชุมชน และแพลตฟอร์มขายบัตร จัดโต๊ะไปงานด้วยกันบน Jurrgun ได้ ทีมงานตรวจและยืนยันก่อน แล้วคุณจะได้พื้นที่พาร์ตเนอร์ของตัวเอง",
+    "Organisers, venues, communities and ticketing platforms can run go-together tables on Jurrgun. The team checks and verifies you first, then you get your own partner area.",
+  ],
+  [
+    "พาร์ตเนอร์ไม่เคยได้ข้อมูลสมาชิก เห็นแค่จำนวนคนจองและเช็กอินของแต่ละงาน ทุกงานต้องมีเจ้าภาพที่ระบุชื่อและจุดนัดพบที่เป็นที่สาธารณะ",
+    "Partners never get member data: only how many booked and checked in at each event. Every event needs a named host and a public meeting point.",
+  ],
+];
+
+/** Who can't apply but is set up by the team (D51, D55): the same sentence on the form and on /partners. */
+export const ADMIN_SET_LINE: [string, string] = [
+  "หน่วยงานรัฐ ศูนย์บริการสาธารณสุข และคลินิกไม่แสวงกำไร ทีมงานตั้งให้โดยตรง ติดต่อทีม Jurrgun",
+  "Government bodies, public health centres and non-profit clinics are set up by the team directly. Contact the Jurrgun team.",
+];
+
+// ---------------------------------------------------------- explainer --
+
+type Two = [string, string];
+
+/**
+ * /partners, the public explainer (owner U2, 2026-10-30). Written only from the
+ * facts Partners gave for main today: no real partners, counts or quotes, no
+ * fee promise past "no fee today", the BMA never as maker or endorser, and the
+ * dating kind left to the apply form, which already lists it.
+ */
+export const PARTNERS_COPY = {
+  title: ["เป็นพาร์ตเนอร์กับ Jurrgun", "Partner with Jurrgun"] as Two,
+  pill: ["สำหรับองค์กร", "For organisations"] as Two,
+  hero: ["เป็นพาร์ตเนอร์|กับ Jurrgun", "Partner with Jurrgun"] as Two,
+  sub: APPLY_INTRO[0],
+  whoTitle: ["ใครสมัครได้", "Who can apply"] as Two,
+  who: [
+    ["ผู้จัดงานและแพลตฟอร์มขายบัตร", "Event organisers and ticketing platforms"],
+    ["สถานที่ เช่น คาเฟ่ บาร์ และแกลเลอรี", "Venues such as cafés, bars and galleries"],
+    ["ชุมชน ชมรม และมหาวิทยาลัย", "Communities, clubs and universities"],
+  ] as Two[],
+  canTitle: ["สิ่งที่พาร์ตเนอร์ทำได้", "What you can do"] as Two,
+  can: [
+    ["จัดโต๊ะไปงานด้วยกัน ทุกงานมีเจ้าภาพที่ระบุชื่อและจุดนัดพบที่เป็นที่สาธารณะ", "Run go-together tables. Every event has a named host and a public meeting point."],
+    ["ลงงานจากระบบของคุณเองด้วยคีย์ที่ Jurrgun ให้ และยกเลิกคีย์ได้", "Post events from your own system with a key Jurrgun gives you. The key can be revoked."],
+    ["เพิ่มฟีดปฏิทินของคุณ พร้อมหมายเหตุว่าข้อกำหนดของแหล่งที่มาอนุญาตอะไรบ้าง", "Add your calendar feed, with a note on what the source's terms allow."],
+    [
+      "ชวนพาร์ตเนอร์ที่ยืนยันแล้วอีกไม่เกิน 2 รายมาร่วมจัด งานจะขึ้นเมื่อทุกรายตอบรับ ทุกพาร์ตเนอร์มีชื่อบนงาน และเห็นตัวเลขเดียวกัน",
+      "Invite up to 2 other verified partners to co-host. The event shows once each accepts, every partner is named, and all see the same counts.",
+    ],
+    ["มีรหัสแนะนำของแต่ละงาน", "Get a referral code for each event."],
+    [
+      "ตั้งเงื่อนไขเข้างาน: ผู้จัดอนุมัติก่อน กลุ่มที่เข้าด้วยรหัส (เช่น นิสิตจุฬาฯ) สิ่งที่ต้องเตรียมหรือควรรู้ มีแอลกอฮอล์ (งานจะเป็น 20+) ปลอดบุหรี่หรือมีที่สูบ หรือเข้างานได้ทุกคนพร้อมกลุ่มไปด้วยกัน",
+      "Set entry rules: organiser approval, a join-code group (for example, Chula students), things to bring or know, alcohol served (the event becomes 20+), smoke-free or a smoking area, or open entry with go-together groups.",
+    ],
+  ] as Two[],
+  privacyTitle: ["ความเป็นส่วนตัวของสมาชิก หมายถึงอะไรสำหรับคุณ", "What members' privacy means for you"] as Two,
+  privacy: [
+    ["ไม่มีข้อมูลสมาชิก: ไม่มีชื่อ รายชื่อ หรือช่องทางติดต่อ", "No member data: no names, lists or contacts."],
+    ["เห็นแค่จำนวนคนที่จองและเช็กอิน และแสดงเมื่อมีตั้งแต่ 10 คนขึ้นไปเท่านั้น", "Only counts of how many booked and checked in, and only from 10 people up."],
+    ["งานให้ความรู้ด้านสุขภาพไม่มีรายชื่อผู้เข้าร่วม และรับคำถามแบบไม่ระบุชื่อ", "Health talks have no attendee list and take anonymous questions."],
+  ] as Two[],
+  howTitle: ["ขั้นตอน", "How it works"] as Two,
+  how: [
+    ["สมัคร: ลงชื่อเข้าใช้ แล้วกรอกแบบฟอร์มสั้น ๆ เกี่ยวกับองค์กรของคุณ", "Apply: sign in and fill in a short form about your organisation."],
+    [
+      "ตรวจสอบ: ผู้ดูแลของ Jurrgun ตรวจองค์กร แล้วยืนยัน หรือปฏิเสธพร้อมหมายเหตุ คุณจะรู้ผลในการแจ้งเตือน",
+      "Review: a Jurrgun admin checks the organisation, then verifies it or declines with a note. You hear in your notifications.",
+    ],
+    ["ยืนยันแล้ว: คุณเป็นผู้ดูแลพาร์ตเนอร์ขององค์กร และได้พื้นที่พาร์ตเนอร์ของตัวเอง", "Verified: you become the organisation's partner admin, with your own partner area."],
+  ] as Two[],
+  fee: ["ตอนนี้ไม่มีค่าธรรมเนียม", "There's no fee today."] as Two,
+  oversight: [
+    "หลังมีการรายงาน ทีมงานส่งพาร์ตเนอร์กลับไปตรวจใหม่ได้ และหยุดชั่วคราวหรือถอดงานใดก็ได้",
+    "After reports, the team can send a partner back to review, and can pause or take down any event.",
+  ] as Two,
+  rulesTitle: ["กติกาที่ผู้จัดยอมรับ", "The rules organisers accept"] as Two,
+  rules: [
+    [
+      "ที่สาธารณะ มีเจ้าภาพที่ระบุชื่อ และทำตามหลักปฏิบัติ (ห้ามบุหรี่ไฟฟ้า กัญชา และยาเสพติดอื่น)",
+      "Public places, a named host, and the code of conduct (no vaping, cannabis or other drugs).",
+    ],
+    ["ไม่มีงาน พาร์ตเนอร์ หรือการโปรโมตเกี่ยวกับกัญชา", "No cannabis events, partners or promotion."],
+    [
+      "งานที่มีแอลกอฮอล์ จำกัดอายุเกิน 18 ปี หรือมีกิจกรรมที่ใช้แรง สมาชิกต้องติ๊กยอมรับข้อความสั้น ๆ ก่อนจอง",
+      "Alcohol, an age limit over 18 or physical activity means members tick a short disclaimer before booking.",
+    ],
+    ["งานสุขภาพให้ข้อมูลเท่านั้น: ฟรี ไม่มีลิงก์ขายบัตรหรือชำระเงิน และไม่ขายอะไร", "Health events are information only: free, with no ticket or payment link, and nothing sold."],
+    ["งานสำหรับผู้หญิงและนอนไบนารีเท่านั้น ต้องมีเจ้าภาพเป็นผู้หญิงหรือนอนไบนารี", "Women and non-binary only events need a woman or non-binary host."],
+    ["งาน 💘 จำกัดเฉพาะกลุ่มที่เข้าด้วยรหัสไม่ได้", "💘 events can't be limited to a join-code group."],
+  ] as Two[],
+  conduct: ["อ่านหลักปฏิบัติ", "Read the code of conduct"] as Two,
+  cta: ["สมัครเป็นพาร์ตเนอร์", "Apply"] as Two,
+  ctaNote: ["ระบบจะให้ลงชื่อเข้าใช้ก่อนสมัคร", "You'll be asked to sign in first."] as Two,
+  contact: ADMIN_SET_LINE,
+};
+
+/** The search snippet, only from the page's own words: the hero's first sentence, then the fee line. */
+export const PARTNERS_DESCRIPTION: Two = [
+  `ผู้จัดงาน สถานที่ ชุมชน และแพลตฟอร์มขายบัตร จัดโต๊ะไปงานด้วยกันบน Jurrgun ได้ ${PARTNERS_COPY.fee[0]}`,
+  `Organisers, venues, communities and ticketing platforms can run go-together tables on Jurrgun. ${PARTNERS_COPY.fee[1]}`,
+];
+
+const PARTNERS_CSS = `
+.pt-list{display:grid;gap:8px;padding-left:1.3em;margin:0 0 16px}
+.pt-list li::marker{color:var(--brand);font-weight:700}
+.pt-cta{margin:24px 0 8px}
+`;
+
+function PtList(props: { v: View; items: Two[]; ordered?: boolean }) {
+  const items = props.items.map((x) => <li>{props.v.t(x[0], x[1])}</li>);
+  return props.ordered ? <ol class="pt-list">{items}</ol> : <ul class="pt-list">{items}</ul>;
+}
+
+partnerRoutes.get("/partners", (c) => {
+  const v = view(c);
+  const { t, lang } = v;
+  const k = PARTNERS_COPY;
+  const T = (x: Two) => t(x[0], x[1]);
+  return page(
+    c,
+    { title: T(k.title), description: T(PARTNERS_DESCRIPTION) },
+    <>
+      <style dangerouslySetInnerHTML={{ __html: PARTNERS_CSS }} />
+      <Bento>
+        <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 31 }} lang={lang}>
+          <Pill dot>{T(k.pill)}</Pill>
+          {/* Phrases stay whole, so Thai never breaks mid-word-group. */}
+          <h1>
+            {T(k.hero)
+              .split("|")
+              .map((w, i) => (
+                <>
+                  {i ? " " : ""}
+                  <span style="white-space:nowrap">{w}</span>
+                </>
+              ))}
+          </h1>
+          <small>{T(k.sub)}</small>
+        </Tile>
+      </Bento>
+
+      <h2>{T(k.whoTitle)}</h2>
+      <PtList v={v} items={k.who} />
+
+      <h2>{T(k.canTitle)}</h2>
+      <PtList v={v} items={k.can} />
+
+      <h2>{T(k.privacyTitle)}</h2>
+      <PtList v={v} items={k.privacy} />
+
+      <h2>{T(k.howTitle)}</h2>
+      <PtList v={v} items={k.how} ordered />
+      <p>
+        <strong>{T(k.fee)}</strong> {T(k.oversight)}
+      </p>
+
+      <h2>{T(k.rulesTitle)}</h2>
+      <PtList v={v} items={k.rules} />
+      <p>
+        <a href="/code-of-conduct">{T(k.conduct)}</a>
+      </p>
+
+      <div class="row pt-cta">
+        <a href="/partner/apply" class="btn primary start-cta">
+          <span>{T(k.cta)}</span>
+          <span class="start-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+      <p class="muted">{T(k.ctaNote)}</p>
+      <p class="muted">{T(k.contact)}</p>
+    </>,
+  );
+});
 
 // ------------------------------------------------------------- apply --
 
@@ -67,18 +242,8 @@ async function applyPage(c: C, errors: string[] = [], d: Record<string, string> 
     { title: t("สมัครเป็นพาร์ตเนอร์", "Become a partner"), tab: "me", status },
     <>
       <h1>{t("สมัครเป็นพาร์ตเนอร์", "Become a partner")}</h1>
-      <p class="muted">
-        {t(
-          "ผู้จัดงาน สถานที่ ชุมชน และแพลตฟอร์มขายบัตร จัดโต๊ะไปงานด้วยกันบน Jurrgun ได้ ทีมงานตรวจและยืนยันก่อน แล้วคุณจะได้พื้นที่พาร์ตเนอร์ของตัวเอง",
-          "Organisers, venues, communities and ticketing platforms can run go-together tables on Jurrgun. The team checks and verifies you first, then you get your own partner area.",
-        )}
-      </p>
-      <p class="muted">
-        {t(
-          "พาร์ตเนอร์ไม่เคยได้ข้อมูลสมาชิก เห็นแค่จำนวนคนจองและเช็กอินของแต่ละงาน ทุกงานต้องมีเจ้าภาพที่ระบุชื่อและจุดนัดพบที่เป็นที่สาธารณะ",
-          "Partners never get member data: only how many booked and checked in at each event. Every event needs a named host and a public meeting point.",
-        )}
-      </p>
+      <p class="muted">{t(...APPLY_INTRO[0])}</p>
+      <p class="muted">{t(...APPLY_INTRO[1])}</p>
       {me.role === "partner_admin" ? (
         <p>
           <LinkButton href="/partner">{t("ไปที่พื้นที่พาร์ตเนอร์", "Go to your partner area")}</LinkButton>
@@ -109,12 +274,7 @@ async function applyPage(c: C, errors: string[] = [], d: Record<string, string> 
                 ))}
               </select>
               <small>{t("แอปเดต: กิจกรรมจะเห็นได้เฉพาะสมาชิกที่เปิดรับเรื่องเดต 💘 เท่านั้น", "Dating apps: your events are seen only by members who opted into 💘.")}</small>
-              <small>
-                {t(
-                  "หน่วยงานรัฐ ศูนย์บริการสาธารณสุข และคลินิกไม่แสวงกำไร ทีมงานตั้งให้โดยตรง ติดต่อทีม Jurrgun",
-                  "Government bodies, public health centres and non-profit clinics are set up by the team directly. Contact the Jurrgun team.",
-                )}
-              </small>
+              <small>{t(...ADMIN_SET_LINE)}</small>
             </div>
             <Field label={t("เว็บไซต์ (ไม่บังคับ)", "Website (optional)")} name="website" type="url" value={d.website} placeholder="https://…" maxlength={300} inputmode="url" autocapitalize="none" />
             <Field
