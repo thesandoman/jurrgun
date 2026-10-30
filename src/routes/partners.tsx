@@ -80,7 +80,7 @@ type Two = [string, string];
 export const PARTNERS_COPY = {
   title: ["เป็นพาร์ตเนอร์กับ Jurrgun", "Partner with Jurrgun"] as Two,
   pill: ["สำหรับองค์กร", "For organisations"] as Two,
-  hero: ["เป็นพาร์ตเนอร์|กับ Jurrgun", "Partner with Jurrgun"] as Two,
+  hero: ["เป็นพาร์ตเนอร์|กับ Jurrgun", "Partner|with Jurrgun"] as Two,
   sub: APPLY_INTRO[0],
   whoTitle: ["ใครสมัครได้", "Who can apply"] as Two,
   who: [
@@ -152,7 +152,13 @@ export const PARTNERS_DESCRIPTION: Two = [
 const PARTNERS_CSS = `
 .pt-list{display:grid;gap:8px;padding-left:1.3em;margin:0 0 16px}
 .pt-list li::marker{color:var(--brand);font-weight:700}
-.pt-cta{margin:24px 0 8px}
+/* A lone hero: the whole row, not half of it on tablets and laptops. */
+.tile2.hero.pt-hero{grid-column:1/-1;grid-row:auto;min-height:200px}
+/* Each phrase moves to the next line whole while it fits, and wraps inside at 320px or 200% text. */
+.pt-ph{display:inline-block;max-width:100%}
+/* The code of conduct link stands alone, so it gets a 44px target. */
+.pt-more{display:inline-flex;align-items:center;min-height:44px}
+.pt-cta{margin:16px 0 8px}
 `;
 
 function PtList(props: { v: View; items: Two[]; ordered?: boolean }) {
@@ -171,7 +177,7 @@ partnerRoutes.get("/partners", (c) => {
     <>
       <style dangerouslySetInnerHTML={{ __html: PARTNERS_CSS }} />
       <Bento>
-        <Tile size="hero" tone="brand" art={{ tone: "evening", icons: [], seed: 31 }} lang={lang}>
+        <Tile size="hero" tone="brand" class="pt-hero" art={{ tone: "evening", icons: [], seed: 31 }} lang={lang}>
           <Pill dot>{T(k.pill)}</Pill>
           {/* Phrases stay whole, so Thai never breaks mid-word-group. */}
           <h1>
@@ -180,7 +186,7 @@ partnerRoutes.get("/partners", (c) => {
               .map((w, i) => (
                 <>
                   {i ? " " : ""}
-                  <span style="white-space:nowrap">{w}</span>
+                  <span class="pt-ph">{w}</span>
                 </>
               ))}
           </h1>
@@ -206,7 +212,7 @@ partnerRoutes.get("/partners", (c) => {
       <h2>{T(k.rulesTitle)}</h2>
       <PtList v={v} items={k.rules} />
       <p>
-        <a href="/code-of-conduct">{T(k.conduct)}</a>
+        <a href="/code-of-conduct" class="pt-more">{T(k.conduct)}</a>
       </p>
 
       <div class="row pt-cta">
