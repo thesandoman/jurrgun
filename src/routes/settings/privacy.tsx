@@ -4,10 +4,12 @@
  */
 import { endPinkies } from "../../services/pinky";
 import { EXIT_REASONS } from "../../content/dating";
-import { count, desc, eq, inArray, isNotNull, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { batch, getDb } from "../../db";
 import { audit } from "../../lib/records";
 import { moderationHistory } from "../../services/moderation-export";
+import { waiveNoteOf, waiveReasonOf } from "../../lib/constants";
+import { WAIVE_REASONS } from "../../domain/waive-note";
 import {
   accounts,
   announcements,
@@ -46,6 +48,8 @@ import {
   pulseQuestions,
   pulseResponses,
   registrations,
+  auditLog,
+  graduations,
   moderationActions,
   reports,
   wellbeing,
@@ -324,7 +328,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
       .where(eq(vibes.accountId, id))
       .limit(1),
     db
-      .select({ event: events.title, reason: strikes.reason, expiresAt: strikes.expiresAt, waived: strikes.waivedBy, createdAt: strikes.createdAt })
+      .select({ id: strikes.id, event: events.title, reason: strikes.reason, expiresAt: strikes.expiresAt, waived: strikes.waivedBy, waivedNote: strikes.waivedReason, createdAt: strikes.createdAt })
       .from(strikes)
       .leftJoin(events, eq(events.id, strikes.eventId))
       .where(eq(strikes.accountId, id))
@@ -375,8 +379,21 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     ? await db.select({ id: profiles.accountId, nickname: profiles.nickname }).from(profiles).where(inArray(profiles.accountId, otherIds)).limit(otherIds.length)
     : [];
   const nick = new Map(others.map((o) => [o.id, o.nickname]));
+  // When each of my strikes was waived: the audit row's date only (not who).
+  const waivedIds = myStrikes.filter((s) => s.waived).map((s) => s.id);
+  const waivedAtOf = new Map(
+    waivedIds.length
+      ? (
+          await db
+            .select({ id: auditLog.targetId, at: auditLog.createdAt })
+            .from(auditLog)
+            .where(and(eq(auditLog.action, "strike.waive"), inArray(auditLog.targetId, waivedIds)))
+            .limit(waivedIds.length * 2)
+        ).map((r) => [r.id ?? "", r.at] as const)
+      : [],
+  );
   // Moderation about me: only what the member was told (services/moderation-export.ts).
-  const [modActions, ownReports] = await Promise.all([
+  const [modActions, ownReports, myGraduations] = await Promise.all([
     db
       .select({ action: moderationActions.action, until: moderationActions.until, note: moderationActions.note, reportId: moderationActions.reportId, createdAt: moderationActions.createdAt })
       .from(moderationActions)
@@ -387,6 +404,12 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
       .from(reports)
       .where(eq(reports.reporter, id))
       .limit(500),
+    db
+      .select({ a: connections.aAccount, b: connections.bAccount, aStill: graduations.aStill, bStill: graduations.bStill, createdAt: graduations.createdAt })
+      .from(graduations)
+      .innerJoin(connections, eq(connections.id, graduations.connectionId))
+      .where(or(eq(connections.aAccount, id), eq(connections.bAccount, id)))
+      .limit(2000),
   ]);
 
   const data = {
@@ -406,7 +429,24 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     reportsIFiled: reps,
     peopleIBlocked: myBlocks.map((b) => ({ nickname: nick.get(b.blocked) ?? null, createdAt: b.createdAt })),
     feedbackIGave: myFeedback,
-    strikes: myStrikes.map(({ waived, ...rest }) => ({ ...rest, waived: !!waived })),
+    // Card D1 (owner decision, 2026-10-30): why a strike was waived, as the chosen reason AND the note, with
+    // the date. Older waivers have no reason, only their note. Never who waived it.
+    strikes: myStrikes.map(({ id: strikeId, waived, waivedNote, ...rest }) => {
+      const key = waived ? waiveReasonOf(waivedNote) : null;
+      return {
+        ...rest,
+        waived: !!waived,
+        waivedAt: waived ? (waivedAtOf.get(strikeId) ?? null) : null,
+        waivedBecause: key ? (({ th, en }) => ({ key, th, en }))(WAIVE_REASONS.find((r) => r.value === key)!) : null,
+        waivedNote: waived ? waiveNoteOf(waivedNote) : null,
+      };
+    }),
+    // Card D1: my own "still in touch?" answer for each friendship that graduated, never the other person's.
+    friendshipsOutsideTheApp: myGraduations.map((g) => ({
+      with: nick.get(g.a === id ? g.b : g.a) ?? null,
+      since: g.createdAt,
+      myStillInTouchAnswer: g.a === id ? g.aStill : g.bStill,
+    })),
     moderationAboutMe: moderationHistory(id, modActions, ownReports),
     bangkokType: vibe[0] ?? null,
     invitesICreated: invitesMade.map((x) => ({ event: x.event, used: !!x.used, createdAt: x.createdAt })),

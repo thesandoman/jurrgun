@@ -2,6 +2,7 @@
  * Staff events, operations part (split from routes/admin/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { WAIVE_REASONS } from "../../../domain/waive-note";
 import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { DISTRICTS, VISITBANGKOK_ROUTES, label } from "../../../lib/constants";
 import { fmtDate } from "../../../lib/i18n";
@@ -347,7 +348,13 @@ adminEvents.get(
                         {r.noShowRecorded ? (
                           s && !s.waivedBy && s.reason === "no_show" ? (
                             <form method="post" action={`${BASE}/${e.id}/strikes/${r.id}/waive`} class="row">
-                              <input type="text" name="reason" required maxlength={200} placeholder={t("เหตุผลที่ยกเว้น", "Reason to waive")} aria-label={t("เหตุผลที่ยกเว้น", "Reason to waive")} />
+                              <select name="why" required aria-label={t("เหตุผลที่ยกเว้น (สมาชิกเห็นได้)", "Reason to waive (the member can see it)")}>
+                                <option value="">{t("เหตุผล…", "Reason…")}</option>
+                                {WAIVE_REASONS.map((r) => (
+                                  <option value={r.value}>{t(r.th, r.en)}</option>
+                                ))}
+                              </select>
+                              <input type="text" name="reason" maxlength={200} placeholder={t("โน้ต (ไม่บังคับ สมาชิกจะเห็นโน้ตนี้)", "Note (optional, the member will see this note)")} aria-label={t("โน้ต ไม่บังคับ สมาชิกจะเห็นโน้ตนี้ อย่าใส่ชื่อผู้รายงานหรือสมาชิกคนอื่น", "Note, optional. The member will see this note, so don't name a reporter or any other member")} />
                               <Button kind="ghost">{t("ยกเว้น", "Waive")}</Button>
                             </form>
                           ) : s?.waivedBy ? (

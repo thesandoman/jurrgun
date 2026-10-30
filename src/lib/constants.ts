@@ -1,3 +1,5 @@
+import { isWaiveReason } from "../domain/waive-note";
+
 /**
  * Fixed lists used across forms, filters and dashboards. Bilingual.
  */
@@ -222,6 +224,19 @@ export const VISITBANGKOK_ROUTES: (Opt & { district: string; venue: string; tags
   { ...o("yaowarat", "ถนนเยาวราช สายกิน", "Yaowarat food walk"), district: "samphanthawong", venue: "Yaowarat Road", tags: ["city_quest", "food", "walk"] },
   { ...o("talat_phlu", "ตลาดพลู", "Talat Phlu market"), district: "thon_buri", venue: "Talat Phlu", tags: ["city_quest", "food", "culture"] },
 ];
+
+/** The free-text note from a stored "[key] note" (or the whole text of an older note), or null. */
+export function waiveNoteOf(stored: string | null | undefined): string | null {
+  const t = (stored ?? "").replace(/^\[[a-z_]+\]\s*/, "").trim();
+  return t || null;
+}
+
+/** The waive reason key from a stored "[key] note", or null for an old free-text-only note. */
+/** Stored waive reasons are "[key] optional note" (list: src/domain/waive-note.ts, Trust & Operations). */
+export function waiveReasonOf(stored: string | null | undefined): string | null {
+  const m = /^\[([a-z_]+)\]/.exec(stored ?? "");
+  return m && isWaiveReason(m[1]) ? m[1] : null;
+}
 
 export function label(list: Opt[], value: string | null | undefined, lang: "th" | "en"): string {
   if (!value) return "";

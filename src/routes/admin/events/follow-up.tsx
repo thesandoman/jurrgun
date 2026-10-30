@@ -9,7 +9,7 @@ import { newId } from "../../../lib/crypto";
 import { batchAll, chunks, keysetAll } from "../../../lib/bulk";
 import { audit, notify, notifyMany } from "../../../lib/records";
 import { accounts, events, profiles, registrations, reports, strikes } from "../../../schema";
-import { noteNamesSomeone, WAIVE_NOTE_MAX, WAIVE_NOTE_REFUSED } from "../../../domain/waive-note";
+import { isWaiveReason, noteNamesSomeone, WAIVE_NOTE_MAX, WAIVE_NOTE_REFUSED } from "../../../domain/waive-note";
 import { refreshWaitlist, runBuddyRound } from "../../../services/events";
 import { blockedAmong } from "../../../services/regular-tables";
 import { announceOpen, postAnnouncement, type AnnounceInput } from "../../../services/announcements";
@@ -308,10 +308,14 @@ adminEvents.post(
       .limit(1);
     if (!reg && rosterAccess(me(c), e) !== "names") return refuse(c, e, t("ไม่พบใบเตือนนี้", "Strike not found"), 404);
     const accountId = reg?.accountId ?? who;
-    const reason = str((await c.req.parseBody()).reason);
-    if (!reason || reason.length > WAIVE_NOTE_MAX) return refuse(c, e, t("ระบุเหตุผล (ไม่เกิน 200 ตัวอักษร)", "Give a reason (max 200 characters)"));
-    // D1: the member sees this note in their data export, so it never names anyone else at the event.
-    if (noteNamesSomeone(reason, await otherNamesAt(db, e, accountId))) return refuse(c, e, t(WAIVE_NOTE_REFUSED[0], WAIVE_NOTE_REFUSED[1]));
+    const body = await c.req.parseBody();
+    const key = str(body.why);
+    const note = str(body.reason);
+    if (!isWaiveReason(key)) return refuse(c, e, t("เลือกเหตุผล", "Choose a reason"));
+    if (note.length > WAIVE_NOTE_MAX) return refuse(c, e, t("โน้ตไม่เกิน 200 ตัวอักษร", "Keep the note to 200 characters"));
+    // D1: the member sees the reason and the note in their data export, so the note never names anyone else at the event.
+    if (note && noteNamesSomeone(note, await otherNamesAt(db, e, accountId))) return refuse(c, e, t(WAIVE_NOTE_REFUSED[0], WAIVE_NOTE_REFUSED[1]));
+    const reason = note ? `[${key}] ${note}` : `[${key}]`;
     const [s] = await db
       .select()
       .from(strikes)

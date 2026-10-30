@@ -411,19 +411,20 @@ describe.skipIf(!HAS_DB)("admin events", () => {
     expect((await kinds(missed.id, "strike")).length).toBe(1);
     expect((await kinds(came.id, "strike")).length).toBe(0);
 
-    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "" } })).status).toBe(400);
+    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { why: "", reason: "Was ill" } })).status).toBe(400);
     // D1: the note goes into the member's export, so naming someone else at the event (or a phone number) is refused.
-    const named = await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: `${host.cookie}; lang=en`, form: { reason: `Came with ${came.username}, who vouched` } });
+    const named = await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: `${host.cookie}; lang=en`, form: { why: "other", reason: `Came with ${came.username}, who vouched` } });
     expect(named.status).toBe(400);
     expect(await named.text()).toContain("names someone else");
-    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "call 081-234-5678" } })).status).toBe(400);
-    const w = await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "Was ill" } });
+    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { why: "other", reason: "call 081-234-5678" } })).status).toBe(400);
+    const w = await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { why: "unwell", reason: "Was ill" } });
     expect(w.status).toBe(302);
     const [s] = await db().select().from(strikes).where(eq(strikes.eventId, past)).limit(1);
     expect(s.waivedBy).toBe(host.id);
-    expect(s.waivedReason).toBe("Was ill");
+    // Card D1: the chosen reason as a [key] prefix, then the note (both exported to the member).
+    expect(s.waivedReason).toBe("[unwell] Was ill");
     expect((await kinds(missed.id, "strike_waived")).length).toBe(1);
-    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { reason: "again" } })).status).toBe(409);
+    expect((await req(`/admin/events/${past}/strikes/${missed.id}/waive`, { cookie: host.cookie, form: { why: "other", reason: "again" } })).status).toBe(409);
   });
 
   it("runs a forced buddy round once", async () => {

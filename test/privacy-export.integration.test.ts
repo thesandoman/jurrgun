@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { createMember, db, HAS_DB, req } from "./helpers";
 import { newId } from "../src/lib/crypto";
 import { eq } from "drizzle-orm";
-import { buddyMatches, buddyOptins, chatMessages, consents, datingIntents, meetFeedback, moderationActions, planPitches, profiles, safeArrivals, thanks, weeklyPlans } from "../src/schema";
+import { buddyMatches, buddyOptins, chatMessages, connections, consents, datingIntents, events, graduations, meetFeedback, moderationActions, planPitches, profiles, safeArrivals, strikes, thanks, weeklyPlans } from "../src/schema";
 
 describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
   it("includes the member's own chats, dating, buddy, feedback, thanks, plans and safety checks", async () => {
@@ -76,5 +76,26 @@ describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
     expect(text).not.toContain("Nok");
     expect(text).not.toContain("internal only");
     expect(text).not.toContain(mod.id);
+  });
+
+  it("card D1: my own still-in-touch answer and the strike waive reason and note, never the other person's answer or who waived", async () => {
+    const [m, other, host] = await Promise.all([createMember({ nickname: "Mine" }), createMember({ nickname: "Theirs" }), createMember({ role: "host" })]);
+    const [a, b] = [m.id, other.id].sort();
+    const conn = newId();
+    await db().insert(connections).values({ id: conn, aAccount: a, bAccount: b, level: "friend", eventId: newId() });
+    await db().insert(graduations).values({ id: newId(), connectionId: conn, aStill: a === m.id, bStill: b === m.id });
+    const ev = newId();
+    const startsAt = new Date(Date.now() - 3 * 86_400_000);
+    await db().insert(events).values({ id: ev, title: "Gone", startsAt, endsAt: new Date(startsAt.getTime() + 3_600_000), venueName: "V", district: "bang_rak", capacity: 6, status: "published", createdBy: host.id });
+    await db().insert(strikes).values({ id: newId(), accountId: m.id, eventId: ev, reason: "no_show", expiresAt: new Date(Date.now() + 80 * 86_400_000), waivedBy: host.id, waivedReason: "[travel] Came with Nim, who vouched for her" });
+    await db().insert(strikes).values({ id: newId(), accountId: m.id, eventId: newId(), reason: "no_show", expiresAt: new Date(Date.now() + 80 * 86_400_000), waivedBy: host.id, waivedReason: "Old free text before the list" });
+    const text = await (await req("/settings/privacy/export", { cookie: m.cookie })).text();
+    const data = JSON.parse(text);
+    expect(data.friendshipsOutsideTheApp).toEqual([{ with: "Theirs", since: expect.any(String), myStillInTouchAnswer: true }]);
+    // Owner decision (2026-10-30): the reason AND the note; older waivers export their note. Never who waived it.
+    type S = { waivedBecause: { key: string } | null; waivedNote: string | null };
+    const byNote = Object.fromEntries(data.strikes.map((x: S) => [x.waivedNote, x.waivedBecause?.key ?? null]));
+    expect(byNote).toEqual({ "Came with Nim, who vouched for her": "travel", "Old free text before the list": null });
+    expect(text).not.toContain(host.id);
   });
 });
