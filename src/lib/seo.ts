@@ -43,6 +43,7 @@ const INDEXABLE = new Set<string>([
   "/new",
   "/international",
   "/local",
+  "/partners",
   "/faq",
   "/learn",
   "/learn/bangkok-types",
@@ -66,12 +67,13 @@ const PUBLIC_ONLY_WHEN_SAID = new Set<string>(["/"]);
 /** /international redirects visitors with no language choice, so its default is the English page. */
 const DEFAULT_LANG: Record<string, "en"> = { "/international": "en" };
 
-/** Sitemap order: the homepage, the front doors, the intro, then what the app is, then help. */
+/** Sitemap order: the homepage, the front doors, the partners page, the intro, then what the app is, then help. */
 const SITEMAP: string[] = [
   "/",
   "/new",
   "/international",
   "/local",
+  "/partners",
   "/intro",
   "/faq",
   "/types",
@@ -180,6 +182,7 @@ export function llmsTxt(): string {
     `- [New to Bangkok](${SITE_ORIGIN}/new): for people who moved to the city recently`,
     `- [From abroad](${SITE_ORIGIN}/international?lang=en): for international residents, in English`,
     `- [Bangkok locals](${SITE_ORIGIN}/local): for people who call Bangkok home and want new friends`,
+    `- [Partners](${SITE_ORIGIN}/partners): how organisers, venues, communities and ticketing platforms can run go-together tables on Jurrgun`,
     `- [FAQ](${SITE_ORIGIN}/faq): cost, who can join, language, what happens after an event, privacy`,
     `- [Bangkok Types](${SITE_ORIGIN}/types): the 16 types from the short quiz`,
     "",

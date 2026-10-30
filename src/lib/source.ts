@@ -1,7 +1,7 @@
 /**
  * Placement tracking (admin only): which link first brought someone in.
  *
- * A public landing (/, /new, /local, /international, /types/:slug, /signup, /quiz) or
+ * A public landing (/, /new, /local, /international, /partners, /types/:slug, /signup, /quiz) or
  * an event page (/events/:id, even when it sends a signed-out visitor to sign
  * in first) opened with
  * `?src=` (or `utm_source`, with `utm_campaign` appended) remembers that value
@@ -26,7 +26,7 @@ export const SOURCE_MAX_AGE = 30 * 86_400;
 const PART_MAX = 32;
 
 /** Paths whose query may carry a placement source. */
-const LANDING = /^\/(?:new|local|international|signup|quiz|types\/[^/]+|events\/[^/]+)?\/?$/;
+const LANDING = /^\/(?:new|local|international|partners|signup|quiz|types\/[^/]+|events\/[^/]+)?\/?$/;
 
 function slug(raw: string | undefined | null): string {
   if (!raw) return "";
