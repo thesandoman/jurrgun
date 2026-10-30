@@ -952,7 +952,8 @@ quizRoutes.post("/quiz", async (c) => {
     .insert(vibes)
     .values({ accountId: user.account.id, ...values })
     .onConflictDoUpdate({ target: vibes.accountId, set: values });
-  await countReach(c.env, personal?.segment ?? DEFAULT_SEGMENT, FINISHED);
+  // Demo and tester accounts (is_demo) never count toward staff totals.
+  if (!user.account.isDemo) await countReach(c.env, personal?.segment ?? DEFAULT_SEGMENT, FINISHED);
   // Style cards go on the profile, merged with earlier answers. "How you date" is
   // romance data, so it lives in the bio and is cleared with romance mode (withoutDating).
   const dateStyle = personal?.openToMore ? styleOf(questions, answers, "open-to-more") : {};
@@ -1035,6 +1036,7 @@ quizRoutes.post("/quiz/reach", async (c) => {
   const user = c.var.user!;
   const q = Number(str((await c.req.parseBody()).q));
   if (!Number.isInteger(q) || q < 0 || q > MAX_REACH_Q) return c.body(null, 204);
+  if (user.account.isDemo) return c.body(null, 204);
   await countReach(c.env, personalOf(user.profile, user.account.role)?.segment ?? DEFAULT_SEGMENT, q);
   return c.body(null, 204);
 });

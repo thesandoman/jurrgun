@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { HAS_DB, createMember, db, req } from "./helpers";
-import { events, quizReach, registrations } from "../src/schema";
+import { accounts, events, quizReach, registrations } from "../src/schema";
 import { newId, randomToken } from "../src/lib/crypto";
 import { cleanHello, HELLO_MAX, helloOpen, helloPrompt } from "../src/domain/hello";
 import { biggestDrop, reachFunnel } from "../src/routes/admin/quiz-health";
@@ -76,6 +76,12 @@ describe.skipIf(!HAS_DB)("say hi first and quiz reach, end to end", () => {
     const after = (await db().select().from(quizReach).where(and(eq(quizReach.day, day), eq(quizReach.question, 5)))).reduce((t, r) => t + r.reached, 0);
     expect(after).toBe(before + 1);
     expect((await db().select().from(quizReach).where(eq(quizReach.question, 500))).length).toBe(0);
+    // Demo and tester accounts (is_demo) are never counted.
+    const demo = await createMember();
+    await db().update(accounts).set({ isDemo: true }).where(eq(accounts.id, demo.id));
+    expect((await req("/quiz/reach", { cookie: demo.cookie, form: { q: "5" } })).status).toBe(204);
+    const afterDemo = (await db().select().from(quizReach).where(and(eq(quizReach.day, day), eq(quizReach.question, 5)))).reduce((t, r) => t + r.reached, 0);
+    expect(afterDemo).toBe(after);
     const viewer = await createMember({ role: "insight_viewer" });
     expect(await (await req("/admin/quiz-health?lang=en", { cookie: viewer.cookie })).text()).toContain("Who finishes");
   });
