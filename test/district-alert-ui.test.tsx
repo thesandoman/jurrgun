@@ -98,9 +98,9 @@ describe("the privacy notice names the alert (owner-approved legal edit)", () =>
 });
 
 describe("today's notice tells members about the alert (owner, 2026-10-26)", () => {
-  it("the 26 October notice listed the weekly district note; the 27 October one lists only what changed since", () => {
-    // The weekly note was in the 26 October "What changed" card; card P1 (27 October) moved the date on.
-    expect(NOTICE_ISO).toBe("2026-10-27");
+  it("the 26 October notice listed the weekly district note; the 30 October one lists only what changed since", () => {
+    // The weekly note was in the 26 October "What changed" card; card P1 (30 October, the day it went live) moved the date on.
+    expect(NOTICE_ISO).toBe("2026-10-30");
     expect(NOTICE_CHANGES.some((c) => c.en.includes("weekly note"))).toBe(false);
   });
   it("the onboarding consent summary matches the notice", () => {

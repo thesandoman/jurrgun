@@ -17,7 +17,7 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-10-27";
+export const NOTICE_ISO = "2026-10-30";
 
 /** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
 export const CAMPAIGN_COUNT: Text = {
