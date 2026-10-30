@@ -8,6 +8,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { ENV, HAS_DB, createMember, db, req, type Member } from "./helpers";
 import { newId, randomToken, sha256 } from "../src/lib/crypto";
 import {
+  datingIntents,
   accounts,
   auditLog,
   connectionChoices,
@@ -270,5 +271,14 @@ describe.skipIf(!HAS_DB)("retention on the staff dashboard", () => {
     expect(await page.text()).toContain('action="/admin/retention"');
     const ran = await db().select().from(auditLog).where(and(eq(auditLog.actor, admin.id), eq(auditLog.action, RETENTION_ACTION))).limit(1);
     expect(ran).toHaveLength(0);
+  });
+
+  it("card D3: empties stored dating reasons and challenges, and leaves the other dating answers", async () => {
+    const m = await createMember();
+    await db().insert(datingIntents).values({ accountId: m.id, mode: "dating", reasons: ["long_term"], challenges: ["safety"], prefs: { kids: "want" } });
+    const counts = await runRetention(ENV);
+    expect(counts.datingWhyCleared).toBeGreaterThanOrEqual(1);
+    const [row] = await db().select().from(datingIntents).where(eq(datingIntents.accountId, m.id)).limit(1);
+    expect([row.mode, row.reasons, row.challenges, row.prefs]).toEqual(["dating", [], [], { kids: "want" }]);
   });
 });

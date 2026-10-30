@@ -262,7 +262,8 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
       .where(eq(chatMessages.sender, id))
       .orderBy(desc(chatMessages.createdAt))
       .limit(5000),
-    db.select({ mode: datingIntents.mode, reasons: datingIntents.reasons, challenges: datingIntents.challenges, prefs: datingIntents.prefs, updatedAt: datingIntents.updatedAt }).from(datingIntents).where(eq(datingIntents.accountId, id)).limit(1),
+    // Card D3: "reasons" and "challenges" are no longer collected and are emptied by retention, so not exported.
+    db.select({ mode: datingIntents.mode, prefs: datingIntents.prefs, updatedAt: datingIntents.updatedAt }).from(datingIntents).where(eq(datingIntents.accountId, id)).limit(1),
     db.select({ intent: buddyOptins.intent, active: buddyOptins.active, updatedAt: buddyOptins.updatedAt }).from(buddyOptins).where(eq(buddyOptins.accountId, id)).limit(1),
     db.select().from(buddyMatches).where(or(eq(buddyMatches.aAccount, id), eq(buddyMatches.bAccount, id))).orderBy(desc(buddyMatches.createdAt)).limit(500),
     db.select({ choice: buddySwipes.choice, createdAt: buddySwipes.createdAt }).from(buddySwipes).where(eq(buddySwipes.accountId, id)).limit(5000),

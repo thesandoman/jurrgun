@@ -38,7 +38,9 @@ describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
     const data = JSON.parse(text);
     expect(data.chatMessagesISent.map((x: { body: string }) => x.body)).toEqual(["my own words"]);
     expect(data.chatMessagesISent[0]).toMatchObject({ thread: "buddy", hasPhoto: true });
-    expect(data.datingIntents).toMatchObject({ mode: "dating", reasons: ["long_term"] });
+    // Card D3: dating "reasons" and "challenges" are no longer collected or exported.
+    expect(data.datingIntents).toMatchObject({ mode: "dating" });
+    expect(data.datingIntents.reasons).toBeUndefined();
     expect(data.bangkokBuddy.optIn.intent).toBe("friends");
     expect(data.bangkokBuddy.buddies[0]).toMatchObject({ with: "Buddyname", state: "active" });
     expect(data.meetFeedbackIGave.map((x: { comment: string }) => x.comment)).toEqual(["lovely"]);

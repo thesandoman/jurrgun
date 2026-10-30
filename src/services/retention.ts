@@ -188,6 +188,8 @@ export const RETENTION_ACTION = "retention.run";
 
 export type RetentionCounts = {
   signalsCleared: number;
+  /** Card D3: stored dating "reasons" and "challenges" emptied (no longer collected; nothing read them). */
+  datingWhyCleared: number;
   choicesDeleted: number;
   sessionsDeleted: number;
   loginAttemptsDeleted: number;
@@ -286,6 +288,14 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
 
   // Pinky Plans: a Pinky ended during an open report kept its chat for the review; once the reports close, it goes.
   await releaseHeldPinkies(db);
+  // Card D3 (owner, 2026-10-30): dating "reasons" and "challenges" are section 26 data that no feature
+  // read, so they are no longer collected and any stored answers are emptied. Idempotent: every run
+  // also clears anything written by a page left open from before.
+  const datingWhy = await db
+    .update(datingIntents)
+    .set({ reasons: [], challenges: [] })
+    .where(sql`${datingIntents.reasons} <> '[]'::jsonb or ${datingIntents.challenges} <> '[]'::jsonb`)
+    .returning({ id: datingIntents.accountId });
   // Pinky Plans: the daily idea count is only needed for today (Bangkok time).
   await db.delete(pinkyIdeaViews).where(lt(pinkyIdeaViews.day, new Date(bkkDayStart(now).getTime() + 7 * HOUR).toISOString().slice(0, 10)));
 
@@ -426,6 +436,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   await db.delete(talkQuestions).where(inArray(talkQuestions.eventId, endedBefore(new Date(now.getTime() - 30 * DAY))));
   const counts: RetentionCounts = {
     signalsCleared: signals.length,
+    datingWhyCleared: datingWhy.length,
     choicesDeleted: choices.length + buddyTaps.length + endedTable.length + endedBuddy.length + buddyConnsGone.length,
     sessionsDeleted: sess.length,
     loginAttemptsDeleted: attempts.length,
