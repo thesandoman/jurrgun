@@ -11,8 +11,9 @@ process.env.TEST_DB_NAME = testDb;
 // another file's rows between that file's inserts and its own run, and that
 // file's counts come back 0. These files run in their own group, one file at a
 // time, after every other file has finished. Any new test that calls one of
-// these joins the group by itself.
-const RETENTION_CALL = /\b(runRetention|retentionIfDue|runClock|onClockTask)\(/;
+// these joins the group by itself. roundIfDue is here because buddy rounds
+// switch off every other buddy opt-in, which races files like pinky-buddy.
+const RETENTION_CALL = /\b(runRetention|retentionIfDue|runClock|onClockTask|roundIfDue)\(/;
 const retentionFiles = readdirSync("test")
   .filter((f) => /\.test\.tsx?$/.test(f) && RETENTION_CALL.test(readFileSync(`test/${f}`, "utf8")))
   .map((f) => `test/${f}`);
