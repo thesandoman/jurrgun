@@ -2,9 +2,11 @@
 //
 //   BASE=http://localhost:8787 node .claude/skills/jurrgun-ui/scripts/shots.mjs '<jobs json>' [outDir]
 //
-// Each job: { name, path, who?, w?, h?, mobile?, mode?: "light"|"dark", lang?: "th"|"en", js?, wait?, full?, check? }
+// Each job: { name, path, who?, cookie?, w?, h?, mobile?, mode?: "light"|"dark", lang?: "th"|"en", js?, wait?, full?, check? }
 //   who    seeded username to sign in as (password read from scripts/seed.ts, never printed); without it
 //          the shot is signed out, and "/" shows the visitor landing (the intro is optional, at /intro)
+//   cookie session id (the bkk_sid value) of a local account made for the shot, e.g. a throwaway
+//          sign-up on the dev server; used instead of who
 //   js     expression run before the shot; its value is printed
 //   full   capture the whole page (up to 2400px tall)
 //   check  print layout problems: sideways scroll, gaps between blocks over the spacing cap,
@@ -79,7 +81,8 @@ const CHECK = (cap) => `(() => {
 for (const j of jobs) {
   const w = j.w || 375;
   await send("Network.clearBrowserCookies");
-  if (j.who) await send("Network.setCookie", { name: "bkk_sid", value: await login(j.who), domain: "localhost", path: "/" });
+  const sid = j.cookie || (j.who ? await login(j.who) : null);
+  if (sid) await send("Network.setCookie", { name: "bkk_sid", value: sid, domain: "localhost", path: "/" });
   await send("Network.setCookie", { name: "lang", value: j.lang || "th", domain: "localhost", path: "/" });
   await send("Emulation.setDeviceMetricsOverride", { width: w, height: j.h || (w < 768 ? 812 : 900), deviceScaleFactor: 1, mobile: j.mobile ?? w < 768 });
   await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: j.mode || "light" }] });
