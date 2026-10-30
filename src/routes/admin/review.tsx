@@ -210,7 +210,7 @@ adminReview.get("/", async (c) => {
               <form
                 method="post"
                 action={`/admin/review/${e.id}/reject`}
-                onsubmit={paused ? `return confirm(${JSON.stringify(t("ยกเลิกกิจกรรมนี้และแจ้งทุกคนที่มีที่นั่ง?", "Cancel this event and tell everyone with a place?"))})` : undefined}
+                data-confirm={paused ? t("ยกเลิกกิจกรรมนี้และแจ้งทุกคนที่มีที่นั่ง?", "Cancel this event and tell everyone with a place?") : undefined}
               >
                 <TextArea
                   label={paused ? t("ยกเลิกพร้อมเหตุผล", "Cancel with a note") : t("ส่งกลับพร้อมเหตุผล", "Send back with a note")}

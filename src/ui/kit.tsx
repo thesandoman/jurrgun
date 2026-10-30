@@ -120,6 +120,30 @@ function SparkPop(props: { initial: string }) {
   );
 }
 
+/**
+ * Small behaviours that used to be inline on*= attributes, which a CSP with
+ * nonces blocks. One delegated listener per event, on the document:
+ *   data-select-all       focus selects a read-only link field
+ *   data-autosubmit       change submits the form (a lone switch)
+ *   data-confirm="…"      submit asks first (WCAG 3.3.4)
+ *   data-confirm-action   moderation: asks with data-c-<action>, "{d}" = days
+ *   data-no-submit        a form that only drives scripts never submits
+ *   data-toggle-pressed   a button flips aria-pressed
+ *   data-reveal           the password show/hide button
+ */
+export const HANDLERS_JS = `(function(d){
+d.addEventListener("focusin",function(e){var t=e.target;if(t&&t.matches&&t.matches("[data-select-all]"))t.select()});
+d.addEventListener("change",function(e){var t=e.target;if(t&&t.matches&&t.matches("[data-autosubmit]")&&t.form){t.form.requestSubmit?t.form.requestSubmit():t.form.submit()}});
+d.addEventListener("submit",function(e){var f=e.target;if(!f||!f.matches)return;
+if(f.matches("[data-no-submit]")){e.preventDefault();return}
+var m=f.getAttribute("data-confirm");
+if(f.matches("[data-confirm-action]")){var a=f.elements.namedItem("action");a=a&&a.value||"";m=f.getAttribute("data-c-"+a);var dd=f.elements.namedItem("days");if(m)m=m.replace("{d}",dd?dd.value:"")}
+if(m&&!confirm(m))e.preventDefault()},true);
+d.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-toggle-pressed],[data-reveal]");if(!b)return;
+if(b.matches("[data-toggle-pressed]")){b.setAttribute("aria-pressed",String(b.getAttribute("aria-pressed")!=="true"));return}
+var i=d.getElementById(b.getAttribute("aria-controls"));if(!i)return;var s=i.type==="password";i.type=s?"text":"password";b.setAttribute("aria-pressed",String(s));b.textContent=s?b.dataset.hide:b.dataset.show});
+})(document)`;
+
 /** The response's CSP nonce, provided by page() (src/lib/security-headers.ts). */
 const NonceContext = createContext<string | undefined>(undefined);
 
@@ -208,6 +232,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
           }}
         />
         <Script dangerouslySetInnerHTML={{ __html: SPRING_JS + ";" + SHEET_JS }} />
+        <Script dangerouslySetInnerHTML={{ __html: HANDLERS_JS }} />
       </head>
       <body class={[opts.admin && "admin", opts.bare && "bare", opts.fullscreen && "fullmap-body"].filter(Boolean).join(" ") || undefined}>
         {opts.fullscreen ? (
@@ -506,7 +531,7 @@ export function Field(props: {
             aria-pressed="false"
             data-show={props.reveal.show}
             data-hide={props.reveal.hide}
-            onclick="var i=document.getElementById(this.getAttribute('aria-controls')),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',String(s));this.textContent=s?this.dataset.hide:this.dataset.show"
+            data-reveal=""
           >
             {props.reveal.show}
           </button>

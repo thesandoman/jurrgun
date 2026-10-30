@@ -114,7 +114,7 @@ calendarRoutes.get("/settings/calendar", async (c) => {
         <Card>
           <div class="field">
             <label for="cal-link">{t("ลิงก์ปฏิทินส่วนตัว", "Private calendar link")}</label>
-            <input id="cal-link" type="text" readonly value={https} onfocus="this.select()" />
+            <input id="cal-link" type="text" readonly value={https} data-select-all="" />
           </div>
           <div class="row">
             <LinkButton href={webcal}>{t("เพิ่มใน Apple หรือ Outlook", "Add to Apple or Outlook")}</LinkButton>

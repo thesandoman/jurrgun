@@ -273,7 +273,7 @@ tableRoutes.get("/tables/:id", async (c) => {
           <Card>
             <div class="field">
               <label for="invite">{t("ลิงก์ชวนเข้าโต๊ะ (ส่งให้คนที่อยากชวนเท่านั้น)", "Invite link (send it only to people you'd like at your table)")}</label>
-              <input id="invite" type="text" readonly value={inviteLink(c, table)} onfocus="this.select()" />
+              <input id="invite" type="text" readonly value={inviteLink(c, table)} data-select-all="" />
             </div>
             <p class="muted">{t("คนที่เคยไปแฮงเอาต์กับคุณ เข้าโต๊ะได้จากหน้ากิจกรรมนั้นเลย", "People who've been to one of your hangouts can join from that event's page.")}</p>
             <form method="post" action={`/tables/${table.id}/link/reset`}>

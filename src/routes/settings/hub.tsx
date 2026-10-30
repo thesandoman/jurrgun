@@ -111,7 +111,7 @@ settingsRoutes.get("/settings", async (c) => {
     user.account.bkkRegistered === "verified" ? (
       <form method="post" action="/settings/badge" class="card inline-toggle">
         <label class="toggle" style="margin:0">
-          <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
+          <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} data-autosubmit="" />
           <span>🏅 {t("แสดงตราผู้มีทะเบียนบ้าน กทม.", "Show my Bangkok Registered Resident badge")}</span>
         </label>
         <noscript>

@@ -28,7 +28,8 @@ describe.skipIf(!HAS_DB)("staff area accessibility", () => {
     const page = await (await req(`/admin/moderation/${id}`, { cookie: admin.cookie })).text();
     expect(page).toContain("data-c-suspend=");
     expect(page).toContain("data-c-ban=");
-    expect(page).toContain("return confirm(");
+    // Asks via the shared HANDLERS_JS listener (no inline onsubmit: CSP).
+    expect(page).toContain("data-confirm-action");
     expect(page).not.toMatch(/<h1[\s\S]*?<\/h1>\s*[\s\S]*?<h3>/);
   });
 });

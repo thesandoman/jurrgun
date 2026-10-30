@@ -156,7 +156,7 @@ export async function countsOnlyPage(c: Ctx, e: Event, db: Db, access: RosterAcc
           </form>
         ) : null}
         {editable && e.status !== "cancelled" ? (
-          <form method="post" action={`${BASE}/${e.id}/cancel`} onsubmit={`return confirm(${JSON.stringify(t("ยกเลิกกิจกรรมนี้และแจ้งผู้ลงทะเบียนทุกคน?", "Cancel this event and notify every registrant?"))})`}>
+          <form method="post" action={`${BASE}/${e.id}/cancel`} data-confirm={t("ยกเลิกกิจกรรมนี้และแจ้งผู้ลงทะเบียนทุกคน?", "Cancel this event and notify every registrant?")}>
             <Button kind="danger">{t("ยกเลิกกิจกรรม", "Cancel event")}</Button>
           </form>
         ) : null}

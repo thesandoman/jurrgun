@@ -380,7 +380,7 @@ hostRoutes.get("/host", async (c) => {
             {e.visibility === "private" && e.privateToken && e.status === "published" ? (
               <div class="field">
                 <label for={`pl-${e.id}`}>{t("ลิงก์ส่วนตัว (ส่งให้คนที่อยากชวนเท่านั้น)", "Private link (send it only to people you invite)")}</label>
-                <input id={`pl-${e.id}`} type="text" readonly value={privateLink(c, e)} onfocus="this.select()" />
+                <input id={`pl-${e.id}`} type="text" readonly value={privateLink(c, e)} data-select-all="" />
               </div>
             ) : null}
             <div class="row">

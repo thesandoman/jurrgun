@@ -79,7 +79,7 @@ safetyRoutes.get("/safety", (c) => {
         <form
           id="plan"
           class="plan"
-          onsubmit="return false"
+          data-no-submit=""
           data-tpl={t(
             "บอกแผนไว้ก่อนนะ: ไปเจอ {who} ที่ {where} ตอน {when} จะทักกลับก่อน {back} ถ้าเงียบไป ช่วยโทรหาหน่อย 🙏",
             "My plan: meeting {who} at {where}, {when}. I'll message you by {back}. If you don't hear from me, please call. 🙏",

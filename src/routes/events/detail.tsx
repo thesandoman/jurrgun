@@ -837,7 +837,7 @@ function InviteBox(props: { event: Event; url: string | null; v: View }) {
       <p class="muted">{t("ส่งให้เพื่อน 1 คน ใช้ได้ครั้งเดียว", "Send to one friend. It works once.")}</p>
       <div class="field">
         <label for="invite-url">{t("ลิงก์ชวนเพื่อน", "Invite link")}</label>
-        <input id="invite-url" type="url" readonly value={props.url} onfocus="this.select()" />
+        <input id="invite-url" type="url" readonly value={props.url} data-select-all="" />
       </div>
       <div class="row">
         <button type="button" class="btn ghost" data-copy data-done={t("คัดลอกแล้ว", "Copied")} hidden>

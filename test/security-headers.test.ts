@@ -70,3 +70,23 @@ describe("CSP reports", () => {
     expect(cspReportSummary("not json")).toBeNull();
   });
 });
+
+describe("no inline event handlers (CSP nonces don't cover on*= attributes)", () => {
+  it("no JSX in src sets an on*= attribute; the behaviours live in HANDLERS_JS", async () => {
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const hits = readdirSync("src", { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => `src/${f}`)
+      .flatMap((f) => readFileSync(f, "utf8").split("\n").map((l, i) => [f, i + 1, l] as const))
+      .filter(([, , l]) => /\son(click|change|submit|focus|blur|input|load|error|key\w+)=["{]/i.test(l))
+      .map(([f, n]) => `${f}:${n}`);
+    expect(hits).toEqual([]);
+  });
+
+  it("every page carries the handlers script with the nonce", async () => {
+    const r = await app.request("https://jurrgun.apps.sv-academy.org/login", {}, {} as never);
+    const nonce = /'nonce-([^']+)'/.exec(r.headers.get("content-security-policy-report-only") ?? "")?.[1];
+    const html = await r.text();
+    expect(html).toContain(`<script nonce="${nonce}">(function(d){\nd.addEventListener("focusin"`);
+  });
+});

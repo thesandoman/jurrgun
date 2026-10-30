@@ -557,7 +557,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
           data-c-warning={t("ส่งคำเตือนถึงสมาชิกคนนี้?", "Send this member a warning?")}
           data-c-suspend={t("ระงับบัญชีนี้ {d} วัน? สมาชิกจะออกจากระบบและได้รับแจ้ง", "Suspend this account for {d} days? They'll be signed out and notified.")}
           data-c-ban={t("แบนบัญชีนี้ถาวร? สมาชิกจะออกจากระบบและได้รับแจ้ง", "Ban this account permanently? They'll be signed out and notified.")}
-          onsubmit="var a=this.elements.namedItem('action').value,m=this.dataset['c'+a.charAt(0).toUpperCase()+a.slice(1)];if(!m)return true;var d=this.elements.namedItem('days');return confirm(m.replace('{d}',d?d.value:''))"
+          data-confirm-action=""
         >
           <div class="field">
             <label for="f-action">{t("การดำเนินการ", "Action")}</label>

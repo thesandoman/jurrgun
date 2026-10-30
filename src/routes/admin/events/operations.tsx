@@ -229,7 +229,7 @@ adminEvents.get(
         {e.visibility === "private" && e.privateToken && (editable || e.hostAccountId === a.id) ? (
           <div class="field">
             <label for="private-link">{t("ลิงก์ส่วนตัว (ส่งให้คนที่ชวนเท่านั้น)", "Private link (send it only to people you invite)")}</label>
-            <input id="private-link" type="text" readonly value={`${new URL(c.req.url).origin}/events/${e.id}?t=${encodeURIComponent(e.privateToken)}`} onfocus="this.select()" />
+            <input id="private-link" type="text" readonly value={`${new URL(c.req.url).origin}/events/${e.id}?t=${encodeURIComponent(e.privateToken)}`} data-select-all="" />
           </div>
         ) : null}
         <div class="row" style="margin:10px 0">
@@ -245,7 +245,7 @@ adminEvents.get(
             </form>
           ) : null}
           {editable && e.status !== "cancelled" ? (
-            <form method="post" action={`${BASE}/${e.id}/cancel`} onsubmit={`return confirm(${JSON.stringify(t("ยกเลิกกิจกรรมนี้และแจ้งผู้ลงทะเบียนทุกคน?", "Cancel this event and notify every registrant?"))})`}>
+            <form method="post" action={`${BASE}/${e.id}/cancel`} data-confirm={t("ยกเลิกกิจกรรมนี้และแจ้งผู้ลงทะเบียนทุกคน?", "Cancel this event and notify every registrant?")}>
               <Button kind="danger">{t("ยกเลิกกิจกรรม", "Cancel event")}</Button>
             </form>
           ) : null}
@@ -572,13 +572,13 @@ adminEvents.get(
           <form
             method="post"
             action={`${BASE}/${e.id}/noshows`}
-            onsubmit={`return confirm(${JSON.stringify(
+            data-confirm={
               ((n) =>
                 t(
                   `บันทึก ${n} คนเป็นผู้ไม่มาตามนัด? แต่ละคนจะได้ใบเตือน 1 ใบ และได้รับแจ้ง (ยกเว้นให้ได้ภายหลัง)`,
                   `Record ${n} ${n === 1 ? "person" : "people"} as no-shows? Each gets 1 strike and a private notice (you can waive one later).`,
-                ))(noShowPending),
-            )})`}
+                ))(noShowPending)
+            }
           >
             <p>
               <small>

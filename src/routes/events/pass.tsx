@@ -176,7 +176,7 @@ eventRoutes.get("/me/events/:id/pass", requireMember, async (c) => {
             </p>
           ) : null}
           {/* Tap the code to flip it to the short code, big, for a host typing it in. */}
-          <button type="button" class="qr-flip" aria-pressed="false" onclick="var p=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',String(p))">
+          <button type="button" class="qr-flip" aria-pressed="false" data-toggle-pressed="">
             <span class="qr-face qr-front" role="img" aria-label={t("คิวอาร์โค้ดบัตรเข้างาน ให้โฮสต์สแกน แตะเพื่อดูรหัสแบบตัวใหญ่", "Event pass QR code for the host to scan. Tap to show the short code large")} dangerouslySetInnerHTML={{ __html: qrSvg(`bkksocial:pass:${reg.passToken}`) }} />
             <span class="qr-face qr-back" aria-hidden="true">
               <small>{t("รหัสบัตร", "Pass code")}</small>

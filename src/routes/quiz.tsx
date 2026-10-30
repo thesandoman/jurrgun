@@ -604,7 +604,7 @@ export function VisibilityToggle(props: { v: View; visible: boolean; next: strin
     <form method="post" action="/quiz/visibility" class="card inline-toggle">
       <input type="hidden" name="next" value={props.next} />
       <label class="toggle" style="margin:0">
-        <input type="checkbox" name="visible" value="1" checked={props.visible} onchange="this.form.requestSubmit?this.form.requestSubmit():this.form.submit()" />
+        <input type="checkbox" name="visible" value="1" checked={props.visible} data-autosubmit="" />
         <span>
           {t("แสดงไทป์ของฉันให้คนที่โต๊ะเห็น", "Show my type to people at my Tables")}
           <small>{t("เฉพาะคนในโต๊ะประจำของคุณที่เห็น", "Only people at your Tables see it")}</small>

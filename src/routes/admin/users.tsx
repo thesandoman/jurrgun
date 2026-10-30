@@ -227,7 +227,7 @@ adminUsers.get("/:id", async (c) => {
           <form
             method="post"
             action={`/admin/users/${encodeURIComponent(acct.id)}/untrust`}
-            onsubmit={`return confirm(${JSON.stringify(t("ยกเลิกผู้จัดที่ไว้ใจ? กิจกรรมใหม่ของเขาจะต้องรอตรวจ", "Remove trusted host? Their new events will wait for review."))})`}
+            data-confirm={t("ยกเลิกผู้จัดที่ไว้ใจ? กิจกรรมใหม่ของเขาจะต้องรอตรวจ", "Remove trusted host? Their new events will wait for review.")}
           >
             <TextArea label={t("เหตุผล (บันทึกในบันทึกการตรวจสอบ)", "Reason (kept in the audit log)")} name="reason" rows={2} required maxlength={500} />
             <Button kind="ghost">{t("ยกเลิกผู้จัดที่ไว้ใจ", "Remove trusted host")}</Button>

@@ -214,7 +214,7 @@ async function area(c: C, opts: { newKey?: string; error?: string; status?: 400 
       {opts.newKey ? (
         <Notice kind="ok">
           {t("คีย์ใหม่ คัดลอกเก็บไว้ตอนนี้ จะไม่แสดงอีก:", "Your new key. Copy it now; it won't be shown again:")}
-          <input type="text" readonly value={opts.newKey} onfocus="this.select()" aria-label={t("คีย์ใหม่", "New key")} />
+          <input type="text" readonly value={opts.newKey} data-select-all="" aria-label={t("คีย์ใหม่", "New key")} />
         </Notice>
       ) : null}
 
