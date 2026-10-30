@@ -16,6 +16,30 @@ import type { View } from "./kit";
 import { JourneyTop, type Journey } from "./journey";
 import { Script } from "./kit";
 
+/**
+ * Thai has no spaces between words, so the browser breaks lines with its own dictionary, and that
+ * dictionary splits some compounds into their parts: at 200% text the Bangkok step showed "ต่าง|ประเทศ"
+ * and "ช่วง|หนึ่ง", its hint "คละ|คนในโต๊ะ", and the basics hint "ไม่|แสดงให้ใครเห็น". No CSS was
+ * forcing these (nothing in the flow sets overflow-wrap, word-break or hyphens); each is a break the
+ * dictionary allows. A word joiner (U+2060, invisible) between the parts takes that one break away, so
+ * the line breaks before the whole word instead. Applied to the flow's hints, answer cards and option
+ * pills; add a pair here when a screenshot shows another split.
+ */
+const WJ = "\u2060";
+export const THAI_KEEP: readonly (readonly [string, string])[] = [
+  ["ต่าง", "ประเทศ"],
+  ["ต่าง", "จังหวัด"],
+  ["ต่าง", "ชาติ"],
+  ["ช่วง", "หนึ่ง"],
+  ["คละ", "คน"],
+  ["ไม่", "แสดง"],
+];
+export function keepThaiWords(s: string): string {
+  if (!/[\u0E00-\u0E7F]/.test(s)) return s;
+  for (const [a, b] of THAI_KEEP) s = s.split(a + b).join(a + WJ + b);
+  return s;
+}
+
 export function FlowStep(props: {
   title: string;
   /** One short helper line. */
@@ -60,7 +84,7 @@ export function FlowStep(props: {
         {props.info ? (
           // The ⓘ sits at the end of the helper line, not alone on a line of its own.
           <div class="flow-hint with-info">
-            {props.hint ? <span>{props.hint}</span> : null}
+            {props.hint ? <span>{keepThaiWords(props.hint)}</span> : null}
             <details class="more-info">
               <summary aria-label={`ⓘ ${props.title}`}>
                 <span aria-hidden="true">ⓘ</span>
@@ -69,7 +93,7 @@ export function FlowStep(props: {
             </details>
           </div>
         ) : props.hint ? (
-          <p class="flow-hint">{props.hint}</p>
+          <p class="flow-hint">{keepThaiWords(props.hint)}</p>
         ) : null}
         <div class="flow-body">{props.children}</div>
         <p class="flow-need" role="alert" hidden />
@@ -167,7 +191,7 @@ export function AnswerCard(props: { name: string; value: string; label: string; 
             {props.badge}
           </b>
         ) : null}
-        {props.label}
+        {keepThaiWords(props.label)}
       </span>
     </label>
   );

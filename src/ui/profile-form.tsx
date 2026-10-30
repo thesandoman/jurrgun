@@ -32,6 +32,7 @@ import {
 import type { View } from "./kit";
 import { PE_JS } from "./profile-edit-js";
 import { Script } from "./kit";
+import { keepThaiWords } from "./flow";
 
 const L = (lang: "th" | "en", x: { th: string; en: string }) => (lang === "en" ? x.en : x.th);
 
@@ -74,7 +75,8 @@ export function PhotoUndo(props: { v: View; had: boolean }) {
 /** Pill checkbox/radio with an emoji. */
 function EmojiPill(props: { name: string; o: Opt; lang: "th" | "en"; checked?: boolean; type?: "checkbox" | "radio"; big?: boolean; q?: string }) {
   const { o } = props;
-  const text = o.emoji === o.en ? "" : L(props.lang, o);
+  // keepThaiWords: Thai compounds such as ต่างประเทศ move to the next line whole (src/ui/flow.tsx).
+  const text = o.emoji === o.en ? "" : keepThaiWords(L(props.lang, o));
   return (
     <label class={`pill ${props.big ? "pf-big" : ""} ${props.q !== undefined ? "ip-chip" : ""}`} data-q={props.q}>
       <input type={props.type ?? "checkbox"} name={props.name} value={o.value} checked={props.checked} />
