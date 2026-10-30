@@ -669,8 +669,11 @@ export const feedback = pgTable(
     feltHeard: integer("felt_heard"),
     groupRating: integer("group_rating"),
     comment: text("comment").notNull().default(""),
-    // place_checked (migration 0027) is deliberately unused: a per-person "answered" flag could single out
-    // a lone place check at a small venue, so the check is offered only with the first feedback instead.
+    // place_checked (migration 0027): NEVER READ OR WRITE (privacy, D66). A per-person "answered" flag could
+    // single out a lone place check at a small venue, so the check is offered only with the first feedback
+    // instead. Declared exactly as in production only so drizzle-kit stops proposing to DROP it; selects on
+    // this table list their columns, and test/place-checked-unused.test.ts fails on any use outside here.
+    placeChecked: boolean("place_checked").notNull().default(false),
     createdAt: created(),
   },
   (t) => [uniqueIndex("social_feedback_unique_idx").on(t.eventId, t.accountId)],

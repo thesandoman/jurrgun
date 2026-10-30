@@ -71,8 +71,16 @@ eventRoutes.get("/events/:id/feedback", requireMember, async (c) => {
   const gate = await feedbackGate(c, id);
   if (gate.error) return gate.error;
   const db = getDb(c.env);
+  // An explicit column list: this table holds a column that must never be read (privacy, D66; see schema.ts).
   const [fb] = await db
-    .select()
+    .select({
+      metNewPerson: feedback.metNewPerson,
+      wouldMeetAgain: feedback.wouldMeetAgain,
+      feltSafe: feedback.feltSafe,
+      feltHeard: feedback.feltHeard,
+      groupRating: feedback.groupRating,
+      comment: feedback.comment,
+    })
     .from(feedback)
     .where(and(eq(feedback.eventId, id), eq(feedback.accountId, me(c).account.id)))
     .limit(1);
