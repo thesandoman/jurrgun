@@ -87,7 +87,10 @@ describe.skipIf(!HAS_DB)("events", () => {
     const l = await (await req("/?district=bang_bon&view=list", { cookie: m.cookie })).text();
     expect(l).not.toContain('id="dmap-data"');
     expect(l).toContain('name="view" value="list"');
-    expect((await req("/")).status).toBe(302);
+    // Signed out, "/" is the landing page now (owner landing cards), never Discover.
+    const out = await req("/");
+    expect(out.status).toBe(200);
+    expect(await out.text()).not.toContain('id="dmap-data"');
   });
 
   it("Discover is a full-screen map with calm chrome: search with filters, two rail buttons, the count on the sheet handle", async () => {

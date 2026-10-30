@@ -167,7 +167,8 @@ describe.skipIf(!HAS_DB)("runRetention", () => {
     const [goneConnRow] = await d.select().from(connections).where(eq(connections.id, goneConn)).limit(1);
     expect(goneConnRow.removedAt).not.toBeNull();
     expect(await d.select().from(reports).where(eq(reports.id, closedReport)).limit(1)).toHaveLength(1);
-    expect((await req("/", { cookie: gone.cookie })).status).toBe(302);
+    // The removed account's session no longer opens a member page ("/" is the public landing when signed out).
+    expect((await req("/settings", { cookie: gone.cookie })).status).toBe(302);
 
     // Too recent, and on hold: untouched.
     for (const m of [recent, held]) {
