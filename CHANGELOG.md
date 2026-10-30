@@ -424,7 +424,7 @@ tests, CI, tooling)
 
 ---
 
-## [0.14.0] - 2026-10-26 · Moderation, 💘 privacy, City Pulse for the BMA and a lighter app (current)
+## [0.14.0] - 2026-10-26 · Moderation, 💘 privacy, City Pulse for the BMA and a lighter app
 
 ### Features
 - **City Pulse for the BMA**: counts rounded to 5, open questions show a daily snapshot, unsorted suggestions wiped 60 days after their month, and a monthly round-up with an audited CSV [9bd7a66] [50e5551] [d27d92b] [e34baca]
@@ -465,6 +465,49 @@ tests, CI, tooling)
 
 ---
 
+## [0.15.0] - 2026-10-26 → 10-30 · Pinky Plans, privacy and security hardening, the landing page and Discover at / (current)
+
+### Features
+- **Pinky Plans**: a mutual Pinky opens a private space for the two of you, with a shared plan both confirm, one shared note, curated real-place date ideas, Pause and End kindly; the safety page prefills where and when [d83c658] [b0da6ea] [8b61bb4] [c818e01] [1342c7b] [e1d6748]
+- Buddy-to-partner Pinky on a Bangkok Buddy pairing, and a "last buddy" card for 7 days after it ends [c032428]
+- **Discover lives at /** for signed-in members; old /events links redirect [5b21b00]
+- **Empty-district alert**: opt in to a weekly note when a table opens in your district, with one-tap off and a Settings switch [88bc3f8] [30da949] [493d343] [088088e] [5a35e8a] [7b21a73] [e194d5f]
+- **Signed-in devices**: see your devices (kind and dates only), sign out everywhere else; unused devices sign out after 14 days [cfa290c] [504833b]
+- Bangkok now (weather, Sanroo headline) comes from the hourly clock, shown with "as of" [0b1b38d] [a2c1aa1]
+- City Insight: landings per campaign code by week, and table fill [d294102] [70202f5] [104b37a]
+
+### UX/UI
+- **New landing page and intro** (owner cards 1 to 7): one "Find my first table" start, a bigger headline, an honest three-step bento, flat tiles, three doors including a new /local page, one quiet BMA line, and /intro as three optional slides [bdbcde5] [b4e0940] [67b7133] [32d8566] [4191bb7] [d130bee] [ef49e57] [b6f67ec] [cf5e176] [069c2b0] [1d4b82d]
+- Phones: one RSVP bar, a host Send bar in reach, a top bar that fits from 360px, 48px primary actions, dots instead of counts, Me opens with one line [0698402] [ac06ce3] [cdeb964] [f90795a] [8385422] [45d374f] [28db45d] [68341cc] [b95131a]
+- Laptops and tablets: one RSVP on laptops, the bottom RSVP bar on tablets, folded host form sections [81b9897] [21c51e4] [5048236] [2a9a65e] [00815ac]
+- Large text: ticket cards reflow, the tab bar shows icons with the current label, heading gaps capped, the wordmark folds away [f39611b] [62a2244] [daf7974] [06b3276] [c1affa7]
+- Discover: an honest empty city; a picked event in the Top 10 keeps its ⭐ tag; 44px map chips and legend toggle [1239b41] [f8fceea] [c8c1532] [8381700]
+
+### Trust & safety
+- Waive notes use a fixed reason and never name anyone else [f07b40b]
+- Sign-in lockout can no longer be used to lock someone else out; current-password guesses are limited; sign-in timing reveals nothing [0d4fa32] [1d6311f]
+- Demo and test accounts stay out of staff figures, member views, buddy rounds and Pinky [70779bb] [94abad4] [44e6d28] [eca17fc]
+
+### Legal & privacy
+- **Privacy notice dated 30 October 2026**: members accept it once; it covers Pinky, photo metadata, self-hosted fonts, signed-in devices and campaign link counts [fcdbd17] [e2f53b4] [c1f2845] [61eabdf] [b1b76b9] [3989929]
+- Photos lose their location and camera details on upload, including those already stored [3c287d5]
+- Security headers on every response and a content security policy (report-only) with per-response nonces; no inline handlers left [8e61928] [5e8f7a5]
+- Atkinson Hyperlegible is self-hosted: Google Fonts is gone [11c14d0]
+- BMA figures are rounded and can't be worked out by subtraction, City Pulse included [ee1a2cd] [7d5cece]
+- The data export includes moderation actions, still-in-touch answers and waive reasons; consent history fold-out [d6c6e83] [903e01d] [e34b165]
+- Deactivating ends a Pinky at once; the friend share keeps where and when out of the URL query [e8d5826]
+
+### Website
+- Search Console verification; signed-out / and /local indexable and in the sitemap and llms.txt [e8b3c62] [471a8d1] [35c944c] [9f596a2]
+
+### Platform
+- The hourly clock heals itself, is on by default, and /admin and /api/health say when it last ran [b1e2314] [ccd770e] [7a73d66]
+- Migrations are all-or-nothing transactions; 0028 to 0034 applied [31ea997]
+- sv-map vendored into the repo [808c5d9]
+- Tests: order-dependent Discover tests search for their own events; buddy rounds run sequentially [fc3df9c] [9d3e62d] [2b3a11d]
+
+---
+
 [0.0.1]: https://github.com/thesandoman/jurrgun/compare/29cf49a...85e6dc7
 [0.1.0]: https://github.com/thesandoman/jurrgun/compare/85e6dc7...1ccb922
 [0.2.0]: https://github.com/thesandoman/jurrgun/compare/1ccb922...673bc4e
@@ -480,6 +523,7 @@ tests, CI, tooling)
 [0.12.0]: https://github.com/thesandoman/jurrgun/compare/c31fc18...31493aa
 [0.13.0]: https://github.com/thesandoman/jurrgun/compare/6fdf581...573cd91
 [0.14.0]: https://github.com/thesandoman/jurrgun/compare/573cd91...d67e0f0
+[0.15.0]: https://github.com/thesandoman/jurrgun/compare/d67e0f0...40cd973
 
 <!-- commit links -->
 [29cf49a]: https://github.com/thesandoman/jurrgun/commit/29cf49a
@@ -858,3 +902,94 @@ tests, CI, tooling)
 [e730fa4]: https://github.com/thesandoman/jurrgun/commit/e730fa4
 [e902c27]: https://github.com/thesandoman/jurrgun/commit/e902c27
 [f2514ba]: https://github.com/thesandoman/jurrgun/commit/f2514ba
+[00815ac]: https://github.com/thesandoman/jurrgun/commit/00815ac
+[0698402]: https://github.com/thesandoman/jurrgun/commit/0698402
+[069c2b0]: https://github.com/thesandoman/jurrgun/commit/069c2b0
+[06b3276]: https://github.com/thesandoman/jurrgun/commit/06b3276
+[088088e]: https://github.com/thesandoman/jurrgun/commit/088088e
+[0b1b38d]: https://github.com/thesandoman/jurrgun/commit/0b1b38d
+[0d4fa32]: https://github.com/thesandoman/jurrgun/commit/0d4fa32
+[104b37a]: https://github.com/thesandoman/jurrgun/commit/104b37a
+[11c14d0]: https://github.com/thesandoman/jurrgun/commit/11c14d0
+[1239b41]: https://github.com/thesandoman/jurrgun/commit/1239b41
+[1342c7b]: https://github.com/thesandoman/jurrgun/commit/1342c7b
+[1d4b82d]: https://github.com/thesandoman/jurrgun/commit/1d4b82d
+[1d6311f]: https://github.com/thesandoman/jurrgun/commit/1d6311f
+[21c51e4]: https://github.com/thesandoman/jurrgun/commit/21c51e4
+[28db45d]: https://github.com/thesandoman/jurrgun/commit/28db45d
+[2a9a65e]: https://github.com/thesandoman/jurrgun/commit/2a9a65e
+[2b3a11d]: https://github.com/thesandoman/jurrgun/commit/2b3a11d
+[30da949]: https://github.com/thesandoman/jurrgun/commit/30da949
+[31ea997]: https://github.com/thesandoman/jurrgun/commit/31ea997
+[32d8566]: https://github.com/thesandoman/jurrgun/commit/32d8566
+[35c944c]: https://github.com/thesandoman/jurrgun/commit/35c944c
+[3989929]: https://github.com/thesandoman/jurrgun/commit/3989929
+[3c287d5]: https://github.com/thesandoman/jurrgun/commit/3c287d5
+[4191bb7]: https://github.com/thesandoman/jurrgun/commit/4191bb7
+[44e6d28]: https://github.com/thesandoman/jurrgun/commit/44e6d28
+[45d374f]: https://github.com/thesandoman/jurrgun/commit/45d374f
+[471a8d1]: https://github.com/thesandoman/jurrgun/commit/471a8d1
+[493d343]: https://github.com/thesandoman/jurrgun/commit/493d343
+[5048236]: https://github.com/thesandoman/jurrgun/commit/5048236
+[504833b]: https://github.com/thesandoman/jurrgun/commit/504833b
+[5a35e8a]: https://github.com/thesandoman/jurrgun/commit/5a35e8a
+[5b21b00]: https://github.com/thesandoman/jurrgun/commit/5b21b00
+[5e8f7a5]: https://github.com/thesandoman/jurrgun/commit/5e8f7a5
+[61eabdf]: https://github.com/thesandoman/jurrgun/commit/61eabdf
+[62a2244]: https://github.com/thesandoman/jurrgun/commit/62a2244
+[67b7133]: https://github.com/thesandoman/jurrgun/commit/67b7133
+[68341cc]: https://github.com/thesandoman/jurrgun/commit/68341cc
+[70202f5]: https://github.com/thesandoman/jurrgun/commit/70202f5
+[70779bb]: https://github.com/thesandoman/jurrgun/commit/70779bb
+[7a73d66]: https://github.com/thesandoman/jurrgun/commit/7a73d66
+[7b21a73]: https://github.com/thesandoman/jurrgun/commit/7b21a73
+[7d5cece]: https://github.com/thesandoman/jurrgun/commit/7d5cece
+[808c5d9]: https://github.com/thesandoman/jurrgun/commit/808c5d9
+[81b9897]: https://github.com/thesandoman/jurrgun/commit/81b9897
+[8381700]: https://github.com/thesandoman/jurrgun/commit/8381700
+[8385422]: https://github.com/thesandoman/jurrgun/commit/8385422
+[88bc3f8]: https://github.com/thesandoman/jurrgun/commit/88bc3f8
+[8b61bb4]: https://github.com/thesandoman/jurrgun/commit/8b61bb4
+[8e61928]: https://github.com/thesandoman/jurrgun/commit/8e61928
+[903e01d]: https://github.com/thesandoman/jurrgun/commit/903e01d
+[94abad4]: https://github.com/thesandoman/jurrgun/commit/94abad4
+[9d3e62d]: https://github.com/thesandoman/jurrgun/commit/9d3e62d
+[9f596a2]: https://github.com/thesandoman/jurrgun/commit/9f596a2
+[a2c1aa1]: https://github.com/thesandoman/jurrgun/commit/a2c1aa1
+[ac06ce3]: https://github.com/thesandoman/jurrgun/commit/ac06ce3
+[b0da6ea]: https://github.com/thesandoman/jurrgun/commit/b0da6ea
+[b1b76b9]: https://github.com/thesandoman/jurrgun/commit/b1b76b9
+[b1e2314]: https://github.com/thesandoman/jurrgun/commit/b1e2314
+[b4e0940]: https://github.com/thesandoman/jurrgun/commit/b4e0940
+[b6f67ec]: https://github.com/thesandoman/jurrgun/commit/b6f67ec
+[b95131a]: https://github.com/thesandoman/jurrgun/commit/b95131a
+[bdbcde5]: https://github.com/thesandoman/jurrgun/commit/bdbcde5
+[c032428]: https://github.com/thesandoman/jurrgun/commit/c032428
+[c1affa7]: https://github.com/thesandoman/jurrgun/commit/c1affa7
+[c1f2845]: https://github.com/thesandoman/jurrgun/commit/c1f2845
+[c818e01]: https://github.com/thesandoman/jurrgun/commit/c818e01
+[c8c1532]: https://github.com/thesandoman/jurrgun/commit/c8c1532
+[ccd770e]: https://github.com/thesandoman/jurrgun/commit/ccd770e
+[cdeb964]: https://github.com/thesandoman/jurrgun/commit/cdeb964
+[cf5e176]: https://github.com/thesandoman/jurrgun/commit/cf5e176
+[cfa290c]: https://github.com/thesandoman/jurrgun/commit/cfa290c
+[d130bee]: https://github.com/thesandoman/jurrgun/commit/d130bee
+[d294102]: https://github.com/thesandoman/jurrgun/commit/d294102
+[d6c6e83]: https://github.com/thesandoman/jurrgun/commit/d6c6e83
+[d83c658]: https://github.com/thesandoman/jurrgun/commit/d83c658
+[daf7974]: https://github.com/thesandoman/jurrgun/commit/daf7974
+[e194d5f]: https://github.com/thesandoman/jurrgun/commit/e194d5f
+[e1d6748]: https://github.com/thesandoman/jurrgun/commit/e1d6748
+[e2f53b4]: https://github.com/thesandoman/jurrgun/commit/e2f53b4
+[e34b165]: https://github.com/thesandoman/jurrgun/commit/e34b165
+[e8b3c62]: https://github.com/thesandoman/jurrgun/commit/e8b3c62
+[e8d5826]: https://github.com/thesandoman/jurrgun/commit/e8d5826
+[eca17fc]: https://github.com/thesandoman/jurrgun/commit/eca17fc
+[ee1a2cd]: https://github.com/thesandoman/jurrgun/commit/ee1a2cd
+[ef49e57]: https://github.com/thesandoman/jurrgun/commit/ef49e57
+[f07b40b]: https://github.com/thesandoman/jurrgun/commit/f07b40b
+[f39611b]: https://github.com/thesandoman/jurrgun/commit/f39611b
+[f8fceea]: https://github.com/thesandoman/jurrgun/commit/f8fceea
+[f90795a]: https://github.com/thesandoman/jurrgun/commit/f90795a
+[fc3df9c]: https://github.com/thesandoman/jurrgun/commit/fc3df9c
+[fcdbd17]: https://github.com/thesandoman/jurrgun/commit/fcdbd17
