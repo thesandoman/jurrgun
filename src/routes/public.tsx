@@ -137,7 +137,7 @@ publicRoutes.get("/", (c) => {
         <a href="/intro">{t("เจอกันคืออะไร", "How Jurrgun works")}</a> · <a href="/learn">{t("เรียนรู้เพิ่ม", "Learn more")}</a>
       </p>
       <p class="muted">
-        <a href="/partner/apply">{t("ผู้จัดงานและสถานที่: สมัครเป็นพาร์ตเนอร์", "For organisers and venues: become a partner")}</a>
+        <a href="/partners">{t("ผู้จัดงานและสถานที่: สมัครเป็นพาร์ตเนอร์", "For organisers and venues: become a partner")}</a>
       </p>
     </>,
   );

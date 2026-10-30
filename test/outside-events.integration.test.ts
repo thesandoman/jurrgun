@@ -452,7 +452,7 @@ describe.skipIf(!HAS_DB)("owner cards 2026-10-20: go-together on Discover and th
     const [m, host] = await Promise.all([createMember(), createMember({ role: "circle_head" })]);
     expect(await (await req("/settings", { cookie: m.cookie })).text()).toContain('href="/settings/calendar"');
     expect(await (await req("/me/events", { cookie: m.cookie })).text()).toContain('href="/settings/calendar"');
-    expect(await (await req("/", { cookie: "jg_intro=seen" })).text()).toContain('href="/partner/apply"');
-    expect(await (await req("/host", { cookie: host.cookie })).text()).toContain('href="/partner/apply"');
+    expect(await (await req("/", { cookie: "jg_intro=seen" })).text()).toContain('href="/partners"');
+    expect(await (await req("/host", { cookie: host.cookie })).text()).toContain('href="/partners"');
   });
 });

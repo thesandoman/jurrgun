@@ -156,7 +156,7 @@ describe("card 5: three doors", () => {
     expect(main).toContain('<a href="/learn">Learn more</a>');
     // The footer already has these, so the landing doesn't repeat them.
     for (const dup of ['href="/faq"', 'href="/code-of-conduct"']) expect(main).not.toContain(dup);
-    expect(main).toContain('href="/partner/apply"');
+    expect(main).toContain('href="/partners"');
     const th = (await bento("th")).html;
     expect(th).toContain("เริ่มจากตรงไหนดี");
     expect(th).toContain("เรียนรู้เพิ่ม");
@@ -165,8 +165,8 @@ describe("card 5: three doors", () => {
   it("every door and every landing link outside the footer opens for a visitor", async () => {
     const { html } = await bento("en");
     const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
-    const hrefs = [...new Set([...main.matchAll(/<a href="(\/[^"#]*)"/g)].map((m) => m[1]))]// Sign up and sign in are the point; the partner link (kept by the owner) asks organisers to sign in to apply.
-      .filter((h) => !["/signup", "/login", "/partner/apply"].includes(h));
+    const hrefs = [...new Set([...main.matchAll(/<a href="(\/[^"#]*)"/g)].map((m) => m[1]))]// Sign up and sign in are the point; the partner link now opens the public /partners page, so it is checked like the rest.
+      .filter((h) => !["/signup", "/login"].includes(h));
     for (const href of hrefs) {
       if (["/new", "/local", "/international"].includes(href)) continue; // these read the database: covered in the integration test
       const res = await app.request(href, visitor("en"), { NO_EXTERNAL: "1" });

@@ -349,7 +349,7 @@ hostRoutes.get("/host", async (c) => {
       </Card>
       {me.role !== "partner_admin" ? (
         <p class="muted">
-          <a href="/partner/apply">{t("จัดงานในนามองค์กร? สมัครเป็นพาร์ตเนอร์", "Run events as an organisation? Become a partner")}</a>
+          <a href="/partners">{t("จัดงานในนามองค์กร? สมัครเป็นพาร์ตเนอร์", "Run events as an organisation? Become a partner")}</a>
         </p>
       ) : null}
       {c.req.query("notice") === "bad_link" ? <Notice kind="error">{t("ลิงก์นี้ใช้ไม่ได้ ใส่ลิงก์ที่ขึ้นต้นด้วย https:// ของหน้ากิจกรรม", "That link can't be used. Paste the event page's link, starting with https://")}</Notice> : null}
