@@ -35,11 +35,12 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
           <h2 id="pinky-h" class="pinky-name">
             เกี่ยวก้อย · Pinky
           </h2>
-          <p class="pinky-sub">
+          {/* The invitation line goes once it's mutual (owner P-N3): the state below says what's true now. */}
+          {state.mutual ? null : <p class="pinky-sub">
             {props.buddy
               ? t("ทำเควสต์ด้วยกันมา 2 ครั้งแล้ว เกี่ยวก้อยไว้ ถ้าเขาเกี่ยวกลับ ค่อยลองไปเดตกัน", "Two quests done together. Hook pinkies to try a date.")
               : t("เกี่ยวก้อยไว้ ถ้าเขาเกี่ยวกลับ ค่อยลองไปเดตกัน", "Hook pinkies to try a date")}
-          </p>
+          </p>}
         </div>
       </div>
       {state.mutual ? (
@@ -62,7 +63,7 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
             ) : null}
             <form method="post" action={action}>
               <button type="submit" name="action" value="back" class="btn ghost">
-                {t("กลับไปเป็นเพื่อน", "Back to friends")}
+                {t("กลับไปเป็นเพื่อน (ไม่มีการส่งข้อความ)", "Back to friends (no message is sent)")}
               </button>
             </form>
           </div>
@@ -72,7 +73,6 @@ export function PinkyRow(props: { t: T; otherId: string; name: string; state: Pi
             <a href="/safety#plan">{t("แชร์แผนนัด", "Share your plan")}</a> ·{" "}
             <a href="/learn/date-responsibly">{t("เดตอย่างปลอดภัย", "Date safely")}</a>
           </p>
-          <p class="pinky-note">{t("ถ้ากลับไปเป็นเพื่อน จะไม่มีใครได้รับแจ้ง", "Going back to friends doesn't notify anyone.")}</p>
         </>
       ) : state.mine ? (
         <>

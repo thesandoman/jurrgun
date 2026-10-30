@@ -69,6 +69,8 @@ export type PageOpts = {
  * a check-in, a connection or a stamp get a calm toast (owner, Phase 2A).
  */
 const PARTY = new Set(["friendship"]);
+/** Notices that stay until the member closes them, instead of a toast that fades (owner P-N3). */
+const STAY = new Set(["back_to_friends"]);
 
 /** `?notice=` keys pages can redirect with. */
 const NOTICES: Record<string, [string, string]> = {
@@ -176,7 +178,13 @@ export function page(c: Context<AppEnv>, opts: PageOpts, body: Child) {
       url={new URL(c.req.url).origin + new URL(c.req.url).pathname}
       seo={headLinks({ host: new URL(c.req.url).host, path: new URL(c.req.url).pathname, explicitLang: c.req.query("lang"), status: opts.status ?? 200, publicView: opts.publicView })}
     >
-      {notice ? (
+      {notice && STAY.has(noticeKey) ? (
+        <Notice kind="ok" class="stay">
+          <span>{v.t(notice[0], notice[1])}</span>
+          {/* Closing is just the same page without the notice: no script needed. */}
+          <a class="stay-close" href={new URL(c.req.url).pathname}>{v.t("ปิด", "Close")}</a>
+        </Notice>
+      ) : notice ? (
         <Notice kind="ok" class={PARTY.has(noticeKey) ? "toast party" : "toast"}>
           {v.t(notice[0], notice[1])}
         </Notice>

@@ -22,6 +22,8 @@ export const ALIVE_CSS = `
 .notice.ok.toast{position:fixed;z-index:40;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);width:max-content;max-width:min(92vw,460px);margin:0;display:flex;align-items:center;gap:10px;padding:12px 18px 12px 12px;border-radius:999px;background:var(--brand-soft);color:var(--ink);font-weight:650;box-shadow:0 14px 34px rgba(4,40,22,.35),0 0 0 1px rgba(6,48,28,.12) inset;animation:toast-in .5s cubic-bezier(.2,.8,.2,1) both,toast-out .45s ease 4.2s forwards}
 .notice.ok.toast::before{content:"✓";flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800;animation:toast-tick .5s .18s cubic-bezier(.2,.8,.2,1) both}
 .notice.ok.toast.party::before{content:"🎉";background:transparent;font-size:1.25rem}
+.notice.ok.stay{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.notice.ok.stay .stay-close{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;font-weight:650;color:var(--brand-strong,var(--brand))}
 @keyframes toast-in{from{opacity:0;transform:translate(-50%,-16px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes toast-out{to{opacity:0;transform:translate(-50%,-12px) scale(.96);visibility:hidden}}
 @keyframes toast-tick{from{transform:scale(0) rotate(-40deg)}to{transform:scale(1) rotate(0)}}

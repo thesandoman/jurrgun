@@ -28,10 +28,11 @@ import { ideaByKey } from "../content/date-ideas";
 import { DISTRICTS, districtsAZ, label } from "../lib/constants";
 import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
-import { fmtDate } from "../lib/i18n";
+import { fmtDate, fmtDay } from "../lib/i18n";
+import { SafeArrivalForm } from "./safety";
 import { requireMember } from "../lib/session";
 import { chatMessages, connectionChoices, connections, notifications, pinkies, pinkyPlans, profiles, type Pinky, type PinkyPlan } from "../schema";
-import { endPinkyOnConnection, ideasNow, pinkyFor, showMoreIdeas } from "../services/pinky-plans";
+import { endPinkyOnConnection, ideasNow, pinkyFor, planUpdateNotice, showMoreIdeas } from "../services/pinky-plans";
 import { withdrawPairTaps } from "../services/pinky";
 import { resolveThread } from "./chat";
 import { Button, Field, Notice, page, Select, str, TextArea, view } from "../ui/kit";
@@ -74,6 +75,7 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
   const idea = ideaByKey(plan?.ideaKey);
   const place = idea ? (lang === "en" ? idea.place.en : idea.place.th) : plan?.placeName;
   const ready = !!plan && !!place && !!plan.startsAt;
+  const past = !!plan?.startsAt && plan.startsAt.getTime() < Date.now();
   const shareWhere = place ? encodeURIComponent(place) : "";
   const shareWhen = plan?.startsAt ? encodeURIComponent(fmtDate(plan.startsAt, lang)) : "";
 
@@ -105,12 +107,28 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
 
       <section class="pk-sec" aria-labelledby="pk-plan">
         <h2 id="pk-plan">{t("แผนของเรา", "Our plan")}</h2>
-        {ready ? (
+        {ready && past ? (
+          // After its time, a plan is history (owner P-N2): where you went, and one way on. Dates are never counted.
+          <div class="pk-plan pk-past">
+            <p>
+              {t("เดตครั้งที่แล้ว", "Last time")}: <b>{place}</b>, {fmtDay(plan!.startsAt!, lang)}
+            </p>
+            {paused ? null : (
+              <a class="btn primary" href={back(p, "?edit=1#pk-form")}>
+                {t("วางแผนครั้งต่อไป", "Plan the next one")}
+              </a>
+            )}
+          </div>
+        ) : ready ? (
           <div class="pk-plan">
             <p class="pk-place">📍 {place}{plan!.district ? <small class="muted"> · {label(DISTRICTS, plan!.district, lang)}</small> : null}</p>
             <p>🗓 {fmtDate(plan!.startsAt!, lang)}</p>
             {bothConfirmed(plan) ? (
-              <p class="pk-confirmed">✓ {t("ยืนยันทั้งคู่แล้ว", "Both confirmed")}</p>
+              <>
+                <p class="pk-confirmed">✓ {t("ยืนยันทั้งคู่แล้ว", "Both confirmed")}</p>
+                {/* The existing private check (owner P-N2): only whoever sets it sees it, and it isn't tied to this Pinky. */}
+                <SafeArrivalForm v={v} context="self" />
+              </>
             ) : iConfirmed ? (
               <p class="muted">{t("คุณยืนยันแล้ว", "You've confirmed")}</p>
             ) : !paused ? (
@@ -198,7 +216,8 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
             </fieldset>
             <p class="muted">{t("แผน ไอเดีย และแชตของเกี่ยวก้อยนี้จะถูกลบทั้งหมด", "The plan, ideas and chat of this Pinky are all deleted.")}</p>
             <p class="muted">{t("ถ้ามีรายงานที่ยังตรวจอยู่ แชตจะเก็บไว้จนกว่าจะตรวจเสร็จ", "If there's an open report, the chat is kept until the review ends.")}</p>
-            <Button kind="danger">{t("จบอย่างใจดี", "End kindly")}</Button>
+            {/* Neutral, not red: red belongs only to the unlock moment (owner P-N3). */}
+            <Button kind="ghost">{t("จบอย่างใจดี", "End kindly")}</Button>
           </form>
         </details>
         <p class="row muted">
@@ -206,7 +225,7 @@ pinkyRoutes.get("/pinky/:id", requireMember, async (c) => {
         </p>
         <form method="post" action={`/block/${them}`}>
           <input type="hidden" name="back" value="/connections" />
-          <button class="btn ghost danger">⛔ {t("บล็อก", "Block")}</button>
+          <button class="btn ghost">⛔ {t("บล็อก", "Block")}</button>
         </form>
       </section>
     </>,
@@ -247,12 +266,15 @@ pinkyRoutes.post("/pinky/:id/plan", requireMember, async (c) => {
   const current = await planOf(db, p.id);
   // Typing the idea's own name back keeps the idea; anything else is the pair's own place.
   const keepIdea = current?.ideaKey && [ideaByKey(current.ideaKey)?.place.en, ideaByKey(current.ideaKey)?.place.th].includes(place) ? current.ideaKey : null;
-  await savePlan(db, p, current, {
-    placeName: keepIdea ? current!.placeName : place,
-    ideaKey: keepIdea,
-    district: DISTRICTS.some((d) => d.value === district) ? district : null,
-    startsAt,
-  }).execute();
+  await batch(c.env, [
+    savePlan(db, p, current, {
+      placeName: keepIdea ? current!.placeName : place,
+      ideaKey: keepIdea,
+      district: DISTRICTS.some((d) => d.value === district) ? district : null,
+      startsAt,
+    }),
+    ...(await planUpdateNotice(db, p, got.mine)),
+  ]);
   return c.redirect(back(p, "#pk-plan"));
 });
 
@@ -264,7 +286,10 @@ pinkyRoutes.post("/pinky/:id/idea", requireMember, async (c) => {
   const idea = ideaByKey(str((await c.req.parseBody()).idea));
   if (!idea) return c.redirect(back(p));
   const current = await planOf(db, p.id);
-  await savePlan(db, p, current, { placeName: idea.place.en, ideaKey: idea.key, district: idea.district, startsAt: current?.startsAt ?? null }).execute();
+  await batch(c.env, [
+    savePlan(db, p, current, { placeName: idea.place.en, ideaKey: idea.key, district: idea.district, startsAt: current?.startsAt ?? null }),
+    ...(await planUpdateNotice(db, p, got.mine)),
+  ]);
   return c.redirect(back(p, "?edit=1#pk-form"));
 });
 
@@ -274,11 +299,15 @@ pinkyRoutes.post("/pinky/:id/confirm", requireMember, async (c) => {
   const { db, p, mine } = got;
   if (!writable(p)) return c.redirect(back(p));
   const plan = await planOf(db, p.id);
-  if (plan && (plan.placeName || plan.ideaKey) && plan.startsAt) {
-    await db
-      .update(pinkyPlans)
-      .set(sideOf(p, mine) === "a" ? { aConfirmedAt: new Date() } : { bConfirmedAt: new Date() })
-      .where(eq(pinkyPlans.id, plan.id));
+  const already = plan ? (sideOf(p, mine) === "a" ? !!plan.aConfirmedAt : !!plan.bConfirmedAt) : true;
+  if (plan && !already && (plan.placeName || plan.ideaKey) && plan.startsAt) {
+    await batch(c.env, [
+      db
+        .update(pinkyPlans)
+        .set(sideOf(p, mine) === "a" ? { aConfirmedAt: new Date() } : { bConfirmedAt: new Date() })
+        .where(eq(pinkyPlans.id, plan.id)),
+      ...(await planUpdateNotice(db, p, mine)),
+    ]);
   }
   return c.redirect(back(p, "#pk-plan"));
 });

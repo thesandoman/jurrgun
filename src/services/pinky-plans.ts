@@ -12,13 +12,14 @@
  * report keeps its own copy and the message stays until the review ends.
  * Nothing here is audited: staff never see Pinky.
  */
-import { and, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import type { getDb } from "../db";
 import { bkkDayStart } from "../domain/pulse-heard";
 import { dayIdeas, ideaBatch, sharedKinds } from "../domain/pinky-plans";
 import type { DateIdea } from "../content/date-ideas";
 import { newId } from "../lib/crypto";
-import { buddyMatches, chatMessages, connections, datingIntents, pinkies, pinkyIdeaViews, pinkyPlans, reports, type Pinky } from "../schema";
+import { buddyMatches, chatMessages, connections, datingIntents, notifications, pinkies, pinkyIdeaViews, pinkyPlans, reports, type Pinky } from "../schema";
+import { notifyAt } from "../domain/chat";
 
 type Db = ReturnType<typeof getDb>;
 type Write = { toSQL(): { sql: string; params: unknown[] } };
@@ -155,4 +156,25 @@ export function showMoreIdeas(db: Db, p: Pinky, now = new Date()) {
     .insert(pinkyIdeaViews)
     .values({ id: newId(), pinkyId: p.id, day, shown: 1 })
     .onConflictDoUpdate({ target: [pinkyIdeaViews.pinkyId, pinkyIdeaViews.day], set: { shown: sql`least(${pinkyIdeaViews.shown} + 1, 2)` } });
+}
+
+/**
+ * Owner P-N1: when one person changes the plan or confirms it, the other gets
+ * one neutral notification, "Your plan was updated in My people". It never
+ * names Pinky or a date, waits for quiet hours, and at most one is waiting
+ * at a time (no pile of pings). Note edits stay silent, like the note itself.
+ */
+export const PLAN_NOTICE_KIND = "pinky_plan";
+export async function planUpdateNotice(db: Db, p: Pinky, from: string, now = new Date()): Promise<Write[]> {
+  const to = p.aAccount === from ? p.bAccount : p.aAccount;
+  const link = `/pinky/${p.id}`;
+  const [waiting] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(eq(notifications.accountId, to), eq(notifications.kind, PLAN_NOTICE_KIND), eq(notifications.link, link), isNull(notifications.readAt)))
+    .limit(1);
+  if (waiting) return [];
+  return [
+    db.insert(notifications).values({ id: newId(), accountId: to, kind: PLAN_NOTICE_KIND, titleTh: "แผนของคุณมีอัปเดตในคนรู้จัก", titleEn: "Your plan was updated in My people", link, createdAt: notifyAt(now) }),
+  ];
 }
