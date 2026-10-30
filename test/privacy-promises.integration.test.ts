@@ -172,12 +172,14 @@ describe.skipIf(!HAS_DB)("the notice's promises", () => {
     const marker = `export-${randomToken(6)}`;
     const ev = await attendedOnce(m.id);
     await db().insert(chatMessages).values({ id: newId(), thread: `circle:${ev}`, sender: m.id, body: `${marker}-chat` });
-    await db().insert(datingIntents).values({ accountId: m.id, mode: "dating", reasons: [`${marker}-why`] });
+    // Card D3: dating "reasons" are no longer exported; the dating goals (prefs) are.
+    await db().insert(datingIntents).values({ accountId: m.id, mode: "dating", reasons: [`${marker}-reason`], prefs: { goal: `${marker}-why` } });
     await db().insert(buddyOptins).values({ accountId: m.id, intent: "friends", active: true, updatedAt: new Date() }).onConflictDoNothing();
     await db().insert(thanks).values({ id: newId(), fromAccount: m.id, toAccount: other.id, context: `conn:${newId()}`, body: `${marker}-thanks` });
     await db().insert(feedback).values({ id: newId(), eventId: ev, accountId: m.id, comment: `${marker}-feedback` }).onConflictDoNothing();
     const text = await (await req("/settings/privacy/export", { cookie: m.cookie })).text();
     for (const part of ["chat", "why", "thanks", "feedback"]) expect(text, part).toContain(`${marker}-${part}`);
+    expect(text).not.toContain(`${marker}-reason`);
     expect(text).toMatch(/buddy/i);
   });
 
