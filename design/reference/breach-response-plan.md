@@ -1,6 +1,6 @@
 # Personal data breach plan · แผนรับมือเหตุละเมิดข้อมูลส่วนบุคคล
 
-*PDPA section 37(4) and the PDPC Notification on the criteria and methods for personal data breach notification, B.E. 2565 (2022). Drafted 16 Oct 2026 against `origin/main` at a038582. Not legal advice; the open items at the end need the owner. The record of processing is `design/reference/record-of-processing.md`.*
+*PDPA section 37(4) and the PDPC Notification on the criteria and methods for personal data breach notification, B.E. 2565 (2022). Drafted 16 Oct 2026 against `origin/main` at a038582; dry run and fixes 30 Oct 2026 (section 11). Not legal advice; the open items at the end need the owner. The record of processing is `design/reference/record-of-processing.md`.*
 
 ## 1. What counts · อะไรคือเหตุละเมิด
 
@@ -28,8 +28,9 @@ Anyone who spots a possible breach tells the incident lead at once. The 72-hour 
 2. **Rotate secrets** in SV Cloud settings (`settings_set`): `GOOGLE_CLIENT_SECRET`, `LINE_CHANNEL_SECRET`, `EMAIL_API_KEY`, `SETUP_KEY`, `IP_HASH_SECRET`. Ask SV Cloud to rotate the database credential. Caution: a new `EMAIL_HASH_SALT` orphans every stored sign-in email, and new VAPID keys end every push device.
 3. **Pause push and email:** remove `VAPID_PRIVATE_KEY` (push sends nothing without both keys) and `EMAIL_PROVIDER` (email sign-in hides itself without all four settings).
 4. **Revoke sessions:** delete rows from `identity_sessions` for the affected accounts, or all of them (a destructive step: confirm with the owner first, SVAGENTS.md rule 9). Members simply sign in again.
-5. **Disable the leaking route or staff access:** there is no kill switch in the code today, so roll back the last deploy (`deploy_rollback`) or push a fix that returns 404; set an affected staff account's role to `user` or suspend it.
-6. **Preserve evidence** before anything is cleaned up (section 8). Do not run the retention job by hand during an incident.
+5. **Disable the leaking route or staff access:** there is no kill switch in the code today, so roll back the last deploy (`deploy_rollback`) or push a fix that returns 404; set an affected staff account's role to `user` or suspend it. **If SV Cloud is unreachable** (it was for about two days in late October 2026): every push to `main` on GitHub deploys, so a `git revert` pushed from any machine, or GitHub's web editor, still takes a route down.
+6. **Stop automatic deletion:** the hourly clock runs retention once a day, and it would delete evidence on its own schedule (chats at 180 days, a Pinky's chat when the Pinky ends once reports close, login attempts after 24 hours). A `bma_admin` presses **Stop** on the clock card at `/admin` (POST `/admin/clock`). This also pauses reminders. Start it again after the evidence is saved.
+7. **Preserve evidence** before anything is cleaned up (section 8). Do not run the retention job by hand during an incident.
 
 ## 4. Assess the risk · ประเมินความเสี่ยง
 
@@ -55,7 +56,7 @@ If 72 hours can't be met, notify as soon as possible and explain the delay; the 
 
 ## 6. Tell members without delay (high risk) · แจ้งสมาชิก
 
-Say what happened, what data, what we did, what they can do, and who to contact. Send it in the app (a notification row), by push (no details on the lock screen) and by email where an address is linked. Message template, Thai first; the incident lead fills in the incident, the data and the date beside each line before sending:
+Say what happened, what data, what we did, what they can do, and who to contact. Send it in the app (a notification row) and by push (no details on the lock screen). **Not by email:** sign-in emails are stored only as keyed hashes, so we can't write to anyone (dry run, 30 Oct 2026). A member who has been signed out by containment sees the notice on their next sign-in; the public `/privacy` page should carry a dated note for anyone who can't sign in. Message template, Thai first; the incident lead fills in the incident, the data and the date beside each line before sending:
 
 > **เรื่องข้อมูลของคุณใน Jurrgun**
 > เราพบเหตุที่ทำให้ข้อมูลบางส่วนของคุณอาจถูกเปิดเผย ข้อมูลที่เกี่ยวข้องและวันที่เกิดเหตุอยู่ด้านล่าง
@@ -81,6 +82,8 @@ SV Cloud, Cloudflare (through SV Cloud), the email provider (Resend or Postmark)
 - SV Cloud observability: `obs_list_errors`, `obs_get_trace`, `obs_list_slow_requests`, and `deploy_list` for what was live.
 - The timeline, the risk assessment, every notice sent and its time.
 - Never copy leaked personal data into tickets or chats; refer to ids.
+- **Pinky and dating writes no audit rows** by design (staff never see romance data). For a leak there, the evidence is the SV Cloud traces and the deploy list, not `/admin/audit`.
+- CSP violation reports land in the SV Cloud logs as "csp violation" (directive and blocked origin only).
 
 ## 9. The BMA · กรุงเทพมหานคร
 
@@ -89,6 +92,22 @@ Tell the BMA liaison when the breach touches moderation, staff accounts held by 
 ## 10. After · หลังเหตุ
 
 Fix the cause, add a test that keeps the promise (in `test/privacy-promises.test.ts` or a `privacy-*` test), update the notice if anything it says changed, and write a short postmortem within 14 days: what happened, timeline, impact, what we changed.
+
+## 11. Dry run, 30 October 2026 · ซ้อมแผน
+
+Thirty minutes on paper against `origin/main` (cfa290c), with no real data touched. Scenario: a bug shows one pair's Pinky plan (place, day, shared note) to another member who opens a stale link. That's section 26 data, so high risk: PDPC within 72 hours and the members without delay.
+
+| Step | What happened on paper | Gap | Fixed in this plan |
+|---|---|---|---|
+| Spotted | A member reports it through the in-app report, which goes to moderators | Moderators must not see romance data, and there is no privacy channel | Open item 8 |
+| Clock starts | The owner is the only role holder; this week SV Cloud was unreachable from his laptop for two days | Containment depended on SV Cloud | Section 3.5: revert through GitHub |
+| Contain | Roll back, or push a 404 for `/pinky/*` | No kill switch | Open item 7 (unchanged) |
+| Evidence | `/admin/audit` has nothing: Pinky writes no audit rows by design | The plan pointed at the audit log | Section 8: use traces and deploys |
+| Evidence | The daily retention run would delete the Pinky chat once the reports close | No step to pause deletion | Section 3.6: stop the clock |
+| Members | Plan said "by email where an address is linked" | Emails are hashes: we can't email anyone | Section 6: app and push, plus a dated note on /privacy |
+| PDPC | Content of the notice is clear (section 5) | Controller's legal name, DPO and contact are still open | Lawyer pack (design/reference/pdpa-lawyer-pack.md) |
+
+Next dry run: after the lawyer review, with a named engineer on call.
 
 ## Breach log · บันทึกเหตุละเมิด
 
@@ -105,6 +124,8 @@ Fix the cause, add a test that keeps the promise (in `test/privacy-promises.test
 5. The BMA's controller status.
 6. A real privacy email to replace the placeholder.
 7. A kill switch or read-only mode for staff pages, so containment doesn't need a deploy.
+8. A way for a member or outsider to report a privacy or security problem: today it's the placeholder privacy address and in-app reports (which go to moderators, who must not see romance data). `security.txt` waits for the real address (owner: "not yet").
+9. A dated public note on `/privacy` for incidents, for members who can't sign in.
 
 ## Sources
 
