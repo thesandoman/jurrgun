@@ -215,7 +215,11 @@ export function PinLegend(props: { t: T }) {
   const { t } = props;
   return (
     <details class="fd-legend" id="fd-legend">
-      <summary>{t("หมุดหมายถึงอะไร", "What the pins mean")}</summary>
+      {/* aria-expanded starts closed and follows the fold (FULLMAP_JS, on toggle); the chevron is decoration. */}
+      <summary aria-expanded="false">
+        <span class="fd-legend-label">{t("หมุดหมายถึงอะไร", "What the pins mean")}</span>
+        <span class="fd-legend-chev" aria-hidden="true" />
+      </summary>
       <ul>
         <li>
           <i class="svm-k exact" aria-hidden="true" /> {t("สถานที่จริง", "Exact place")}
@@ -550,6 +554,11 @@ moreBtn.addEventListener("click", () => {
   if (!f) return;
   f.open = true;
   (f.querySelector('select[name="tag"]') || f.querySelector("summary"))?.focus();
+});
+// What the pins mean: its summary's aria-expanded (server-rendered "false") follows the fold.
+document.getElementById("fd-legend")?.addEventListener("toggle", (ev) => {
+  const d = ev.currentTarget;
+  d.querySelector(":scope > summary")?.setAttribute("aria-expanded", d.open ? "true" : "false");
 });
 // With the chips folded behind Filters (large text in landscape), opening Filters brings the categories into view.
 document.getElementById("fd-filters")?.addEventListener("toggle", (ev) => {
@@ -907,6 +916,13 @@ html.a11y-contrast .fd-bar::before{background:var(--surface);-webkit-backdrop-fi
 /* The fold's toggle is a full 44px row with its own focus ring (the .fullmap keeps it ahead of the app's summary rules). */
 .fullmap .fd-legend>summary{display:flex;align-items:center;box-sizing:border-box;min-height:44px;margin:0 -12px;padding:10px 12px;border-radius:12px;font-weight:600;line-height:1.4;cursor:pointer}
 .fullmap .fd-legend>summary:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+/* Its open/closed arrow: the same chevron as the app's other folds (native.ts), turning when open; no turn with reduced motion. */
+.fd-legend>summary{list-style:none}
+.fd-legend>summary::-webkit-details-marker{display:none}
+.fd-legend-label{flex:1 1 auto;min-width:0}
+.fd-legend-chev{flex:none;width:8px;height:8px;margin:0 4px 4px 12px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg);transition:transform .2s ease}
+.fd-legend[open]>summary .fd-legend-chev{transform:rotate(-135deg);margin:4px 4px 0 12px}
+@media (prefers-reduced-motion:reduce){.fd-legend-chev{transition:none}}
 .fd-legend ul{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
 .fd-legend li{display:flex;align-items:center;gap:10px;line-height:1.4}
 /* A pin that is only a district area says so on its card, with the same dashed mark as the legend. */

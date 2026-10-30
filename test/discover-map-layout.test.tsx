@@ -95,6 +95,25 @@ describe("Discover map Key", () => {
     expect(FULLMAP_CSS).toMatch(/\.fullmap \.fd-legend>summary\{display:flex;[^}]*min-height:44px;/);
     expect(FULLMAP_CSS).toMatch(/\.fullmap \.fd-legend>summary:focus-visible\{outline:3px solid var\(--ink\)/);
   });
+
+  it("its toggle shows a decorative open/closed arrow and says it starts closed, with no inline handlers", () => {
+    for (const t of [th, en]) {
+      const html = page(t);
+      const summary = html.slice(html.indexOf('class="fd-legend"'), html.indexOf("</summary>", html.indexOf('class="fd-legend"')));
+      expect(summary).toContain('<summary aria-expanded="false">');
+      expect(summary).toContain('<span class="fd-legend-chev" aria-hidden="true">');
+      // Thai first: the label comes before the arrow.
+      expect(summary.indexOf(t === th ? "หมุดหมายถึงอะไร" : "What the pins mean")).toBeLessThan(summary.indexOf("fd-legend-chev"));
+      expect(html).not.toMatch(/\son[a-z]+=/i);
+    }
+    // aria-expanded follows the fold through the nonce'd map script, not an inline handler.
+    expect(FULLMAP_JS).toContain('document.getElementById("fd-legend")?.addEventListener("toggle"');
+    expect(FULLMAP_JS).toContain('setAttribute("aria-expanded", d.open ? "true" : "false")');
+    // The arrow turns when open, and not with reduced motion.
+    expect(FULLMAP_CSS).toContain(".fd-legend[open]>summary .fd-legend-chev{transform:rotate(-135deg)");
+    expect(FULLMAP_CSS).toContain("@media (prefers-reduced-motion:reduce){.fd-legend-chev{transition:none}}");
+    expect(FULLMAP_CSS).toContain(".fd-legend>summary::-webkit-details-marker{display:none}");
+  });
 });
 
 // The chips row's helpers, run as the browser runs them.
