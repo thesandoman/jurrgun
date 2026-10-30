@@ -345,7 +345,7 @@ describe.skipIf(!HAS_DB)("owner P4: co-host invites lapse", () => {
     await req(`/partner/events/${out.id}/cohosts`, { cookie: lead.admin.cookie, form: { orgId: co.orgId } });
     const [inv] = await db().select().from(eventPartners).where(eq(eventPartners.eventId, out.id));
     const member = await en(await createMember());
-    const find = `/events?view=list&q=${encodeURIComponent(name)}`;
+    const find = `/?view=list&q=${encodeURIComponent(name)}`;
     expect(await (await req(find, { cookie: member.cookie })).text()).not.toContain(`/events/${out.id}"`);
 
     // 73 hours later, before the clock has run: already off the co-host's list, and the event shows.
