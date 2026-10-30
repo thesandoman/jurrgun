@@ -18,6 +18,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import { secureCookie } from "./deployed";
 import { countLanding, looksHuman } from "../services/landings";
 import { allowedCode } from "../content/src-codes";
+import { createLogger } from "../logger";
 import type { AppEnv } from "./env";
 
 export const SOURCE_COOKIE = "jg_src";
@@ -69,7 +70,11 @@ export const captureSource: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!source) return;
   if (looksHuman(c.req.header("user-agent"), c.req.header("sec-purpose") ?? c.req.header("purpose"))) {
     // Only register codes are stored; anything typed into ?src= (a name, say) is counted as "other".
-    const counted = countLanding(c.env, allowedCode(source)).catch(() => {});
+    const code = allowedCode(source);
+    // A failed count never breaks the page, but it is logged (QA, 30 Oct 2026): code only, nothing about the visitor.
+    const counted = countLanding(c.env, code).catch((e: unknown) => {
+      createLogger(c.env).warn("landing.count_failed", { code, error: String(e).slice(0, 200) });
+    });
     try {
       c.executionCtx.waitUntil(counted);
     } catch {
