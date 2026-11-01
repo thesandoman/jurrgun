@@ -5,13 +5,16 @@
  * settings, gender identity, orientation, dating answers, private choices or
  * other people's chats.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { createMember, db, HAS_DB, req } from "./helpers";
 import { newId } from "../src/lib/crypto";
 import { connections, profiles } from "../src/schema";
 import { datingDeckFor, promptById } from "../src/content/profile";
 import { redactSensitive } from "../src/lib/records";
+
+// Password hashing is slow on small CI machines; the default 5s timed out in the nightly run.
+vi.setConfig({ testTimeout: 30_000 });
 
 describe("audit detail redaction", () => {
   it("hides private keys at any depth and keeps the rest", () => {

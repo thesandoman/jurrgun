@@ -2,7 +2,7 @@
  * Sign-in and sign-up throttling (PRD §11), against local Postgres.
  * Each test uses its own random client IP so reruns don't collide.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import app from "../src/index";
 import { ENV, HAS_DB, TEST_PASSWORD, createMember, db } from "./helpers";
@@ -10,6 +10,9 @@ import { hmacSha256, randomToken } from "../src/lib/crypto";
 import { loginAttempts, notifications } from "../src/schema";
 import { and } from "drizzle-orm";
 import { CEILING_NOTICE_KIND, LOGIN_ACCOUNT_CEILING } from "../src/routes/auth";
+
+// Password hashing is slow on small CI machines; the default 5s timed out in the nightly run.
+vi.setConfig({ testTimeout: 30_000 });
 
 /** How a username is stored in identity_login_attempts: a keyed hash, never the name (privacy R11). Tests set no secret. */
 const userKey = async (u: string) => `user:${await hmacSha256("user:", u)}`;

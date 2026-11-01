@@ -4,7 +4,7 @@
  * other person in a block or a removal, client IPs are keyed hashes, and
  * sign-in usernames are never stored in the clear.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { eq, notInArray } from "drizzle-orm";
 import app from "../src/index";
 import { createMember, db, ENV, HAS_DB, req, type Member } from "./helpers";
@@ -12,6 +12,9 @@ import { hmacSha256, newId, sha256 } from "../src/lib/crypto";
 import { shownTarget } from "../src/lib/records";
 import { auditLog, buddyOptins, connections, loginAttempts, vibes } from "../src/schema";
 import { ARCHETYPES } from "../src/vibe/archetypes";
+
+// Password hashing is slow on small CI machines; the default 5s timed out in the nightly run.
+vi.setConfig({ testTimeout: 30_000 });
 
 const withType = (m: Member, archetype: string, visible: boolean) =>
   db().insert(vibes).values({ accountId: m.id, vector: {}, archetype, visible }).onConflictDoUpdate({ target: vibes.accountId, set: { archetype, visible } });
