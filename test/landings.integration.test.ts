@@ -59,7 +59,9 @@ describe.skipIf(!HAS_DB)("landings per code", () => {
   });
 
   it("never stores a typed-in name: an unlisted code counts as other", async () => {
-    const name = `somchai-${newId().slice(0, 6)}`;
+    // Letters only: the parser drops any source with 6 digits in a row (it looks like a phone or id),
+    // so a uuid slice of 6 digits (about 1 run in 17) never counted, and this test failed at random.
+    const name = `somchai-${newId().replace(/[^a-f]/g, "x").slice(0, 6)}`;
     const before = await count("other");
     await open(`/new?src=${name}`, { "user-agent": BROWSER });
     expect((await count("other")) - before).toBe(1);
