@@ -5,7 +5,7 @@
 import { eventSeenBy } from "../../services/demo";
 import { HELLO_MAX, helloPrompt } from "../../domain/hello";
 import { isGoTogether, ViaLine } from "../../ui/go-together";
-import { OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, womenOnlyEventVisible } from "../../domain/rules";
+import { RESIDENT_PAUSED, OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, womenOnlyEventVisible } from "../../domain/rules";
 import { type Context } from "hono";
 import { type AnyColumn, and, asc, count, eq, gt, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../../db";
@@ -290,7 +290,7 @@ export function EventCard(props: { e: Event; taken: number; v: View; mine?: stri
           <SpotsTag e={e} taken={props.taken} t={t} />
           {quest ? <Tag tone="accent">🧭 {t("ซิตี้เควสต์", "City Quest")}</Tag> : null}
           {e.plusOneAllowed ? <Tag>{t("ชวนเพื่อนมาได้ +1", "+1 welcome")}</Tag> : null}
-          {e.residentPriority || e.residentQuota > 0 ? <Tag tone="muted">{t("🏙️ สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "🏙️ Resident priority")}</Tag> : null}
+          {!RESIDENT_PAUSED && (e.residentPriority || e.residentQuota > 0) ? <Tag tone="muted">{t("🏙️ สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "🏙️ Resident priority")}</Tag> : null}
         </div>
       </div>
     </Card>

@@ -2,6 +2,7 @@
  * Staff events, operations part (split from routes/admin/events.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { RESIDENT_PAUSED } from "../../../domain/rules";
 import { WAIVE_REASONS } from "../../../domain/waive-note";
 import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { DISTRICTS, VISITBANGKOK_ROUTES, label } from "../../../lib/constants";
@@ -401,7 +402,7 @@ adminEvents.get(
             {waitlistCount > waitRows.length ? (
               <p class="muted">{t(`แสดง ${waitRows.length} คนแรกจากทั้งหมด ${waitlistCount} คน`, `Showing the first ${waitRows.length} of ${waitlistCount}`)}</p>
             ) : null}
-            <small>{t("ตอนเสนอที่นั่ง ระบบจะใช้สิทธิ์ผู้อยู่อาศัยและกฎใบเตือนมาจัดลำดับด้วย", "Offers apply resident priority and strike rules on top of this order")}</small>
+            <small>{RESIDENT_PAUSED ? t("ตอนเสนอที่นั่ง ระบบจะใช้กฎใบเตือนมาจัดลำดับด้วย", "Offers apply strike rules on top of this order") : t("ตอนเสนอที่นั่ง ระบบจะใช้สิทธิ์ผู้อยู่อาศัยและกฎใบเตือนมาจัดลำดับด้วย", "Offers apply resident priority and strike rules on top of this order")}</small>
           </>
         )}
         {e.status === "published" && !ended ? (

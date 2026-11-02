@@ -14,6 +14,7 @@ import {
   romanceCompatible,
   romanceEligible,
   safeCount,
+  RESIDENT_PAUSED,
   seatAvailable,
   seatsOverbooked,
   strikeStanding,
@@ -130,22 +131,32 @@ describe("strikes (PRD §24)", () => {
 });
 
 describe("seats and waitlist", () => {
+  it("resident tag paused (owner, 2026-11-02): no quota, no priority, first come first served", () => {
+    expect(RESIDENT_PAUSED).toBe(true);
+    const st = { capacity: 10, residentQuota: 3, taken: 7, takenByNonResidents: 7 };
+    expect(seatAvailable(st, false)).toBe(true);
+    expect(seatAvailable({ ...st, taken: 10 }, false)).toBe(false);
+    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 9 }, false)).toBe(false);
+    const e = (id: string, mins: number, isResident: boolean) => ({ id, createdAt: new Date(mins * 60_000), isResident, priority: true });
+    expect(waitlistOrder([e("a", 1, false), e("b", 2, true)], true).map((x) => x.id)).toEqual(["a", "b"]);
+  });
+  // The rules kept for when it comes back (paused = false):
   it("reserves the resident quota", () => {
     const st = { capacity: 10, residentQuota: 3, taken: 7, takenByNonResidents: 7 };
-    expect(seatAvailable(st, false)).toBe(false);
-    expect(seatAvailable(st, true)).toBe(true);
-    expect(seatAvailable({ ...st, taken: 10 }, true)).toBe(false);
+    expect(seatAvailable(st, false, false)).toBe(false);
+    expect(seatAvailable(st, true, false)).toBe(true);
+    expect(seatAvailable({ ...st, taken: 10 }, true, false)).toBe(false);
   });
   it("spots an overbooking after the seat is taken", () => {
     const st = { capacity: 10, residentQuota: 3, taken: 10, takenByNonResidents: 7 };
-    expect(seatsOverbooked(st, false)).toBe(false); // exactly full is fine
-    expect(seatsOverbooked({ ...st, taken: 11 }, true)).toBe(true);
-    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 8 }, false)).toBe(true); // ate into the resident quota
-    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 8 }, true)).toBe(false);
+    expect(seatsOverbooked(st, false, false)).toBe(false); // exactly full is fine
+    expect(seatsOverbooked({ ...st, taken: 11 }, true, false)).toBe(true);
+    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 8 }, false, false)).toBe(true); // ate into the resident quota
+    expect(seatsOverbooked({ ...st, taken: 9, takenByNonResidents: 8 }, true, false)).toBe(false);
   });
   it("orders priority, then residents (if prioritised), then first come", () => {
     const e = (id: string, mins: number, isResident: boolean, priority = true) => ({ id, createdAt: new Date(mins * 60_000), isResident, priority });
-    const order = waitlistOrder([e("a", 1, false), e("b", 2, true), e("c", 0, false, false)], true).map((x) => x.id);
+    const order = waitlistOrder([e("a", 1, false), e("b", 2, true), e("c", 0, false, false)], true, false).map((x) => x.id);
     expect(order).toEqual(["b", "a", "c"]);
     expect(waitlistOrder([e("a", 1, false), e("b", 2, true)], false).map((x) => x.id)).toEqual(["a", "b"]);
   });
@@ -155,8 +166,8 @@ describe("seats and waitlist", () => {
     expect(waitlistOrder([e("a", 1, false), boosted], false).map((x) => x.id)).toEqual(["b", "a"]);
     // Strikes still come first: a boosted person with 2+ strikes stays behind.
     expect(waitlistOrder([e("a", 1, false), { ...e("c", 0, false, false), boost: true }], false).map((x) => x.id)).toEqual(["a", "c"]);
-    // Resident priority still comes first.
-    expect(waitlistOrder([e("r", 3, true), boosted], true).map((x) => x.id)).toEqual(["r", "b"]);
+    // Resident priority still comes first (when the resident tag isn't paused).
+    expect(waitlistOrder([e("r", 3, true), boosted], true, false).map((x) => x.id)).toEqual(["r", "b"]);
   });
   it("reliable means the last 4 plans kept; one miss means waiting for the next 4", () => {
     const at = (d: number, checkedIn = true) => ({ startsAt: new Date(2026, 9, d), checkedIn });

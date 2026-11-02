@@ -3,7 +3,7 @@
  * See ./index.ts for the route list.
  */
 import { endPinkies } from "../../services/pinky";
-import { canBeWomenOnly, canSwitchToSingle, isPaused, romanceEligible } from "../../domain/rules";
+import { RESIDENT_PAUSED, canBeWomenOnly, canSwitchToSingle, isPaused, romanceEligible } from "../../domain/rules";
 import { ROMANCE_EXPLAINER } from "../../content/dating";
 import { canHost } from "../../domain/hosting";
 import { and, asc, desc, eq, gt, ne } from "drizzle-orm";
@@ -108,7 +108,7 @@ settingsRoutes.get("/settings", async (c) => {
       </a>
     );
   const badge =
-    user.account.bkkRegistered === "verified" ? (
+    !RESIDENT_PAUSED && user.account.bkkRegistered === "verified" ? (
       <form method="post" action="/settings/badge" class="card inline-toggle">
         <label class="toggle" style="margin:0">
           <input type="checkbox" name="show" value="1" checked={p.showResidentBadge} data-autosubmit="" />
@@ -430,7 +430,7 @@ settingsRoutes.post("/settings/newcomer", async (c) => {
 
 settingsRoutes.post("/settings/badge", async (c) => {
   const user = me(c);
-  if (user.account.bkkRegistered !== "verified") return c.text("Forbidden", 403);
+  if (RESIDENT_PAUSED || user.account.bkkRegistered !== "verified") return c.text("Forbidden", 403);
   const body = await c.req.parseBody();
   await getDb(c.env)
     .update(profiles)

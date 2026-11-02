@@ -9,6 +9,7 @@
  * Verification and Bangkok-registration toggles are manual stand-ins until
  * the ThaiD / BMA registry integrations exist; BMA admins only.
  */
+import { RESIDENT_PAUSED } from "../../domain/rules";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { desc, eq, or, sql } from "drizzle-orm";
@@ -253,7 +254,10 @@ adminUsers.get("/:id", async (c) => {
               </select>
               <Button kind="ghost">{t("บันทึก", "Save")}</Button>
             </form>
-            <form method="post" action={`/admin/users/${encodeURIComponent(acct.id)}/bkk`} class="row">
+{RESIDENT_PAUSED ? (
+              <p class="muted small">{t("พักไว้: ยังไม่มีการตรวจจริง จึงไม่ใช้กับที่นั่งหรือตรา และแก้ไม่ได้", "Paused: there's no real check yet, so it isn't used for seats or badges and can't be changed.")}</p>
+            ) : (
+                        <form method="post" action={`/admin/users/${encodeURIComponent(acct.id)}/bkk`} class="row">
               <select name="value" aria-label={t("ทะเบียนบ้าน กทม.", "Bangkok registration")} style="max-width:260px">
                 {BKK.map((v) => (
                   <option value={v} selected={v === acct.bkkRegistered}>{L2(bkkLabel, v)}</option>
@@ -261,6 +265,7 @@ adminUsers.get("/:id", async (c) => {
               </select>
               <Button kind="ghost">{t("บันทึก", "Save")}</Button>
             </form>
+            )}
             <form method="post" action={`/admin/users/${encodeURIComponent(acct.id)}/demo`} class="row">
               <select name="value" aria-label={t("บัญชีทดลอง", "Demo or test account")} style="max-width:260px">
                 <option value="no" selected={!acct.isDemo}>{t("บัญชีจริง", "Real account")}</option>
@@ -353,7 +358,8 @@ adminUsers.post("/:id/untrust", async (c) => {
   }
   return c.redirect(`/admin/users/${encodeURIComponent(id)}?notice=untrusted`);
 });
-adminUsers.post("/:id/bkk", (c) => setField(c, "bkkRegistered", BKK));
+// Paused (RESIDENT_PAUSED): nobody sets it until there is a real check. The stored value is shown, not changed.
+adminUsers.post("/:id/bkk", (c) => (RESIDENT_PAUSED ? c.text("Paused", 403) : setField(c, "bkkRegistered", BKK)));
 
 /**
  * Demo or test account (owner C2, 27 Oct 2026): bma_admin only, every change audited,

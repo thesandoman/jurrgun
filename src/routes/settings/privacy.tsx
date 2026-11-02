@@ -415,7 +415,16 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
 
   const data = {
     exportedAt: new Date().toISOString(),
-    account: account[0] ?? null,
+    // bkkRegistered is set by hand by staff, with no document check, and is paused (domain/rules.ts RESIDENT_PAUSED).
+    account: account[0]
+      ? {
+          ...account[0],
+          bkkRegisteredNote: {
+            th: "ทีมงานตั้งค่านี้เองโดยไม่ได้ตรวจเอกสาร ตอนนี้พักไว้ จึงไม่ใช้กับที่นั่ง คิวสำรอง หรือตรา",
+            en: "Staff set this by hand, without checking any document. It's paused, so it isn't used for seats, the waitlist or badges.",
+          },
+        }
+      : null,
     // The photo is noted, not its private storage key.
     profile: profile[0] ? (({ accountId: _a, photoKey, ...rest }) => ({ ...rest, hasPhoto: !!photoKey }))(profile[0]) : null,
     consents: consentRows,

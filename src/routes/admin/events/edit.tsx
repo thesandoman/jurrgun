@@ -5,7 +5,7 @@
 import { cleanPhoto } from "../../../domain/photos";
 import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { batch, getDb } from "../../../db";
-import { canBeWomenOnly, OPEN_TO_MORE_TAG, partnerEventTags, seatAvailable, WOMEN_ONLY_TAG } from "../../../domain/rules";
+import { canBeWomenOnly, OPEN_TO_MORE_TAG, partnerEventTags, RESIDENT_PAUSED, seatAvailable, WOMEN_ONLY_TAG } from "../../../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, VISITBANGKOK_ROUTES, label, values, districtsAZ } from "../../../lib/constants";
 import { newId, randomToken } from "../../../lib/crypto";
 import { batchAll } from "../../../lib/bulk";
@@ -469,8 +469,8 @@ function validate(
       emergencyContact: d.emergencyContact,
       // Server-side rule: a dating partner's event always carries open_to_more.
       tags: partnerEventTags(d.tags, orgKindFor(a, ctx, partnerOrgId)),
-      residentPriority: d.residentPriority,
-      residentQuota: residentQuota!,
+      // Paused (RESIDENT_PAUSED): the fields aren't on the form, so the stored values are left as they are.
+      ...(RESIDENT_PAUSED ? {} : { residentPriority: d.residentPriority, residentQuota: residentQuota! }),
       buddyEnabled: d.buddyEnabled,
       hostAccountId: d.hostAccountId || null,
       partnerOrgId,
@@ -606,8 +606,8 @@ function EventForm(props: {
         <Choices legend={t("ภาษา", "Languages")} name="languages" options={LANGUAGES} values={d.languages} lang={lang} />
         <Toggle name="plusOneAllowed" label={t("ชวนเพื่อนมาได้ 1 คน", "Bring-a-friend (+1) allowed")} checked={d.plusOneAllowed} />
         <Toggle name="buddyEnabled" label={t("เปิด Event Buddy", "Enable Event Buddy")} hint={t("จับคู่คนที่ไม่อยากมาคนเดียว 48 ชม. ก่อนงาน", "Pairs people who don't want to arrive alone, 48h before")} checked={d.buddyEnabled} />
-        <Toggle name="residentPriority" label={t("ให้สิทธิ์ผู้อยู่อาศัยในกรุงเทพฯ ก่อน", "Bangkok resident priority")} checked={d.residentPriority} />
-        <Field label={t("โควตาผู้อยู่อาศัย (ที่นั่ง)", "Resident quota (seats)")} name="residentQuota" type="number" min={0} max={ORGANISER_MAX_CAPACITY} value={d.residentQuota} hint={t("ไม่เกินจำนวนที่นั่ง", "At most the capacity")} />
+        {RESIDENT_PAUSED ? null : <Toggle name="residentPriority" label={t("ให้สิทธิ์ผู้อยู่อาศัยในกรุงเทพฯ ก่อน", "Bangkok resident priority")} checked={d.residentPriority} />}
+        {RESIDENT_PAUSED ? null : <Field label={t("โควตาผู้อยู่อาศัย (ที่นั่ง)", "Resident quota (seats)")} name="residentQuota" type="number" min={0} max={ORGANISER_MAX_CAPACITY} value={d.residentQuota} hint={t("ไม่เกินจำนวนที่นั่ง", "At most the capacity")} />}
         <EntryRuleFields t={t} d={d} talk={props.a.role === "bma_admin" || orgKindFor(props.a, ctx, d.partnerOrgId || null) === "health"} />
       </Card>
       <Card>

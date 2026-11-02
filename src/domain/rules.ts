@@ -237,6 +237,14 @@ export function strikeStanding(rows: StrikeRow[], now: Date = new Date()): Strik
 
 export const OFFER_HOURS = 12;
 
+/**
+ * The Bangkok resident tag is PAUSED (owner, 2026-11-02, after the panel). bkk_registered is set by hand
+ * with no real check, so the seat quota, waitlist priority, badge and every "verified" line are switched
+ * off together. Columns and stored values stay, so it can come back if the BMA asks or a real check
+ * exists. Staff can't set it while paused. Nobody loses a seat they already hold.
+ */
+export const RESIDENT_PAUSED = true;
+
 export type SeatState = {
   capacity: number;
   /** Seats reserved for verified Bangkok-registered residents. */
@@ -248,9 +256,9 @@ export type SeatState = {
 };
 
 /** Whether a new RSVP gets a seat now or joins the waitlist. */
-export function seatAvailable(s: SeatState, isResident: boolean): boolean {
+export function seatAvailable(s: SeatState, isResident: boolean, paused = RESIDENT_PAUSED): boolean {
   if (s.taken >= s.capacity) return false;
-  if (isResident) return true;
+  if (paused || isResident) return true;
   return s.takenByNonResidents < s.capacity - Math.max(0, Math.min(s.residentQuota, s.capacity));
 }
 
@@ -259,9 +267,9 @@ export function seatAvailable(s: SeatState, isResident: boolean): boolean {
  * non-resident share)? Two people racing for the last seat both see a free
  * seat; this re-check after the write is what keeps the event from overbooking.
  */
-export function seatsOverbooked(s: SeatState, isResident: boolean): boolean {
+export function seatsOverbooked(s: SeatState, isResident: boolean, paused = RESIDENT_PAUSED): boolean {
   if (s.taken > s.capacity) return true;
-  if (isResident) return false;
+  if (paused || isResident) return false;
   return s.takenByNonResidents > s.capacity - Math.max(0, Math.min(s.residentQuota, s.capacity));
 }
 
@@ -281,10 +289,10 @@ export type WaitlistEntry = {
  * priority; then people whose showing up earned a first seat (owner card
  * 10-16, tit-for-tat); then first come, first served.
  */
-export function waitlistOrder(entries: WaitlistEntry[], residentPriority: boolean): WaitlistEntry[] {
+export function waitlistOrder(entries: WaitlistEntry[], residentPriority: boolean, paused = RESIDENT_PAUSED): WaitlistEntry[] {
   return entries.slice().sort((a, b) => {
     if (a.priority !== b.priority) return a.priority ? -1 : 1;
-    if (residentPriority && a.isResident !== b.isResident) return a.isResident ? -1 : 1;
+    if (!paused && residentPriority && a.isResident !== b.isResident) return a.isResident ? -1 : 1;
     if (!!a.boost !== !!b.boost) return a.boost ? -1 : 1;
     return a.createdAt.getTime() - b.createdAt.getTime();
   });

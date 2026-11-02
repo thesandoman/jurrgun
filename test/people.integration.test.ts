@@ -403,7 +403,7 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     const html = await (await req(`/events/${ev}/people`, { cookie: en(me) })).text();
     const cards = html.split('<section class="card').slice(1);
     const card = (n: string) => cards.find((x) => x.includes(`<legend>${n}</legend>`)) ?? "";
-    expect(card(`${p}a`)).toContain("Bangkok resident");
+    expect(card(`${p}a`)).not.toContain("Bangkok resident"); // paused (owner, 2026-11-02)
     expect(card(`${p}b`)).not.toContain("Bangkok resident");
     expect(card(`${p}c`)).not.toContain("Bangkok resident");
     expect(card(`${p}b`)).not.toContain("Story Collector");
@@ -427,7 +427,7 @@ describe.skipIf(!HAS_DB)("resident badge and Bangkok Types on people lists", () 
     await optIn(x);
     await db().insert(vibes).values({ accountId: x.id, vector: {}, archetype: "CDMH", modifier: "rhythm-", visible: true });
     html = await (await req("/connections", { cookie: en(y) })).text();
-    expect(html).toContain("Bangkok resident");
+    expect(html).not.toContain("Bangkok resident"); // paused (owner, 2026-11-02), even verified and opted in
     // The slim card (B1) leaves the type and the spark to the profile.
     expect(html).not.toContain("Conversation spark");
     let prof = await (await req(`/people/${x.id}`, { cookie: en(y) })).text();

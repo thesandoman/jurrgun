@@ -17,7 +17,7 @@
 import { isStaffTarget, limitText, reportLimit, staffAlert } from "../services/report-intake";
 import { vapidKeys } from "../services/push";
 import { PushSwitch } from "../ui/push-switch";
-import { MAX_SHARES_PER_DAY } from "../domain/rules";
+import { RESIDENT_PAUSED, MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
 import { myTables, raiseConflicts } from "../services/regular-tables";
 import { Hono, type Context } from "hono";
@@ -171,7 +171,7 @@ async function blockedSet(db: Db, me: string): Promise<Set<string>> {
 
 /** The opt-in "Bangkok Registered Resident" badge: verified AND opted in. */
 export function showsResidentBadge(a: { bkkRegistered: string }, p: { showResidentBadge: boolean }): boolean {
-  return a.bkkRegistered === "verified" && p.showResidentBadge === true;
+  return !RESIDENT_PAUSED && a.bkkRegistered === "verified" && p.showResidentBadge === true;
 }
 
 export function ResidentTag(props: { v: View }) {

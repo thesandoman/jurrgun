@@ -232,13 +232,15 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect(rows[0].status).toBe("confirmed");
   });
 
-  it("keeps the resident quota for verified Bangkok residents", async () => {
+  it("resident tag paused (owner, 2026-11-02): a stored quota is ignored, first come first served", async () => {
     const [n1, n2] = [await createMember(), await createMember()];
     const resident = await createMember({ bkkRegistered: "verified" });
     const ev = await mkEvent({ capacity: 2, residentQuota: 1 });
     expect(loc(await req(`/events/${ev}/rsvp`, { cookie: n1.cookie, method: "POST", form: {} }))).toContain("rsvp_confirmed");
-    expect(loc(await req(`/events/${ev}/rsvp`, { cookie: n2.cookie, method: "POST", form: {} }))).toContain("rsvp_waitlisted");
-    expect(loc(await req(`/events/${ev}/rsvp`, { cookie: resident.cookie, method: "POST", form: {} }))).toContain("rsvp_confirmed");
+    expect(loc(await req(`/events/${ev}/rsvp`, { cookie: n2.cookie, method: "POST", form: {} }))).toContain("rsvp_confirmed");
+    expect(loc(await req(`/events/${ev}/rsvp`, { cookie: resident.cookie, method: "POST", form: {} }))).toContain("rsvp_waitlisted");
+    const [e] = await db().select({ q: events.residentQuota }).from(events).where(eq(events.id, ev));
+    expect(e.q).toBe(1); // kept, so it can come back
   });
 
   it("refuses RSVPs outside the event age range", async () => {
@@ -464,7 +466,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     const stranger = await createMember();
     expect((await req(`/events/${ev}`, { cookie: stranger.cookie })).status).toBe(404);
   });
-  it("filters resident priority events and labels them", async () => {
+  it("resident tag paused: no filter, no label, no 'verified' line; the filter in the address does nothing", async () => {
     const m = await createMember();
     const base = { district: "lat_krabang", startsAt: new Date(Date.now() + 2 * HOUR) };
     const prio = await mkEvent({ ...base, residentPriority: true });
@@ -473,9 +475,11 @@ describe.skipIf(!HAS_DB)("events", () => {
     const html = await (await req("/?district=lat_krabang&resident=1", { cookie: `${m.cookie}; lang=en` })).text();
     expect(html).toContain(`EV-${prio.slice(0, 8)}`);
     expect(html).toContain(`EV-${quota.slice(0, 8)}`);
-    expect(html).not.toContain(`EV-${plain.slice(0, 8)}`);
-    expect(html).toContain("Resident priority events");
-    expect(html).toContain("🏙️ Resident priority");
+    expect(html).toContain(`EV-${plain.slice(0, 8)}`);
+    expect(html).not.toContain("Resident priority events");
+    expect(html).not.toContain("🏙️ Resident priority");
+    const page = await (await req(`/events/${quota}?lang=en`, { cookie: m.cookie })).text();
+    expect(page).not.toMatch(/[Vv]erified resident/);
   });
 
   it("shows the Bangkok Type card until I take the quiz or hide it", async () => {
@@ -534,7 +538,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     expect((await req(`/events/${ev}/cover`, { cookie: m.cookie })).status).toBe(404);
   });
 
-  it("live page: resident badge only when verified AND opted in; Bangkok Type only when visible; nobody hidden", async () => {
+  it("live page: no resident badge while paused; Bangkok Type only when visible; nobody hidden", async () => {
     const [aNick, bNick, cNick] = [`A${nick("a")}`, `B${nick("b")}`, `C${nick("c")}`];
     const me = await createMember({ nickname: nick("Me") });
     const a = await createMember({ nickname: aNick, bkkRegistered: "verified" });
@@ -556,7 +560,7 @@ describe.skipIf(!HAS_DB)("events", () => {
     const html = await (await req(`/events/${ev}/live`, { cookie: `${me.cookie}; lang=en` })).text();
     const items = html.split('<li class="person">').slice(1);
     const item = (n: string) => items.find((x) => x.includes(n)) ?? "";
-    expect(item(aNick)).toContain("Bangkok resident");
+    expect(item(aNick)).not.toContain("Bangkok resident"); // paused (owner, 2026-11-02)
     expect(item(bNick)).not.toContain("Bangkok resident");
     expect(item(cNick)).not.toContain("Bangkok resident");
     expect(item(aNick)).not.toContain("The Party Host");

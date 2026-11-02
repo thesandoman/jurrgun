@@ -4,7 +4,7 @@
  */
 import { asOf, pulseGlance, weatherBits } from "../pulse";
 import { segmentOf, type Segment } from "../../domain/segment";
-import { OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, womenOnlyEventVisible } from "../../domain/rules";
+import { RESIDENT_PAUSED, OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, womenOnlyEventVisible } from "../../domain/rules";
 import { weekKey } from "../../domain/buddy";
 import { cleanBio } from "../../content/profile";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -200,7 +200,7 @@ export async function discoverPage(c: Context<AppEnv>) {
     intensity: c.req.query("intensity") ?? "",
     plusOne: c.req.query("plusOne") === "1",
     fitsAge: c.req.query("fitsAge") === "1",
-    resident: c.req.query("resident") === "1",
+    resident: !RESIDENT_PAUSED && c.req.query("resident") === "1",
     text: (c.req.query("q") ?? "").trim().slice(0, 80),
   };
   const mapView = c.req.query("view") !== "list"; // the map is the default
@@ -288,7 +288,7 @@ export async function discoverPage(c: Context<AppEnv>) {
       <Toggle name="smokeFree" label={t("ปลอดบุหรี่", "Smoke-free")} checked={q.smokeFree} />
       <Toggle name="plusOne" label={t("ชวนเพื่อนมาได้ (+1)", "Can bring a friend (+1)")} checked={q.plusOne} />
       <Toggle name="fitsAge" label={t("เหมาะกับช่วงอายุของฉัน", "Fits my age")} checked={q.fitsAge} />
-      <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />
+      {RESIDENT_PAUSED ? null : <Toggle name="resident" label={t("กิจกรรมที่ให้สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Resident priority events")} checked={q.resident} />}
       <div class="row">
         <Button>{t("ดูกิจกรรม", "Show events")}</Button>
         {filtered ? <LinkButton href={mapView ? "/" : "/?view=list"} kind="ghost">{t("ล้างตัวกรอง", "Clear")}</LinkButton> : null}

@@ -340,12 +340,13 @@ describe.skipIf(!HAS_DB)("user lookup", () => {
     expect((await req(`/admin/users/${m.id}/verification`, { cookie: mod.cookie, form: { value: "verified" } })).status).toBe(403);
     expect((await req(`/admin/users/${m.id}/verification`, { cookie: admin.cookie, form: { value: "bogus" } })).status).toBe(400);
     expect((await req(`/admin/users/${m.id}/verification`, { cookie: admin.cookie, form: { value: "verified" } })).status).toBe(302);
-    expect((await req(`/admin/users/${m.id}/bkk`, { cookie: admin.cookie, form: { value: "verified" } })).status).toBe(302);
+    // Resident tag paused (owner, 2026-11-02): nobody sets it.
+    expect((await req(`/admin/users/${m.id}/bkk`, { cookie: admin.cookie, form: { value: "verified" } })).status).toBe(403);
     const [acct] = await db().select().from(accounts).where(eq(accounts.id, m.id));
     expect(acct.verification).toBe("verified");
-    expect(acct.bkkRegistered).toBe("verified");
+    expect(acct.bkkRegistered).toBe("not_checked");
     expect(await auditRows(admin.id, "users.set_verification")).toHaveLength(1);
-    expect(await auditRows(admin.id, "users.set_bkk_registered")).toHaveLength(1);
+    expect(await auditRows(admin.id, "users.set_bkk_registered")).toHaveLength(0);
   });
 });
 

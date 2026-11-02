@@ -8,7 +8,7 @@ import { TableIntroPrompt } from "../../ui/table-intro";
 import { SaveNext } from "../../ui/offline-next";
 import { IcebreakerCard } from "../../ui/icebreakers";
 import { icebreakerWindow } from "../../content/icebreakers";
-import { OPEN_TO_MORE_TAG, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../../domain/rules";
+import { OPEN_TO_MORE_TAG, RESIDENT_PAUSED, romanceEventOk, WOMEN_ONLY_TAG, womenOnlyEventOk, womenOnlyEventVisible } from "../../domain/rules";
 import { getCookie, setCookie } from "hono/cookie";
 import { secureCookie } from "../../lib/deployed";
 import type { Child } from "hono/jsx";
@@ -544,7 +544,7 @@ export async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) 
           <dd>{event.safetyInfo || t("โฮสต์จะแจ้งก่อนงาน", "Your host will share it before the event")}</dd>
           <dt>{t("ติดต่อฉุกเฉิน", "Emergency contact")}</dt>
           <dd>{event.emergencyContact || "191 / 1669"}</dd>
-          {event.residentQuota > 0 || event.residentPriority ? (
+          {!RESIDENT_PAUSED && (event.residentQuota > 0 || event.residentPriority) ? (
             <>
               <dt>{t("สิทธิ์ผู้มีทะเบียนบ้าน กทม.", "Bangkok resident priority")}</dt>
               <dd>

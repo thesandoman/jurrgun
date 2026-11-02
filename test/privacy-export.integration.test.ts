@@ -100,4 +100,13 @@ describe.skipIf(!HAS_DB)("R4: the data export is complete", () => {
     expect(byNote).toEqual({ "Came with Nim, who vouched for her": "travel", "Old free text before the list": null });
     expect(text).not.toContain(host.id);
   });
+
+  it("resident tag paused: the export says plainly what the field is, and the badge switch is gone", async () => {
+    const m = await createMember({ bkkRegistered: "verified" });
+    const data = JSON.parse(await (await req("/settings/privacy/export", { cookie: m.cookie })).text());
+    expect(data.account.bkkRegistered).toBe("verified");
+    expect(data.account.bkkRegisteredNote.en).toBe("Staff set this by hand, without checking any document. It's paused, so it isn't used for seats, the waitlist or badges.");
+    expect((await req("/settings/badge", { cookie: m.cookie, form: { show: "1" } })).status).toBe(403);
+    expect(await (await req("/settings?lang=en", { cookie: m.cookie })).text()).not.toContain('action="/settings/badge"');
+  });
 });
