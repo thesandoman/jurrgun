@@ -10,6 +10,7 @@
  * gender identity or age preferences, and "romance" is filtered out of the
  * "Here for" chips so romance mode is never revealed.
  */
+import { hasContact } from "../domain/contact-text";
 import type { Child } from "hono/jsx";
 import { reflectionFacts } from "./reflections";
 import {
@@ -517,7 +518,13 @@ export function PromptCard(props: { v: View; q: Prompt; a: Answer; photo: string
   let body: Child = null;
   switch (q.kind) {
     case "text":
-      body = <p class="pc-a">{String(a.value)}</p>;
+      body = (
+        <>
+          <p class="pc-a">{String(a.value)}</p>
+          {/* Card F2: my own card (only it has edit spots) says what others see hidden. */}
+          {props.edit && hasContact(String(a.value)) ? <p class="muted small" data-hidden-part="">{props.v.t("คนอื่นจะเห็นส่วนนี้เป็น ••••", "Others see this as ••••")}</p> : null}
+        </>
+      );
       break;
     case "slider": {
       const n = Number(a.value);

@@ -52,11 +52,14 @@ function isActive(a: { status: string; suspendedUntil: Date | null }, now = new 
 /** Display-safe fields only. Never age, username, relationship or romance data. */
 /** Card F2: tells the author what's hidden and from whom. */
 export const CONTACTS_HIDDEN_NOTE: [string, string] = [
-  "เบอร์ ไอดี หรือลิงก์ในโปรไฟล์ของคุณจะแสดงเป็น •••• คนที่จะเห็นคือคนที่เจอกันในกิจกรรมและเลือกกันทั้งสองฝ่ายแล้ว",
-  "Phone numbers, IDs and links on your profile show as ••••. Only people you've met at an event and connected with can see them.",
+  "เบอร์ ไอดี หรือลิงก์ในโปรไฟล์ของคุณ คนอื่นจะเห็นเป็น •••• มีแค่คนรู้จักของคุณที่เห็น",
+  "Phone numbers, IDs and links on your profile show as •••• to others. Only your people can see them.",
 ];
 
-/** Card F2: an active connection between the two: met at an event, chose each other. The rule profile links follow. */
+/**
+ * Card F2: an active connection between the two, the owner's rule ("After connecting") and the one profile links follow.
+ * Having met isn't enough, and a buddy connection counts even before their first quest.
+ */
 async function isConnected(db: ReturnType<typeof getDb>, a: string, b: string): Promise<boolean> {
   const [row] = await db
     .select({ id: connections.id })
