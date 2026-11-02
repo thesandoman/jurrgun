@@ -75,16 +75,29 @@ export function createLogger(env?: LoggerEnv): Logger {
   };
 }
 
+/** How much of a failed query's SQL to keep. The platform cuts long log lines, and the column list alone can fill one. */
+const MAX_SQL_CHARS = 300;
+
+/**
+ * A failed query's message is `Failed query: <sql>\nparams: <values>`. Drop the values,
+ * which can hold account ids, and shorten the SQL.
+ */
+function cleanMessage(message: string): string {
+  if (!message.startsWith("Failed query:")) return message;
+  const sql = message.split("\nparams:")[0];
+  return sql.length > MAX_SQL_CHARS ? `${sql.slice(0, MAX_SQL_CHARS)}…` : sql;
+}
+
 function serializeError(err: Error): Record<string, unknown> {
-  const result: Record<string, unknown> = {
-    name: err.name,
-    message: err.message,
-  };
+  // The cause goes first: it holds the database's own reason, and must survive if the line is cut.
+  const result: Record<string, unknown> = {};
   if (err.cause instanceof Error) {
     result.cause = serializeError(err.cause);
   } else if (err.cause !== undefined && err.cause !== null) {
     result.cause = String(err.cause);
   }
+  result.name = err.name;
+  result.message = cleanMessage(err.message);
   return result;
 }
 

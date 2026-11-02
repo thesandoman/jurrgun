@@ -14,7 +14,7 @@
  *    join myself (my age). Shown as a count, never as who.
  *  - The connection level (friend, romance and so on) is never used or shown.
  */
-import { DEMO_ACCOUNTS } from "./demo";
+import { pairSeenBy } from "./demo";
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { ageOn, isPaused, OPEN_TO_MORE_TAG, WOMEN_ONLY_TAG, withinRange } from "../domain/rules";
@@ -69,7 +69,7 @@ export async function seeAgain(
         or(eq(connections.aAccount, me.id), eq(connections.bAccount, me.id)),
         isNull(connections.removedAt),
         // Demo accounts never show up for real members (owner C2); demo viewers keep their demo world.
-        sql`(${me.id} in ${DEMO_ACCOUNTS} or (${connections.aAccount} not in ${DEMO_ACCOUNTS} and ${connections.bAccount} not in ${DEMO_ACCOUNTS}))`,
+        pairSeenBy(sql`${connections.aAccount}`, sql`${connections.bAccount}`, me.id),
         inArray(
           connections.eventId,
           went.map((e) => e.id),

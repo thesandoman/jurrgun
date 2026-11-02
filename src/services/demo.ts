@@ -65,10 +65,12 @@ export async function realPeopleFor(db: ReturnType<typeof import("../db").getDb>
 /**
  * Viewer-aware in SQL, for services that only hold the viewer's id: an event is
  * visible when it isn't demo-hosted, or when the viewer is a demo account.
+ * The ::text cast matters: a bare parameter on the left of IN (subquery) has no type
+ * the deployed database can work out, though local Postgres accepts it.
  */
 export const eventSeenBy = (eventId: SQL, viewerId: string | null): SQL =>
   viewerId
-    ? sql`(${eventId} not in ${DEMO_EVENTS} or ${viewerId} in ${DEMO_ACCOUNTS})`
+    ? sql`(${eventId} not in ${DEMO_EVENTS} or ${viewerId}::text in ${DEMO_ACCOUNTS})`
     : sql`${eventId} not in ${DEMO_EVENTS}`;
 
 /**
@@ -77,7 +79,7 @@ export const eventSeenBy = (eventId: SQL, viewerId: string | null): SQL =>
  * Me-page counts and chat unread counts follow the same rule as people lists).
  */
 export const pairSeenBy = (a: SQL, b: SQL, viewerId: SQL | string): SQL =>
-  sql`(${viewerId} in ${DEMO_ACCOUNTS} or (${a} not in ${DEMO_ACCOUNTS} and ${b} not in ${DEMO_ACCOUNTS}))`;
+  sql`(${viewerId}::text in ${DEMO_ACCOUNTS} or (${a} not in ${DEMO_ACCOUNTS} and ${b} not in ${DEMO_ACCOUNTS}))`;
 
 /** Chat links (/chat/conn:<id>, /chat/buddy:<id>) whose two people include a demo account. */
 export const DEMO_CHAT_LINKS = sql`(
