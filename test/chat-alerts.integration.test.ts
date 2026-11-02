@@ -60,14 +60,14 @@ describe.skipIf(!HAS_DB)("chat alerts", () => {
     const [alert] = await alertsAbout(s.id);
     const mod = await createMember({ role: "moderator" });
     const page = await (await req(`/admin/moderation/${alert.id}`, { cookie: mod.cookie })).text();
-    expect(page).toContain("Open the messages");
+    expect(page).toContain("เปิดอ่านข้อความ");
     expect(page).not.toContain("lend me");
     const opened = await req(`/admin/moderation/${alert.id}/alert-messages`, { method: "POST", cookie: mod.cookie });
     expect(opened.status).toBe(200);
     expect(opened.headers.get("cache-control")).toContain("no-store");
     const html = await opened.text();
     expect(html).toContain("lend me");
-    expect(html).toContain("To A");
+    expect(html).toContain("ถึง A");
     const logged = await db().select().from(auditLog).where(and(eq(auditLog.actor, mod.id), eq(auditLog.action, "moderation.view_alert_messages")));
     expect(logged).toHaveLength(1);
   });
@@ -106,7 +106,7 @@ describe.skipIf(!HAS_DB)("chat alerts", () => {
     const id = newId();
     await db().insert(chatMessages).values({ id, thread: `conn:${conn}`, sender: sender.id, body: "join my group" });
     const page = await (await req(`/chat/conn:${conn}`, { cookie: me.cookie })).text();
-    expect(page).toContain("Ask our team to check");
+    expect(page).toContain("ให้ทีมงานช่วยดู");
     const res = await req(`/chat/conn:${conn}/report/${id}`, { method: "POST", cookie: me.cookie, form: { help: "1" } });
     expect(res.headers.get("location")).toContain("notice=asked");
     const [r] = await db().select().from(reports).where(eq(reports.targetMessage, id));
