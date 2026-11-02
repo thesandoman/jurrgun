@@ -2,9 +2,10 @@
  * Sign in with Google / LINE: claim checks (pure) and the full redirect,
  * callback and account-creation flow with the provider's token endpoint faked.
  */
+import { rejoinHolds, reports } from "../src/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { ENV, HAS_DB, createMember, db } from "./helpers";
+import { ENV, HAS_DB, createMember, db, req } from "./helpers";
 import app from "../src/index";
 import { checkIdToken } from "../src/routes/oauth";
 import { b64url } from "../src/lib/crypto";
@@ -89,6 +90,76 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
     expect(r.headers.get("location")).toBe("/events");
     const links = await db().select().from(oauthLinks).where(eq(oauthLinks.subject, sub));
     expect(links).toHaveLength(1);
+  });
+
+  // ---- Owner card F4 ----
+  const googleIn = async (sub: string) => {
+    const s = await start("google");
+    fakeToken({ iss: "https://accounts.google.com", aud: "gid", exp: Date.now() / 1000 + 600, nonce: s.nonce, sub });
+    return get(`/auth/google/callback?code=c&state=${s.state}&lang=en`, s.cookie);
+  };
+  /** A member on a Google login, with a report about them, who has deactivated. */
+  async function leftWithReport() {
+    const [m, mod, reporter] = await Promise.all([createMember(), createMember({ role: "moderator" }), createMember()]);
+    const sub = `f4-${newId()}`;
+    await db().insert(oauthLinks).values({ id: newId(), provider: "google", subject: sub, accountId: m.id });
+    const reportId = newId();
+    await db().insert(reports).values({ id: reportId, reporter: reporter.id, targetAccount: m.id, reason: "harassment", details: "test" });
+    const off = await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
+    expect(off.status).toBe(302);
+    return { m, mod, sub, reportId };
+  }
+  const act = (mod: { cookie: string }, id: string, form: Record<string, string>) => req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form });
+
+  it("F4: a login that left with a report open is refused only after the report ends in a ban", async () => {
+    const { m, mod, sub, reportId } = await leftWithReport();
+    const holds = await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id));
+    expect(holds).toHaveLength(1);
+    expect(holds[0].bannedAt).toBeNull();
+    expect(JSON.stringify(holds[0])).not.toContain(sub);
+
+    await act(mod, reportId, { action: "ban", note: "Repeated", rule: "harassment" });
+    const r = await googleIn(sub);
+    expect(r.status).toBe(403);
+    const html = await r.text();
+    expect(html).toContain("This login can&#39;t be used to join. If that seems wrong, contact us.");
+    expect(html).toContain('href="/privacy#contact"');
+    expect(r.headers.get("set-cookie") ?? "").not.toContain("bkk_sid=");
+    expect(await db().select().from(oauthLinks).where(eq(oauthLinks.subject, sub))).toHaveLength(0);
+  });
+
+  it("F4: a dismissed report releases the login, and a lifted ban does too", async () => {
+    const a = await leftWithReport();
+    await act(a.mod, a.reportId, { action: "dismiss", note: "Nothing in it" });
+    expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, a.m.id))).toHaveLength(0);
+    expect((await googleIn(a.sub)).headers.get("location")).toBe("/onboarding");
+
+    const b = await leftWithReport();
+    await act(b.mod, b.reportId, { action: "ban", note: "Repeated", rule: "harassment" });
+    expect((await googleIn(b.sub)).status).toBe(403);
+    const again = newId();
+    await db().insert(reports).values({ id: again, reporter: b.m.id, targetAccount: b.m.id, reason: "other", details: "Ban review requested by the member." });
+    await act(b.mod, again, { action: "lift", note: "Looked again" });
+    expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, b.m.id))).toHaveLength(0);
+  });
+
+  it("F4: leaving with no report open keeps nothing", async () => {
+    const m = await createMember();
+    await db().insert(oauthLinks).values({ id: newId(), provider: "google", subject: `f4-${newId()}`, accountId: m.id });
+    await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
+    expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id))).toHaveLength(0);
+  });
+
+  it("F4 bug fix: a banned Google login reaches the ban screen with 'look again'", async () => {
+    const m = await createMember();
+    const sub = `f4-${newId()}`;
+    await db().insert(oauthLinks).values({ id: newId(), provider: "google", subject: sub, accountId: m.id });
+    await db().update(accounts).set({ status: "banned" }).where(eq(accounts.id, m.id));
+    const r = await googleIn(sub);
+    expect(r.status).toBe(403);
+    const html = await r.text();
+    expect(html).toContain('action="/login/look-again"');
+    expect(r.headers.get("set-cookie") ?? "").not.toContain("bkk_sid=");
   });
 
   it("links a provider to the account that is already signed in", async () => {

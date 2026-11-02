@@ -23,6 +23,7 @@ import { requireMember } from "../lib/session";
 import { accounts, emailLinks, loginAttempts } from "../schema";
 import { checkCode, emailEnabled, emailHash, normalizeEmail, requestCode, type CodeCheck } from "../services/email-code";
 import { Button, Card, Field, Notice, page, safeNext, str, view, type View } from "../ui/kit";
+import { emailIdentity, REJOIN_REFUSED, rejoinRefused } from "../services/rejoin";
 import { ipKey, loginThrottled, recordFailure, signIn, tooMany, warnOwnerOfCeiling } from "./auth";
 
 export const emailCodeRoutes = new Hono<AppEnv>();
@@ -288,6 +289,8 @@ emailCodeRoutes.post("/settings/email/verify", async (c) => {
   await db.delete(loginAttempts).where(eq(loginAttempts.username, attemptKey(hash)));
   // They proved they own the address, so saying it's taken tells them nothing new.
   const [owner] = await db.select({ accountId: emailLinks.accountId }).from(emailLinks).where(eq(emailLinks.emailHash, hash)).limit(1);
+  // Card F4: a login held after a ban can't come back through another account.
+  if (await rejoinRefused(db, await emailIdentity(c.env, hash))) return SettingsEmailPage(c, { error: t(REJOIN_REFUSED[0], REJOIN_REFUSED[1]), status: 409 });
   if (owner && owner.accountId !== id) return SettingsEmailPage(c, { error: t("อีเมลนี้ผูกกับบัญชีอื่นอยู่แล้ว", "This email is already linked to another account."), status: 409 });
   try {
     // One sign-in email per member: a new one replaces the old.

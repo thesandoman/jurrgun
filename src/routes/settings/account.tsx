@@ -22,6 +22,7 @@ import { Button, Field, list, Notice, page, str, view, type View } from "../../u
 import { researchWithdrawn } from "../../services/consent";
 import { releaseUpcomingSeats } from "../../services/events";
 import { endPinkies } from "../../services/pinky";
+import { holdWrites } from "../../services/rejoin";
 import { settingsRoutes } from "./app";
 import { PrivacyCenter } from "./privacy";
 import { currentConsents, me } from "./shared";
@@ -64,6 +65,8 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.delete(sessions).where(eq(sessions.accountId, id)),
     db.delete(appHandoffs).where(eq(appHandoffs.accountId, id)),
     db.delete(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)),
+    // Card F4: with a report open, a keyed hash of each login stays until the report's outcome is known.
+    ...(await holdWrites(c.env, db, id)),
     // Unlink Google / LINE / Apple now: signing in with them again starts a fresh account.
     db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
     db.delete(emailLinks).where(eq(emailLinks.accountId, id)),

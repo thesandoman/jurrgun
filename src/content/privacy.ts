@@ -405,6 +405,17 @@ export const PRIVACY_CONTACT: Text = {
   en: `Privacy contact: the Jurrgun team at ${PRIVACY_EMAIL}${PRIVACY_EMAIL_IS_PLACEHOLDER ? " (placeholder address, the real one is coming soon)" : ""}`,
 };
 
+/**
+ * The contact section on /faq (#contact), where links like F4's refusal point (JG-2). It shows the
+ * address only once the real one replaces the placeholder; until then it says the address is coming.
+ */
+export const FAQ_CONTACT: Text = PRIVACY_EMAIL_IS_PLACEHOLDER
+  ? {
+      th: "อีเมลของทีม Jurrgun กำลังตั้งค่า และจะแสดงที่นี่เร็ว ๆ นี้ ถ้าคุณมีบัญชีอยู่ กด ‘รายงาน’ ในแอปได้ตลอด",
+      en: "The Jurrgun team's email address is being set up and will appear here soon. If you have an account, you can always use Report in the app.",
+    }
+  : { th: `อีเมลถึงทีม Jurrgun ได้ที่ ${PRIVACY_EMAIL}`, en: `Email the Jurrgun team at ${PRIVACY_EMAIL}.` };
+
 /** The in-app route for a problem with a person or an event. */
 export const REPORT_LINE: Text = {
   th: "ถ้าเป็นเรื่องของสมาชิกหรือกิจกรรม กดรายงานในโปรไฟล์ของคนนั้น หรือในหน้ากิจกรรม ทีมงานจะเห็นทันที",

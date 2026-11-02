@@ -16,6 +16,7 @@
  * Staff never see relationship status, romance settings, gender identity,
  * age preferences or connection choices here — only account basics.
  */
+import { markBanned, release, releaseIfSettled } from "../../services/rejoin";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { aliasedTable, and, asc, count, desc, eq, gte, ilike, inArray, ne, or, sql, type SQL } from "drizzle-orm";
@@ -819,12 +820,14 @@ adminModeration.post("/:id/action", async (c) => {
       ops.push(notify(db, target.id, "moderation", th, en, "/code-of-conduct"));
     } else if (action === "ban") {
       ops.push(db.update(accounts).set({ status: "banned", suspendedUntil: null }).where(eq(accounts.id, target.id)));
+      ops.push(markBanned(db, target.id, now)); // Card F4: a login held at deactivation is now refused at sign-up.
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
       // Owner card C: they also see this on the blocked sign-in screen, with "ask us to look again".
       const [th, en] = banCopy(rule);
       ops.push(notify(db, target.id, "moderation", th, en, "/login"));
     } else if (action === "lift") {
       ops.push(db.update(accounts).set({ status: "active", suspendedUntil: null }).where(eq(accounts.id, target.id)));
+      ops.push(release(db, target.id)); // Card F4.
       // Any one-time "look again" token goes too, so nothing left over can sign in.
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
       ops.push(notify(db, target.id, "moderation", LIFT_COPY[0], LIFT_COPY[1], "/"));
@@ -872,6 +875,8 @@ adminModeration.post("/:id/action", async (c) => {
     }),
   );
   await batch(c.env, ops);
+  // Card F4: the report closed without a ban, so a login held for it is free again (unless another report is open).
+  if (target && resolved && action !== "ban") await releaseIfSettled(db, target.id);
   // Owner card B: the photo copy is held only while the report is open.
   if (resolved && isPhotoReport(r)) await dropEvidence(c.env, r.id);
   // A banned member's seats go to the waitlist; a suspended member's, for events inside the suspension (owner card D).

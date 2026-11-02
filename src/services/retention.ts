@@ -69,6 +69,7 @@ import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
 import { BUDDY_PINKY_DAYS, ENDED_PREFIX } from "../domain/pinky";
 import { bkkDayStart, bkkMonth, bkkWeekKey } from "../domain/pulse-heard";
 import { endPinkiesOf, releaseHeldPinkies } from "./pinky-plans";
+import { deleteExpiredHolds } from "./rejoin";
 import { CODE_RETENTION_HOURS } from "./email-code";
 import { audit } from "../lib/records";
 import { deleteObject, type StorageEnv } from "../storage";
@@ -290,6 +291,8 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
 
   // Pinky Plans: a Pinky ended during an open report kept its chat for the review; once the reports close, it goes.
   await releaseHeldPinkies(db);
+  // Card F4: rejoin holds go after REJOIN_HOLD_DAYS.
+  await deleteExpiredHolds(db, now);
   // Card D3 (owner, 2026-10-30): dating "reasons" and "challenges" are section 26 data that no feature
   // read, so they are no longer collected and any stored answers are emptied. Idempotent: every run
   // also clears anything written by a page left open from before.

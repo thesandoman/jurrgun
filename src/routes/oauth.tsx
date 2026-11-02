@@ -28,9 +28,10 @@ import { createLogger } from "../logger";
 import { accountUsable, startSession } from "../lib/session";
 import { accounts, loginAttempts, oauthLinks } from "../schema";
 import { Notice, page, safeNext, view } from "../ui/kit";
-import { ipKey, SIGNUP_PREFIX, signupThrottled, tooMany } from "./auth";
+import { ipKey, signIn, SIGNUP_PREFIX, signupThrottled, tooMany } from "./auth";
 import { backToApp, handOff, readAppLeg, type AppLeg } from "./app-auth";
 import { APPLE_ISSUER, appleClientSecret, appleConfigured, keepAppleToken } from "../services/apple";
+import { oauthIdentity, REJOIN_REFUSED, rejoinRefused } from "../services/rejoin";
 
 export type Provider = "google" | "line" | "apple";
 
@@ -216,11 +217,28 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
       return fail(t(`บัญชี ${name} นี้เชื่อมกับบัญชี Jurrgun อื่นอยู่แล้ว`, `This ${name} account is already linked to a different Jurrgun account.`));
     }
     const [acct] = await db.select().from(accounts).where(eq(accounts.id, link.accountId)).limit(1);
-    if (!acct || !accountUsable(acct)) return fail(t("บัญชีนี้ใช้งานไม่ได้ตอนนี้", "This account can't be used right now."));
-    await keepAppleToken(c.env, db, acct.id, appleRefresh);
-    if (app) return handOff(c, app, acct.id);
-    if (!current) await startSession(c, acct.id);
-    return c.redirect(tx.next || "/onboarding");
+    if (!acct) return fail(t("บัญชีนี้ใช้งานไม่ได้ตอนนี้", "This account can't be used right now."));
+    if (app) {
+      if (!accountUsable(acct)) return fail(t("บัญชีนี้ใช้งานไม่ได้ตอนนี้", "This account can't be used right now."));
+      await keepAppleToken(c.env, db, acct.id, appleRefresh);
+      return handOff(c, app, acct.id);
+    }
+    if (accountUsable(acct)) await keepAppleToken(c.env, db, acct.id, appleRefresh);
+    if (current) return c.redirect(tx.next || "/onboarding");
+    // Card F4: the same last step as password sign-in, so a banned login reaches the ban screen and "look again".
+    return signIn(c, acct, tx.next || "/onboarding", (msg) => fail(msg));
+  }
+
+  // Card F4: this login left with a report open, and the report ended in a ban. Never for Apple:
+  // its account ID is used only to sign in (owner card S1).
+  if (p !== "apple" && await rejoinRefused(db, await oauthIdentity(c.env, p, sub))) {
+    return page(
+      c,
+      { title: t("สมัครสมาชิก", "Sign up"), status: 403 },
+      <Notice kind="error">
+        {t(REJOIN_REFUSED[0], REJOIN_REFUSED[1])} <a href="/faq#contact">{t("ติดต่อเรา", "Contact us")}</a>
+      </Notice>,
+    );
   }
 
   // Signed in already: link this provider to the current account.

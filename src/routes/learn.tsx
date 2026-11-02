@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { faqJsonLd } from "../lib/seo";
 import { ABOUT, FAQ, HELPLINES, LAST_CHECKED, LEARN_CARDS, LEARN_GROUPS, REVIEW_NOTE, TOPICS, TYPES_CARD, groupCards, type Block, type LearnCard, type Source, type Topic } from "../content/learn";
+import { FAQ_CONTACT } from "../content/privacy";
 import { canHost } from "../domain/hosting";
 import type { AppEnv } from "../lib/env";
 import { fmtDay, L, type Lang } from "../lib/i18n";
@@ -122,6 +123,8 @@ learnRoutes.get("/faq", (c) => {
     <>
       <h1>{t("คำถามที่พบบ่อย", "Frequently asked questions")}</h1>
       <FaqList lang={lang} />
+      <h2 id="contact">{t("ติดต่อเรา", "Contact us")}</h2>
+      <p>{L(lang, FAQ_CONTACT)}</p>
       <p style="margin-top:16px">
         <a href="/learn">{t("อ่านเพิ่มเติม: เรียนรู้เรื่องการเดตและความปลอดภัย →", "Read more: learn about dating and safety →")}</a>
       </p>
