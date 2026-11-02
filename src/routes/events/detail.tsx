@@ -25,7 +25,7 @@ import { requireMember } from "../../lib/session";
 import { accounts, buddyPairs, events, invites, profiles, registrations, type Event, type Registration } from "../../schema";
 import { refreshWaitlist, runBuddyRound, seatState } from "../../services/events";
 import { AskCard, Button, Card, Field, LinkButton, Notice, page, Select, Tag, TextArea, Toggle, view, type View, FactIcon, FactTiles } from "../../ui/kit";
-import { canView, isReviewer, ownsEvent, PAUSED_LINE } from "../../domain/hosting";
+import { canView, isReviewer, ownsEvent, PAUSED_LINE, paymentSite } from "../../domain/hosting";
 import { eventAnnouncements } from "../../services/announcements";
 import { AnnouncementList } from "../../ui/announcements";
 import { dayOfOpen, shownDayStatus, shownEta } from "../../domain/day-of";
@@ -523,6 +523,12 @@ export async function renderDetail(c: Ctx, event: Event, opts: DetailOpts = {}) 
                 <a href={event.paymentUrl} target="_blank" rel="noopener noreferrer nofollow">
                   {t("จ่ายเงินให้ผู้จัด ↗", "Pay the host ↗")}
                 </a>
+                {paymentSite(event.paymentUrl) ? (
+                  <small class="muted" data-payment-site="">
+                    {" "}
+                    {t(`กำลังออกไปที่ ${paymentSite(event.paymentUrl)} เช็กก่อนจ่าย`, `Going to ${paymentSite(event.paymentUrl)}. Check before you pay.`)}
+                  </small>
+                ) : null}
               </>
             ) : null}
           </dd>

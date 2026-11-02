@@ -335,3 +335,17 @@ export function checkProposal(
     },
   };
 }
+
+/**
+ * Card F6 (owner, 2026-11): the site a host's payment link really goes to, shown before the member leaves.
+ * The browser's own parser decides, so "paypal.com@evil.example" reads evil.example, and a lookalike
+ * written in other alphabets shows as its plain xn-- form. Null when it isn't a web address.
+ */
+export function paymentSite(url: string | null | undefined): string | null {
+  try {
+    const u = new URL(url ?? "");
+    return u.protocol === "https:" || u.protocol === "http:" ? u.hostname.replace(/^www\./, "") : null;
+  } catch {
+    return null;
+  }
+}
