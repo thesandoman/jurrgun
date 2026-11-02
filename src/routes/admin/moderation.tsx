@@ -295,7 +295,7 @@ function AlertSummary(props: { t: (th: string, en: string) => string; id: string
       {open ? (
         <form method="post" action={`/admin/moderation/${encodeURIComponent(id)}/alert-messages`}>
           <button type="submit" class="btn ghost">{t("เปิดอ่านข้อความ (บันทึกการเปิดดู)", "Open the messages (this is recorded)")}</button>
-          <small class="muted"> {t("เปิดเฉพาะเมื่อจำเป็นต่อการตัดสินใจ", "Only if you need them to decide.")}</small>
+          <p class="muted small">{t("เปิดเฉพาะเมื่อจำเป็นต่อการตัดสินใจ", "Only if you need them to decide.")}</p>
         </form>
       ) : null}
     </>
