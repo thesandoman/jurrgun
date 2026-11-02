@@ -33,7 +33,7 @@
  */
 import { SafeArrivalForm } from "./safety";
 import { Sheet } from "../ui/sheet";
-import { ALL_INTERESTS, cleanBio, promptById } from "../content/profile";
+import { maskBioContacts, ALL_INTERESTS, cleanBio, promptById } from "../content/profile";
 import { canHost } from "../domain/hosting";
 import { Hono, type Context } from "hono";
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
@@ -1115,7 +1115,8 @@ buddyRoutes.get("/buddy/deck", requireMember, async (c) => {
     // Privacy R8: a stranger's Bangkok Type shows on the deck only when they chose to show it.
     const theirs = shown?.visible ? types.get(next) : undefined;
     const a = theirs ? ARCHETYPES[theirs] : null;
-    const quote = deckQuote(cleanBio(person.bio), lang);
+    // Card F2: the deck shows strangers, so contact details in an answer are always hidden.
+    const quote = deckQuote(maskBioContacts(cleanBio(person.bio)), lang);
     // What you share: two or three interests in common, plus your district when it's the same.
     const sameDistrict = person.district && person.district === mineP.district ? districtName(lang, person.district) : null;
     const shared = person.interests.filter((i) => mineP.interests.includes(i)).slice(0, sameDistrict ? 2 : 3);

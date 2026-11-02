@@ -12,6 +12,8 @@
  *  - quiet hours: messages still send, the notification waits until morning.
  */
 
+import { hasContact } from "./contact-text";
+
 export const MAX_CHARS = 500;
 
 /**
@@ -44,10 +46,6 @@ export function parseThread(key: string): ThreadKey | null {
 }
 export const threadKey = (t: ThreadKey) => `${t.kind}:${t.ref}`;
 
-const URL_RE = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|co|me|io|ly|th|link|app|xyz)\b/i;
-// Thai and international phone numbers: 9+ digits, allowing spaces, dots and dashes.
-const PHONE_RE = /(?:\+?\d[\s.-]?){9,}/;
-const HANDLE_RE = /(?:^|\s)@[a-z0-9_.]{3,}|\b(?:line\s*id|ไลน์ไอดี|ไอดีไลน์|ig|instagram|ไอจี)\s*[:：]?\s*[a-z0-9_.@-]{3,}/i;
 const MONEY_RE = /โอน(?:เงิน)?|ยืมเงิน|ขอเงิน|ส่งเงิน|พร้อมเพย์|promptpay|transfer|wire|lend me|borrow money|send (?:me )?money|bank account|เลขบัญชี|crypto|usdt|bitcoin|gift ?card/i;
 
 export type CheckResult =
@@ -70,7 +68,7 @@ export function checkMessage(
   if (ctx.sentTodayAll >= PER_DAY_TOTAL) return { ok: false, reason: "day_cap" };
   if (!ctx.met) {
     if (ctx.sentInThread >= BEFORE_MEET_BUDGET) return { ok: false, reason: "budget" };
-    if (URL_RE.test(body) || PHONE_RE.test(body) || HANDLE_RE.test(body)) return { ok: false, reason: "contact_before_meet" };
+    if (hasContact(body)) return { ok: false, reason: "contact_before_meet" };
   }
   return { ok: true, body, moneyFlag: MONEY_RE.test(body) };
 }

@@ -17,7 +17,7 @@
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
-import { cleanBio, currentDatingDeck, currentDeck, universityKey, withoutDating } from "../content/profile";
+import { bioHasContacts, maskBioContacts, cleanBio, currentDatingDeck, currentDeck, universityKey, withoutDating } from "../content/profile";
 import type { AppEnv } from "../lib/env";
 import { requireMember } from "../lib/session";
 import { accounts, blocks, buddyMatches, connections, events, profiles, registrations, type Account, type Profile } from "../schema";
@@ -32,6 +32,7 @@ import { ResidentTag, showsResidentBadge, TypeSpark, vibesFor } from "./people";
 import { pinkyState, stepBack, tapPinky } from "../services/pinky";
 import { PinkyRow } from "../ui/pinky";
 import { visibleLinks } from "../services/profile-links";
+import { maskContacts } from "../domain/contact-text";
 import { ProfileLinksCard } from "../ui/profile-links";
 import { str } from "../ui/kit";
 import { EditSpot, isSectionName } from "../ui/profile-sections";
@@ -49,8 +50,26 @@ function isActive(a: { status: string; suspendedUntil: Date | null }, now = new 
 }
 
 /** Display-safe fields only. Never age, username, relationship or romance data. */
-export function cardPerson(p: Profile, viewer?: Profile | null): CardPerson {
-  const full = cleanBio(p.bio);
+/** Card F2: tells the author what's hidden and from whom. */
+export const CONTACTS_HIDDEN_NOTE: [string, string] = [
+  "เบอร์ ไอดี หรือลิงก์ในโปรไฟล์ของคุณจะแสดงเป็น •••• คนที่จะเห็นคือคนที่เจอกันในกิจกรรมและเลือกกันทั้งสองฝ่ายแล้ว",
+  "Phone numbers, IDs and links on your profile show as ••••. Only people you've met at an event and connected with can see them.",
+];
+
+/** Card F2: an active connection between the two: met at an event, chose each other. The rule profile links follow. */
+async function isConnected(db: ReturnType<typeof getDb>, a: string, b: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(and(isNull(connections.removedAt), or(and(eq(connections.aAccount, a), eq(connections.bAccount, b)), and(eq(connections.aAccount, b), eq(connections.bAccount, a)))))
+    .limit(1);
+  return !!row;
+}
+
+export function cardPerson(p: Profile, viewer?: Profile | null, opts: { showContacts?: boolean } = {}): CardPerson {
+  // Card F2: contact details in free text never leave the server unless the caller says this viewer may see them.
+  const stored = cleanBio(p.bio);
+  const full = opts.showContacts ? stored : maskBioContacts(stored);
   const showDating = datingPromptsShown(p, viewer ?? p);
   // Dating answers never leave this function unless the viewer may see them.
   const bio = showDating ? full : withoutDating(full);
@@ -63,7 +82,7 @@ export function cardPerson(p: Profile, viewer?: Profile | null): CardPerson {
     interests: p.interests,
     intents: p.intents.filter((i) => i !== "romance"),
     newcomer: p.newcomer,
-    legacy: p.prompts ?? {},
+    legacy: opts.showContacts ? (p.prompts ?? {}) : Object.fromEntries(Object.entries(p.prompts ?? {}).map(([k, val]) => [k, typeof val === "string" ? maskContacts(val) : val])),
     bio,
     deck: currentDeck(p.accountId, bio),
     dating: datingShown(p, viewer ?? p),
@@ -203,7 +222,9 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
   const { t } = v;
   const me = c.var.user!;
   const db = getDb(c.env);
-  const person = cardPerson(target.profile, me.profile);
+  // Card F2: the member's own card, or someone they've met and connected with, shows contact details.
+  const connected = !self && (await isConnected(db, me.account.id, target.account.id));
+  const person = cardPerson(target.profile, me.profile, { showContacts: self || connected });
   // The card itself is only reachable by connected viewers and the member (visibleProfile), and
   // regularAt drops tables this viewer couldn't join (women-only) or whose host they're blocked with.
   const [vibes, tables, metAt, pinky, links] = await Promise.all([
@@ -245,6 +266,7 @@ async function renderCard(c: Ctx, target: { account: Account; profile: Profile }
       {self ? (
         <p class="muted">{t("คนที่เคยเจอคุณจะเห็นแบบนี้", "What people you've met will see.")}</p>
       ) : null}
+      {self && bioHasContacts(person.bio) ? <p class="muted" data-contacts-hidden="">{t(CONTACTS_HIDDEN_NOTE[0], CONTACTS_HIDDEN_NOTE[1])}</p> : null}
       <ProfileCard
         v={v}
         person={person}

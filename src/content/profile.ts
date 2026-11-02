@@ -10,6 +10,7 @@
  * Pure module: no database, no Hono. Validation for every prompt kind lives
  * here so the routes and the tests share one set of rules.
  */
+import { hasContact, maskContacts } from "../domain/contact-text";
 import { createRng, shuffle } from "../vibe/rng";
 import { cleanReflections, type Reflections } from "./reflections";
 import { cleanStyle, type StyleCard } from "../vibe/styles";
@@ -1450,6 +1451,29 @@ export function rankFromPositions(p: Prompt, positions: Record<string, string>):
 }
 
 /** Keep only well-formed fields of a stored bio (jsonb from the database). */
+/** The free-text fields of a bio a member writes themselves (card F2). Written prompt answers are handled with them. */
+const FREE_TEXT_BIO = ["hometown", "learning", "occupationOther", "educationDetail", "universityName"] as const;
+
+/** Card F2: the bio with contact details in its free text replaced by ••••, for a viewer who hasn't connected. */
+export function maskBioContacts(bio: Bio): Bio {
+  const out: Bio = { ...bio };
+  for (const k of FREE_TEXT_BIO) {
+    const v = out[k];
+    if (typeof v === "string") out[k] = maskContacts(v);
+  }
+  if (bio.answers) {
+    out.answers = Object.fromEntries(
+      Object.entries(bio.answers).map(([id, a]) => [id, a.kind === "text" && typeof a.value === "string" ? { ...a, value: maskContacts(a.value) } : a]),
+    );
+  }
+  return out;
+}
+
+/** Card F2: whether any of it would be hidden. */
+export function bioHasContacts(bio: Bio): boolean {
+  return FREE_TEXT_BIO.some((k) => hasContact(bio[k] ?? "")) || Object.values(bio.answers ?? {}).some((a) => a.kind === "text" && typeof a.value === "string" && hasContact(a.value));
+}
+
 /** Card D3: the AskCard keys, one per question and place. */
 export type AskKey = "women_only_gender";
 export const askDismissed = (bio: Bio, key: AskKey) => !!bio.dismissedAsks?.includes(key);
