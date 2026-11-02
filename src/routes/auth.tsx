@@ -48,6 +48,8 @@ export const CEILING_NOTICE_KIND = "security.sign_in_attempts";
 export const SIGNUP_WINDOW_MS = 60 * MINUTE;
 export const SIGNUP_MAX_PER_IP = 10;
 export const SIGNUP_PREFIX = "signup:";
+/** Card F5: the hidden field only a bot fills in. */
+export const SIGNUP_TRAP_FIELD = "referral_site";
 const UNKNOWN_IP = "unknown";
 
 /**
@@ -211,6 +213,15 @@ function AuthForm(props: {
     <Card>
       <form method="post" action={mode === "signup" ? "/signup" : "/login"}>
         <input type="hidden" name="next" value={props.next ?? ""} />
+        {mode === "signup" ? (
+          // Card F5: a trap for sign-up bots. People never see it, can't tab to it, and autofill is told to skip it.
+          <div class="sr-only" aria-hidden="true">
+            <label>
+              Leave this empty
+              <input type="text" name={SIGNUP_TRAP_FIELD} value="" tabindex={-1} autocomplete="off" data-1p-ignore="" data-lpignore="true" />
+            </label>
+          </div>
+        ) : null}
         <Field
           label={t("ชื่อผู้ใช้", "Username")}
           name="username"
@@ -276,6 +287,9 @@ authRoutes.post("/signup", async (c) => {
         <AuthForm mode="signup" t={t} v={v} username={username} terms={terms} />
       </>,
     );
+  // Card F5: the trap field was filled. Say so instead of dropping it silently: if a person's browser
+  // somehow filled it, the form that comes back has it empty and pressing Sign up again works.
+  if (str(body[SIGNUP_TRAP_FIELD])) return fail(t("มีช่องที่ต้องเว้นว่างถูกกรอกไว้ กดสมัครอีกครั้งได้เลย", "A field that should stay empty was filled in. Please press Sign up again."));
   if (!USERNAME_RE.test(username)) return fail(t("ชื่อผู้ใช้ไม่ถูกต้อง", "That username isn't valid."));
   if (isPasswordless(username)) return fail(t("ชื่อผู้ใช้ห้ามขึ้นต้นด้วย google_ หรือ line_", "Usernames can't start with google_ or line_."));
   const pwIssue = passwordProblem(password);
