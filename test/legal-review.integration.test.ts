@@ -94,8 +94,7 @@ describe.skipIf(!HAS_DB)("members who joined before the Terms box", () => {
     expect(html).toContain('action="/settings/terms"');
     // One calm card that says what changed (owner, 2026-10-26): since 30 Oct, the card P1 list.
     expect(html).toContain("What changed");
-    expect(html).toContain("the two of you get a private shared plan and chat");
-    expect(html).toContain("remove location, camera and time details");
+    expect(html).toContain("we automatically check one-to-one chats");
     expect(html).not.toContain("audit log is kept 2 years");
     expect(html.match(/action="\/settings\/terms"/g)).toHaveLength(1);
   });

@@ -36,6 +36,8 @@
 - **Research codes:** City Pulse answers are kept under a code, not the name, but the account holds the code until deletion. Pseudonymous or anonymous for the notice and the BMA totals?
 - **Privacy contact:** the notice still shows a placeholder address. What must the contact be (a named person, a role address)?
 
+- **Chat pattern check (card F3):** an automatic check of one-to-one chats for money mentions, or one message sent to 3 or more people in a week, alerts a moderator, who can open those messages through a logged step. Nothing is automatic for the account. We rely on legitimate interest and disclose it in the notice. Is that enough, or does it need more, such as a balancing record?
+
 ## Background: PDPC sources
 
 - PDPC home and e-services: https://www.pdpc.or.th/en/home/

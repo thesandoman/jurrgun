@@ -18,6 +18,7 @@ import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, LATE_CANCEL_HOURS
 import { DEACTIVATED_RETENTION_DAYS } from "../services/retention";
 import { CAMPAIGN_COUNT,
   APPEAL_REPLY_DAYS,
+  CHAT_CHECK,
   CONTACT_ADDRESS,
   COOKIES,
   DEVICE_STORAGE,
@@ -108,6 +109,7 @@ export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
         ["ถ้าคุณเข้าร่วมบัดดี้กรุงเทพฯ คนอื่นที่เข้าร่วมจะเห็นการ์ดสั้น ๆ: ชื่อเล่น สรรพนามถ้าแสดง เขต ความสนใจ ภาษา และไทป์ถ้าคุณเปิดให้เห็น ไม่มีรูปหรืออายุ", "If you join Bangkok Buddy, others who joined see a short card: nickname, pronouns if shown, district, interests, languages, and your Bangkok Type if you show it. No photo or age."],
         ["โฮสต์และผู้จัดที่เป็นพาร์ตเนอร์ เห็นชื่อเล่น การลงชื่อ การเช็กอิน โต๊ะ เวลาที่จะไปถึง และการไม่มาตามนัด ของคนในกิจกรรมของเขา", "Hosts and partner organisers see the nickname, sign-up, check-in, table, ETA and no-shows of people at their events."],
         ["คนในแชตเดียวกัน (โต๊ะ โต๊ะประจำ บัดดี้ หรือคนรู้จัก) เห็นข้อความในแชตนั้น", "People in a chat with you (a table, Regular Table, buddy or connection) see the messages in it."],
+        [CHAT_CHECK.th, CHAT_CHECK.en],
         ["ลิงก์โซเชียลในโปรไฟล์ของคุณ เห็นได้เฉพาะคนที่เลือกกันทั้งสองฝ่าย และเฉพาะตอนที่คุณเปิดให้เห็น", "The social links on your profile are visible only to mutual connections, and only while your switch is on."],
         ["ข้อมูลเปิดใจมากกว่าเพื่อน เห็นได้เฉพาะคนที่เปิดใจเหมือนกัน และเฉพาะส่วนที่คุณเลือกแสดง", "Open to something more details are seen only by others who also opted in, and only what you choose to show."],
         ["แผนนัด โน้ต และแชตของเกี่ยวก้อย เห็นแค่คุณสองคน ทีมงานไม่เห็น และไม่นับรวมในยอดใด ๆ", "A Pinky's plan, note and chat are seen only by the two of you. Staff never see them, and they're left out of every total."],

@@ -17,38 +17,25 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-10-30";
+export const NOTICE_ISO = "2026-11-02";
 
 /** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
 export const CAMPAIGN_COUNT: Text = {
   th: "ลิงก์แคมเปญนับเป็นจำนวนต่อวัน โดยไม่เก็บข้อมูลใด ๆ ของคนที่เปิด",
   en: "Campaign links are counted per day, with nothing about the person who opened them.",
 };
-const CAMPAIGN_COUNT_CHANGE: Text = CAMPAIGN_COUNT;
+
+/** Card F3 (Trust & Operations' check, services/chat-alerts.ts). */
+export const CHAT_CHECK: Text = {
+  th: "เพื่อกันการหลอกลวง ระบบตรวจแชตแบบตัวต่อตัวโดยอัตโนมัติ หาการพูดถึงเรื่องเงิน หรือข้อความเดียวกันที่ส่งถึง 3 คนขึ้นไปใน 1 สัปดาห์ ถ้าเจอจะแจ้งผู้ดูแลให้ตัดสิน บัญชีไม่โดนลงโทษอัตโนมัติ ผู้ดูแลเห็นแค่ตัวเลขก่อน และเปิดอ่านข้อความที่เข้าข่ายได้ผ่านขั้นตอนที่มีบันทึกเท่านั้น เราไม่ตรวจแชตกลุ่มและแชตของเกี่ยวก้อยหรือคู่ที่เปิด 💘",
+  en: "To stop scams, we automatically check one-to-one chats for money mentions, or the same message sent to 3 or more people in a week. A match alerts a moderator, who decides what happens. Nothing happens to an account automatically. Moderators see counts first, and can open the matching messages only through a step that's logged. Group chats and Pinky or 💘 pairs' chats aren't checked.",
+};
 
 /**
  * What changed since the version before, in plain words: shown once on the
  * "updated Terms" card on Me (owner, 2026-10-26: one calm card, no reminders).
  */
-export const NOTICE_CHANGES: Text[] = [
-  {
-    th: "ใหม่: เกี่ยวก้อย · Pinky ถ้าคุณกับคนที่เคยเจอเลือกกันทั้งสองฝ่าย จะมีแผนนัดและแชตส่วนตัวของสองคน เมื่อคนใดคนหนึ่งจบ แผนและข้อความช่วงนั้นจะถูกลบ ทีมงานไม่เห็น",
-    en: "New: เกี่ยวก้อย · Pinky. If you and someone you met both choose it, the two of you get a private shared plan and chat. When either of you ends it, the plan and the messages from that time are deleted. Staff never see it.",
-  },
-  {
-    th: "รูปที่คุณอัปโหลด เราลบข้อมูลตำแหน่ง กล้อง และเวลาที่ถ่ายออกให้แล้ว รูปที่มีอยู่ก่อนหน้าก็ลบให้แล้วเช่นกัน",
-    en: "We now remove location, camera and time details from every photo you upload, and did the same for photos already here.",
-  },
-  {
-    th: "ฟอนต์อ่านง่ายในการตั้งค่าการเข้าถึงมาจากเราเองแล้ว ไม่ใช่ Google Fonts จึงไม่มีข้อมูลการเข้าเว็บส่งไปที่ Google",
-    en: "The easier-to-read font now comes from us, not Google Fonts, so Google no longer sees your visit.",
-  },
-  {
-    th: "หน้าอุปกรณ์ที่เข้าสู่ระบบใหม่ ดูได้ว่าเข้าสู่ระบบไว้ที่ไหน และออกจากระบบในเครื่องอื่นได้ เราเก็บแค่ประเภทอุปกรณ์และวันที่ ถ้าไม่ได้ใช้ 14 วัน จะออกจากระบบให้เอง",
-    en: "A new Signed-in devices page shows where you're signed in and lets you sign out elsewhere. We keep only the kind of device and the dates. A device unused for 14 days is signed out by itself.",
-  },
-  CAMPAIGN_COUNT_CHANGE,
-];
+export const NOTICE_CHANGES: Text[] = [CHAT_CHECK];
 
 const MONTHS: [string, string][] = [
   ["มกราคม", "January"], ["กุมภาพันธ์", "February"], ["มีนาคม", "March"], ["เมษายน", "April"], ["พฤษภาคม", "May"], ["มิถุนายน", "June"],
