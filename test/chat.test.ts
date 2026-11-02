@@ -24,7 +24,7 @@ describe("chat limits", () => {
 
   it("before the first meet: no links, numbers or handles, and a small budget", () => {
     const pre = { ...ok, met: false };
-    for (const m of ["see www.example.com", "https://x.co/a", "call 081 234 5678", "my line id: sunny_99", "add me @sunny.bkk", "ig: sunny99"]) {
+    for (const m of ["see www.example.com", "https://x.co/a", "call 081 234 5678", "my line id: sunny_99", "add me @sunny.bkk", "ig: sunny99", "ig sando", "ไอจี sando", "instagram sandosit", "my line is sandosit"]) {
       expect(checkMessage(m, pre)).toEqual({ ok: false, reason: "contact_before_meet" });
     }
     expect(checkMessage("Saturday 10:00 at Lumphini?", pre).ok).toBe(true);

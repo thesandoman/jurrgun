@@ -3,17 +3,22 @@
  * Used by chat (refused before the first meet) and profile text (shown as •••• until connected).
  *
  * Written from the review panel's cases. It should catch "ไลน์ sando99", "LINE: sando99", Telegram and Thai
- * digits, and leave "I post on Instagram sometimes" and "Worked at Agoda.com" alone. So a platform name only
- * counts with something handle-shaped after it: a separator ("LINE: x", "ไอดี x") or a token with a digit,
- * "_" or ".". A bare domain only counts with a path, unless it's a contact or short-link site.
+ * digits, and leave "I post on Instagram sometimes" and "Worked at Agoda.com" alone. It also keeps everything the
+ * old chat filter refused, including letters-only handles ("ig sando", "ไอจี sando", "my line is sandosit").
+ * A platform name counts when what follows looks like a handle: a separator or linking word ("LINE: x", "ไอดี x",
+ * "my line is x", "ไลน์ผม x"), a token with a digit, "_" or ".", or, for names that aren't everyday words, any
+ * other word that isn't everyday English ("ig sando" yes, "Instagram sometimes" no). "line", "snap", "signal"
+ * and "fb" are everyday or too short, so they need the stronger signs. A bare domain only counts with a path,
+ * unless it's a contact or short-link site.
  * Deliberately simple: spaced-out spellings ("l i n e") get through. This raises the cost; it isn't a wall.
  */
 export const HIDDEN = "••••";
 
 const D = "[0-9๐-๙０-９]";
+/** A Latin name must end at a word boundary ("insta" isn't "instagram" + "gram"); a Thai one can run straight into a handle. */
 const WORDS = [
-  "line", "ไลน์", "ig", "insta", "instagram", "ไอจี", "telegram", "เทเลแกรม", "tg", "whatsapp", "วอทส์แอป", "วอทแอป", "wechat", "วีแชท",
-  "facebook", "fb", "เฟซบุ๊ก", "เฟสบุ๊ค", "เฟส", "tiktok", "ติ๊กต็อก", "ติ๊กตอก", "snapchat", "snap", "discord", "kakao", "signal",
+  ...["line", "ig", "insta", "instagram", "telegram", "tg", "whatsapp", "wechat", "facebook", "fb", "tiktok", "snapchat", "snap", "discord", "kakao", "signal"].map((w) => `${w}(?![a-z0-9_])`),
+  ...["ไลน์", "ไอจี", "เทเลแกรม", "วอทส์แอป", "วอทแอป", "วีแชท", "เฟซบุ๊ก", "เฟสบุ๊ค", "เฟส", "ติ๊กต็อก", "ติ๊กตอก"],
 ].join("|");
 
 const PLAIN: RegExp[] = [
@@ -27,7 +32,14 @@ const PLAIN: RegExp[] = [
 ];
 /** "ไอดีไลน์ x" / "id line x": the id word comes first. */
 const ID_FIRST = /(?:ไอดีไลน์|id\s*line)\s*[:：=]?\s*(@?[a-z0-9_.-]{3,})/gi;
-const PLATFORM = new RegExp(`(?<![a-z0-9_])(?:${WORDS})(\\s*(?:id|ไอดี)?\\s*(?:[:：=]|คือ)?\\s*)(@?[a-z0-9_.\\-]{3,})`, "gi");
+const PLATFORM = new RegExp(`(?<![a-z0-9_])(${WORDS})(\\s*(?:(?:id|ไอดี|is|ผม|ฉัน|เรา|หนู|ของผม|ของฉัน|ของเรา)\\s*)*(?:[:：=]|คือ)?\\s*)(@?[a-z0-9_.\\-]{3,})`, "gi");
+/** Platform names that are also everyday words, or too short: a plain word after them proves nothing. */
+const AMBIGUOUS = /^(?:line|snap|signal|fb|เฟส)$/i;
+/** Plain words that follow a platform name in ordinary sentences ("Instagram sometimes", "TikTok videos"). */
+const EVERYDAY = new Set(
+  "sometimes often always never usually rarely mostly mainly only just also too again now then today tonight here there a an the and or but so for from with without about after before when while because if at in on of to by as is are was were be been that this these those it its my your our their his her me you we they i not no yes more less much many some all any most very really reel reels story stories post posts page pages account accounts video videos photo photos picture pictures content creator creators influencer influencers marketing ads ad shop shops group groups live lives feed feeds app apps user users addict fan fans friend friends ban banned scroller scrolling busy free down open closed good bad long short dead full new old".split(" "),
+);
+const notEveryday = (token: string) => !EVERYDAY.has(token.toLowerCase()) && !/(?:ly|ing)$/i.test(token);
 
 type Range = [number, number];
 
@@ -36,8 +48,10 @@ export function findContacts(text: string): Range[] {
   for (const re of PLAIN) for (const m of text.matchAll(re)) out.push([m.index, m.index + m[0].length]);
   for (const m of text.matchAll(ID_FIRST)) out.push([m.index + m[0].length - m[1].length, m.index + m[0].length]);
   for (const m of text.matchAll(PLATFORM)) {
-    const strong = /id|ไอดี|[:：=]|คือ/i.test(m[1]);
-    if (strong || /[0-9_.]/.test(m[2])) out.push([m.index + m[0].length - m[2].length, m.index + m[0].length]);
+    const [whole, name, between, token] = m;
+    const strong = /id|ไอดี|is|ผม|ฉัน|เรา|หนู|[:：=]|คือ/i.test(between);
+    const shaped = /[0-9_.]/.test(token) || token.startsWith("@");
+    if (strong ? notEveryday(token) || shaped : shaped || (!AMBIGUOUS.test(name) && notEveryday(token))) out.push([m.index + whole.length - token.length, m.index + whole.length]);
   }
   out.sort((a, b) => a[0] - b[0]);
   const merged: Range[] = [];
