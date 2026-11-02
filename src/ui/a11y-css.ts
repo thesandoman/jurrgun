@@ -1553,4 +1553,6 @@ main h2.doors-eyebrow{margin:24px 0 8px}
 /* Empty states end in one next step (owner, W1): a plain link under the line, a 44px target. */
 .empty-next{margin:-4px 0 16px;text-align:center}
 .empty-next a{display:inline-flex;align-items:center;min-height:44px;font-weight:700}
+/* Discover on phones and tablets: open Filters takes the whole row (it was squeezed to about 110px beside Map and Cards); the view switch wraps under it. */
+@media (max-width:1023.98px){.disc-bar:not(.is-stuck) .disc-tools .filters[open]{flex-basis:100%}}
 `);
