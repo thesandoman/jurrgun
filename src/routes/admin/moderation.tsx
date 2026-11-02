@@ -37,6 +37,8 @@ import { getObject, getObjectUrl } from "../../storage";
 import { OPEN_TO_MORE_TAG } from "../../domain/rules";
 import { FLAG_SUSPEND_DAYS, FLAG_WINDOW_DAYS, FLAGS_TO_REMOVE, flagLimitReached, removalAllowed } from "../../domain/rules";
 import { Script } from "../../ui/kit";
+import { ALERT_REASON, isChatAlert, parseAlertDetails } from "../../domain/chat-alerts";
+import { alertMessages } from "../../services/chat-alerts";
 
 /** Rules a moderator can name as broken: the report reasons, minus "other". */
 const RULES = REPORT_REASON_LABELS.filter((r) => r.value !== "other");
@@ -80,6 +82,9 @@ const STATUS_LABELS: Record<string, [string, string]> = {
   actioned: ["ดำเนินการแล้ว", "Actioned"],
   dismissed: ["ยกเลิกแล้ว", "Dismissed"],
 };
+
+/** A report's reason. An alert has its own, kept out of the rules a moderator can name. */
+const reasonLabel = (reason: string, lang: "th" | "en") => (reason === ALERT_REASON ? (lang === "en" ? "Chat alert" : "การแจ้งเตือนจากแชต") : label(REPORT_REASON_LABELS, reason, lang));
 
 const reporterProfile = aliasedTable(profiles, "reporter_profile");
 const targetProfile = aliasedTable(profiles, "target_profile");
@@ -136,6 +141,7 @@ adminModeration.get("/", async (c) => {
         reason: reports.reason,
         severity: reports.severity,
         createdAt: reports.createdAt,
+        reporter: reports.reporter,
         reporterNick: reporterProfile.nickname,
         targetNick: targetProfile.nickname,
         eventTitle: events.title,
@@ -218,9 +224,9 @@ adminModeration.get("/", async (c) => {
                 <tr>
                   <td>{r.severity === "critical" ? <Tag tone="warn">{t("ด่วน", "Critical")}</Tag> : <Tag>{t("ทั่วไป", "Standard")}</Tag>}</td>
                   <td>
-                    <a href={`/admin/moderation/${encodeURIComponent(r.id)}`}>{label(REPORT_REASON_LABELS, r.reason, lang)}</a>
+                    <a href={`/admin/moderation/${encodeURIComponent(r.id)}`}>{reasonLabel(r.reason, lang)}</a>
                   </td>
-                  <td>{r.reporterNick ?? "-"}</td>
+                  <td>{isChatAlert(r) ? t("ระบบ", "System") : r.reporterNick ?? "-"}</td>
                   <td>{r.targetNick ?? "-"}</td>
                   <td>{r.eventTitle ? (lang === "en" && r.eventTitleEn ? r.eventTitleEn : r.eventTitle) : "-"}</td>
                   <td>
@@ -266,6 +272,34 @@ async function loadReport(c: Context<AppEnv>, id: string) {
   // A moderator never sees a report about staff, so it's "not found", not "forbidden".
   if (row && !isAdmin(c) && row.targetRole && (STAFF_TARGET_ROLES as readonly string[]).includes(row.targetRole)) return null;
   return row ?? null;
+}
+
+/** An alert's pattern: counts only. The messages open through a recorded step. */
+function AlertSummary(props: { t: (th: string, en: string) => string; id: string; alert: ReturnType<typeof parseAlertDetails>; open: boolean }) {
+  const { t, id, alert, open } = props;
+  if (!alert) return <p class="muted">{t("อ่านรายละเอียดการแจ้งเตือนไม่ได้", "This alert's details can't be read.")}</p>;
+  return (
+    <>
+      <h2 class="h3">{t("รูปแบบที่พบ", "The pattern")}</h2>
+      <p>
+        {alert.kind === "money"
+          ? t(`พูดถึงเงินกับ ${alert.people} คน รวม ${alert.messages} ข้อความ ใน 7 วัน`, `Mentioned money to ${alert.people} people, ${alert.messages} messages, within 7 days.`)
+          : t(`ส่งข้อความเดียวกันถึง ${alert.people} คน รวม ${alert.messages} ข้อความ ใน 7 วัน`, `Sent the same message to ${alert.people} people, ${alert.messages} messages, within 7 days.`)}
+      </p>
+      {alert.oneEvent ? (
+        <p class="muted">
+          {t(`${alert.oneEvent} จาก ${alert.people} คนมาจากกิจกรรมเดียวกัน ถ้าทั้งหมดมาจากงานเดียว อาจเป็นการหารค่าใช้จ่าย`, `${alert.oneEvent} of the ${alert.people} came from one event. If that's all of them, it may be a split bill.`)}
+        </p>
+      ) : null}
+      <p class="muted">{t("นี่เป็นการแจ้งเตือนอัตโนมัติ ไม่ใช่ธง และยังไม่มีอะไรเกิดขึ้นกับบัญชีนี้ คุณเป็นคนตัดสินใจ", "This is an automatic alert, not a flag. Nothing has happened to the account: you decide.")}</p>
+      {open ? (
+        <form method="post" action={`/admin/moderation/${encodeURIComponent(id)}/alert-messages`}>
+          <button type="submit" class="btn ghost">{t("เปิดอ่านข้อความ (บันทึกการเปิดดู)", "Open the messages (this is recorded)")}</button>
+          <small class="muted"> {t("เปิดเฉพาะเมื่อจำเป็นต่อการตัดสินใจ", "Only if you need them to decide.")}</small>
+        </form>
+      ) : null}
+    </>
+  );
 }
 
 async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: string; status?: 200 | 400 } = {}) {
@@ -348,6 +382,7 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
 
   const protectedTarget = target?.role === "bma_admin" && me.role !== "bma_admin";
   const selfTarget = !!target && target.id === me.id;
+  const alert = isChatAlert(r) ? parseAlertDetails(r.details) : null;
   const evTitle = row.eventTitle ? (lang === "en" && row.eventTitleEn ? row.eventTitleEn : row.eventTitle) : null;
 
   return page(
@@ -359,14 +394,14 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
       </p>
       {opts.error ? <Notice kind="error">{opts.error}</Notice> : null}
       <h1>
-        {label(REPORT_REASON_LABELS, r.reason, lang)}{" "}
+        {reasonLabel(r.reason, lang)}{" "}
         {r.severity === "critical" ? <Tag tone="warn">{t("ด่วน", "Critical")}</Tag> : <Tag>{t("ทั่วไป", "Standard")}</Tag>}{" "}
         <Tag tone="accent">{lang === "en" ? STATUS_LABELS[r.status]?.[1] ?? r.status : STATUS_LABELS[r.status]?.[0] ?? r.status}</Tag>
       </h1>
 
       <Card>
         <p class="meta">
-          <span>{t("ผู้รายงาน", "Reporter")}: {row.reporterNick ?? "-"}</span>
+          <span>{t("ผู้รายงาน", "Reporter")}: {isChatAlert(r) ? t("ระบบ (ไม่มีคนรายงาน)", "System (nobody filed this)") : row.reporterNick ?? "-"}</span>
           <span>{t("รายงานเมื่อ", "Filed")}: {fmtDate(r.createdAt, lang)}</span>
           {evTitle ? (
             <span>
@@ -375,8 +410,14 @@ async function renderDetail(c: Context<AppEnv>, id: string, opts: { error?: stri
             </span>
           ) : null}
         </p>
-        <h2 class="h3">{t("รายละเอียดจากผู้รายงาน", "Reporter's details")}</h2>
-        <p style="white-space:pre-wrap">{r.details || t("(ไม่มีรายละเอียด)", "(no details)")}</p>
+        {isChatAlert(r) ? (
+          <AlertSummary t={t} id={r.id} alert={alert} open={r.status === "open" || r.status === "in_review"} />
+        ) : (
+          <>
+            <h2 class="h3">{t("รายละเอียดจากผู้รายงาน", "Reporter's details")}</h2>
+            <p style="white-space:pre-wrap">{r.details || t("(ไม่มีรายละเอียด)", "(no details)")}</p>
+          </>
+        )}
         {r.targetMessage ? (
           <>
             <h2 class="h3">{t("หลักฐานที่เก็บไว้", "Evidence kept")}</h2>
@@ -645,6 +686,46 @@ adminModeration.get("/:id/evidence", async (c) => {
   return new Response(obj.body, { headers: { "content-type": obj.metadata.contentType ?? "application/octet-stream", "cache-control": "no-store" } });
 });
 
+/**
+ * The messages behind an open alert: a POST, so opening them is always a choice,
+ * and every opening is in the audit log. Never stored, never cached.
+ */
+adminModeration.post("/:id/alert-messages", async (c) => {
+  const { t, lang } = view(c);
+  const me = c.var.user!.account;
+  const row = await loadReport(c, c.req.param("id"));
+  if (!row) return c.notFound();
+  const r = row.report;
+  if (!isChatAlert(r) || (r.status !== "open" && r.status !== "in_review") || r.targetAccount === me.id) return c.notFound();
+  const db = getDb(c.env);
+  const shown = await alertMessages(db, r);
+  await audit(db, me.id, "moderation.view_alert_messages", { type: "report", id: r.id }, { target: r.targetAccount, count: shown.length });
+  c.header("cache-control", "no-store");
+  return page(
+    c,
+    { title: t("ข้อความในการแจ้งเตือน", "Messages behind this alert"), admin: true },
+    <>
+      <p>
+        <a href={`/admin/moderation/${encodeURIComponent(r.id)}`}>← {t("กลับไปที่การแจ้งเตือน", "Back to the alert")}</a>
+      </p>
+      <h1>{t("ข้อความในการแจ้งเตือน", "Messages behind this alert")}</h1>
+      <p class="muted">{t("เฉพาะข้อความที่ตรงกับรูปแบบนี้ ไม่ใช่ทั้งแชต การเปิดครั้งนี้ถูกบันทึกแล้ว ผู้รับแสดงเป็น A, B, C", "Only the messages that match this pattern, never the whole chat. This opening is recorded. Receivers show as A, B, C.")}</p>
+      {shown.length ? (
+        <>
+          {shown.map((m) => (
+            <Card>
+              <p style="white-space:pre-wrap;margin:0">{m.body}</p>
+              <small class="muted">{t(`ถึง ${m.person}`, `To ${m.person}`)} · {fmtDate(m.createdAt, lang)}</small>
+            </Card>
+          ))}
+        </>
+      ) : (
+        <Empty>{t("ไม่มีข้อความเหลือแล้ว อาจถูกซ่อนหรือลบไปแล้ว", "No messages left. They may have been hidden or deleted.")}</Empty>
+      )}
+    </>,
+  );
+});
+
 adminModeration.post("/:id/action", async (c) => {
   const { t } = view(c);
   const id = c.req.param("id");
@@ -776,7 +857,7 @@ adminModeration.post("/:id/action", async (c) => {
   // Owner card C: the reporter hears once when their report closes, never about the other person.
   // A member's own "look again" request is answered by the lift notice (or nothing), not this.
   const closing = resolved && r.status !== "actioned" && r.status !== "dismissed" && (action === "dismiss" || action === "warning" || action === "suspend" || action === "ban");
-  if (closing && r.reporter !== r.targetAccount) {
+  if (closing && r.reporter !== r.targetAccount && !isChatAlert(r)) {
     const [th, en] = reporterCopy(action !== "dismiss");
     ops.push(notify(db, r.reporter, "report_closed", th, en, "/connections"));
   }

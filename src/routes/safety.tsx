@@ -119,6 +119,7 @@ safetyRoutes.get("/safety", (c) => {
         ))}
       </ul>
 
+      <p class="muted">{t("รู้สึกแปลก ๆ ในแชต? แตะ ⋯ ที่ข้อความนั้น แล้วให้ทีมงานช่วยดู อีกฝ่ายจะไม่รู้ว่ามาจากคุณ", "Something feel off in a chat? Tap ⋯ on the message and ask our team to check. The other person won't know it came from you.")}</p>
       <p class="row">
         <a href="/report">🚩 {t("รายงาน", "Report someone")}</a>
         <a href="/safety/how">{t("เราดูแลความปลอดภัยยังไง", "How we keep you safe")}</a>

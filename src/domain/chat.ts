@@ -46,7 +46,8 @@ export function parseThread(key: string): ThreadKey | null {
 }
 export const threadKey = (t: ThreadKey) => `${t.kind}:${t.ref}`;
 
-const MONEY_RE = /โอน(?:เงิน)?|ยืมเงิน|ขอเงิน|ส่งเงิน|พร้อมเพย์|promptpay|transfer|wire|lend me|borrow money|send (?:me )?money|bank account|เลขบัญชี|crypto|usdt|bitcoin|gift ?card/i;
+// "transfer" and "wire" alone are everyday words ("transfer at Siam", "wireless"): they need money beside them.
+const MONEY_RE = /โอน(?:เงิน)?(?!เอน)|ยืมเงิน|ขอเงิน|ส่งเงิน|พร้อมเพย์|promptpay|\b(?:bank|money|wire) transfer\b|\btransfer(?:s|red|ring)?\s+(?:me\b|you\b|(?:the\s+|some\s+|your\s+)?(?:money|funds|cash|baht)\b|\d[\d,.]*\s*(?:k\b|baht|thb|฿)|฿|to\s+(?:my|your)\s+(?:bank|account|wallet))|\bwire\s+(?:me\b|you\b|(?:the\s+)?(?:money|funds|cash)\b|\d)|\blend me\b|borrow money|send (?:me )?money|bank account|เลขบัญชี|crypto|usdt|bitcoin|gift ?card/i;
 
 export type CheckResult =
   | { ok: true; body: string; moneyFlag: boolean }

@@ -55,6 +55,7 @@ import { accounts, auditLog, blocks, consents, events, notifications, profiles, 
 import { getStatefulObject } from "../state";
 import { pushToAccount } from "./push";
 import { runPhotoCleanBatch } from "./photo-clean";
+import { runChatAlerts } from "./chat-alerts";
 import { retentionIfDue } from "./retention";
 import { lapseInvites } from "./collabs";
 import { readDueFeeds } from "./outside-events";
@@ -229,6 +230,8 @@ export async function runClock(env: Bindings, now: Date = new Date()): Promise<C
   await lapseInvites(env, now).catch((err) => createLogger(env).warn("co-host invite lapse failed", { error: String(err) }));
   // One-time clean of photos stored before uploads were stripped (owner, 2026-10-26): a batch an hour until done.
   await runPhotoCleanBatch(env).catch((err) => createLogger(env).warn("photo clean batch failed", { error: String(err) }));
+  // Patterns in one-to-one chats for a moderator to look at (owner F3). Nobody is messaged, so any hour.
+  await runChatAlerts(env, now).catch((err) => createLogger(env).warn("chat alerts failed", { error: String(err) }));
   if (quietHours(now)) {
     out.quiet = true;
     return out;

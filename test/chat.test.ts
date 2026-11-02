@@ -42,6 +42,17 @@ describe("chat limits", () => {
     expect(plain.ok && plain.moneyFlag).toBe(false);
   });
 
+  it("flags a transfer or wire only with money beside it", () => {
+    for (const m of ["please transfer me 500", "transfer 2,000 baht tonight", "transfer the money to my account", "wire me the deposit", "bank transfer is fine", "wire transfer only", "transfer to my account"]) {
+      const r = checkMessage(m, ok);
+      expect(r.ok && r.moneyFlag, m).toBe(true);
+    }
+    for (const m of ["my wireless earbuds died", "transfer at Siam for the Silom line", "transfer to the BTS at Asok", "we transfer 2 stops later", "โอนเอนนิดหน่อย"]) {
+      const r = checkMessage(m, ok);
+      expect(r.ok && r.moneyFlag, m).toBe(false);
+    }
+  });
+
   it("nudges to meet after 30 messages without meeting", () => {
     expect(shouldNudge(false, 29)).toBe(false);
     expect(shouldNudge(false, 30)).toBe(true);

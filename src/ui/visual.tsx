@@ -231,6 +231,7 @@ details.how.ev-desc>summary{font-weight:400;line-height:1.5;color:var(--ink-2)}
 .chat-msgs .inline{display:inline}
 .linkish{background:none;border:0;padding:0;color:var(--ink-3);text-decoration:underline;font:inherit;cursor:pointer}
 .chat-warn{margin:0 0 4px;padding:8px 12px;border-radius:12px;background:var(--warn-soft);color:var(--warn);font-size:.85rem;font-weight:600}
+.chat-warn p{margin:0}.chat-warn .linkish{color:inherit;font-weight:600;margin-top:4px;min-height:24px}
 .chat-photo{margin:0;border-radius:18px;overflow:hidden;background:var(--surface-2);max-width:280px;box-shadow:var(--shadow)}
 .chat-photo img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover}
 .chat-photo figcaption{padding:8px 12px;font-size:.9rem}

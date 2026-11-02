@@ -513,6 +513,9 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
       {c.req.query("notice") === "reported" ? (
         <Notice kind="ok">{t("ได้รับรายงานแล้ว ทีมงานจะตรวจสอบ ถ้าไม่อยากคุยต่อ บล็อกได้จากหน้าคนรู้จัก", "Reported. Our team will review it. You can block them from My people if you'd rather not talk.")}</Notice>
       ) : null}
+      {c.req.query("notice") === "asked" ? (
+        <Notice kind="ok">{t("ขอบคุณที่บอกเรา ทีมงานจะช่วยดูให้ และจะไม่บอกอีกฝ่ายว่าเรื่องนี้มาจากคุณ คุณไม่ต้องตอบข้อความนี้ และบล็อกได้จากหน้าคนรู้จัก", "Thanks for telling us. Our team will take a look, and won't tell the other person it came from you. You don't have to reply, and you can block them from My people.")}</Notice>
+      ) : null}
       {!th.met ? (
         <Notice kind="info">
           {t(
@@ -537,7 +540,13 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
               </small>
             ) : null}
             {m.moneyFlag && m.sender !== me ? (
-              <p class="chat-warn">⚠️ {t("ข้อความนี้พูดถึงเงิน อย่าโอนเงินให้คนที่เพิ่งรู้จัก", "This mentions money. Never send money to someone you've just met.")}</p>
+              <div class="chat-warn">
+                <p>⚠️ {t("ข้อความนี้พูดถึงเงิน อย่าโอนเงินให้คนที่เพิ่งรู้จัก", "This mentions money. Never send money to someone you've just met.")}</p>
+                <form method="post" action={`/chat/${key}/report/${m.id}`}>
+                  <input type="hidden" name="help" value="1" />
+                  <button class="linkish">{t("รู้สึกแปลก ๆ ไหม? ให้ทีมงานช่วยดู", "Something feel off? Ask our team to check")}</button>
+                </form>
+              </div>
             ) : null}
             {m.kind === "photo" ? (
               <figure class="chat-photo">
@@ -561,6 +570,12 @@ async function renderThread(c: C, key: string, error?: { th: string; en: string 
                   triggerLabel={t(`ตัวเลือกสำหรับข้อความจาก ${nameOf.get(m.sender) ?? "?"}`, `Options for the message from ${nameOf.get(m.sender) ?? "?"}`)}
                   align="start"
                 >
+                  <form method="post" action={`/chat/${key}/report/${m.id}`}>
+                    <input type="hidden" name="help" value="1" />
+                    <button class="sheet-item">
+                      <span aria-hidden="true">🛟</span> {t("รู้สึกแปลก ๆ? ให้ทีมงานช่วยดู", "Something feel off? Ask our team to check")}
+                    </button>
+                  </form>
                   <form method="post" action={`/chat/${key}/report/${m.id}`}>
                     <button class="sheet-item danger">
                       <span aria-hidden="true">🚩</span> {t("รายงานข้อความนี้", "Report this message")}
@@ -801,6 +816,8 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
   const [m] = await db.select().from(chatMessages).where(and(eq(chatMessages.id, c.req.param("msgId")), inArray(chatMessages.thread, keysOf(th)))).limit(1);
   if (!m || m.sender === me) return c.redirect(`/chat/${key}`);
   const critical = !!m.moneyFlag;
+  // Owner F3: "Ask our team to check" files the same report, as a possible scam, with kinder words.
+  const help = str((await c.req.parseBody()).help) === "1";
   // Owner card A: 1 a day about the same person, 10 a day in all; critical never blocked.
   if (await reportLimit(db, me, m.sender, critical)) return c.redirect(`/chat/${key}?notice=report_limit`);
   const alert = await staffAlert(c.env, db, { critical, aboutStaff: await isStaffTarget(db, m.sender) });
@@ -811,7 +828,7 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
       reporter: me,
       targetAccount: m.sender,
       targetMessage: m.id,
-      reason: m.moneyFlag ? "spam_scam" : "harassment",
+      reason: m.moneyFlag || help ? "spam_scam" : "harassment",
       details: m.kind === "photo" ? `${PHOTO_DETAILS_PREFIX} (caption: ${m.body.slice(0, 200)})` : m.kind === "poll" ? `Chat poll: ${m.body.slice(0, 500)}` : `Chat message: ${m.body.slice(0, 500)}`,
       severity: critical ? "critical" : "standard",
     }),
@@ -821,7 +838,7 @@ chatRoutes.post("/chat/:thread/report/:msgId", async (c) => {
   // Owner card B: a copy of just the reported photo, kept until the report is closed.
   if (m.kind === "photo" && m.photoKey) await keepPhoto(c.env, id, m.photoKey);
   await alert.push();
-  return c.redirect(`/chat/${key}?notice=reported`);
+  return c.redirect(`/chat/${key}?notice=${help ? "asked" : "reported"}`);
 });
 
 /**
