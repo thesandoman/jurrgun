@@ -21,7 +21,7 @@ describe("card F2: finding contact details", () => {
     }
   });
   it("still leaves ordinary mentions alone", () => {
-    for (const s of ["Instagram sometimes", "my line is busy", "on TikTok daily", "Facebook groups are fun", "Love IG stories", "I'm on Instagram mostly", "line cook for 3 years", "signal is bad here", "I saw it on TikTok yesterday", "I use Facebook marketplace", "Love my telegram channel"]) {
+    for (const s of ["Instagram sometimes", "my line is busy", "on TikTok daily", "Facebook groups are fun", "Love IG stories", "I'm on Instagram mostly", "line cook for 3 years", "signal is bad here", "I saw it on TikTok yesterday", "I saw it on Instagram yesterday", "ig last week", "I use Facebook marketplace", "Love my telegram channel"]) {
       expect(hasContact(s), s).toBe(false);
     }
   });
