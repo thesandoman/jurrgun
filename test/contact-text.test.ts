@@ -16,12 +16,12 @@ describe("card F2: finding contact details", () => {
     for (const s of ["see www.example.com", "https://x.co/a", "call 081 234 5678", "my line id: sunny_99", "add me @sunny.bkk", "ig: sunny99", "shop.co/deal"]) expect(hasContact(s), s).toBe(true);
   });
   it("keeps refusing letters-only handles the old filter caught (QA's cases)", () => {
-    for (const s of ["ig sando", "ไอจี sando", "instagram sandosit", "facebook sandosit", "my line is sandosit", "ไลน์ผม sando99", "my insta is sando99", "line id: sunny", "ig: sunny", "ไลน์ คือ sando"]) {
+    for (const s of ["ig sando", "ไอจี sando", "instagram sandosit", "my facebook is sandosit", "my line is sandosit", "ไลน์ผม sando99", "my insta is sando99", "line id: sunny", "ig: sunny", "ไลน์ คือ sando"]) {
       expect(hasContact(s), s).toBe(true);
     }
   });
   it("still leaves ordinary mentions alone", () => {
-    for (const s of ["Instagram sometimes", "my line is busy", "on TikTok daily", "Facebook groups are fun", "Love IG stories", "I'm on Instagram mostly", "line cook for 3 years", "signal is bad here"]) {
+    for (const s of ["Instagram sometimes", "my line is busy", "on TikTok daily", "Facebook groups are fun", "Love IG stories", "I'm on Instagram mostly", "line cook for 3 years", "signal is bad here", "I saw it on TikTok yesterday", "I use Facebook marketplace", "Love my telegram channel"]) {
       expect(hasContact(s), s).toBe(false);
     }
   });

@@ -6,10 +6,9 @@
  * digits, and leave "I post on Instagram sometimes" and "Worked at Agoda.com" alone. It also keeps everything the
  * old chat filter refused, including letters-only handles ("ig sando", "ไอจี sando", "my line is sandosit").
  * A platform name counts when what follows looks like a handle: a separator or linking word ("LINE: x", "ไอดี x",
- * "my line is x", "ไลน์ผม x"), a token with a digit, "_" or ".", or, for names that aren't everyday words, any
- * other word that isn't everyday English ("ig sando" yes, "Instagram sometimes" no). "line", "snap", "signal"
- * and "fb" are everyday or too short, so they need the stronger signs. A bare domain only counts with a path,
- * unless it's a contact or short-link site.
+ * "my line is x", "ไลน์ผม x"), a token with a digit, "_" or ".", or, after ig, insta, instagram or ไอจี only, any
+ * other word that isn't everyday English ("ig sando" yes, "Instagram sometimes" no). A bare domain only counts
+ * with a path, unless it's a contact or short-link site.
  * Deliberately simple: spaced-out spellings ("l i n e") get through. This raises the cost; it isn't a wall.
  */
 export const HIDDEN = "••••";
@@ -33,8 +32,11 @@ const PLAIN: RegExp[] = [
 /** "ไอดีไลน์ x" / "id line x": the id word comes first. */
 const ID_FIRST = /(?:ไอดีไลน์|id\s*line)\s*[:：=]?\s*(@?[a-z0-9_.-]{3,})/gi;
 const PLATFORM = new RegExp(`(?<![a-z0-9_])(${WORDS})(\\s*(?:(?:id|ไอดี|is|ผม|ฉัน|เรา|หนู|ของผม|ของฉัน|ของเรา)\\s*)*(?:[:：=]|คือ)?\\s*)(@?[a-z0-9_.\\-]{3,})`, "gi");
-/** Platform names that are also everyday words, or too short: a plain word after them proves nothing. */
-const AMBIGUOUS = /^(?:line|snap|signal|fb|เฟส)$/i;
+/**
+ * The names the old chat filter refused a plain word after ("ig sando"). For every other platform a plain word
+ * proves nothing ("I saw it on TikTok yesterday", "I use Facebook marketplace"), so those need the stronger signs.
+ */
+const PLAIN_WORD_COUNTS = /^(?:ig|insta|instagram|ไอจี)$/i;
 /** Plain words that follow a platform name in ordinary sentences ("Instagram sometimes", "TikTok videos"). */
 const EVERYDAY = new Set(
   "sometimes often always never usually rarely mostly mainly only just also too again now then today tonight here there a an the and or but so for from with without about after before when while because if at in on of to by as is are was were be been that this these those it its my your our their his her me you we they i not no yes more less much many some all any most very really reel reels story stories post posts page pages account accounts video videos photo photos picture pictures content creator creators influencer influencers marketing ads ad shop shops group groups live lives feed feeds app apps user users addict fan fans friend friends ban banned scroller scrolling busy free down open closed good bad long short dead full new old".split(" "),
@@ -51,7 +53,7 @@ export function findContacts(text: string): Range[] {
     const [whole, name, between, token] = m;
     const strong = /id|ไอดี|is|ผม|ฉัน|เรา|หนู|[:：=]|คือ/i.test(between);
     const shaped = /[0-9_.]/.test(token) || token.startsWith("@");
-    if (strong ? notEveryday(token) || shaped : shaped || (!AMBIGUOUS.test(name) && notEveryday(token))) out.push([m.index + whole.length - token.length, m.index + whole.length]);
+    if (strong ? notEveryday(token) || shaped : shaped || (PLAIN_WORD_COUNTS.test(name) && notEveryday(token))) out.push([m.index + whole.length - token.length, m.index + whole.length]);
   }
   out.sort((a, b) => a[0] - b[0]);
   const merged: Range[] = [];
