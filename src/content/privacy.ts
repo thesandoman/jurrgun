@@ -17,7 +17,7 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-11-02";
+export const NOTICE_ISO = "2026-11-05";
 
 /** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
 export const CAMPAIGN_COUNT: Text = {
@@ -35,7 +35,12 @@ export const CHAT_CHECK: Text = {
  * What changed since the version before, in plain words: shown once on the
  * "updated Terms" card on Me (owner, 2026-10-26: one calm card, no reminders).
  */
-export const NOTICE_CHANGES: Text[] = [CHAT_CHECK];
+export const NOTICE_CHANGES: Text[] = [
+  {
+    th: "มีแอป Jurrgun ในมือถือแล้ว ถ้าเปิดการแจ้งเตือนในแอป เราส่งผ่าน Expo ซึ่งเห็นแค่ที่อยู่สำหรับส่งของมือถือคุณ และข้อความเดียวว่า \"มีอะไรใหม่สำหรับคุณใน Jurrgun\" ไม่มีชื่อหรือข้อความแชต",
+    en: "There's now a Jurrgun phone app. If you turn on its notifications, we send them through Expo, which sees only your phone's push address and one line, \"You have something new in Jurrgun\". Never names or messages.",
+  },
+];
 
 const MONTHS: [string, string][] = [
   ["มกราคม", "January"], ["กุมภาพันธ์", "February"], ["มีนาคม", "March"], ["เมษายน", "April"], ["พฤษภาคม", "May"], ["มิถุนายน", "June"],
@@ -271,6 +276,7 @@ export const COOKIES: CookieItem[] = [
   { name: "lang", what: { th: "ภาษาที่คุณเลือก", en: "Your language" }, life: { th: "1 ปี", en: "1 year" } },
   { name: "jg_src", what: { th: "ลิงก์แคมเปญหรือพาร์ตเนอร์ที่พาคุณมา", en: "The campaign or partner link that brought you" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "bkk_oauth", what: { th: "ระหว่างเข้าสู่ระบบด้วย Google หรือ LINE", en: "While you sign in with Google or LINE" }, life: { th: "10 นาที", en: "10 minutes" } },
+  { name: "bkk_app_bind", what: { th: "ระหว่างเข้าสู่ระบบในแอป Jurrgun ในมือถือ ผูกการเข้าสู่ระบบไว้กับแอปที่เริ่มเท่านั้น", en: "While you sign in on the Jurrgun phone app, so the sign-in only finishes in the app that started it" }, life: { th: "10 นาที", en: "10 minutes" } },
   { name: "bkk_invite", what: { th: "ลิงก์ชวนจากเพื่อน จนกว่าคุณจะสมัครเสร็จ", en: "A friend's invite link, until you finish signing up" }, life: { th: "7 วัน", en: "7 days" } },
   { name: "bkk_intent", what: { th: "สิ่งที่คุณเลือกในหน้าต้อนรับ (เพื่อน หรือเปิดใจมากกว่าเพื่อน)", en: "Your choice on the welcome screen (friends, or open to more)" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "bkk_dating_pending", what: { th: "คำตอบเรื่องเดตตอนสมัคร เก็บไว้ในเครื่องคุณจนกว่าจะยินยอม ถ้าไม่ยินยอมจะถูกลบ", en: "Your sign-up dating answers, kept on your device until you consent; dropped if you don't" }, life: { th: "30 วัน", en: "30 days" } },
@@ -322,7 +328,19 @@ export const PROCESSORS: Processor[] = [
     name: "Google · Apple · Mozilla · Microsoft",
     group: "for_us",
     does: { th: "ส่งการแจ้งเตือนไปที่มือถือหรือเบราว์เซอร์ ถ้าคุณเปิด", en: "Deliver notifications to your phone or browser, if you turn them on" },
-    sees: { th: "ที่อยู่สำหรับส่งของเครื่องคุณ ข้อความถูกเข้ารหัส อ่านไม่ได้", en: "Your device's push address. Messages are encrypted, so they can't read them" },
+    sees: {
+      th: "ที่อยู่สำหรับส่งของเครื่องคุณ การแจ้งเตือนในเบราว์เซอร์ถูกเข้ารหัส อ่านไม่ได้ ส่วนการแจ้งเตือนในแอปมีแค่ข้อความกลาง ๆ บรรทัดเดียว",
+      en: "Your device's push address. Browser notifications are encrypted, so they can't read them; app notifications carry only one generic line.",
+    },
+  },
+  {
+    name: "Expo",
+    group: "for_us",
+    does: { th: "ส่งการแจ้งเตือนไปที่แอป Jurrgun ในมือถือ ถ้าคุณเปิด", en: "Deliver notifications to the Jurrgun phone app, if you turn them on" },
+    sees: {
+      th: "ที่อยู่สำหรับส่งของมือถือคุณ และข้อความเดียวคือ \"มีอะไรใหม่สำหรับคุณใน Jurrgun\" ไม่มีชื่อ ชื่อกิจกรรม หรือข้อความแชต",
+      en: "Your phone's push address and one line, \"You have something new in Jurrgun\". Never names, event titles or messages.",
+    },
   },
   {
     name: "Google · LINE",
