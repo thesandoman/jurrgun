@@ -248,7 +248,7 @@ settingsRoutes.get("/settings", async (c) => {
       quick={quick}
       links={[
         { href: "/learn", emoji: "📚", title: t("เรียนรู้", "Learn"), hint: t("เพื่อนใหม่ สุขภาพใจ เที่ยวกรุงเทพฯ", "Friends, wellbeing, getting around"), tint: "sky", group: gOut },
-        { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut },
+        { href: "/safety", emoji: "🛡️", title: t("ปลอดภัยไว้ก่อน", "Safety net"), hint: t("สายด่วน แชร์แผนนัด", "Helplines, share your plans"), tint: "mint", group: gOut, pinned: true },
         { href: "/safety/how", emoji: "🤝", title: t("เราดูแลความปลอดภัยยังไง", "How we keep you safe"), hint: t("เลือกกันทั้งสองฝ่าย บล็อก รายงาน", "Mutual only, block, report"), tint: "mint", group: gOut },
         canHost(user.account, true)
           ? { href: "/host", emoji: "🎪", title: t("จัดกิจกรรม", "Host an event"), hint: t("ฟรี หรือจ่ายที่สถานที่", "Free or pay at the venue"), tint: "lime" as const, group: gOut }
@@ -260,7 +260,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/me/month", emoji: "🌱", title: t("เดือนนี้ของฉัน", "My month in people"), hint: t("คนที่เจอ ที่ที่ไป ไม่นับเวลาบนจอ", "People met, places, never screen time"), tint: "green", group: gOut },
         { href: "/thanks", emoji: "💌", title: t("คำขอบคุณ", "Thank-yous"), hint: t("ข้อความส่วนตัวจากคนที่เจอ", "Private notes from people you met"), tint: "sun", group: gOut },
         { href: "/settings/habits", emoji: "🌿", title: t("นิสัยดี ๆ และการพัก", "Healthy habits"), hint: isPaused(p, now) ? t("กำลังพักอยู่", "On a break") : t("นัดต่อสัปดาห์ พัก Jurrgun", "Plans a week, take a break"), tint: "mint", group: gYou },
-        { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green", group: gYou },
+        { href: "/settings/profile", emoji: "✏️", title: t("แก้ไขโปรไฟล์", "Edit profile"), hint: t("รูป ความสนใจ อาชีพ คำถามของคุณ", "Photo, interests, work, your prompts"), tint: "green", group: gYou, pinned: true },
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ใช้รหัสแทนชื่อ", "Quick questions, under a code, not your name"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
         { href: "/settings/consents", emoji: "✅", title: t("ความยินยอมของฉัน", "My consents"), hint: t("เปิดหรือปิดแต่ละเรื่อง พร้อมวันที่", "Each one on or off, with dates"), tint: "mint", group: gAcct },

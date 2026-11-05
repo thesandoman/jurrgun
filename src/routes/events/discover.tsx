@@ -425,7 +425,6 @@ export async function discoverPage(c: Context<AppEnv>) {
         {glance.waiting ? <span>· {t("มีคำถามสัปดาห์นี้รออยู่", "this week's question is waiting")}</span> : null}
         <span aria-hidden="true">›</span>
       </a>
-      <p class="eyebrow">{t("กลุ่มเล็ก สถานที่จริง", "Small groups, real places")}</p>
       <h1>{t("สัปดาห์นี้ในกรุงเทพฯ ทำอะไรดี?", "What can I do in Bangkok this week?")}</h1>
       <a href="/plan" class="plan-line">
         <span aria-hidden="true">🗓️</span> {t("แผนสัปดาห์นี้: เราเลือกให้ 2 อย่าง", "This week's plan: 2 picks made for you")} <span aria-hidden="true">›</span>

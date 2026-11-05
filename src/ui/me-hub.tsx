@@ -10,11 +10,12 @@ import type { Child } from "hono/jsx";
 import { interestOpt } from "../content/profile";
 import type { Lang } from "../lib/i18n";
 import type { View } from "./kit";
-import { SectionHead, SubLabel } from "./section-head";
+import { SectionHead } from "./section-head";
 import { AvatarStack } from "./visual";
 
 export type MeStep = { done: boolean; label: string; href: string };
-export type MeLink = { href: string; emoji: string; title: string; hint: string; tint: Tint; group?: string };
+/** `pinned`: always visible above the folded groups (owner, card B: Safety net and Edit profile). */
+export type MeLink = { href: string; emoji: string; title: string; hint: string; tint: Tint; group?: string; pinned?: boolean };
 export type Tint = "green" | "lime" | "teal" | "mint" | "sky" | "sun";
 
 /**
@@ -141,29 +142,20 @@ export function MeHub(props: {
 
       {props.quick}
 
-      {[...new Set(props.links.map((l) => l.group ?? ""))].map((g) => (
-      <>
-      {g ? <SubLabel>{g}</SubLabel> : null}
-      <nav class="me-menu" aria-label={g || t("ตั้งค่า", "Settings")}>
-        {/* One grouped list per group, rows split by hairlines (owner, 2026-10-16). */}
-        <ul class="glist me-list">
-          {props.links.filter((l) => (l.group ?? "") === g).map((l) => (
-            <li>
-              <a href={l.href} class="me-row">
-                <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
-                  {l.emoji}
-                </span>
-                <span class="me-row-text">
-                  <strong>{l.title}</strong>
-                  <small>{l.hint}</small>
-                </span>
-                <span class="me-chev" aria-hidden="true">›</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      </>
+      {/* Pinned rows stay open; each group of the rest folds into a tap-to-open group (owner, card B). */}
+      {props.links.some((l) => l.pinned) ? (
+        <nav class="me-menu" aria-label={t("ใช้บ่อย", "Most used")}>
+          <ul class="glist me-list">{props.links.filter((l) => l.pinned).map((l) => <MeRow l={l} />)}</ul>
+        </nav>
+      ) : null}
+      {[...new Set(props.links.filter((l) => !l.pinned).map((l) => l.group ?? ""))].map((g) => (
+        <details class="me-group">
+          <summary class="sub-label">{g || t("ตั้งค่า", "Settings")}</summary>
+          <nav class="me-menu" aria-label={g || t("ตั้งค่า", "Settings")}>
+            {/* One grouped list per group, rows split by hairlines (owner, 2026-10-16). */}
+            <ul class="glist me-list">{props.links.filter((l) => !l.pinned && (l.group ?? "") === g).map((l) => <MeRow l={l} />)}</ul>
+          </nav>
+        </details>
       ))}
 
       <div class="me-lang" role="group" aria-label={t("ภาษา", "Language")}>
@@ -240,3 +232,21 @@ const ME_CSS = `
 .me-out:hover{background:var(--err-soft)}
 
 `;
+
+function MeRow(props: { l: MeLink }) {
+  const { l } = props;
+  return (
+    <li>
+      <a href={l.href} class="me-row">
+        <span class={`me-bubble tint-${l.tint}`} aria-hidden="true">
+          {l.emoji}
+        </span>
+        <span class="me-row-text">
+          <strong>{l.title}</strong>
+          <small>{l.hint}</small>
+        </span>
+        <span class="me-chev" aria-hidden="true">›</span>
+      </a>
+    </li>
+  );
+}

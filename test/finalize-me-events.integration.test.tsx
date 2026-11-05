@@ -72,7 +72,10 @@ describe.skipIf(!HAS_DB)("finalize review: pages", () => {
     expect(me).not.toContain("Show my type to people at my Tables");
     expect(me).not.toContain("Retake the quiz");
     expect(me).toContain('<h2 id="me-type-h">Your Bangkok Type</h2><a href="/types">All types</a>');
-    expect(me).toContain('<h3 class="sub-label">Out and about</h3>');
+    expect(me).toContain('<summary class="sub-label">Out and about</summary>');
+    // Owner card B: the lists fold, and Safety net and Edit profile stay visible above them.
+    expect(me).toMatch(/<a href="\/safety" class="me-row">[\s\S]*<details class="me-group">/);
+
     const result = await (await req("/quiz/result?lang=en", { cookie: m.cookie })).text();
     expect(result).toContain("Show my type to people at my Tables");
     expect(result).toContain("Retake the quiz");

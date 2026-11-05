@@ -167,4 +167,9 @@ function snap(f){var a=[];new FormData(f).forEach(function(v,k){a.push(k+"="+(ty
 window.jgGuard={add:guard,reset:function(f){var g=guard(f);g.start=snap(f);g.sent=false;g.always=f.getAttribute("data-guard")==="dirty"},drop:function(f){guarded=guarded.filter(function(g){return g.f!==f});f._g=null},dirty:function(f){var g=f._g;return !!g&&!g.sent&&(g.always||snap(f)!==g.start)}};
 addEventListener("pageshow",function(){guarded.forEach(function(g){g.sent=false})});
 addEventListener("beforeunload",function(e){if(guarded.some(function(g){return !g.sent&&(g.always||snap(g.f)!==g.start)})){e.preventDefault();e.returnValue=""}});
+/* A link or tab tap asks first while edits are unsaved (owner, card D): the Jurrgun app's web view, and iPhone's, never show the browser's leave warning. */
+var LEAVE=(document.documentElement.lang||"").indexOf("th")===0?"ยังไม่ได้บันทึกที่แก้ไว้ ออกจากหน้านี้เลยไหม?":"You have unsaved changes. Leave this page?";
+/* On window, after every page handler: a link a script already handled (a menu, a sheet) is not a navigation. */
+addEventListener("click",function(e){if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(!a||a.target&&a.target!=="_self"||a.hasAttribute("download"))return;var h=a.getAttribute("href")||"";if(h.charAt(0)==="#")return;
+var dirty=guarded.filter(function(g){return !g.sent&&(g.always||snap(g.f)!==g.start)});if(!dirty.length)return;if(confirm(LEAVE)){dirty.forEach(function(g){g.sent=true})}else{e.preventDefault()}});
 document.addEventListener("invalid",function(e){var f=e.target;if(f&&f.setAttribute)f.setAttribute("aria-invalid","true")},true);document.addEventListener("input",function(e){var f=e.target;if(f&&f.getAttribute&&f.getAttribute("aria-invalid")==="true"&&f.checkValidity&&f.checkValidity())f.removeAttribute("aria-invalid")},true)})()`;

@@ -1557,4 +1557,13 @@ main h2.doors-eyebrow{margin:24px 0 8px}
 @media (max-width:1023.98px){.disc-bar:not(.is-stuck) .disc-tools .filters[open]{flex-basis:100%}}
 /* Profile 1 to 5 scale: each number was 39px wide, under the 44px tap floor. */
 .pf-scale .pill>span{min-width:44px;justify-content:center;text-align:center}
+/* Me: the three lists of rows fold into tap-to-open groups (owner card B); the heading is the 48px tap target. */
+.me-group{margin:0 0 8px}
+.me-group>summary{display:flex;align-items:center;justify-content:space-between;min-height:48px;margin:0;cursor:pointer;list-style:none}
+.me-group>summary::-webkit-details-marker{display:none}
+.me-group>summary::after{content:"\\203A";font-size:1.3rem;line-height:1;transform:rotate(90deg);transition:transform .2s}
+.me-group[open]>summary::after{transform:rotate(-90deg)}
+@media (prefers-reduced-motion:reduce){.me-group>summary::after{transition:none}}
+/* Tab labels a touch bigger for Thai tone marks (owner card F); the centre stays mango. */
+.tabbar a,.tabbar a.center{font-size:.78rem;line-height:1.25}
 `);
