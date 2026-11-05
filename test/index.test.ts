@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
+import { CSS_HREF } from "../src/ui/kit";
 
 /** A signed-out visitor. */
 const seen = { headers: {} };
@@ -94,7 +95,9 @@ describe("GET /fonts/:file", () => {
     const html = await (await app.request("/", seen)).text();
     const urls = [...html.matchAll(/href="(\/fonts\/[^"]+\.woff2)"/g)].map((m) => m[1]);
     expect(urls.some((u) => u.includes("saochingcha-700"))).toBe(true);
-    expect(html).toContain("font-family:'Anuphan'");
+    // The @font-face rules live in the shared stylesheet the page links (ui/kit.tsx).
+    expect(html).toContain(`href="${CSS_HREF}"`);
+    expect(await (await app.request(CSS_HREF)).text()).toContain("font-family:'Anuphan'");
     const res = await app.request(urls[0]);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("font/woff2");
