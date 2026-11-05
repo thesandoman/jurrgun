@@ -22,7 +22,7 @@ import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, useColorSche
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
 
-import { providerFrom, signIn, type SignInStart } from '@/lib/sign-in';
+import { providerFrom, signIn } from '@/lib/sign-in';
 
 // react-native-webview 14 types its class as WebView<P = undefined>, and
 // WebViewProps & undefined is `never` under current TypeScript. Same component, usable props.
@@ -65,8 +65,11 @@ export default function JurrgunShell() {
   const web = useRef<Shell>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [source, setSource] = useState<{ uri: string } | SignInStart>({ uri: SITE + '/' });
+  const [source, setSource] = useState<{ uri: string }>({ uri: SITE + '/' });
   const busy = useRef(false);
+  // Where the web view is now, and a sign-in finish waiting for a page of the site to be open.
+  const here = useRef(SITE + '/');
+  const pendingFinish = useRef<string | null>(null);
 
   // A jurrgun:// link that opened (or reopened) the app goes to its page.
   const incoming = Linking.useLinkingURL();
@@ -88,14 +91,36 @@ export default function JurrgunShell() {
     return () => sub.remove();
   }, [canGoBack]);
 
-  const onNav = useCallback((nav: WebViewNavigation) => setCanGoBack(nav.canGoBack), []);
+  const onNav = useCallback((nav: WebViewNavigation) => {
+    setCanGoBack(nav.canGoBack);
+    here.current = nav.url;
+  }, []);
+
+  /** The finish runs only on a page of the site, so its fetch is same-origin and carries the cookie back. */
+  const runFinish = useCallback(() => {
+    const js = pendingFinish.current;
+    if (!js) return;
+    let onSite = false;
+    try {
+      onSite = new URL(here.current).host === SITE_HOST;
+    } catch {}
+    if (!onSite) {
+      setSource({ uri: SITE + '/login' });
+      return;
+    }
+    pendingFinish.current = null;
+    web.current?.injectJavaScript(js);
+  }, []);
 
   const startSignIn = useCallback((provider: 'google' | 'line') => {
     if (busy.current) return;
     busy.current = true;
     signIn(SITE, provider)
       .then((r) => {
-        if (r.ok) setSource(r.source);
+        if (r.ok) {
+          pendingFinish.current = r.finishJs;
+          runFinish();
+        }
         else if (r.reason !== 'cancelled')
           Alert.alert(
             'เข้าสู่ระบบไม่สำเร็จ · Couldn\'t sign in',
@@ -107,7 +132,7 @@ export default function JurrgunShell() {
       .finally(() => {
         busy.current = false;
       });
-  }, []);
+  }, [runFinish]);
 
   const shouldLoad = useCallback(({ url }: { url: string }) => {
     if (url.startsWith('about:') || url.startsWith('blob:') || url.startsWith('data:')) return true;
@@ -153,7 +178,11 @@ export default function JurrgunShell() {
         originWhitelist={['https://*', 'http://*', 'about:*', 'blob:*', 'data:*', ...['tel', 'mailto', 'sms', 'line', 'geo', 'maps', 'intent'].map((s) => `${s}:*`)]}
         onShouldStartLoadWithRequest={shouldLoad}
         onNavigationStateChange={onNav}
-        onLoadEnd={() => SplashScreen.hideAsync().catch(() => {})}
+        onLoadEnd={() => {
+          SplashScreen.hideAsync().catch(() => {});
+          // A sign-in that came back while the web view was elsewhere finishes once a site page has loaded.
+          if (pendingFinish.current) runFinish();
+        }}
         onError={() => {
           setOffline(true);
           SplashScreen.hideAsync().catch(() => {});
