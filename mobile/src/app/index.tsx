@@ -18,7 +18,7 @@ import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type Ref } from 'react';
-import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
 
@@ -65,6 +65,9 @@ export default function JurrgunShell() {
   const web = useRef<Shell>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [offline, setOffline] = useState(false);
+  // Sign-in waits on the network twice with nothing to see (owner: "a bit of a freeze"): show that it's working.
+  const [signing, setSigning] = useState<null | 'start' | 'finish'>(null);
+  const finishing = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [source, setSource] = useState<{ uri: string }>({ uri: SITE + '/' });
   const busy = useRef(false);
   // Where the web view is now; who is waiting for the next page load or for the begin step's answer.
@@ -150,6 +153,8 @@ export default function JurrgunShell() {
     async (provider: Provider) => {
       if (busy.current) return;
       busy.current = true;
+      setSigning('start');
+      let handedOver = false;
       try {
         const { verifier, challenge } = await makePkce();
         if (!(await ensureOnSite()) || !(await begin(challenge))) return failed('failed');
@@ -158,12 +163,21 @@ export default function JurrgunShell() {
           if (r.reason !== 'cancelled') failed(r.reason);
           return;
         }
+        setSigning('finish');
         if (!(await ensureOnSite())) return failed('failed');
+        // The overlay stays until the signed-in page loads (onLoadEnd), or 20 seconds at most.
+        handedOver = true;
+        if (finishing.current) clearTimeout(finishing.current);
+        finishing.current = setTimeout(() => {
+          finishing.current = null;
+          setSigning(null);
+        }, 20_000);
         web.current?.injectJavaScript(finishScript(r.code, verifier));
       } catch {
         failed('failed');
       } finally {
         busy.current = false;
+        if (!handedOver) setSigning(null);
       }
     },
     [begin, ensureOnSite],
@@ -220,6 +234,12 @@ export default function JurrgunShell() {
           const waiting = loadWaiters.current;
           loadWaiters.current = [];
           waiting.forEach((resolve) => resolve());
+          // The page after finishing sign-in has loaded: the overlay goes.
+          if (finishing.current) {
+            clearTimeout(finishing.current);
+            finishing.current = null;
+            setSigning(null);
+          }
         }}
         onError={() => {
           setOffline(true);
@@ -235,6 +255,14 @@ export default function JurrgunShell() {
         geolocationEnabled={false}
         decelerationRate="normal"
       />
+      {signing ? (
+        <View style={[StyleSheet.absoluteFill, styles.signing, { backgroundColor: c.bg }]} accessibilityLiveRegion="polite">
+          <ActivityIndicator size="large" color={c.brand} />
+          <Text style={[styles.p, { color: c.text, textAlign: 'center' }]}>
+            {signing === 'start' ? 'กำลังเปิดหน้าเข้าสู่ระบบ…\nOpening sign-in…' : 'กำลังพาคุณเข้า Jurrgun…\nSigning you in…'}
+          </Text>
+        </View>
+      ) : null}
       {offline ? (
         <View style={[StyleSheet.absoluteFill, styles.offline, { backgroundColor: c.bg }]} accessibilityRole="alert">
           <Text style={[styles.h1, { color: c.text }]}>คุณออฟไลน์อยู่</Text>
@@ -261,6 +289,7 @@ export default function JurrgunShell() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   offline: { padding: 24, justifyContent: 'center', gap: 12 },
+  signing: { alignItems: 'center', justifyContent: 'center', gap: 16, opacity: 0.96 },
   h1: { fontSize: 28, fontWeight: '700' },
   h2: { fontSize: 20, fontWeight: '600' },
   p: { fontSize: 16, lineHeight: 24 },
