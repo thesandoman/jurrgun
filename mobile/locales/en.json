@@ -2,6 +2,7 @@
   "ios": {
     "CFBundleDisplayName": "Jurrgun",
     "NSCameraUsageDescription": "Jurrgun uses the camera only when you tap to add a photo to your profile or a chat, or to scan a QR code at check-in.",
-    "NSPhotoLibraryUsageDescription": "Jurrgun opens your photos only when you tap to add a photo to your profile or a chat."
+    "NSPhotoLibraryUsageDescription": "Jurrgun opens your photos only when you tap to add a photo to your profile or a chat.",
+    "NSFaceIDUsageDescription": "Jurrgun uses Face ID only to unlock the app, when you turn on the app lock."
   }
 }

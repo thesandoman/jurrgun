@@ -18,11 +18,12 @@ import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type Ref } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
 
 import * as Notifications from 'expo-notifications';
+import { LOCK_MESSAGE, RELOCK_MS, lockAvailable, lockOn, lockStateScript, setLock, unlock } from '@/lib/app-lock';
 import { answerScript, expoToken, PUSH_MESSAGE, registerScript, tappedPath } from '@/lib/push';
 import { BEGIN_MESSAGE, beginScript, finishScript, makePkce, openSignIn, providerFrom, type Provider } from '@/lib/sign-in';
 
@@ -138,6 +139,44 @@ export default function JurrgunShell() {
     });
   }, []);
 
+  // App lock (Face ID or fingerprint): locked at launch when on, and again after a minute away.
+  const th = (Intl.DateTimeFormat().resolvedOptions().locale || '').startsWith('th');
+  const [locked, setLocked] = useState<'checking' | 'locked' | 'open'>('checking');
+  const awayAt = useRef<number | null>(null);
+  const tryUnlock = useCallback(async () => {
+    if (await unlock(th)) setLocked('open');
+  }, [th]);
+  useEffect(() => {
+    lockOn().then((on) => {
+      setLocked(on ? 'locked' : 'open');
+      if (on) tryUnlock();
+    });
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background') awayAt.current = Date.now();
+      if (state === 'active' && awayAt.current !== null) {
+        const away = Date.now() - awayAt.current;
+        awayAt.current = null;
+        if (away > RELOCK_MS)
+          lockOn().then((on) => {
+            if (on) {
+              setLocked('locked');
+              tryUnlock();
+            }
+          });
+      }
+    });
+    return () => sub.remove();
+  }, [tryUnlock]);
+  const onLockSwitch = useCallback(async (want: boolean | null) => {
+    const available = await lockAvailable();
+    if (want === null || !available) {
+      web.current?.injectJavaScript(lockStateScript({ on: available && (await lockOn()), available, ok: want === null }));
+      return;
+    }
+    const ok = await setLock(want, th);
+    web.current?.injectJavaScript(lockStateScript({ on: await lockOn(), available, ok }));
+  }, [th]);
+
   // Push: on only when the member flips the site's switch; a refreshed token re-registers itself.
   const pushOn = useRef(false);
   const onPushSwitch = useCallback(async (on: boolean) => {
@@ -168,8 +207,9 @@ export default function JurrgunShell() {
       const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean };
       if (m.type === BEGIN_MESSAGE && typeof m.id === 'string') beginWaiters.current.get(m.id)?.(m.ok === true);
       if (m.type === PUSH_MESSAGE) onPushSwitch(m.on === true);
+      if (m.type === LOCK_MESSAGE) onLockSwitch(typeof m.on === 'boolean' ? m.on : null);
     } catch {}
-  }, [onPushSwitch]);
+  }, [onPushSwitch, onLockSwitch]);
 
   const failed = (reason: 'failed' | 'busy') =>
     Alert.alert(
@@ -321,6 +361,21 @@ export default function JurrgunShell() {
           </Text>
         </View>
       ) : null}
+      {/* Last, so the lock covers every other layer. */}
+      {locked !== 'open' ? (
+        <View style={[StyleSheet.absoluteFill, styles.lock, { backgroundColor: c.bg }]} accessibilityViewIsModal>
+          <Text style={{ fontSize: 48 }} accessibilityElementsHidden>🔒</Text>
+          <Text style={[styles.h2, { color: c.text, textAlign: 'center' }]}>{th ? 'Jurrgun ล็อกอยู่' : 'Jurrgun is locked'}</Text>
+          {locked === 'locked' ? (
+            <Pressable
+              onPress={tryUnlock}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.button, { alignSelf: 'center', backgroundColor: c.brand, opacity: pressed ? 0.8 : 1 }]}>
+              <Text style={[styles.buttonText, { color: c.onBrand }]}>{th ? 'ปลดล็อก' : 'Unlock'}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -330,6 +385,7 @@ const styles = StyleSheet.create({
   offline: { padding: 24, justifyContent: 'center', gap: 12 },
   progressTrack: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
   progressBar: { height: 3, borderTopRightRadius: 2, borderBottomRightRadius: 2 },
+  lock: { alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 10 },
   signing: { alignItems: 'center', justifyContent: 'center', gap: 16, opacity: 0.96 },
   h1: { fontSize: 28, fontWeight: '700' },
   h2: { fontSize: 20, fontWeight: '600' },

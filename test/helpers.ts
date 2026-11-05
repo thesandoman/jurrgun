@@ -101,9 +101,9 @@ export async function createMember(
 /** Request the app as a member. `form` sends application/x-www-form-urlencoded. */
 export async function req(
   path: string,
-  opts: { cookie?: string; method?: string; form?: Record<string, string | string[]>; json?: unknown } = {},
+  opts: { cookie?: string; method?: string; form?: Record<string, string | string[]>; json?: unknown; headers?: Record<string, string> } = {},
 ): Promise<Response> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...opts.headers };
   if (opts.cookie) headers.cookie = opts.cookie;
   let body: string | undefined;
   if (opts.form) {

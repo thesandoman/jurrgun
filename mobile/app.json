@@ -15,7 +15,8 @@
         "NSCameraUsageDescription": "Jurrgun uses the camera only when you tap to add a photo to your profile or a chat, or to scan a QR code at check-in.",
         "NSPhotoLibraryUsageDescription": "Jurrgun opens your photos only when you tap to add a photo to your profile or a chat.",
         "CFBundleDevelopmentRegion": "th",
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "NSFaceIDUsageDescription": "Jurrgun uses Face ID only to unlock the app, when you turn on the app lock."
       }
     },
     "android": {
@@ -57,6 +58,13 @@
         "expo-notifications",
         {
           "color": "#137f45"
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Jurrgun uses Face ID only to unlock the app, when you turn on the app lock."
         }
       ]
     ],
