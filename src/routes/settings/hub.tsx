@@ -17,6 +17,7 @@ import { newId } from "../../lib/crypto";
 import { allowedEndpoint } from "../../lib/webpush";
 import { vapidKeys } from "../../services/push";
 import { PushSwitch } from "../../ui/push-switch";
+import { InstallLine } from "../../ui/install-line";
 import { emailEnabled } from "../../services/email-code";
 import { audit } from "../../lib/records";
 import { datingIntents, consents, events, pushSubscriptions, profiles, registrations } from "../../schema";
@@ -214,6 +215,7 @@ settingsRoutes.get("/settings", async (c) => {
       interests={p.interests}
       next={
         nextUp ? (
+          <>
           <a class="card me-next" href={`/me/events/${nextUp.id}/pass`}>
             <small>{t("โต๊ะถัดไป", "Your next table")}</small>
             <span>
@@ -223,6 +225,9 @@ settingsRoutes.get("/settings", async (c) => {
               {lang === "en" ? nextUp.titleEn ?? nextUp.title : nextUp.title} <span aria-hidden="true">→</span>
             </b>
           </a>
+          {/* Only with a table coming up: the home-screen line (card M2), quiet and dismissible per phone. */}
+          <InstallLine t={t} />
+          </>
         ) : (
           <a class="card me-next" href="/">
             <small>{t("โต๊ะถัดไป", "Your next table")}</small>
