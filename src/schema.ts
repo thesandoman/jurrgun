@@ -166,6 +166,27 @@ export const oauthLinks = pgTable(
 );
 
 /**
+ * Phone-app sign-in hand-off (src/routes/app-auth.ts). Google and LINE refuse
+ * sign-in inside an app's embedded web view, so the app opens the phone's own
+ * browser; when the provider sends it back to us, we send the app a one-time
+ * code instead of a cookie. The app swaps that code, with its PKCE verifier,
+ * for a session. One row per code, deleted when used and two minutes after.
+ */
+export const appHandoffs = pgTable(
+  "identity_app_handoffs",
+  {
+    /** SHA-256 of the code — the raw code is never stored. */
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    /** base64url SHA-256 of the app's PKCE verifier (S256). */
+    challenge: text("challenge").notNull(),
+    expiresAt: ts("expires_at").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("identity_app_handoffs_account_idx").on(t.accountId)],
+);
+
+/**
  * health (D51: BMA public health centres, the Thai Red Cross, NGO and
  * non-profit clinics; set up by an admin only, information only) and
  * public_sector (D55: BMA departments, district offices, national agencies,
@@ -725,7 +746,8 @@ export type Announcement = typeof announcements.$inferSelect;
 
 /**
  * Web Push: one row per phone or browser that said yes to notifications
- * (src/lib/webpush.ts). Deleted when the push service says it is gone, when
+ * (src/lib/webpush.ts). A row for the phone app holds its Expo push token in
+ * `endpoint` ("ExponentPushToken[...]") with empty keys (src/lib/expo-push.ts). Deleted when the push service says it is gone, when
  * the member turns it off, and with the account.
  */
 export const pushSubscriptions = pgTable(
