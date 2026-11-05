@@ -1566,4 +1566,6 @@ main h2.doors-eyebrow{margin:24px 0 8px}
 @media (prefers-reduced-motion:reduce){.me-group>summary::after{transition:none}}
 /* Tab labels a touch bigger for Thai tone marks (owner card F); the centre stays mango. */
 .tabbar a,.tabbar a.center{font-size:.78rem;line-height:1.25}
+/* In the Jurrgun phone app (the app marks html.in-app): no text selection or long-press callout on the app's chrome, so a held tap doesn't select a tab label or button. Event text, venues, addresses, inputs and chat stay copyable. */
+html.in-app :is(.topbar,.tabbar,.top-nav,.btn,.pill,.qs,.me-row,.chip,.sub-label,.disc-tools,.view-switch,summary){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 `);

@@ -16,14 +16,16 @@
  */
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type Ref } from 'react';
-import { ActivityIndicator, Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
 
 import * as Notifications from 'expo-notifications';
 import { LOCK_MESSAGE, RELOCK_MS, lockAvailable, lockOn, lockStateScript, setLock, unlock } from '@/lib/app-lock';
+import { AFTER, BEFORE, PAGE_MESSAGE } from '@/lib/page-bridge';
 import { answerScript, expoToken, PUSH_MESSAGE, registerScript, tappedPath } from '@/lib/push';
 import { BEGIN_MESSAGE, beginScript, finishScript, makePkce, openSignIn, providerFrom, type Provider } from '@/lib/sign-in';
 
@@ -64,8 +66,6 @@ export function pathFrom(url: string | null): string | null {
 }
 
 export default function JurrgunShell() {
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const c = COLORS[scheme];
   const web = useRef<Shell>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -74,6 +74,11 @@ export default function JurrgunShell() {
   const finishing = useRef<ReturnType<typeof setTimeout> | null>(null);
   // A thin bar while a page loads, so a tap shows at once that something is happening (owner: "lag").
   const [progress, setProgress] = useState(0);
+  // The page's own theme (the site defaults to light) and whether pull-to-refresh fits this page.
+  const [pageDark, setPageDark] = useState(false);
+  const [pull, setPull] = useState(false);
+  // Colours and the status bar follow the page's theme, not the phone's dark mode (owner card M3).
+  const c = COLORS[pageDark ? 'dark' : 'light'];
   const [source, setSource] = useState<{ uri: string }>({ uri: SITE + '/' });
   const busy = useRef(false);
   // Where the web view is now; who is waiting for the next page load or for the begin step's answer.
@@ -204,9 +209,13 @@ export default function JurrgunShell() {
 
   const onMessage = useCallback((e: WebViewMessageEvent) => {
     try {
-      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean };
+      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean; dark?: boolean; pull?: boolean };
       if (m.type === BEGIN_MESSAGE && typeof m.id === 'string') beginWaiters.current.get(m.id)?.(m.ok === true);
       if (m.type === PUSH_MESSAGE) onPushSwitch(m.on === true);
+      if (m.type === PAGE_MESSAGE) {
+        setPageDark(m.dark === true);
+        setPull(m.pull === true);
+      }
       if (m.type === LOCK_MESSAGE) onLockSwitch(typeof m.on === 'boolean' ? m.on : null);
     } catch {}
   }, [onPushSwitch, onLockSwitch]);
@@ -290,6 +299,7 @@ export default function JurrgunShell() {
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
+      <StatusBar style={pageDark ? 'light' : 'dark'} />
       <Web
         ref={web}
         source={source}
@@ -323,7 +333,9 @@ export default function JurrgunShell() {
         sharedCookiesEnabled
         thirdPartyCookiesEnabled={false}
         allowsBackForwardNavigationGestures
-        pullToRefreshEnabled
+        pullToRefreshEnabled={pull}
+        injectedJavaScriptBeforeContentLoaded={BEFORE}
+        injectedJavaScript={AFTER}
         mediaPlaybackRequiresUserAction
         allowsInlineMediaPlayback
         geolocationEnabled={false}
