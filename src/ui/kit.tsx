@@ -32,6 +32,7 @@ import { asset, type AssetPath } from "../assets";
 import { A11Y_FORM_JS, A11Y_HEAD_JS, A11Y_MENU_JS, A11yMenu } from "./a11y";
 import { NOTIF_JS, NotifMenu } from "./notif-menu";
 import { CLEAR_OFFLINE_JS } from "./offline-next";
+import { PHOTO_SHRINK_JS } from "./photo-shrink";
 import { UnreadDot } from "./unread";
 
 export type View = { lang: Lang; t: T; user: CurrentUser | null; path: string };
@@ -313,6 +314,8 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
             __html: `if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,
           }}
         />
+        {/* Photos are shrunk on the phone before upload (photo-shrink.ts); uploads are signed-in only. */}
+        {user ? <Script dangerouslySetInnerHTML={{ __html: PHOTO_SHRINK_JS }} /> : null}
         {/* Signed out (or the session ended): forget any table saved for offline on this device. The offline page is cached signed-out, so it is left out. */}
         {!user && v.path !== "/offline" ? <Script dangerouslySetInnerHTML={{ __html: CLEAR_OFFLINE_JS }} /> : null}
       </body>
