@@ -61,6 +61,12 @@ describe("GET /intro", () => {
     expect(html).not.toContain('class="tabbar"');
   });
 
+  it("lets the page background scroll on touch screens (no full repaint per scroll frame on Android)", async () => {
+    const html = await (await app.request("/", seen)).text();
+    const at = html.lastIndexOf("@media (hover:none){body{background-attachment:scroll!important}}");
+    expect(at).toBeGreaterThan(html.lastIndexOf("background-attachment:fixed"));
+  });
+
   it("serves the new app icon", async () => {
     const svg = await (await app.request("/icon.svg")).text();
     expect(svg).toContain("#137f45"); // waving-hand mark, in the brand green

@@ -23,7 +23,14 @@ import { PALETTE_CSS } from "./palette";
 import { themed } from "./styles";
 
 /** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
-const ALL_CSS = FONT_CSS + themed(PALETTE_CSS) + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS;
+/**
+ * Touch screens: the page background scrolls with the page instead of staying fixed. A fixed
+ * background with several large gradients makes Android repaint the whole screen on every scroll
+ * frame (the owner's "lag" in the app and in Chrome). iPhone Safari already ignores the fixed
+ * setting, so this only makes Android match what iPhones show. Last, so it wins over every theme.
+ */
+export const TOUCH_SCROLL_CSS = "@media (hover:none){body{background-attachment:scroll!important}}";
+const ALL_CSS = FONT_CSS + themed(PALETTE_CSS) + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS + TOUCH_SCROLL_CSS;
 import { BRAND, BrandMark } from "./brand";
 import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
 import { A11Y_CSS } from "./a11y-css";
