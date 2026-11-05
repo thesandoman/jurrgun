@@ -16,6 +16,7 @@ import type { AppEnv } from "../lib/env";
 import { Card, LinkButton, page, view } from "../ui/kit";
 import { NEXT_MAX, OFFLINE_CACHE, SAVED_ATTR } from "../ui/offline-next";
 import { Script } from "../ui/kit";
+import { asset } from "../assets";
 
 export const pwaRoutes = new Hono<AppEnv>();
 
@@ -140,7 +141,7 @@ self.addEventListener("push", (event) => {
   let m = {};
   try { m = event.data ? event.data.json() : {}; } catch (e) {}
   const url = typeof m.url === "string" && m.url.startsWith("/") ? m.url : "/";
-  event.waitUntil(self.registration.showNotification(m.title || "Jurrgun", { body: m.body || "", tag: m.tag, icon: "/icon.svg", badge: "/icon.svg", data: { url } }));
+  event.waitUntil(self.registration.showNotification(m.title || "Jurrgun", { body: m.body || "", tag: m.tag, icon: ${JSON.stringify(asset("app/icon-192.png"))}, badge: "/icon.svg", data: { url } }));
 });
 
 self.addEventListener("notificationclick", (event) => {

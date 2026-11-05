@@ -9,6 +9,7 @@ import { L } from "../lib/i18n";
 import { AvatarStack, Bento, Big, Pill, Tile } from "../ui/visual";
 import { LinkButton, page, safeNext, view } from "../ui/kit";
 import { BRAND, MARK_SVG } from "../ui/brand";
+import { asset } from "../assets";
 import { A11yMenu } from "../ui/a11y";
 import { discoverPage } from "./events/discover";
 import { GOOGLE_SITE_VERIFICATION, llmsTxt, robotsTxt, siteJsonLd, sitemapXml } from "../lib/seo";
@@ -299,7 +300,15 @@ publicRoutes.get("/manifest.webmanifest", (c) =>
       background_color: "#fff9f0",
       theme_color: "#137f45",
       lang: "th",
-      icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
+      // Full-square brand green, so Android's crop and iPhone's corners never show a transparent edge.
+      // "maskable" keeps the hand and the wave lines inside the safe circle; "any" draws them larger.
+      icons: [
+        { src: asset("app/icon-192.png"), sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: asset("app/icon-512.png"), sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: asset("app/icon-maskable-192.png"), sizes: "192x192", type: "image/png", purpose: "maskable" },
+        { src: asset("app/icon-maskable-512.png"), sizes: "512x512", type: "image/png", purpose: "maskable" },
+        { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      ],
     },
     200,
     { "content-type": "application/manifest+json", "cache-control": "public, max-age=86400" },

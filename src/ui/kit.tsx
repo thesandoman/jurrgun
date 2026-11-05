@@ -236,6 +236,8 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
         <meta name="twitter:card" content="summary_large_image" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        {/* iPhone home screen: an opaque square (iOS rounds the corners itself; transparent ones turn black). */}
+        <link rel="apple-touch-icon" sizes="180x180" href={asset("app/apple-touch-icon-180.png")} />
         {PRELOAD_FONTS.map((f) => <link rel="preload" href={fontUrl(f)} as="font" type="font/woff2" crossorigin="" />)}
         <style dangerouslySetInnerHTML={{ __html: ALL_CSS }} />
         <Script

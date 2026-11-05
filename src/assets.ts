@@ -10,6 +10,11 @@
 // Add a file to design/assets/, run `npm run assets`, and commit both.
 
 export const assets = {
+  "app/apple-touch-icon-180.png": "/assets/2f5069d1b0b1/app/apple-touch-icon-180.png",
+  "app/icon-192.png": "/assets/56b2da670868/app/icon-192.png",
+  "app/icon-512.png": "/assets/91972a4efa8c/app/icon-512.png",
+  "app/icon-maskable-192.png": "/assets/6aa0fca4416c/app/icon-maskable-192.png",
+  "app/icon-maskable-512.png": "/assets/854b1b7c7330/app/icon-maskable-512.png",
   "brand/mark-512.png": "/assets/826239741835/brand/mark-512.png",
   "og/site.jpg": "/assets/93b00d342909/og/site.jpg",
   "og/types/caf-curator.jpg": "/assets/bec8d05fc129/og/types/caf-curator.jpg",

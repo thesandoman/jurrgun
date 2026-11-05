@@ -68,6 +68,19 @@ describe("GET /intro", () => {
     expect(manifest.name).toContain("Jurrgun");
     expect(manifest.theme_color).toBe("#137f45");
   });
+
+  it("gives home screens opaque PNG icons, with separate any and maskable entries", async () => {
+    const manifest = (await (await app.request("/manifest.webmanifest")).json()) as { icons: { src: string; sizes: string; type: string; purpose: string }[] };
+    const png = (purpose: string, sizes: string) => manifest.icons.find((i) => i.type === "image/png" && i.purpose === purpose && i.sizes === sizes);
+    for (const sizes of ["192x192", "512x512"]) {
+      expect(png("any", sizes)?.src).toMatch(/^\/assets\/[0-9a-f]+\/app\/icon-\d+\.png$/);
+      expect(png("maskable", sizes)?.src).toMatch(/^\/assets\/[0-9a-f]+\/app\/icon-maskable-\d+\.png$/);
+    }
+    // One purpose per entry: "any maskable" made Android crop the "any" icon too.
+    expect(manifest.icons.every((i) => !i.purpose.includes(" "))).toBe(true);
+    const html = await (await app.request("/", seen)).text();
+    expect(html).toMatch(/<link rel="apple-touch-icon" sizes="180x180" href="\/assets\/[0-9a-f]+\/app\/apple-touch-icon-180\.png"/);
+  });
 });
 
 describe("GET /fonts/:file", () => {
