@@ -333,6 +333,8 @@ export default function JurrgunShell() {
         sharedCookiesEnabled
         thirdPartyCookiesEnabled={false}
         allowsBackForwardNavigationGestures
+        // iPhone's long-press link preview is a browser habit, not an app's (owner card M3).
+        allowsLinkPreview={false}
         pullToRefreshEnabled={pull}
         injectedJavaScriptBeforeContentLoaded={BEFORE}
         injectedJavaScript={AFTER}
