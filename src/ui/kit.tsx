@@ -22,7 +22,6 @@ import { WARM_CSS } from "./warm";
 import { PALETTE_CSS } from "./palette";
 import { themed } from "./styles";
 
-/** Global CSS: the base styles, plus the visual kit and postcard art used across pages. */
 /**
  * Touch screens: the page background scrolls with the page instead of staying fixed. A fixed
  * background with several large gradients makes Android repaint the whole screen on every scroll
@@ -30,7 +29,22 @@ import { themed } from "./styles";
  * setting, so this only makes Android match what iPhones show. Last, so it wins over every theme.
  */
 export const TOUCH_SCROLL_CSS = "@media (hover:none){body{background-attachment:scroll!important}}";
-const ALL_CSS = FONT_CSS + themed(PALETTE_CSS) + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS + TOUCH_SCROLL_CSS;
+/**
+ * Global CSS: the base styles, plus the visual kit and postcard art used across pages.
+ * Served once as /css/<hash>.css (src/routes/vendor.ts) and cached for a year, not
+ * inlined: it is about 213 KB, and every page carried it before (Mobile App, Nov 2026).
+ */
+export const ALL_CSS = FONT_CSS + themed(PALETTE_CSS) + STYLES + themed(QUESTION_ART_CSS + VISUAL_CSS) + NATIVE_CSS + ALIVE_CSS + LAYOUT_CSS + WARM_CSS + TYPE_CSS + MOMENTS_CSS + A11Y_CSS + TOUCH_SCROLL_CSS;
+
+/** FNV-1a, 64-bit, hex: a content hash for the stylesheet's URL. Synchronous, so it's ready at module load. */
+function fnv64(s: string): string {
+  let h = 0xcbf29ce484222325n;
+  for (let i = 0; i < s.length; i++) h = BigInt.asUintN(64, (h ^ BigInt(s.charCodeAt(i))) * 0x100000001b3n);
+  return h.toString(16).padStart(16, "0");
+}
+/** Changes whenever the CSS does, so the old file can be cached forever. */
+export const CSS_HASH = fnv64(ALL_CSS).slice(0, 12);
+export const CSS_HREF = `/css/${CSS_HASH}.css`;
 import { BRAND, BrandMark } from "./brand";
 import { FONT_CSS, PRELOAD_FONTS, TYPE_CSS, fontUrl } from "./fonts";
 import { A11Y_CSS } from "./a11y-css";
@@ -246,7 +260,7 @@ function Layout(props: { v: View; opts: PageOpts; origin: string; url: string; s
         {/* iPhone home screen: an opaque square (iOS rounds the corners itself; transparent ones turn black). */}
         <link rel="apple-touch-icon" sizes="180x180" href={asset("app/apple-touch-icon-180.png")} />
         {PRELOAD_FONTS.map((f) => <link rel="preload" href={fontUrl(f)} as="font" type="font/woff2" crossorigin="" />)}
-        <style dangerouslySetInnerHTML={{ __html: ALL_CSS }} />
+        <link rel="stylesheet" href={CSS_HREF} />
         <Script
           dangerouslySetInnerHTML={{
             __html: A11Y_HEAD_JS,

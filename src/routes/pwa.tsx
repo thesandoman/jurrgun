@@ -1,8 +1,8 @@
 /**
  * PWA plumbing (PRD §16): the service worker and the offline page.
  *
- * The worker precaches only three public, member-free files: /offline,
- * /icon.svg and /manifest.webmanifest. Pages and API responses go straight
+ * The worker precaches only four public, member-free files: /offline,
+ * /icon.svg, /manifest.webmanifest and the stylesheet (/css/<hash>.css). Pages and API responses go straight
  * to the network and are not stored, because pages carry member data.
  *
  * The one exception is the member's own next table (ui/offline-next.tsx):
@@ -13,7 +13,7 @@
  */
 import { Hono } from "hono";
 import type { AppEnv } from "../lib/env";
-import { Card, LinkButton, page, view } from "../ui/kit";
+import { CSS_HASH, CSS_HREF, Card, LinkButton, page, view } from "../ui/kit";
 import { NEXT_MAX, OFFLINE_CACHE, SAVED_ATTR } from "../ui/offline-next";
 import { Script } from "../ui/kit";
 import { asset } from "../assets";
@@ -24,10 +24,11 @@ export const pwaRoutes = new Hono<AppEnv>();
 export const SW_VERSION = "bkk-social-v3";
 
 const SW = `/* Jurrgun service worker. Caches public shell files, plus the member's own next table pass. */
-const CACHE = ${JSON.stringify(SW_VERSION)};
+const CACHE = ${JSON.stringify(SW_VERSION)} + "-" + ${JSON.stringify(CSS_HASH)};
+const CSS = ${JSON.stringify(CSS_HREF)};
 const NEXT = ${JSON.stringify(OFFLINE_CACHE)};
 const NEXT_MAX = ${NEXT_MAX};
-const PRECACHE = ["/offline", "/icon.svg", "/manifest.webmanifest"];
+const PRECACHE = ["/offline", "/icon.svg", "/manifest.webmanifest", CSS];
 // The member's own pass page, and nothing else, may be kept for offline.
 const PASS = /^\\/me\\/events\\/[A-Za-z0-9_-]+\\/pass$/;
 const MARK = '${SAVED_ATTR}=""';
@@ -123,6 +124,13 @@ self.addEventListener("fetch", (event) => {
           )
         )
     );
+    return;
+  }
+
+  // The stylesheet: cache first, so the offline page and saved passes stay styled. A saved pass
+  // may name an older stylesheet; with no signal, today's stands in for it.
+  if (url.pathname.startsWith("/css/")) {
+    event.respondWith(caches.match(req).then((hit) => hit || fetch(req).catch(() => caches.match(CSS))));
     return;
   }
 

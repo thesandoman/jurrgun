@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../lib/env";
 import { SV_MAP_CSS_B64, SV_MAP_JS_B64 } from "../vendor/sv-map.generated";
 import { fontBytes } from "../ui/fonts";
+import { ALL_CSS, CSS_HASH } from "../ui/kit";
 
 export const vendorRoutes = new Hono<AppEnv>();
 
@@ -25,6 +26,15 @@ vendorRoutes.get("/vendor/sv-map.js", (c) =>
 );
 vendorRoutes.get("/vendor/sv-map.css", (c) =>
   c.body(svMapCss(), 200, { "content-type": "text/css; charset=utf-8", "cache-control": LONG }),
+);
+
+// The site's stylesheet (ui/kit.tsx). The current hash is cached for a year; an old one (a page
+// loaded before a deploy) gets today's CSS without long caching, rather than a broken page.
+vendorRoutes.get("/css/:file", (c) =>
+  c.body(ALL_CSS, 200, {
+    "content-type": "text/css; charset=utf-8",
+    "cache-control": c.req.param("file") === `${CSS_HASH}.css` ? "public, max-age=31536000, immutable" : "no-cache",
+  }),
 );
 
 // Brand fonts (ui/fonts.ts). The hash is in the URL, so a year is safe.
