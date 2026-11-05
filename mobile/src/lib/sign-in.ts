@@ -1,37 +1,41 @@
 /**
- * Google and LINE sign-in for the app (RFC 8252, built with Core Platform).
+ * Google and LINE sign-in for the app (RFC 8252, built with Core Platform;
+ * final flow after QA & Release's security review).
  *
  * Google refuses sign-in inside an embedded web view, so the app runs it in
- * the phone's own browser and comes back with a one-time code:
- *   1. A PKCE verifier is made here and kept in memory only.
- *   2. The browser opens /auth/{google|line}?app=1 with the verifier's
- *      SHA-256 challenge and returns to jurrgun://auth?code=… (2 minutes,
- *      once, only with that verifier).
- *   3. From a page of the site already open in the web view, a same-origin
- *      fetch POSTs the code and verifier to /auth/app/finish, which sets the
- *      site's normal HttpOnly cookie and says where to go next. (A source-POST
- *      from the app was refused by Core after QA review: another site could
- *      use it to sign a member into someone else's account.) The app never
- *      holds a session token, and the verifier never goes in a URL.
+ * the phone's own browser and brings back a one-time code. Both ends of the
+ * exchange run inside the web view, as same-origin fetches on a page of the
+ * site, so the session cookie lands there and nowhere else:
+ *   0. begin: the web view POSTs the PKCE challenge to /auth/app/begin, which
+ *      sets a 10-minute cookie tying this sign-in to this web view.
+ *   1. The phone's browser opens /auth/{google|line}?app=1 with the same
+ *      challenge and returns to jurrgun://auth?code=… (once, 2 minutes).
+ *   2. finish: the web view POSTs the code and the verifier to
+ *      /auth/app/finish, which sets the site's normal HttpOnly cookie and
+ *      says where to go next.
+ * The verifier lives only in memory, never in a URL; the app never holds a
+ * session token.
  */
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 export type Provider = 'google' | 'line';
-export type SignInResult = { ok: true; finishJs: string } | { ok: false; reason: 'cancelled' | 'failed' | 'busy' };
+export type Pkce = { verifier: string; challenge: string };
+export type BrowserResult = { ok: true; code: string } | { ok: false; reason: 'cancelled' | 'failed' | 'busy' };
+
+/** The message the begin script posts back to the app. */
+export const BEGIN_MESSAGE = 'jurrgun-signin-begin';
 
 const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-
-/** 64 characters from the PKCE alphabet. */
-function verifier(): string {
-  const bytes = Crypto.getRandomBytes(64);
-  let out = '';
-  for (const b of bytes) out += CHARS[b % CHARS.length];
-  return out;
-}
-
 const base64url = (b64: string) => b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+export async function makePkce(): Promise<Pkce> {
+  let verifier = '';
+  for (const b of Crypto.getRandomBytes(64)) verifier += CHARS[b % CHARS.length];
+  const challenge = base64url(await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, verifier, { encoding: Crypto.CryptoEncoding.BASE64 }));
+  return { verifier, challenge };
+}
 
 /** /auth/google or /auth/line on the site, as the site's own buttons link them. */
 export function providerFrom(site: string, url: string): Provider | null {
@@ -45,14 +49,19 @@ export function providerFrom(site: string, url: string): Provider | null {
   }
 }
 
-export async function signIn(site: string, provider: Provider): Promise<SignInResult> {
-  const v = verifier();
-  const challenge = base64url(await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, v, { encoding: Crypto.CryptoEncoding.BASE64 }));
-  // jurrgun://auth in an installed build; Expo Go gives its own exp://…/--/auth.
-  const redirect = Linking.createURL('auth');
-  const start =
-    `${site}/auth/${provider}?app=1&redirect_uri=${encodeURIComponent(redirect)}` +
-    `&code_challenge=${challenge}&code_challenge_method=S256`;
+/** Step 0, run in the web view: answers through postMessage with this attempt's id. */
+export function beginScript(challenge: string, id: string): string {
+  const reply = (ok: string) => `window.ReactNativeWebView.postMessage(JSON.stringify({type:${JSON.stringify(BEGIN_MESSAGE)},id:${JSON.stringify(id)},ok:${ok}}))`;
+  return (
+    `fetch("/auth/app/begin",{method:"POST",credentials:"same-origin",headers:{"x-jurrgun-app":"begin"},body:new URLSearchParams({code_challenge:${JSON.stringify(challenge)}})})` +
+    `.then(function(r){${reply('r.ok')}}).catch(function(){${reply('false')}});true;`
+  );
+}
+
+/** Step 1, in the phone's browser. */
+export async function openSignIn(site: string, provider: Provider, challenge: string): Promise<BrowserResult> {
+  const redirect = 'jurrgun://auth';
+  const start = `${site}/auth/${provider}?app=1&redirect_uri=${encodeURIComponent(redirect)}&code_challenge=${challenge}&code_challenge_method=S256`;
   let res: WebBrowser.WebBrowserAuthSessionResult;
   try {
     res = await WebBrowser.openAuthSessionAsync(start, redirect);
@@ -66,13 +75,13 @@ export async function signIn(site: string, provider: Provider): Promise<SignInRe
   if (!code || !/^[A-Za-z0-9._~-]{8,256}$/.test(code)) {
     return { ok: false, reason: err === 'busy' ? 'busy' : err === 'cancelled' ? 'cancelled' : 'failed' };
   }
-  return { ok: true, finishJs: finishScript(code, v) };
+  return { ok: true, code };
 }
 
-/** Run inside the web view, on a page of the site: swaps the code for the cookie, then goes on. */
+/** Step 2, run in the web view: swaps the code for the cookie, then goes on. */
 export function finishScript(code: string, verifier: string): string {
   return (
-    `fetch("/auth/app/finish",{method:"POST",credentials:"same-origin",body:new URLSearchParams({code:${JSON.stringify(code)},code_verifier:${JSON.stringify(verifier)}})})` +
+    `fetch("/auth/app/finish",{method:"POST",credentials:"same-origin",headers:{"x-jurrgun-app":"finish"},body:new URLSearchParams({code:${JSON.stringify(code)},code_verifier:${JSON.stringify(verifier)}})})` +
     `.then(function(r){return r.ok?r.json():Promise.reject(r.status)})` +
     `.then(function(j){location.href=typeof j.next==="string"&&j.next.charAt(0)==="/"&&j.next.charAt(1)!=="/"?j.next:"/"})` +
     `.catch(function(){location.href="/login"});true;`

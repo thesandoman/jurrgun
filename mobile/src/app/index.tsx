@@ -20,9 +20,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type Ref } from 'react';
 import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
 
-import { providerFrom, signIn } from '@/lib/sign-in';
+import { BEGIN_MESSAGE, beginScript, finishScript, makePkce, openSignIn, providerFrom, type Provider } from '@/lib/sign-in';
 
 // react-native-webview 14 types its class as WebView<P = undefined>, and
 // WebViewProps & undefined is `never` under current TypeScript. Same component, usable props.
@@ -67,9 +67,10 @@ export default function JurrgunShell() {
   const [offline, setOffline] = useState(false);
   const [source, setSource] = useState<{ uri: string }>({ uri: SITE + '/' });
   const busy = useRef(false);
-  // Where the web view is now, and a sign-in finish waiting for a page of the site to be open.
+  // Where the web view is now; who is waiting for the next page load or for the begin step's answer.
   const here = useRef(SITE + '/');
-  const pendingFinish = useRef<string | null>(null);
+  const loadWaiters = useRef<(() => void)[]>([]);
+  const beginWaiters = useRef(new Map<string, (ok: boolean) => void>());
 
   // A jurrgun:// link that opened (or reopened) the app goes to its page.
   const incoming = Linking.useLinkingURL();
@@ -96,43 +97,77 @@ export default function JurrgunShell() {
     here.current = nav.url;
   }, []);
 
-  /** The finish runs only on a page of the site, so its fetch is same-origin and carries the cookie back. */
-  const runFinish = useCallback(() => {
-    const js = pendingFinish.current;
-    if (!js) return;
-    let onSite = false;
+  const onSite = () => {
     try {
-      onSite = new URL(here.current).host === SITE_HOST;
-    } catch {}
-    if (!onSite) {
-      setSource({ uri: SITE + '/login' });
-      return;
+      return new URL(here.current).host === SITE_HOST;
+    } catch {
+      return false;
     }
-    pendingFinish.current = null;
-    web.current?.injectJavaScript(js);
+  };
+
+  /** Both sign-in steps must run on a page of the site (same-origin fetches). Opens /login if needed. */
+  const ensureOnSite = useCallback(async (): Promise<boolean> => {
+    if (onSite()) return true;
+    const loaded = new Promise<void>((resolve) => loadWaiters.current.push(resolve));
+    setSource({ uri: SITE + '/login' });
+    await Promise.race([loaded, new Promise((r) => setTimeout(r, 20_000))]);
+    return onSite();
   }, []);
 
-  const startSignIn = useCallback((provider: 'google' | 'line') => {
-    if (busy.current) return;
-    busy.current = true;
-    signIn(SITE, provider)
-      .then((r) => {
-        if (r.ok) {
-          pendingFinish.current = r.finishJs;
-          runFinish();
-        }
-        else if (r.reason !== 'cancelled')
-          Alert.alert(
-            'เข้าสู่ระบบไม่สำเร็จ · Couldn\'t sign in',
-            r.reason === 'busy'
-              ? 'มีคนเข้าสู่ระบบอยู่มาก ลองใหม่อีกครั้งในอีกสักครู่\nLots of people are signing in. Try again in a moment.'
-              : 'ลองใหม่อีกครั้ง หรือใช้อีเมลเข้าสู่ระบบ\nTry again, or sign in with your email.',
-          );
-      })
-      .finally(() => {
-        busy.current = false;
+  const begin = useCallback((challenge: string): Promise<boolean> => {
+    const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        beginWaiters.current.delete(id);
+        resolve(false);
+      }, 15_000);
+      beginWaiters.current.set(id, (ok) => {
+        clearTimeout(timer);
+        beginWaiters.current.delete(id);
+        resolve(ok);
       });
-  }, [runFinish]);
+      web.current?.injectJavaScript(beginScript(challenge, id));
+    });
+  }, []);
+
+  const onMessage = useCallback((e: WebViewMessageEvent) => {
+    try {
+      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean };
+      if (m.type === BEGIN_MESSAGE && typeof m.id === 'string') beginWaiters.current.get(m.id)?.(m.ok === true);
+    } catch {}
+  }, []);
+
+  const failed = (reason: 'failed' | 'busy') =>
+    Alert.alert(
+      'เข้าสู่ระบบไม่สำเร็จ · Couldn\'t sign in',
+      reason === 'busy'
+        ? 'มีคนเข้าสู่ระบบอยู่มาก ลองใหม่อีกครั้งในอีกสักครู่\nLots of people are signing in. Try again in a moment.'
+        : 'ลองใหม่อีกครั้ง หรือใช้อีเมลเข้าสู่ระบบ\nTry again, or sign in with your email.',
+    );
+
+  /** Google or LINE: begin in the web view, sign in in the phone's browser, finish in the web view. */
+  const startSignIn = useCallback(
+    async (provider: Provider) => {
+      if (busy.current) return;
+      busy.current = true;
+      try {
+        const { verifier, challenge } = await makePkce();
+        if (!(await ensureOnSite()) || !(await begin(challenge))) return failed('failed');
+        const r = await openSignIn(SITE, provider, challenge);
+        if (!r.ok) {
+          if (r.reason !== 'cancelled') failed(r.reason);
+          return;
+        }
+        if (!(await ensureOnSite())) return failed('failed');
+        web.current?.injectJavaScript(finishScript(r.code, verifier));
+      } catch {
+        failed('failed');
+      } finally {
+        busy.current = false;
+      }
+    },
+    [begin, ensureOnSite],
+  );
 
   const shouldLoad = useCallback(({ url }: { url: string }) => {
     if (url.startsWith('about:') || url.startsWith('blob:') || url.startsWith('data:')) return true;
@@ -178,10 +213,13 @@ export default function JurrgunShell() {
         originWhitelist={['https://*', 'http://*', 'about:*', 'blob:*', 'data:*', ...['tel', 'mailto', 'sms', 'line', 'geo', 'maps', 'intent'].map((s) => `${s}:*`)]}
         onShouldStartLoadWithRequest={shouldLoad}
         onNavigationStateChange={onNav}
+        onMessage={onMessage}
         onLoadEnd={() => {
           SplashScreen.hideAsync().catch(() => {});
-          // A sign-in that came back while the web view was elsewhere finishes once a site page has loaded.
-          if (pendingFinish.current) runFinish();
+          // A sign-in step waiting for a page of the site to finish loading.
+          const waiting = loadWaiters.current;
+          loadWaiters.current = [];
+          waiting.forEach((resolve) => resolve());
         }}
         onError={() => {
           setOffline(true);
