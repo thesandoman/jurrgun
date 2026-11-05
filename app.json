@@ -1,14 +1,18 @@
 {
   "expo": {
-    "name": "sando",
+    "name": "Jurrgun",
     "slug": "sando",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "sando",
+    "scheme": "jurrgun",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Jurrgun uses the camera only when you tap to add a photo to your profile or a chat, or to scan a check-in QR code. · เจอกันใช้กล้องเฉพาะตอนที่คุณแตะเพื่อเพิ่มรูปในโปรไฟล์หรือแชท หรือสแกน QR เช็กอิน",
+        "NSPhotoLibraryUsageDescription": "Jurrgun opens your photos only when you tap to add a photo to your profile or a chat. · เจอกันเปิดรูปของคุณเฉพาะตอนที่คุณแตะเพื่อเพิ่มรูปในโปรไฟล์หรือแชท"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,15 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "server",
@@ -28,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#fff9f0",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -48,6 +60,7 @@
         "projectId": "8e9fbd11-f2c1-4431-99c7-2e8b46b44dc7"
       }
     },
-    "owner": "jurrgun"
+    "owner": "jurrgun",
+    "backgroundColor": "#fff9f0"
   }
 }
