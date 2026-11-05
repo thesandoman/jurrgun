@@ -23,6 +23,14 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   /** Contact for push services, a URL or mailto:. Defaults to the live site. */
   VAPID_SUBJECT?: string;
   /**
+   * Phone app (src/routes/app-auth.ts): extra redirect URIs, comma-separated, the
+   * sign-in hand-off may return to, beyond APP_REDIRECTS in the code. For testing
+   * builds such as Expo Go (exp://...); the store builds belong in the code list.
+   */
+  APP_REDIRECT_URIS?: string;
+  /** Expo push (src/lib/expo-push.ts): only needed if "enhanced push security" is on for the Expo project. */
+  EXPO_ACCESS_TOKEN?: string;
+  /**
    * Sign in with an email code (src/services/email-code.ts). Off, with every
    * surface hidden, until all four are set. EMAIL_PROVIDER is "resend" or
    * "postmark"; EMAIL_HASH_SALT keys the hash the address is stored as.

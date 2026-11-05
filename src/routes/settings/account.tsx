@@ -5,7 +5,7 @@
 import { EXIT_REASONS } from "../../content/dating";
 import { deleteCookie, getCookie } from "hono/cookie";
 import type { Context } from "hono";
-import { and, desc, eq, gt, ne } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, ne } from "drizzle-orm";
 import type { AppEnv } from "../../lib/env";
 import { fmtDay } from "../../lib/i18n";
 import { batch, getDb } from "../../db";
@@ -14,7 +14,7 @@ import { cleanBio } from "../../content/profile";
 import { hashPassword, newId, sha256, verifyPassword } from "../../lib/crypto";
 import { audit } from "../../lib/records";
 import { SESSION_COOKIE } from "../../lib/session";
-import { accounts, exitReasons, pushSubscriptions, oauthLinks, emailLinks, profileLinks, profiles, sessions } from "../../schema";
+import { accounts, appHandoffs, exitReasons, pushSubscriptions, oauthLinks, emailLinks, profileLinks, profiles, sessions } from "../../schema";
 import { attemptUser, ipKey, loginThrottled, recordFailure } from "../auth";
 import { deleteObject } from "../../storage";
 import { Button, Field, list, Notice, page, str, view, type View } from "../../ui/kit";
@@ -59,6 +59,7 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     ...researchWithdrawn(db, id, user.account.researchId),
     db.update(profiles).set({ photoKey: null, bio: {}, updatedAt: new Date() }).where(eq(profiles.accountId, id)),
     db.delete(sessions).where(eq(sessions.accountId, id)),
+    db.delete(appHandoffs).where(eq(appHandoffs.accountId, id)),
     db.delete(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)),
     // Unlink Google / LINE now: signing in with them again starts a fresh account.
     db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
@@ -132,7 +133,7 @@ settingsRoutes.post("/settings/password", async (c) => {
   const thisSession = await currentSessionId(c);
   await batch(c.env, [
     db.update(accounts).set({ passwordHash: hash, passwordSalt: salt }).where(eq(accounts.id, user.account.id)),
-    signOutOthers(db, user.account.id, thisSession),
+    ...signOutOthers(db, user.account.id, thisSession),
     audit(db, user.account.id, "account.password_changed", { type: "account", id: user.account.id }),
   ]);
   return c.redirect("/settings?notice=password_changed");
@@ -145,7 +146,11 @@ async function currentSessionId(c: Context<AppEnv>): Promise<string> {
 
 /** Every OTHER session of this account; this device stays signed in. Shared by password change and the devices page. */
 function signOutOthers(db: ReturnType<typeof getDb>, accountId: string, thisSession: string) {
-  return db.delete(sessions).where(and(eq(sessions.accountId, accountId), ne(sessions.id, thisSession)));
+  return [
+    db.delete(sessions).where(and(eq(sessions.accountId, accountId), ne(sessions.id, thisSession))),
+    // Their phone-app push tokens go with them.
+    db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.accountId, accountId), isNotNull(pushSubscriptions.sessionId), ne(pushSubscriptions.sessionId, thisSession))),
+  ];
 }
 
 // -------------------------------------------------------- signed-in devices (card S4) --
@@ -215,7 +220,7 @@ settingsRoutes.post("/settings/devices/sign-out-others", async (c) => {
   const user = me(c);
   const db = getDb(c.env);
   await batch(c.env, [
-    signOutOthers(db, user.account.id, await currentSessionId(c)),
+    ...signOutOthers(db, user.account.id, await currentSessionId(c)),
     audit(db, user.account.id, "account.signed_out_others", { type: "account", id: user.account.id }),
   ]);
   return c.redirect("/settings/devices?notice=signed_out_others");

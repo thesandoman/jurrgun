@@ -13,8 +13,11 @@ import { DISTRICTS, label } from "../../lib/constants";
 import { cleanBio, currentDatingDeck, isDatingPrompt } from "../../content/profile";
 import { MeHub, meLine, type MeStep } from "../../ui/me-hub";
 import { SubLabel } from "../../ui/section-head";
-import { newId } from "../../lib/crypto";
+import { newId, sha256 } from "../../lib/crypto";
+import { getCookie } from "hono/cookie";
+import { SESSION_COOKIE } from "../../lib/session";
 import { allowedEndpoint } from "../../lib/webpush";
+import { isExpoToken } from "../../lib/expo-push";
 import { vapidKeys } from "../../services/push";
 import { PushSwitch } from "../../ui/push-switch";
 import { InstallLine } from "../../ui/install-line";
@@ -275,18 +278,31 @@ settingsRoutes.get("/settings", async (c) => {
   );
 });
 
-/** Web Push on this phone or browser: the page subscribes, then tells us where to send. */
+/**
+ * Push on this phone or browser: the page subscribes, then tells us where to send.
+ * The phone app sends {"expoToken": "ExponentPushToken[...]"} instead (src/lib/expo-push.ts). That row
+ * belongs to this session: a refreshed token replaces it, and signing out deletes it.
+ * /settings/push/off takes the token as its endpoint.
+ */
 settingsRoutes.post("/settings/push", async (c) => {
   const user = me(c);
-  const body = (await c.req.json().catch(() => null)) as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } | null;
-  const endpoint = typeof body?.endpoint === "string" ? body.endpoint : "";
-  const p256dh = typeof body?.keys?.p256dh === "string" ? body.keys.p256dh : "";
-  const auth = typeof body?.keys?.auth === "string" ? body.keys.auth : "";
-  if (!vapidKeys(c.env)) return c.json({ error: "Notifications aren't switched on yet" }, 503);
-  if (!allowedEndpoint(endpoint) || endpoint.length > 1000 || !/^[\w-]{80,100}$/.test(p256dh) || !/^[\w-]{16,32}$/.test(auth)) return c.json({ error: "Not a push subscription" }, 400);
+  const body = (await c.req.json().catch(() => null)) as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown }; expoToken?: unknown } | null;
+  const expoToken = typeof body?.expoToken === "string" ? body.expoToken : "";
+  const endpoint = expoToken || (typeof body?.endpoint === "string" ? body.endpoint : "");
+  const p256dh = expoToken ? "" : typeof body?.keys?.p256dh === "string" ? body.keys.p256dh : "";
+  const auth = expoToken ? "" : typeof body?.keys?.auth === "string" ? body.keys.auth : "";
+  if (expoToken) {
+    if (!isExpoToken(expoToken)) return c.json({ error: "Not an Expo push token" }, 400);
+  } else {
+    if (!vapidKeys(c.env)) return c.json({ error: "Notifications aren't switched on yet" }, 503);
+    if (!allowedEndpoint(endpoint) || endpoint.length > 1000 || !/^[\w-]{80,100}$/.test(p256dh) || !/^[\w-]{16,32}$/.test(auth)) return c.json({ error: "Not a push subscription" }, 400);
+  }
   const db = getDb(c.env);
+  const sessionId = expoToken ? await sha256(getCookie(c, SESSION_COOKIE) ?? "") : null;
   // One endpoint belongs to one member: a shared browser moves to whoever turned it on last.
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  // A refreshed Expo token replaces this session's old one.
+  if (sessionId) await db.delete(pushSubscriptions).where(eq(pushSubscriptions.sessionId, sessionId));
   const mine = await db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, user.account.id)).orderBy(asc(pushSubscriptions.createdAt)).limit(20);
   if (mine.length >= 10) await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, mine[0].id));
   // Notifications on this phone means event reminders too (the consent the hourly clock reads),
@@ -298,7 +314,7 @@ settingsRoutes.post("/settings/push", async (c) => {
     .orderBy(desc(consents.createdAt))
     .limit(1);
   await batch(c.env, [
-    db.insert(pushSubscriptions).values({ id: newId(), accountId: user.account.id, endpoint, p256dh, auth }),
+    db.insert(pushSubscriptions).values({ id: newId(), accountId: user.account.id, endpoint, p256dh, auth, ...(sessionId ? { sessionId } : {}) }),
     ...(said?.granted
       ? []
       : [

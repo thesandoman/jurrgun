@@ -250,7 +250,7 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
           .limit(2000)
       : Promise.resolve([]),
     rid ? db.select({ phase: wellbeing.phase, q1: wellbeing.q1, q2: wellbeing.q2, q3: wellbeing.q3, createdAt: wellbeing.createdAt }).from(wellbeing).where(eq(wellbeing.researchId, rid)).limit(10) : Promise.resolve([]),
-    db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)).limit(20),
+    db.select({ id: pushSubscriptions.id, app: pushSubscriptions.sessionId }).from(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)).limit(20),
   ]);
   const myLinks = await ownLinks(db, id);
   // Privacy R4: chats (my own messages), dating intents, buddy data, meet feedback, thanks,
@@ -465,6 +465,8 @@ settingsRoutes.get("/settings/privacy/export", async (c) => {
     signInEmails: Number(emails?.n ?? 0),
     notifications: notes,
     notificationDevices: pushDevices.length,
+    // Of those, the phone app's (Expo push). Only the count; the tokens themselves aren't exported.
+    notificationAppDevices: pushDevices.filter((d) => d.app).length,
     cityPulse: { answers: pulse, wellbeing: wb },
     // Chat threads are named by kind only (buddy, connection, circle); photos are noted, not exported as storage keys.
     chatMessagesISent: myMessages.map(({ thread, ...rest }) => ({ thread: thread.split(":")[0], ...rest })),

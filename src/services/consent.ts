@@ -20,10 +20,10 @@
  *   personalization   read by seating, buddy matching and the weekly plan.
  *   notifications     read by reminders and push; no row means no.
  */
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { newId } from "../lib/crypto";
-import { accounts, consents, datingIntents, profiles, pulseResponses, wellbeing } from "../schema";
+import { accounts, consents, datingIntents, profiles, pulseResponses, pushSubscriptions, wellbeing } from "../schema";
 import { NOTICE_ISO, TERMS_CONSENT, TERMS_VERSION } from "../content/privacy";
 
 type Db = ReturnType<typeof getDb>;
@@ -103,6 +103,10 @@ export function consentEffects(db: Db, accountId: string, category: string, gran
   if (category === RESEARCH_CONSENT) return granted ? [issueResearchId(db, accountId)] : researchWithdrawn(db, accountId, researchId);
   if (category === RELATIONSHIP_CONSENT && !granted) {
     return [db.update(profiles).set({ relationship: "prefer_not", updatedAt: new Date() }).where(eq(profiles.accountId, accountId))];
+  }
+  // Reminders consent withdrawn: the phone app's Expo tokens go (Privacy & Security, Nov 2026).
+  if (category === NOTIFICATIONS_CONSENT && !granted) {
+    return [db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.accountId, accountId), isNotNull(pushSubscriptions.sessionId)))];
   }
   if (category === GENDER_CONSENT && !granted) {
     return [

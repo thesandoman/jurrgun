@@ -110,6 +110,7 @@ import {
   notifications,
   profileLinks,
   pushSubscriptions,
+  appHandoffs,
   oauthLinks,
   profiles,
   pulseResponses,
@@ -300,7 +301,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
   await db.delete(pinkyIdeaViews).where(lt(pinkyIdeaViews.day, new Date(bkkDayStart(now).getTime() + 7 * HOUR).toISOString().slice(0, 10)));
 
   const safetyCutoff = new Date(now.getTime() - SAFETY_RETENTION_DAYS * DAY);
-  const [signals, choices, sess, attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone, annsOld] = await batch(env, [
+  const [signals, choices, sess, , , attempts, checkIns, , pulseOld, wellOld, , , codesOld, readOld, unreadOld, reportsOld, actionsOld, strikesOld, auditOld, exitNotes, sharesGone, annsOld] = await batch(env, [
     db
       .update(registrations)
       .set({ socialSignal: null, signalTopics: null, helloLine: null })
@@ -316,6 +317,9 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       .where(inArray(connectionChoices.eventId, endedBefore(windowCutoff)))
       .returning({ id: connectionChoices.id }),
     db.delete(sessions).where(lt(sessions.expiresAt, now)).returning({ id: sessions.id }),
+    db.delete(appHandoffs).where(lt(appHandoffs.expiresAt, now)).returning({ id: appHandoffs.id }),
+    // Phone-app push tokens whose session ended without a sign-out (expired, or 14 days idle).
+    db.delete(pushSubscriptions).where(sql`${pushSubscriptions.sessionId} is not null and not exists (select 1 from ${sessions} where ${sessions.id} = ${pushSubscriptions.sessionId} and ${sessions.expiresAt} >= ${now})`).returning({ id: pushSubscriptions.id }),
     db.delete(loginAttempts).where(lt(loginAttempts.createdAt, attemptCutoff)).returning({ id: loginAttempts.id }),
     db
       .update(registrations)
@@ -476,6 +480,7 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
       db.delete(profiles).where(inArray(profiles.accountId, ids)),
       db.delete(vibes).where(inArray(vibes.accountId, ids)),
       db.delete(sessions).where(inArray(sessions.accountId, ids)),
+      db.delete(appHandoffs).where(inArray(appHandoffs.accountId, ids)),
       db.delete(notifications).where(inArray(notifications.accountId, ids)),
       db.delete(pushSubscriptions).where(inArray(pushSubscriptions.accountId, ids)),
       // Contact shares: theirs, and the other person's on a connection with them.

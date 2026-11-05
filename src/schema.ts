@@ -747,7 +747,8 @@ export type Announcement = typeof announcements.$inferSelect;
 /**
  * Web Push: one row per phone or browser that said yes to notifications
  * (src/lib/webpush.ts). A row for the phone app holds its Expo push token in
- * `endpoint` ("ExponentPushToken[...]") with empty keys (src/lib/expo-push.ts). Deleted when the push service says it is gone, when
+ * `endpoint` ("ExponentPushToken[...]") with empty keys (src/lib/expo-push.ts),
+ * and the session it was registered in: signing out deletes it (migration 0036). Deleted when the push service says it is gone, when
  * the member turns it off, and with the account.
  */
 export const pushSubscriptions = pgTable(
@@ -758,6 +759,8 @@ export const pushSubscriptions = pgTable(
     endpoint: text("endpoint").notNull(),
     p256dh: text("p256dh").notNull(),
     auth: text("auth").notNull(),
+    /** identity_sessions.id, for an Expo row only. Web Push rows belong to the browser, not a session. */
+    sessionId: text("session_id"),
     createdAt: created(),
   },
   (t) => [uniqueIndex("social_push_endpoint_idx").on(t.endpoint), index("social_push_account_idx").on(t.accountId)],

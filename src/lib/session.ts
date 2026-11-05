@@ -10,8 +10,8 @@ import { DEMO_CHAT_LINKS } from "../services/demo";
 import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, eq, gt, sql } from "drizzle-orm";
-import { getDb } from "../db";
-import { accounts, events, notifications, profiles, sessions, type Role } from "../schema";
+import { batch, getDb } from "../db";
+import { accounts, events, notifications, profiles, pushSubscriptions, sessions, type Role } from "../schema";
 import { CHAT_KIND } from "../domain/chat";
 import { DIGEST_KINDS } from "../domain/digest";
 
@@ -34,13 +34,13 @@ import { langFromHeader, pickLang } from "./i18n";
 export const SESSION_COOKIE = "bkk_sid";
 export const SESSION_DAYS = 30;
 
-export async function startSession(c: Context<AppEnv>, accountId: string): Promise<void> {
+export async function startSession(c: Context<AppEnv>, accountId: string, device?: string): Promise<void> {
   const token = randomToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_DAYS * 86_400_000);
   await getDb(c.env)
     .insert(sessions)
-    .values({ id: await sha256(token), accountId, expiresAt, lastSeenAt: now, device: deviceKind(c.req.header("user-agent")) });
+    .values({ id: await sha256(token), accountId, expiresAt, lastSeenAt: now, device: device ?? deviceKind(c.req.header("user-agent")) });
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
     secure: secureCookie(c),
@@ -52,7 +52,12 @@ export async function startSession(c: Context<AppEnv>, accountId: string): Promi
 
 export async function endSession(c: Context<AppEnv>): Promise<void> {
   const token = getCookie(c, SESSION_COOKIE);
-  if (token) await getDb(c.env).delete(sessions).where(eq(sessions.id, await sha256(token)));
+  if (token) {
+    const id = await sha256(token);
+    const db = getDb(c.env);
+    // The phone app's Expo token goes with the session it was registered in (Privacy & Security, Nov 2026).
+    await batch(c.env, [db.delete(sessions).where(eq(sessions.id, id)), db.delete(pushSubscriptions).where(eq(pushSubscriptions.sessionId, id))]);
+  }
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
 }
 

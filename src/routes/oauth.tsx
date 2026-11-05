@@ -4,6 +4,8 @@
  *   GET /auth/:provider            → the provider's consent screen
  *   GET /auth/:provider/callback   ← back from it: sign in, or create an account
  *
+ * The phone app uses the same two routes with ?app=1 (src/routes/app-auth.ts).
+ *
  * Only the `openid` scope is asked for, so all we learn is the provider's
  * stable user id (`sub`). No email, name or photo is requested or stored.
  *
@@ -27,6 +29,7 @@ import { accountUsable, startSession } from "../lib/session";
 import { accounts, loginAttempts, oauthLinks } from "../schema";
 import { Notice, page, safeNext, view } from "../ui/kit";
 import { ipKey, SIGNUP_PREFIX, signupThrottled, tooMany } from "./auth";
+import { backToApp, handOff, readAppLeg, type AppLeg } from "./app-auth";
 
 export type Provider = "google" | "line";
 
@@ -87,7 +90,8 @@ function decodeJwtPayload(jwt: string): Record<string, unknown> | null {
 }
 
 const TX_COOKIE = "bkk_oauth";
-type Tx = { p: Provider; state: string; verifier: string; nonce: string; next: string };
+/** `app`: started by the phone app, which gets a one-time code back instead of a cookie (src/routes/app-auth.ts). */
+type Tx = { p: Provider; state: string; verifier: string; nonce: string; next: string; app?: AppLeg };
 
 const redirectUri = (c: Context<AppEnv>, p: Provider) => `${new URL(c.req.url).origin}/auth/${p}/callback`;
 
@@ -98,7 +102,9 @@ oauthRoutes.get("/auth/:provider", async (c) => {
   if (!isProvider(p)) return c.notFound();
   const creds = PROVIDERS[p].creds(c.env);
   if (!creds) return c.notFound();
-  const tx: Tx = { p, state: randomToken(16), verifier: randomToken(32), nonce: randomToken(16), next: safeNext(c.req.query("next"), "") };
+  const app = readAppLeg(c);
+  if (app && "error" in app) return c.text(app.error, 400);
+  const tx: Tx = { p, state: randomToken(16), verifier: randomToken(32), nonce: randomToken(16), next: safeNext(c.req.query("next"), ""), ...(app ? { app: app.leg } : {}) };
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tx.verifier))));
   setCookie(c, TX_COOKIE, b64url(new TextEncoder().encode(JSON.stringify(tx))), {
     httpOnly: true,
@@ -129,8 +135,18 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   const creds = PROVIDERS[p].creds(c.env);
   if (!creds) return c.notFound();
   const name = PROVIDERS[p].name;
+  let tx: Tx | null = null;
+  try {
+    tx = JSON.parse(new TextDecoder().decode(fromB64url(getCookie(c, TX_COOKIE) ?? ""))) as Tx;
+  } catch {
+    tx = null;
+  }
+  deleteCookie(c, TX_COOKIE, { path: "/auth" });
+  const app = tx?.app;
   const fail = (msg: string) =>
-    page(
+    app
+      ? backToApp(c, app, { error: "failed" })
+      : page(
       c,
       { title: t("เข้าสู่ระบบ", "Sign in"), status: 400 },
       <>
@@ -142,15 +158,8 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
       </>,
     );
 
-  let tx: Tx | null = null;
-  try {
-    tx = JSON.parse(new TextDecoder().decode(fromB64url(getCookie(c, TX_COOKIE) ?? ""))) as Tx;
-  } catch {
-    tx = null;
-  }
-  deleteCookie(c, TX_COOKIE, { path: "/auth" });
   // Cancelled on the provider's screen.
-  if (c.req.query("error")) return c.redirect("/login");
+  if (c.req.query("error")) return app ? backToApp(c, app, { error: "cancelled" }) : c.redirect("/login");
   const code = c.req.query("code");
   if (!tx || tx.p !== p || !code || c.req.query("state") !== tx.state) {
     return fail(t("หมดเวลาหรือมีบางอย่างไม่ตรงกัน ลองใหม่อีกครั้ง", "That took too long or didn't match. Please try again."));
@@ -185,7 +194,8 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
     .from(oauthLinks)
     .where(and(eq(oauthLinks.provider, p), eq(oauthLinks.subject, sub)))
     .limit(1);
-  const current = c.var.user;
+  // The phone's browser may hold someone's web session; the app signs in as the provider's account, never links.
+  const current = app ? null : c.var.user;
 
   if (link) {
     if (current && current.account.id !== link.accountId) {
@@ -193,6 +203,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
     }
     const [acct] = await db.select().from(accounts).where(eq(accounts.id, link.accountId)).limit(1);
     if (!acct || !accountUsable(acct)) return fail(t("บัญชีนี้ใช้งานไม่ได้ตอนนี้", "This account can't be used right now."));
+    if (app) return handOff(c, app, acct.id);
     if (!current) await startSession(c, acct.id);
     return c.redirect(tx.next || "/onboarding");
   }
@@ -206,14 +217,15 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   // New here: a normal account with a generated username and an unusable password.
   const now = new Date();
   const ip = await ipKey(c);
-  if (await signupThrottled(c, ip, now)) return tooMany(c, "signup");
+  if (await signupThrottled(c, ip, now)) return app ? backToApp(c, app, { error: "busy" }) : tooMany(c, "signup");
   const id = newId();
   const { hash, salt } = await hashPassword(randomToken(32));
   const username = `${p}_${randomToken(9).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10) || id.slice(0, 10)}`;
   await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: null, signupSource: signupSource(c) });
   await db.insert(oauthLinks).values({ id: newId(), provider: p, subject: sub, accountId: id });
   await db.insert(loginAttempts).values({ id: newId(), username: `${SIGNUP_PREFIX}${id}`, ipHash: ip.ipHash, createdAt: now });
-  createLogger(c.env).info("oauth.account_created", { provider: p, lang });
+  createLogger(c.env).info("oauth.account_created", { provider: p, lang, app: !!app });
+  if (app) return handOff(c, app, id);
   await startSession(c, id);
   return c.redirect("/onboarding");
 });
