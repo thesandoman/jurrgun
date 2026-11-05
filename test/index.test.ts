@@ -63,9 +63,12 @@ describe("GET /intro", () => {
   });
 
   it("lets the page background scroll on touch screens (no full repaint per scroll frame on Android)", async () => {
+    // The rule sits in the shared stylesheet the page links, after every fixed background.
     const html = await (await app.request("/", seen)).text();
-    const at = html.lastIndexOf("@media (hover:none){body{background-attachment:scroll!important}}");
-    expect(at).toBeGreaterThan(html.lastIndexOf("background-attachment:fixed"));
+    expect(html).toContain(`href="${CSS_HREF}"`);
+    const css = await (await app.request(CSS_HREF)).text();
+    const at = css.lastIndexOf("@media (hover:none){body{background-attachment:scroll!important}}");
+    expect(at).toBeGreaterThan(css.lastIndexOf("background-attachment:fixed"));
   });
 
   it("serves the new app icon", async () => {
