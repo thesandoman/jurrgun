@@ -19,7 +19,8 @@ const retentionFiles = readdirSync("test")
   .map((f) => `test/${f}`);
 
 // Agent worktrees live under .claude/worktrees with their own copy of the tests.
-const exclude = [...configDefaults.exclude, ".claude/**"];
+// mobile/ is the Expo app (its own package and tooling); the website's suite never runs it.
+const exclude = [...configDefaults.exclude, ".claude/**", "mobile/**"];
 const env = { DATABASE_URL: process.env.TEST_DATABASE_URL ?? `postgres://postgres:postgres@localhost:5432/${testDb}` };
 
 export default defineConfig({

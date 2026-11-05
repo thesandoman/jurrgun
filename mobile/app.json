@@ -8,17 +8,20 @@
     "scheme": "jurrgun",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "supportsTablet": false,
+      "bundleIdentifier": "app.jurrgun",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
-        "NSCameraUsageDescription": "Jurrgun uses the camera only when you tap to add a photo to your profile or a chat, or to scan a check-in QR code. · เจอกันใช้กล้องเฉพาะตอนที่คุณแตะเพื่อเพิ่มรูปในโปรไฟล์หรือแชท หรือสแกน QR เช็กอิน",
-        "NSPhotoLibraryUsageDescription": "Jurrgun opens your photos only when you tap to add a photo to your profile or a chat. · เจอกันเปิดรูปของคุณเฉพาะตอนที่คุณแตะเพื่อเพิ่มรูปในโปรไฟล์หรือแชท"
+        "NSCameraUsageDescription": "Jurrgun uses the camera only when you tap to add a photo to your profile or a chat, or to scan a QR code at check-in.",
+        "NSPhotoLibraryUsageDescription": "Jurrgun opens your photos only when you tap to add a photo to your profile or a chat.",
+        "CFBundleDevelopmentRegion": "th",
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#137f45",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -29,10 +32,11 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
-      ]
+      ],
+      "package": "app.jurrgun"
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -42,7 +46,11 @@
         {
           "backgroundColor": "#fff9f0",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 96,
+          "dark": {
+            "backgroundColor": "#0b3520",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ]
     ],
@@ -61,6 +69,10 @@
       }
     },
     "owner": "jurrgun",
-    "backgroundColor": "#fff9f0"
+    "backgroundColor": "#fff9f0",
+    "locales": {
+      "th": "./locales/th.json",
+      "en": "./locales/en.json"
+    }
   }
 }

@@ -7,13 +7,12 @@
  * (tel:, LINE, maps) handed to the right app, outside links in the system
  * browser, and jurrgun:// links that open a page in the app.
  *
- * Not in v1, waiting on Core Platform: Google and LINE sign-in (Google
- * refuses sign-in inside an embedded web view, so it has to run in the
- * system browser and hand back to the app) and native push (Expo tokens).
- * Until then, sign-in inside the app is by email code.
+ * Google and LINE sign-in run in the phone's browser and hand back to the
+ * web view (sign-in.ts). Native push waits on Privacy & Security's notice
+ * line for Expo, which lands with Core's server side.
  *
- * Privacy: the session is the site's normal cookie inside the web view; the
- * app stores no token of its own and has no analytics or crash SDK.
+ * Privacy: the session is the site's normal HttpOnly cookie inside the web
+ * view; the app stores no token of its own and has no analytics or crash SDK.
  */
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -22,6 +21,8 @@ import { useCallback, useEffect, useRef, useState, type ComponentType, type Ref 
 import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
+
+import { providerFrom, signIn, type SignInStart } from '@/lib/sign-in';
 
 // react-native-webview 14 types its class as WebView<P = undefined>, and
 // WebViewProps & undefined is `never` under current TypeScript. Same component, usable props.
@@ -50,6 +51,7 @@ function pathFrom(url: string | null): string | null {
     if (u.protocol === 'https:' && u.host === SITE_HOST) return u.pathname + u.search;
     const { hostname, path, queryParams } = Linking.parse(url);
     const p = '/' + [hostname, path].filter(Boolean).join('/');
+    if (p === '/auth' || p.startsWith('/auth/') || p.startsWith('/--/auth')) return null;
     const q = new URLSearchParams(queryParams as Record<string, string>).toString();
     return p.startsWith('//') ? null : p + (q ? `?${q}` : '');
   } catch {
@@ -63,13 +65,14 @@ export default function JurrgunShell() {
   const web = useRef<Shell>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [uri, setUri] = useState(SITE + '/');
+  const [source, setSource] = useState<{ uri: string } | SignInStart>({ uri: SITE + '/' });
+  const busy = useRef(false);
 
   // A jurrgun:// link that opened (or reopened) the app goes to its page.
   const incoming = Linking.useLinkingURL();
   useEffect(() => {
     const p = pathFrom(incoming);
-    if (p) setUri(SITE + p);
+    if (p) setSource({ uri: SITE + p });
   }, [incoming]);
 
   // Android back: back through the site's pages first, then leave the app.
@@ -87,6 +90,25 @@ export default function JurrgunShell() {
 
   const onNav = useCallback((nav: WebViewNavigation) => setCanGoBack(nav.canGoBack), []);
 
+  const startSignIn = useCallback((provider: 'google' | 'line') => {
+    if (busy.current) return;
+    busy.current = true;
+    signIn(SITE, provider)
+      .then((r) => {
+        if (r.ok) setSource(r.source);
+        else if (r.reason !== 'cancelled')
+          Alert.alert(
+            'เข้าสู่ระบบไม่สำเร็จ · Couldn\'t sign in',
+            r.reason === 'busy'
+              ? 'มีคนเข้าสู่ระบบอยู่มาก ลองใหม่อีกครั้งในอีกสักครู่\nLots of people are signing in. Try again in a moment.'
+              : 'ลองใหม่อีกครั้ง หรือใช้อีเมลเข้าสู่ระบบ\nTry again, or sign in with your email.',
+          );
+      })
+      .finally(() => {
+        busy.current = false;
+      });
+  }, []);
+
   const shouldLoad = useCallback(({ url }: { url: string }) => {
     if (url.startsWith('about:') || url.startsWith('blob:') || url.startsWith('data:')) return true;
     if (HAND_OFF.test(url)) {
@@ -99,18 +121,22 @@ export default function JurrgunShell() {
     } catch {
       return false;
     }
+    // The site's Google and LINE buttons: run them in the phone's browser instead.
+    const provider = providerFrom(SITE, url);
+    if (provider) {
+      startSignIn(provider);
+      return false;
+    }
     if (host === SITE_HOST) return true;
+    // Reached Google or LINE some other way: same as the buttons.
     if (SIGN_IN_HOSTS.includes(host)) {
-      Alert.alert(
-        'ยังเข้าสู่ระบบด้วยวิธีนี้ในแอปไม่ได้ · Not in the app yet',
-        'ตอนนี้ในแอปใช้อีเมลเข้าสู่ระบบได้ก่อน\nFor now, sign in with your email in the app. Google and LINE sign-in are coming.',
-      );
+      startSignIn(host === 'access.line.me' ? 'line' : 'google');
       return false;
     }
     // Anywhere else opens in the phone's browser, outside the app.
     WebBrowser.openBrowserAsync(url).catch(() => {});
     return false;
-  }, []);
+  }, [startSignIn]);
 
   const retry = useCallback(() => {
     setOffline(false);
@@ -121,7 +147,7 @@ export default function JurrgunShell() {
     <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
       <Web
         ref={web}
-        source={{ uri }}
+        source={source}
         style={[styles.fill, { backgroundColor: c.bg }]}
         applicationNameForUserAgent="JurrgunApp/1.0"
         originWhitelist={['https://*', 'http://*', 'about:*', 'blob:*', 'data:*', ...['tel', 'mailto', 'sms', 'line', 'geo', 'maps', 'intent'].map((s) => `${s}:*`)]}
