@@ -1448,7 +1448,13 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
       <h1>{t("การแจ้งเตือน", "Notifications")}</h1>
       {push ? <PushSwitch t={t} publicKey={push.publicKey} card /> : null}
       {rows.length === 0 ? (
-        <Empty>{t("ยังไม่มีการแจ้งเตือน", "No notifications yet.")}</Empty>
+        // Not a dead end: the same next step as the other empty pages.
+        <>
+          <Empty>{t("ยังไม่มีการแจ้งเตือน", "No notifications yet.")}</Empty>
+          <p class="empty-next">
+            <a href="/?view=list">{t("หาโต๊ะถัดไป", "Find your next table")} →</a>
+          </p>
+        </>
       ) : (
         // Grouped by day, and the same message on the same day folds into one row with a count (Phase 3).
         groupNotifications(rows, lang).map((g) => (

@@ -477,7 +477,8 @@ export async function discoverPage(c: Context<AppEnv>) {
         <Script dangerouslySetInnerHTML={{ __html: RAIL_OPEN_JS }} />
         {above.size ? null : <h2 class="sr-only">{t("รายการกิจกรรม", "Event list")}</h2>}
         <section id="discover-list" class="discover-list" aria-label={t("รายการกิจกรรม", "Event list")}>
-          {above.size ? <h2 class="disc-more-h">{t("กิจกรรมอื่น ๆ", "More events")}</h2> : null}
+          {/* Only when there are more events: with every event already in the top list, the cards below are not events. */}
+          {above.size && rest.length ? <h2 class="disc-more-h">{t("กิจกรรมอื่น ๆ", "More events")}</h2> : null}
           {cardList(
             <>
               {forYouHidden ? null : (

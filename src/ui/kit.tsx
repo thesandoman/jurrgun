@@ -405,7 +405,7 @@ function TabBar(props: { v: View; tab: Tab; top?: boolean }) {
         <a
           href={href}
           class={`${key === "mine" ? "center " : ""}${props.tab === key || (key === "me" && props.tab === "learn") ? "on" : ""}`.trim() || undefined}
-          aria-current={props.tab === key ? "page" : undefined}
+          aria-current={props.tab === key ? "page" : key === "me" && props.tab === "learn" ? "true" : undefined}
           aria-label={key === "connections" && chats > 0 ? t(`${text} แชตยังไม่ได้อ่าน ${chats}`, `${text}, ${chats} unread ${chats === 1 ? "chat" : "chats"}`) : undefined}
         >
           <span aria-hidden="true">{icon}</span>
