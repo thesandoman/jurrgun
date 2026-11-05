@@ -1555,4 +1555,6 @@ main h2.doors-eyebrow{margin:24px 0 8px}
 .empty-next a{display:inline-flex;align-items:center;min-height:44px;font-weight:700}
 /* Discover on phones and tablets: open Filters takes the whole row (it was squeezed to about 110px beside Map and Cards); the view switch wraps under it. */
 @media (max-width:1023.98px){.disc-bar:not(.is-stuck) .disc-tools .filters[open]{flex-basis:100%}}
+/* Profile 1 to 5 scale: each number was 39px wide, under the 44px tap floor. */
+.pf-scale .pill>span{min-width:44px;justify-content:center;text-align:center}
 `);
