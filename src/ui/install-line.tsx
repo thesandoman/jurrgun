@@ -26,12 +26,12 @@ export function InstallLine(props: { t: T }) {
       <div class="card me-ask install-line" id="install-line" hidden>
         <p>
           <strong data-for="android">
-            📲 {t("เพิ่ม Jurrgun ไว้ที่หน้าจอโฮม เปิดดูโต๊ะของคุณได้ในแตะเดียว", "Put Jurrgun on your home screen, so your table is one tap away.")}
+            📲 {t("เพิ่ม Jurrgun ไว้ที่หน้าจอโฮม แตะครั้งเดียวก็เห็นโต๊ะของคุณ", "Put Jurrgun on your home screen, so your table is one tap away.")}
           </strong>
           <strong data-for="ios" hidden>
             📲{" "}
             {t(
-              "บน iPhone แตะปุ่มแชร์ แล้วเลือก \"เพิ่มไปยังหน้าจอโฮม\" การเตือนก่อนวันงานใช้ได้เมื่อเปิดจากหน้าจอโฮมเท่านั้น",
+              "บน iPhone แตะปุ่มแชร์ แล้วเลือก \"เพิ่มไปยังหน้าจอโฮม\" การเตือนก่อนวันงานใช้ได้เฉพาะตอนเปิดจากหน้าจอโฮม",
               "On iPhone, tap Share, then Add to Home Screen. Day-before reminders only work from there.",
             )}
           </strong>
