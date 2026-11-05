@@ -6,9 +6,10 @@
  * path, never `msg`'s words. Neither ever fails the caller, and the
  * in-app notification row is written either way by the caller.
  */
-import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import type { Bindings } from "../lib/env";
+import { sha256 } from "../lib/crypto";
 import { sendPush, type VapidKeys } from "../lib/webpush";
 import { isExpoToken, sendExpo } from "../lib/expo-push";
 import { createLogger } from "../logger";
@@ -70,4 +71,15 @@ export async function pushToAccount(env: Bindings, db: Db, accountId: string, ms
   }
   if (gone.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
   return sent;
+}
+
+/**
+ * In the Jurrgun phone app: whether this signed-in app session already has push on. Expo rows
+ * belong to one session (by the hash of its cookie), so the switch shows the truth for this phone.
+ */
+export async function appPushOn(db: Db, sessionCookie: string | undefined, userAgent: string | undefined): Promise<boolean> {
+  if (!sessionCookie || !/JurrgunApp/.test(userAgent ?? "")) return false;
+  const sessionId = await sha256(sessionCookie);
+  const [row] = await db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(and(eq(pushSubscriptions.sessionId, sessionId), isNotNull(pushSubscriptions.sessionId))).limit(1);
+  return !!row;
 }

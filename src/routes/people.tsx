@@ -15,7 +15,8 @@
  * wrap every page in the app.
  */
 import { isStaffTarget, limitText, reportLimit, staffAlert } from "../services/report-intake";
-import { vapidKeys } from "../services/push";
+import { appPushOn, vapidKeys } from "../services/push";
+import { getCookie } from "hono/cookie";
 import { PushSwitch } from "../ui/push-switch";
 import { RESIDENT_PAUSED, MAX_SHARES_PER_DAY } from "../domain/rules";
 import { canHost } from "../domain/hosting";
@@ -40,7 +41,7 @@ import { newId } from "../lib/crypto";
 import type { AppEnv } from "../lib/env";
 import { fmtDate, fmtDay } from "../lib/i18n";
 import { audit, notify } from "../lib/records";
-import { requireMember } from "../lib/session";
+import { requireMember, SESSION_COOKIE } from "../lib/session";
 import {
   accounts,
   blocks,
@@ -1446,7 +1447,7 @@ peopleRoutes.get("/notifications", requireMember, async (c) => {
     { title: t("การแจ้งเตือน", "Notifications") },
     <>
       <h1>{t("การแจ้งเตือน", "Notifications")}</h1>
-      {push ? <PushSwitch t={t} publicKey={push.publicKey} card /> : null}
+      {push ? <PushSwitch t={t} publicKey={push.publicKey} card appOn={await appPushOn(db, getCookie(c, SESSION_COOKIE), c.req.header("user-agent"))} /> : null}
       {rows.length === 0 ? (
         // Not a dead end: the same next step as the other empty pages.
         <>

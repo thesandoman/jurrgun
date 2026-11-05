@@ -22,6 +22,8 @@ import { ActivityIndicator, Alert, BackHandler, Platform, Pressable, StyleSheet,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebViewProps } from 'react-native-webview';
 
+import * as Notifications from 'expo-notifications';
+import { answerScript, expoToken, PUSH_MESSAGE, registerScript, tappedPath } from '@/lib/push';
 import { BEGIN_MESSAGE, beginScript, finishScript, makePkce, openSignIn, providerFrom, type Provider } from '@/lib/sign-in';
 
 // react-native-webview 14 types its class as WebView<P = undefined>, and
@@ -136,12 +138,38 @@ export default function JurrgunShell() {
     });
   }, []);
 
+  // Push: on only when the member flips the site's switch; a refreshed token re-registers itself.
+  const pushOn = useRef(false);
+  const onPushSwitch = useCallback(async (on: boolean) => {
+    const { token, denied } = await expoToken(on);
+    if (!token) {
+      web.current?.injectJavaScript(answerScript(on ? { ok: false, denied } : { ok: true, on: false }));
+      return;
+    }
+    pushOn.current = on;
+    web.current?.injectJavaScript(registerScript(token, on));
+  }, []);
+  useEffect(() => {
+    const sub = Notifications.addPushTokenListener(() => {
+      if (!pushOn.current) return;
+      expoToken(false).then(({ token }) => token && web.current?.injectJavaScript(registerScript(token, true)));
+    });
+    return () => sub.remove();
+  }, []);
+  // A tapped notification opens its page, also when it started the app.
+  const lastTap = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    const p = tappedPath(lastTap);
+    if (p) setSource({ uri: SITE + p });
+  }, [lastTap]);
+
   const onMessage = useCallback((e: WebViewMessageEvent) => {
     try {
-      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean };
+      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean };
       if (m.type === BEGIN_MESSAGE && typeof m.id === 'string') beginWaiters.current.get(m.id)?.(m.ok === true);
+      if (m.type === PUSH_MESSAGE) onPushSwitch(m.on === true);
     } catch {}
-  }, []);
+  }, [onPushSwitch]);
 
   const failed = (reason: 'failed' | 'busy') =>
     Alert.alert(

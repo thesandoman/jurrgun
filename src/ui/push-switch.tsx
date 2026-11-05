@@ -17,7 +17,8 @@
 import { Script } from "./kit";
 type T = (th: string, en: string) => string;
 
-export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
+/** `appOn`: in the Jurrgun phone app, whether this signed-in app session already has push on (server-side, by session). */
+export function PushSwitch(props: { t: T; publicKey: string; card?: boolean; appOn?: boolean }) {
   const { t } = props;
   const text = {
     off: t("เตือนก่อนวันงาน และตอนเลือกคนที่อยากเจออีก", "Day-before and meet-again reminders"),
@@ -33,7 +34,7 @@ export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
   };
   return (
     <>
-      <div class={props.card ? "push-switch push-card" : "push-switch"} data-key={props.publicKey} data-text={JSON.stringify(text)} id="push">
+      <div class={props.card ? "push-switch push-card" : "push-switch"} data-key={props.publicKey} data-app-on={props.appOn ? "1" : "0"} data-text={JSON.stringify(text)} id="push">
         <button type="button" class="qs" aria-pressed="false" aria-describedby="push-hint">
           <span aria-hidden="true">🔔</span>
           <span>
@@ -54,6 +55,10 @@ export function PushSwitch(props: { t: T; publicKey: string; card?: boolean }) {
 const PUSH_SWITCH_JS = `(function(){var f=document.getElementById("push");if(!f)return;
 var T=JSON.parse(f.dataset.text),b=f.querySelector("button"),hint=f.querySelector("small"),sub=null;
 function say(s,on){hint.textContent=s;b.setAttribute("aria-pressed",on?"true":"false")}
+/* In the Jurrgun phone app the web view can't do web push: the app asks the phone, registers its Expo token through this page's session, and answers with a "jurrgun-push" event. */
+if(/JurrgunApp/.test(navigator.userAgent)&&window.ReactNativeWebView){var on=f.dataset.appOn==="1";say(on?T.on:T.off,on);
+addEventListener("jurrgun-push",function(e){var d=e.detail||{};b.disabled=false;if(d.ok){on=!!d.on;say(on?T.on:T.off,on)}else say(d.denied?T.blocked:T.failed,on)});
+b.addEventListener("click",function(){b.disabled=true;say(T.working,on);window.ReactNativeWebView.postMessage(JSON.stringify({type:"jurrgun-push",on:!on}))});return}
 var standalone=navigator.standalone||matchMedia("(display-mode: standalone)").matches;
 var ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 var can="serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;

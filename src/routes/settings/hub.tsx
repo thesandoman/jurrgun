@@ -18,7 +18,7 @@ import { getCookie } from "hono/cookie";
 import { SESSION_COOKIE } from "../../lib/session";
 import { allowedEndpoint } from "../../lib/webpush";
 import { isExpoToken } from "../../lib/expo-push";
-import { vapidKeys } from "../../services/push";
+import { appPushOn, vapidKeys } from "../../services/push";
 import { PushSwitch } from "../../ui/push-switch";
 import { InstallLine } from "../../ui/install-line";
 import { emailEnabled } from "../../services/email-code";
@@ -155,7 +155,7 @@ settingsRoutes.get("/settings", async (c) => {
           }}
         />
       )}
-      {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} /> : null}
+      {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} appOn={await appPushOn(db, getCookie(c, SESSION_COOKIE), c.req.header("user-agent"))} /> : null}
       {/* The empty-district alert (owner card 7): shown while notifications are on; off with them, whatever the switch says. */}
       {notifYes && districtName(p.district, lang) ? (
         <QuickSwitch
