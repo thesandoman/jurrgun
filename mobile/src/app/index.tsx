@@ -43,20 +43,21 @@ const COLORS = {
   dark: { bg: '#0b3520', text: '#fff9f0', muted: '#c9d8cf', brand: '#3fbf77', onBrand: '#0b3520' },
 };
 
-/** A site path from a jurrgun://path link or a link to the site itself. */
-function pathFrom(url: string | null): string | null {
+/**
+ * A site path from a jurrgun://path link or a link to the site itself; null for anything else
+ * (Expo's own development links, other apps' schemes), which must never become a page.
+ */
+export function pathFrom(url: string | null): string | null {
   if (!url) return null;
-  try {
-    const u = new URL(url);
-    if (u.protocol === 'https:' && u.host === SITE_HOST) return u.pathname + u.search;
-    const { hostname, path, queryParams } = Linking.parse(url);
-    const p = '/' + [hostname, path].filter(Boolean).join('/');
-    if (p === '/auth' || p.startsWith('/auth/') || p.startsWith('/--/auth')) return null;
-    const q = new URLSearchParams(queryParams as Record<string, string>).toString();
-    return p.startsWith('//') ? null : p + (q ? `?${q}` : '');
-  } catch {
-    return null;
-  }
+  // Plain string parsing: React Native's URL handles custom schemes differently from browsers.
+  const site = url.match(/^https:\/\/([^/?#]+)(\/[^#]*)?/i);
+  if (site) return site[1].toLowerCase() === SITE_HOST ? site[2] || '/' : null;
+  const app = url.match(/^jurrgun:\/\/\/?([^?#]*)(\?[^#]*)?/i);
+  if (!app) return null;
+  const p = '/' + app[1].replace(/^\/+/, '');
+  if (p === '/auth' || p.startsWith('/auth/')) return null;
+  if (!/^\/[A-Za-z0-9/_.~-]*$/.test(p)) return null;
+  return p + (app[2] ?? '');
 }
 
 export default function JurrgunShell() {
@@ -68,6 +69,8 @@ export default function JurrgunShell() {
   // Sign-in waits on the network twice with nothing to see (owner: "a bit of a freeze"): show that it's working.
   const [signing, setSigning] = useState<null | 'start' | 'finish'>(null);
   const finishing = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A thin bar while a page loads, so a tap shows at once that something is happening (owner: "lag").
+  const [progress, setProgress] = useState(0);
   const [source, setSource] = useState<{ uri: string }>({ uri: SITE + '/' });
   const busy = useRef(false);
   // Where the web view is now; who is waiting for the next page load or for the begin step's answer.
@@ -228,7 +231,10 @@ export default function JurrgunShell() {
         onShouldStartLoadWithRequest={shouldLoad}
         onNavigationStateChange={onNav}
         onMessage={onMessage}
+        onLoadStart={() => setProgress(0.08)}
+        onLoadProgress={(e) => setProgress(e.nativeEvent.progress >= 1 ? 0 : Math.max(0.08, e.nativeEvent.progress))}
         onLoadEnd={() => {
+          setProgress(0);
           SplashScreen.hideAsync().catch(() => {});
           // A sign-in step waiting for a page of the site to finish loading.
           const waiting = loadWaiters.current;
@@ -255,6 +261,11 @@ export default function JurrgunShell() {
         geolocationEnabled={false}
         decelerationRate="normal"
       />
+      {progress > 0 ? (
+        <View pointerEvents="none" style={styles.progressTrack} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%`, backgroundColor: c.brand }]} />
+        </View>
+      ) : null}
       {signing ? (
         <View style={[StyleSheet.absoluteFill, styles.signing, { backgroundColor: c.bg }]} accessibilityLiveRegion="polite">
           <ActivityIndicator size="large" color={c.brand} />
@@ -289,6 +300,8 @@ export default function JurrgunShell() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   offline: { padding: 24, justifyContent: 'center', gap: 12 },
+  progressTrack: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
+  progressBar: { height: 3, borderTopRightRadius: 2, borderBottomRightRadius: 2 },
   signing: { alignItems: 'center', justifyContent: 'center', gap: 16, opacity: 0.96 },
   h1: { fontSize: 28, fontWeight: '700' },
   h2: { fontSize: 20, fontWeight: '600' },
