@@ -422,5 +422,11 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE TABLE \"identity_app_handoffs\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"challenge\" text NOT NULL,\n\t\"expires_at\" timestamp with time zone NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
       "CREATE INDEX \"identity_app_handoffs_account_idx\" ON \"identity_app_handoffs\" (\"account_id\");"
     ]
+  },
+  {
+    "id": "0036_push_session",
+    "statements": [
+      "ALTER TABLE \"social_push_subscriptions\" ADD COLUMN \"session_id\" text;"
+    ]
   }
 ];

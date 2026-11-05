@@ -253,6 +253,13 @@
       "when": 1793862120778,
       "tag": "0035_app_handoffs",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793862461035,
+      "tag": "0036_push_session",
+      "breakpoints": true
     }
   ]
 }
