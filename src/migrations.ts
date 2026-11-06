@@ -428,5 +428,12 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
     "statements": [
       "ALTER TABLE \"social_push_subscriptions\" ADD COLUMN \"session_id\" text;"
     ]
+  },
+  {
+    "id": "0037_apple_tokens",
+    "statements": [
+      "CREATE TABLE \"identity_apple_tokens\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"token\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE INDEX \"identity_apple_tokens_account_idx\" ON \"identity_apple_tokens\" (\"account_id\");"
+    ]
   }
 ];
