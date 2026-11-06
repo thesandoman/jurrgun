@@ -12,7 +12,8 @@ describe.skipIf(!HAS_DB)("delete account", () => {
     const html = await (await req("/settings/privacy?lang=en", { cookie: m.cookie })).text();
     expect(html).toContain(">Delete account</summary>");
     expect(html).toContain(`deleted within ${DEACTIVATED_RETENTION_DAYS} days.`);
-    expect(html).toContain(`for ${SAFETY_RETENTION_DAYS / 365} years after they close`);
+    expect(html).toContain(`for ${SAFETY_RETENTION_DAYS / 365} years. If a report`);
+    expect(html).toContain('href="/settings/privacy/export"');
     expect(html).toContain("Delete for good");
     expect(html).toContain("Keep my account");
     expect(html).not.toContain("Deactivate account");

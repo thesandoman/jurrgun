@@ -74,7 +74,7 @@ export function PrivacyCenter(props: { v: View; current: Map<string, boolean>; o
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
     ["👥 ข้อมูลการใช้งาน", "👥 Social store", "ชื่อเล่น รูป ความสนใจ กิจกรรมที่ลงทะเบียน คนรู้จัก และการตั้งค่าส่วนตัว", "Nickname, photo, interests, events, connections and your private preferences."],
-    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse และคำถามเรื่องความรู้สึก เก็บโดยใช้รหัสแทนชื่อ เมื่อปิดบัญชี เราตัดรหัสนี้ออกจากบัญชีของคุณ", "City Pulse and wellbeing answers, kept under a code, not your name. When you deactivate, the code is cut from your account."],
+    ["📊 ข้อมูลวิจัยเมือง", "📊 City research store", "คำตอบ City Pulse และคำถามเรื่องความรู้สึก เก็บโดยใช้รหัสแทนชื่อ เมื่อลบบัญชี เราตัดรหัสนี้ออกจากบัญชีของคุณ", "City Pulse and wellbeing answers, kept under a code, not your name. When you deactivate, the code is cut from your account."],
   ];
   return (
     <>
@@ -82,7 +82,7 @@ export function PrivacyCenter(props: { v: View; current: Map<string, boolean>; o
         <a href="/settings">← {t("ฉัน", "Me")}</a>
       </p>
       <h1>{t("ศูนย์ความเป็นส่วนตัว", "Privacy centre")}</h1>
-      <p class="muted">{t("ข้อมูลของคุณ: ดูว่าเก็บที่ไหน ดาวน์โหลด หรือปิดบัญชี", "Your data: where it lives, download it, or close your account.")}</p>
+      <p class="muted">{t("ข้อมูลของคุณ: ดูว่าเก็บที่ไหน ดาวน์โหลด หรือลบบัญชี", "Your data: where it lives, download it, or delete your account.")}</p>
       <p class="row">
         <a class="btn ghost" href="/settings/consents">{t("ความยินยอมของฉัน", "My consents")} <span aria-hidden="true">→</span></a>
         <a class="btn ghost" href="/privacy">{t("นโยบายความเป็นส่วนตัว", "Privacy notice")}</a>
@@ -119,9 +119,12 @@ export function PrivacyCenter(props: { v: View; current: Map<string, boolean>; o
         </p>
         <p class="muted">
           {t(
-            `สิ่งที่เราเก็บไว้: รายงานและการดำเนินการของทีมดูแล เก็บ ${SAFETY_RETENTION_DAYS / 365} ปีหลังปิดเรื่อง ถ้ามีรายงานที่ยังเปิดอยู่เกี่ยวกับคุณ จะลบหลังรายงานปิด ยอดรวมแบบไม่ระบุตัวตนยังอยู่`,
-            `What we keep: reports and moderation actions, for ${SAFETY_RETENTION_DAYS / 365} years after they close. If a report about you is still open, deletion waits until it closes. Anonymous totals stay.`,
+            `สิ่งที่เราเก็บไว้: รายงานและการดำเนินการของทีมดูแล เก็บ ${SAFETY_RETENTION_DAYS / 365} ปี ถ้ายังมีรายงานเกี่ยวกับคุณเปิดอยู่ การลบจะรอจนรายงานปิด ยอดรวมแบบไม่ระบุตัวตนยังอยู่`,
+            `What we keep: reports and moderation actions, for ${SAFETY_RETENTION_DAYS / 365} years. If a report about you is still open, deletion waits until it closes. Anonymous totals stay.`,
           )}
+        </p>
+        <p>
+          <a href="/settings/privacy/export">{t("ดาวน์โหลดข้อมูลของฉันก่อน", "Download my data first")} →</a>
         </p>
         <p class="row">
           <a class="btn ghost" href="/settings/habits">⏸️ {t("พักก่อนแทน (คนรู้จักและแชตยังอยู่)", "Take a break instead (your people and chats stay)")}</a>
