@@ -17,7 +17,7 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-11-05";
+export const NOTICE_ISO = "2026-11-06";
 
 /** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
 export const CAMPAIGN_COUNT: Text = {
@@ -36,6 +36,10 @@ export const CHAT_CHECK: Text = {
  * "updated Terms" card on Me (owner, 2026-10-26: one calm card, no reminders).
  */
 export const NOTICE_CHANGES: Text[] = [
+  {
+    th: "เข้าสู่ระบบด้วย Apple ได้แล้ว เราไม่ขอชื่อหรืออีเมล เก็บแค่รหัสบัญชี Apple ไว้ให้คุณเข้าสู่ระบบ และรหัสเข้าระบบของ Apple ที่เข้ารหัสไว้ เพื่อยกเลิกการเชื่อมกับ Apple เมื่อคุณลบบัญชี",
+    en: "You can now sign in with Apple. We ask for no name or email. We keep only Apple's account ID, to sign you in, and Apple's sign-in token, encrypted, so we can cancel the link with Apple when you delete your account.",
+  },
   {
     th: "มีแอป Jurrgun ในมือถือแล้ว ถ้าเปิดการแจ้งเตือนในแอป เราส่งผ่าน Expo ซึ่งเห็นแค่ที่อยู่สำหรับส่งของมือถือคุณ และข้อความเดียวว่า \"มีอะไรใหม่สำหรับคุณใน Jurrgun\" ไม่มีชื่อหรือข้อความแชต",
     en: "There's now a Jurrgun phone app. If you turn on its notifications, we send them through Expo, which sees only your phone's push address and one line, \"You have something new in Jurrgun\". Never names or messages.",
@@ -239,10 +243,17 @@ export const RETENTION: RetentionItem[] = [
     code: "EXIT_NOTE_RETENTION_DAYS",
   },
   {
+    what: { th: "รหัสเข้าระบบของ Apple (เข้ารหัสไว้)", en: "Apple's sign-in token (encrypted)" },
+    keep: {
+      th: "เก็บไว้เพื่อยกเลิกการเชื่อมกับ Apple เท่านั้น เมื่อคุณลบบัญชี เราแจ้งยกเลิกกับ Apple แล้วลบทิ้ง",
+      en: "kept only to cancel the link with Apple; when you delete your account, we cancel it with Apple, then delete it",
+    },
+  },
+  {
     what: { th: "บัญชีที่ลบแล้ว", en: "Deleted accounts" },
     keep: {
-      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล คำตอบ City Pulse และแบบสอบถามความรู้สึก และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
-      en: "profile hidden, and photos, social links, City Pulse and wellbeing answers and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
+      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล คำตอบ City Pulse และแบบสอบถามความรู้สึก และการเข้าสู่ระบบด้วย Google LINE Apple หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
+      en: "profile hidden, and photos, social links, City Pulse and wellbeing answers and Google, LINE, Apple or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
     },
     period: { n: 30, unit: "days" },
     code: "DEACTIVATED_RETENTION_DAYS",
@@ -275,7 +286,7 @@ export const COOKIES: CookieItem[] = [
   { name: "bkk_sid", what: { th: "ให้คุณเข้าสู่ระบบค้างไว้", en: "Keeps you signed in" }, life: { th: "30 วัน", en: "30 days" } },
   { name: "lang", what: { th: "ภาษาที่คุณเลือก", en: "Your language" }, life: { th: "1 ปี", en: "1 year" } },
   { name: "jg_src", what: { th: "ลิงก์แคมเปญหรือพาร์ตเนอร์ที่พาคุณมา", en: "The campaign or partner link that brought you" }, life: { th: "30 วัน", en: "30 days" } },
-  { name: "bkk_oauth", what: { th: "ระหว่างเข้าสู่ระบบด้วย Google หรือ LINE", en: "While you sign in with Google or LINE" }, life: { th: "10 นาที", en: "10 minutes" } },
+  { name: "bkk_oauth", what: { th: "ระหว่างเข้าสู่ระบบด้วย Google LINE หรือ Apple", en: "While you sign in with Google, LINE or Apple" }, life: { th: "10 นาที", en: "10 minutes" } },
   { name: "bkk_app_bind", what: { th: "ระหว่างเข้าสู่ระบบในแอป Jurrgun ในมือถือ ผูกการเข้าสู่ระบบไว้กับแอปที่เริ่มเท่านั้น", en: "While you sign in on the Jurrgun phone app, so the sign-in only finishes in the app that started it" }, life: { th: "10 นาที", en: "10 minutes" } },
   { name: "bkk_invite", what: { th: "ลิงก์ชวนจากเพื่อน จนกว่าคุณจะสมัครเสร็จ", en: "A friend's invite link, until you finish signing up" }, life: { th: "7 วัน", en: "7 days" } },
   { name: "bkk_intent", what: { th: "สิ่งที่คุณเลือกในหน้าต้อนรับ (เพื่อน หรือเปิดใจมากกว่าเพื่อน)", en: "Your choice on the welcome screen (friends, or open to more)" }, life: { th: "30 วัน", en: "30 days" } },
@@ -343,10 +354,10 @@ export const PROCESSORS: Processor[] = [
     },
   },
   {
-    name: "Google · LINE",
+    name: "Google · LINE · Apple",
     group: "own",
     does: { th: "ให้เข้าสู่ระบบ ถ้าคุณเลือกใช้ และแชร์ลงใน LINE เมื่อคุณแตะ", en: "Sign-in, if you choose it, and sharing to LINE when you tap it" },
-    sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขออีเมลหรือรายชื่อเพื่อน และสิ่งที่คุณเลือกแชร์", en: "That you use Jurrgun (we only ask for an account ID, never your email or friends), and whatever you choose to share" },
+    sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขอชื่อ อีเมล หรือรายชื่อเพื่อน และสิ่งที่คุณเลือกแชร์", en: "That you use Jurrgun (we only ask for an account ID, never your name, email or friends), and whatever you choose to share" },
   },
   {
     name: "Esri · OpenStreetMap · jsDelivr",
