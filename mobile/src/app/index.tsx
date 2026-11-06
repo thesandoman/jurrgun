@@ -53,6 +53,10 @@ const COLORS = {
  * A site path from a jurrgun://path link or a link to the site itself; null for anything else
  * (Expo's own development links, other apps' schemes), which must never become a page.
  */
+// Notifications exist only on phones; on the web (a developer opening localhost) there is no last tap.
+const useLastTap: () => Notifications.NotificationResponse | null | undefined =
+  Platform.OS === 'web' ? () => null : Notifications.useLastNotificationResponse;
+
 export function pathFrom(url: string | null): string | null {
   if (!url) return null;
   // Plain string parsing: React Native's URL handles custom schemes differently from browsers.
@@ -214,6 +218,7 @@ export default function JurrgunShell() {
     web.current?.injectJavaScript(registerScript(token, on));
   }, []);
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const sub = Notifications.addPushTokenListener(() => {
       if (!pushOn.current) return;
       expoToken(false).then(({ token }) => token && web.current?.injectJavaScript(registerScript(token, true)));
@@ -221,7 +226,7 @@ export default function JurrgunShell() {
     return () => sub.remove();
   }, []);
   // A tapped notification opens its page, also when it started the app.
-  const lastTap = Notifications.useLastNotificationResponse();
+  const lastTap = useLastTap();
   useEffect(() => {
     const p = tappedPath(lastTap);
     if (p) setSource({ uri: SITE + p });
