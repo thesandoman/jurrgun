@@ -38,8 +38,10 @@ export function fetchScript(lang: string): string {
   const post = (x: string) => `window.ReactNativeWebView.postMessage(JSON.stringify({type:${JSON.stringify(WIDGET_MESSAGE)},${x}}))`;
   return (
     `fetch("/api/app/next-table?lang=${lang === 'en' ? 'en' : 'th'}",{credentials:"same-origin",redirect:"manual"})` +
-    `.then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){${post('signedIn:true,table:j.table')}})` +
-    `.catch(function(){${post('signedIn:false,table:null')}});true;`
+    // Signed out (a redirect to /login, or any non-ok answer) blanks the widget; no signal at all
+    // leaves it as it was, so the next table stays on the phone on the way there.
+    `.then(function(r){if(!r.ok){${post('signedIn:false,table:null')};return}return r.json().then(function(j){${post('signedIn:true,table:j.table')}})})` +
+    `.catch(function(){});true;`
   );
 }
 

@@ -228,6 +228,12 @@ export default function JurrgunShell() {
   }, [lastTap]);
 
   const onMessage = useCallback((e: WebViewMessageEvent) => {
+    // Only Jurrgun's own pages may talk to the app (push, lock, widget, sign-in).
+    try {
+      if (new URL(e.nativeEvent.url).host !== SITE_HOST) return;
+    } catch {
+      return;
+    }
     try {
       const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean; dark?: boolean; pull?: boolean; signedIn?: boolean; table?: Parameters<typeof saveWidget>[0] };
       if (m.type === BEGIN_MESSAGE && typeof m.id === 'string') beginWaiters.current.get(m.id)?.(m.ok === true);
