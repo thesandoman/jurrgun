@@ -60,6 +60,7 @@ import { ownLinks } from "../../services/profile-links";
 import { dropPendingDating } from "../onboarding";
 import { acceptedTerms, consentEffects, consentRow, GENDER_CONSENT, RELATIONSHIP_CONSENT, termsRow } from "../../services/consent";
 import { settingsRoutes } from "./app";
+import { DEACTIVATED_RETENTION_DAYS, SAFETY_RETENTION_DAYS } from "../../services/retention";
 import { currentConsents, me, romanceOffPatch, withdrawRomanceChoices } from "./shared";
 import type { C } from "./shared";
 
@@ -68,7 +69,7 @@ import type { C } from "./shared";
 /** Switched on and off with a plain toggle; the consent centre (/settings/consents) also sends profile_links. */
 const OPTIONAL = ["personalization", "research", "notifications"];
 
-export function PrivacyCenter(props: { v: View; current: Map<string, boolean> }) {
+export function PrivacyCenter(props: { v: View; current: Map<string, boolean>; openDelete?: boolean }) {
   const { t, lang } = props.v;
   const stores: [string, string, string, string][] = [
     ["🪪 ข้อมูลตัวตน", "🪪 Identity store", "ชื่อผู้ใช้ รหัสผ่าน (เข้ารหัสแล้ว) สถานะบัญชีและการยืนยันตัวตน", "Username, password (hashed), account and verification status."],
@@ -105,11 +106,21 @@ export function PrivacyCenter(props: { v: View; current: Map<string, boolean> })
         </LinkButton>
       </Card>
       <Card>
-        <h2 id="deactivate">{t("ปิดบัญชี", "Deactivate account")}</h2>
+        {/* Owner card S2 (App Store 5.1.1): one "Delete account". Deactivation already deletes: the profile goes at once, and
+            retention erases the rest after DEACTIVATED_RETENTION_DAYS unless a report about them is open. */}
+        <details class="delete-account" id="deactivate" open={props.openDelete}>
+        <summary class="btn danger">{t("ลบบัญชี", "Delete account")}</summary>
+        <h2>{t("ลบบัญชีของคุณใช่ไหม", "Delete your account?")}</h2>
         <p>
           {t(
-            "เราจะซ่อนโปรไฟล์ของคุณทันที ออกจากระบบทุกเครื่อง ลบรูป และตัดการเชื่อมโยงกับข้อมูลวิจัย จากนั้นลบบัญชีถาวรหลัง 30 วัน",
-            "Your profile is hidden at once, you're signed out everywhere, your photo is deleted and the link to your research answers is cut. The account is permanently deleted after 30 days.",
+            `โปรไฟล์จะหายไปทันทีและออกจากระบบทุกเครื่อง ข้อความที่คุณส่งในแชตและข้อมูลอื่นจะถูกลบภายใน ${DEACTIVATED_RETENTION_DAYS} วัน กู้คืนไม่ได้`,
+            `Your profile disappears now and you're signed out everywhere. Your chat messages and the rest of your data are deleted within ${DEACTIVATED_RETENTION_DAYS} days. This can't be undone.`,
+          )}
+        </p>
+        <p class="muted">
+          {t(
+            `สิ่งที่เราเก็บไว้: รายงานและการดำเนินการของทีมดูแล เก็บ ${SAFETY_RETENTION_DAYS / 365} ปีหลังปิดเรื่อง ถ้ามีรายงานที่ยังเปิดอยู่เกี่ยวกับคุณ จะลบหลังรายงานปิด ยอดรวมแบบไม่ระบุตัวตนยังอยู่`,
+            `What we keep: reports and moderation actions, for ${SAFETY_RETENTION_DAYS / 365} years after they close. If a report about you is still open, deletion waits until it closes. Anonymous totals stay.`,
           )}
         </p>
         <p class="row">
@@ -130,9 +141,13 @@ export function PrivacyCenter(props: { v: View; current: Map<string, boolean> })
             </div>
           </fieldset>
           <TextArea label={t("อยากบอกอะไรเราเพิ่มไหม (ไม่บังคับ)", "Anything you'd like us to know? (optional)")} name="exitNote" rows={2} maxlength={500} />
-          <Toggle name="confirm" label={t("ฉันเข้าใจและต้องการปิดบัญชี", "I understand and want to deactivate my account")} />
-          <Button kind="danger">{t("ปิดบัญชี", "Deactivate")}</Button>
+          <Toggle name="confirm" label={t("ฉันเข้าใจ และต้องการลบบัญชี", "I understand and want to delete my account")} />
+          <div class="row">
+            <Button kind="danger">{t("ลบถาวร", "Delete for good")}</Button>
+            <a class="btn ghost" href="/settings">{t("ไม่ลบ", "Keep my account")}</a>
+          </div>
         </form>
+        </details>
       </Card>
     </>
   );

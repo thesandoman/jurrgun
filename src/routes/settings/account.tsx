@@ -37,8 +37,8 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
       c,
       { title: v.t("ศูนย์ความเป็นส่วนตัว", "Privacy centre"), tab: "me", status: 400 },
       <>
-        <Notice kind="error">{v.t("ติ๊กยืนยันก่อนปิดบัญชี", "Please tick the box to confirm deactivation.")}</Notice>
-        <PrivacyCenter v={v} current={current} />
+        <Notice kind="error">{v.t("ติ๊กยืนยันก่อนลบบัญชี", "Please tick the box to confirm deleting your account.")}</Notice>
+        <PrivacyCenter v={v} current={current} openDelete />
       </>,
     );
   }

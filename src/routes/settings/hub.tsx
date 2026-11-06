@@ -267,7 +267,7 @@ settingsRoutes.get("/settings", async (c) => {
         { href: "/pulse", emoji: "💬", title: t("City Pulse: ช่วยพัฒนาเมือง", "City Pulse: help the city"), hint: t("คำถามสั้น ๆ ใช้รหัสแทนชื่อ", "Quick questions, under a code, not your name"), tint: "sky", group: gAcct },
         { href: "/settings/connections", emoji: "💞", title: t("ตั้งค่าการรู้จักกันหลังกิจกรรม", "Connection preferences"), hint: t("สถานะความสัมพันธ์ ช่วงอายุ (ส่วนตัว)", "Relationship status, age range (private)"), tint: "teal", group: gYou },
         { href: "/settings/consents", emoji: "✅", title: t("ความยินยอมของฉัน", "My consents"), hint: t("เปิดหรือปิดแต่ละเรื่อง พร้อมวันที่", "Each one on or off, with dates"), tint: "mint", group: gAcct },
-        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy centre"), hint: t("ดาวน์โหลดข้อมูล ปิดบัญชี", "Download my data, deactivate"), tint: "mint", group: gAcct },
+        { href: "/settings/privacy", emoji: "🔒", title: t("ศูนย์ความเป็นส่วนตัว", "Privacy centre"), hint: t("ดาวน์โหลดข้อมูล ลบบัญชี", "Download my data, delete account"), tint: "mint", group: gAcct },
         ...(emailEnabled(c.env)
           ? [{ href: "/settings/email", emoji: "✉️", title: t("อีเมลสำหรับเข้าสู่ระบบ", "Sign-in email"), hint: t("เข้าสู่ระบบด้วยรหัสทางอีเมล", "Sign in with a code by email"), tint: "sky" as const, group: gAcct }]
           : []),

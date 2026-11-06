@@ -113,7 +113,7 @@ const NOTICES: Record<string, [string, string]> = {
   blocked: ["บล็อกแล้ว คุณจะไม่เห็นกันอีก", "Blocked, you won't see each other again"],
   thanks: ["ขอบคุณสำหรับความคิดเห็น", "Thanks for your feedback"],
   shared: ["แชร์ช่องทางติดต่อแล้ว", "Contact shared"],
-  deactivated: ["ปิดบัญชีแล้ว", "Account deactivated"],
+  deactivated: ["ลบบัญชีแล้ว", "Account deleted"],
   done: ["เรียบร้อย", "Done"],
   district_alert_off: ["ปิดการแจ้งเตือนกิจกรรมในเขตแล้ว", "District alert turned off"],
   clock_unavailable: ["นาฬิกาทำงานได้เฉพาะบนเว็บไซต์จริง", "The clock only runs on the live site"],

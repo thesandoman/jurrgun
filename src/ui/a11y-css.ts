@@ -1571,4 +1571,9 @@ html.in-app :is(.topbar,.tabbar,.top-nav,.btn,.pill,.qs,.me-row,.chip,.sub-label
 /* Me, folded groups: the fold kept the old group-label type (.78rem, bold, faint), so rows inside had 12px titles under 13px subtitles; and an old inline-flex rule left their arrows mid-row. Rows read like the pinned ones now; the summary keeps its .sub-label look. */
 .me-group{font-size:inherit;font-weight:inherit;color:inherit;letter-spacing:inherit}
 .me-group a.me-row{display:flex}
+/* Privacy centre: "Delete account" opens its own confirm step in place (owner card S2). */
+main details.delete-account{border:0;padding:0;margin:0;background:none;box-shadow:none}
+.delete-account>summary{list-style:none;display:inline-flex;cursor:pointer}
+.delete-account>summary::-webkit-details-marker{display:none}
+.delete-account[open]>summary{display:none}
 `);
