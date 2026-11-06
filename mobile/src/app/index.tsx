@@ -38,7 +38,7 @@ export const SITE = 'https://jurrgun.apps.sv-academy.org';
 const SITE_HOST = new URL(SITE).host;
 
 /** Sign-in providers that refuse to run inside an embedded web view. */
-const SIGN_IN_HOSTS = ['accounts.google.com', 'access.line.me'];
+const SIGN_IN_HOSTS = ['accounts.google.com', 'access.line.me', 'appleid.apple.com'];
 
 /** Schemes that belong to another app on the phone. */
 const HAND_OFF = /^(tel|mailto|sms|line|geo|maps|comgooglemaps|intent):/i;
@@ -284,7 +284,7 @@ export default function JurrgunShell() {
     if (host === SITE_HOST) return true;
     // Reached Google or LINE some other way: same as the buttons.
     if (SIGN_IN_HOSTS.includes(host)) {
-      startSignIn(host === 'access.line.me' ? 'line' : 'google');
+      startSignIn(host === 'access.line.me' ? 'line' : host === 'appleid.apple.com' ? 'apple' : 'google');
       return false;
     }
     // Anywhere else opens in the phone's browser, outside the app.

@@ -20,7 +20,7 @@ import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
-export type Provider = 'google' | 'line';
+export type Provider = 'google' | 'line' | 'apple';
 export type Pkce = { verifier: string; challenge: string };
 export type BrowserResult = { ok: true; code: string } | { ok: false; reason: 'cancelled' | 'failed' | 'busy' };
 
@@ -37,12 +37,12 @@ export async function makePkce(): Promise<Pkce> {
   return { verifier, challenge };
 }
 
-/** /auth/google or /auth/line on the site, as the site's own buttons link them. */
+/** /auth/google, /auth/line or /auth/apple on the site, as the site's own buttons link them. */
 export function providerFrom(site: string, url: string): Provider | null {
   try {
     const u = new URL(url);
     if (u.origin !== site || u.searchParams.has('app')) return null;
-    const m = u.pathname.match(/^\/auth\/(google|line)\/?$/);
+    const m = u.pathname.match(/^\/auth\/(google|line|apple)\/?$/);
     return m ? (m[1] as Provider) : null;
   } catch {
     return null;
