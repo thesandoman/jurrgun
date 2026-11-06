@@ -15,6 +15,7 @@
  * view; the app stores no token of its own and has no analytics or crash SDK.
  */
 import * as Linking from 'expo-linking';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
@@ -338,7 +339,11 @@ export default function JurrgunShell() {
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
-      <StatusBar style={pageDark ? 'light' : 'dark'} />
+      {/* The router's screens own the status bar on iOS (view-controller based
+          appearance), so expo-status-bar was ignored there and the clock went white
+          over the cream page whenever the phone was in dark mode. */}
+      <Stack.Screen options={{ statusBarStyle: pageDark ? 'light' : 'dark' }} />
+      {Platform.OS === 'android' && <StatusBar style={pageDark ? 'light' : 'dark'} />}
       <Web
         ref={web}
         source={source}
