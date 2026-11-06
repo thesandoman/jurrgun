@@ -17,6 +17,14 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   GOOGLE_CLIENT_SECRET?: string;
   LINE_CHANNEL_ID?: string;
   LINE_CHANNEL_SECRET?: string;
+  /**
+   * Sign in with Apple (src/services/apple.ts): the Services ID, the team and key ids, and the
+   * .p8 key's text, all from the owner's Apple Developer account. Offered only when all four are set.
+   */
+  APPLE_SERVICES_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
   /** Web Push (src/lib/webpush.ts). Push stays off until both keys are set as SV Cloud settings. */
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;

@@ -2,6 +2,7 @@
  * Settings, account part (split from routes/settings.tsx, Core Platform C3: a pure move).
  * See ./index.ts for the route list.
  */
+import { revokeAppleTokens } from "../../services/apple";
 import { EXIT_REASONS } from "../../content/dating";
 import { deleteCookie, getCookie } from "hono/cookie";
 import type { Context } from "hono";
@@ -52,6 +53,8 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
   const promptPhotos = Object.values(cleanBio(user.profile?.bio).answers ?? {})
     .map((a) => a.photoKey)
     .filter((k): k is string => !!k);
+  // Apple asks for the person's token to be revoked when they delete their account (owner card S1).
+  await revokeAppleTokens(c.env, db, [id]);
   await batch(c.env, [
     db.update(accounts).set({ status: "deactivated", deactivatedAt: new Date() }).where(eq(accounts.id, id)),
     // City Pulse and wellbeing answers go now, as on research withdrawal, and the research_id is
@@ -61,7 +64,7 @@ settingsRoutes.post("/settings/deactivate", async (c) => {
     db.delete(sessions).where(eq(sessions.accountId, id)),
     db.delete(appHandoffs).where(eq(appHandoffs.accountId, id)),
     db.delete(pushSubscriptions).where(eq(pushSubscriptions.accountId, id)),
-    // Unlink Google / LINE now: signing in with them again starts a fresh account.
+    // Unlink Google / LINE / Apple now: signing in with them again starts a fresh account.
     db.delete(oauthLinks).where(eq(oauthLinks.accountId, id)),
     db.delete(emailLinks).where(eq(emailLinks.accountId, id)),
     // Social links go at once; the switch's history stays with the other consents until deletion.

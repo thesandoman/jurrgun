@@ -30,8 +30,9 @@ import { accounts, loginAttempts, oauthLinks } from "../schema";
 import { Notice, page, safeNext, view } from "../ui/kit";
 import { ipKey, SIGNUP_PREFIX, signupThrottled, tooMany } from "./auth";
 import { backToApp, handOff, readAppLeg, type AppLeg } from "./app-auth";
+import { APPLE_ISSUER, appleClientSecret, appleConfigured, keepAppleToken } from "../services/apple";
 
-export type Provider = "google" | "line";
+export type Provider = "google" | "line" | "apple";
 
 type ProviderConfig = {
   name: string;
@@ -39,6 +40,8 @@ type ProviderConfig = {
   token: string;
   issuers: string[];
   creds: (env: Bindings) => { id: string; secret: string } | null;
+  /** Ask for the openid scope and use PKCE. Apple takes neither: no scope means it shares no name or email. */
+  oidcScope: boolean;
 };
 
 const PROVIDERS: Record<Provider, ProviderConfig> = {
@@ -48,6 +51,7 @@ const PROVIDERS: Record<Provider, ProviderConfig> = {
     token: "https://oauth2.googleapis.com/token",
     issuers: ["https://accounts.google.com", "accounts.google.com"],
     creds: (env) => (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET } : null),
+    oidcScope: true,
   },
   line: {
     name: "LINE",
@@ -55,14 +59,24 @@ const PROVIDERS: Record<Provider, ProviderConfig> = {
     token: "https://api.line.me/oauth2/v2.1/token",
     issuers: ["https://access.line.me"],
     creds: (env) => (env.LINE_CHANNEL_ID && env.LINE_CHANNEL_SECRET ? { id: env.LINE_CHANNEL_ID, secret: env.LINE_CHANNEL_SECRET } : null),
+    oidcScope: true,
+  },
+  apple: {
+    name: "Apple",
+    authorize: "https://appleid.apple.com/auth/authorize",
+    token: "https://appleid.apple.com/auth/token",
+    issuers: [APPLE_ISSUER],
+    // The secret is a fresh signed JWT per sign-in (appleClientSecret), so none is stored here.
+    creds: (env) => (appleConfigured(env) ? { id: env.APPLE_SERVICES_ID!, secret: "" } : null),
+    oidcScope: false,
   },
 };
 
-const isProvider = (p: string): p is Provider => p === "google" || p === "line";
+const isProvider = (p: string): p is Provider => p === "google" || p === "line" || p === "apple";
 
 /** Providers whose secrets are set, in display order. */
 export function enabledProviders(env: Bindings): Provider[] {
-  return (["line", "google"] as const).filter((p) => PROVIDERS[p].creds(env));
+  return (["line", "google", "apple"] as const).filter((p) => PROVIDERS[p].creds(env));
 }
 
 /** Pure: does this ID token payload belong to this sign-in? */
@@ -118,11 +132,9 @@ oauthRoutes.get("/auth/:provider", async (c) => {
     response_type: "code",
     client_id: creds.id,
     redirect_uri: redirectUri(c, p),
-    scope: "openid",
     state: tx.state,
     nonce: tx.nonce,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
+    ...(PROVIDERS[p].oidcScope ? { scope: "openid", code_challenge: challenge, code_challenge_method: "S256" } : { response_mode: "query" }),
     ...(p === "google" ? { prompt: "select_account" } : {}),
   }).toString();
   return c.redirect(url.toString());
@@ -166,6 +178,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   }
 
   let sub: string | null = null;
+  let appleRefresh: string | undefined;
   try {
     const res = await fetch(PROVIDERS[p].token, {
       method: "POST",
@@ -175,11 +188,12 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
         code,
         redirect_uri: redirectUri(c, p),
         client_id: creds.id,
-        client_secret: creds.secret,
-        code_verifier: tx.verifier,
+        client_secret: p === "apple" ? await appleClientSecret(c.env) : creds.secret,
+        ...(PROVIDERS[p].oidcScope ? { code_verifier: tx.verifier } : {}),
       }),
     });
-    const body = (await res.json()) as { id_token?: string };
+    const body = (await res.json()) as { id_token?: string; refresh_token?: string };
+    appleRefresh = p === "apple" ? body.refresh_token : undefined;
     const claims = res.ok && body.id_token ? decodeJwtPayload(body.id_token) : null;
     sub = claims ? checkIdToken(claims, { issuers: PROVIDERS[p].issuers, audience: creds.id, nonce: tx.nonce, now: Date.now() }) : null;
     if (!sub) createLogger(c.env).warn("oauth.token_rejected", { provider: p, status: res.status });
@@ -203,6 +217,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
     }
     const [acct] = await db.select().from(accounts).where(eq(accounts.id, link.accountId)).limit(1);
     if (!acct || !accountUsable(acct)) return fail(t("บัญชีนี้ใช้งานไม่ได้ตอนนี้", "This account can't be used right now."));
+    await keepAppleToken(c.env, db, acct.id, appleRefresh);
     if (app) return handOff(c, app, acct.id);
     if (!current) await startSession(c, acct.id);
     return c.redirect(tx.next || "/onboarding");
@@ -211,6 +226,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   // Signed in already: link this provider to the current account.
   if (current) {
     await db.insert(oauthLinks).values({ id: newId(), provider: p, subject: sub, accountId: current.account.id });
+    await keepAppleToken(c.env, db, current.account.id, appleRefresh);
     return c.redirect("/settings?notice=saved");
   }
 
@@ -223,6 +239,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   const username = `${p}_${randomToken(9).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10) || id.slice(0, 10)}`;
   await db.insert(accounts).values({ id, username, passwordHash: hash, passwordSalt: salt, researchId: null, signupSource: signupSource(c) });
   await db.insert(oauthLinks).values({ id: newId(), provider: p, subject: sub, accountId: id });
+  await keepAppleToken(c.env, db, id, appleRefresh);
   await db.insert(loginAttempts).values({ id: newId(), username: `${SIGNUP_PREFIX}${id}`, ipHash: ip.ipHash, createdAt: now });
   createLogger(c.env).info("oauth.account_created", { provider: p, lang, app: !!app });
   if (app) return handOff(c, app, id);
@@ -230,7 +247,16 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
   return c.redirect("/onboarding");
 });
 
-/** "Continue with LINE / Google" buttons, or nothing when neither is set up. */
+/** Apple's logo, as its guidelines ask on the button: the glyph only, in the text colour. */
+function AppleMark() {
+  return (
+    <svg viewBox="0 0 14 17" width="15" height="18" fill="currentColor" focusable="false">
+      <path d="M11.62 9.03c-.02-1.87 1.53-2.77 1.6-2.81-.87-1.28-2.23-1.45-2.71-1.47-1.15-.12-2.25.68-2.83.68-.59 0-1.49-.66-2.45-.64-1.26.02-2.42.73-3.07 1.86-1.31 2.27-.33 5.63.94 7.47.62.9 1.36 1.91 2.33 1.87.94-.04 1.29-.6 2.42-.6s1.45.6 2.44.58c1.01-.02 1.65-.91 2.26-1.82.71-1.04 1-2.05 1.02-2.1-.02-.01-1.95-.75-1.97-2.98zM9.77 3.54c.51-.62.86-1.49.77-2.35-.74.03-1.64.49-2.17 1.11-.48.55-.9 1.43-.78 2.28.82.06 1.67-.42 2.18-1.04z" />
+    </svg>
+  );
+}
+
+/** "Continue with LINE / Google / Apple" buttons, or nothing when none is set up. */
 export function SocialSignIn(props: { t: (th: string, en: string) => string; providers: Provider[]; next?: string }) {
   if (!props.providers.length) return null;
   const q = props.next ? `?next=${encodeURIComponent(props.next)}` : "";
@@ -239,7 +265,7 @@ export function SocialSignIn(props: { t: (th: string, en: string) => string; pro
       {props.providers.map((p) => (
         <a href={`/auth/${p}${q}`} class={`btn social-btn social-${p}`}>
           <span class="social-mark" aria-hidden="true">
-            {p === "line" ? "LINE" : "G"}
+            {p === "line" ? "LINE" : p === "apple" ? <AppleMark /> : "G"}
           </span>
           {props.t(`ดำเนินการต่อด้วย ${PROVIDERS[p].name}`, `Continue with ${PROVIDERS[p].name}`)}
         </a>

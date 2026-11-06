@@ -156,13 +156,30 @@ export const oauthLinks = pgTable(
   "identity_oauth_links",
   {
     id: text("id").primaryKey(),
-    /** google | line */
+    /** google | line | apple */
     provider: text("provider").notNull(),
     subject: text("subject").notNull(),
     accountId: text("account_id").notNull(),
     createdAt: created(),
   },
   (t) => [uniqueIndex("identity_oauth_links_provider_subject_idx").on(t.provider, t.subject), index("identity_oauth_links_account_idx").on(t.accountId)],
+);
+
+/**
+ * Sign in with Apple (src/services/apple.ts): the refresh token from the
+ * person's latest Apple sign-in, sealed (AES-GCM), kept only so it can be
+ * revoked with Apple when they delete their account. Deleted then.
+ */
+export const appleTokens = pgTable(
+  "identity_apple_tokens",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    /** base64url(iv || AES-GCM ciphertext) of Apple's refresh token. */
+    token: text("token").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("identity_apple_tokens_account_idx").on(t.accountId)],
 );
 
 /**

@@ -82,6 +82,9 @@ form{margin:0}
 .social-btn{justify-content:center;gap:10px;font-weight:700}
 .social-line{background:#06c755;color:#fff;border-color:#06c755}
 .social-google{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.social-apple{background:#000;color:#fff;border-color:#000}
+.social-apple .social-mark{display:inline-flex}
+@media (prefers-color-scheme:dark){.social-apple{background:#fff;color:#000;border-color:#fff}}
 .social-mark{font-weight:900;font-size:.78rem;letter-spacing:.02em}
 .social-google .social-mark{font-size:1.05rem;color:#4285f4}
 .social-or{display:flex;align-items:center;gap:12px;color:var(--ink-3);font-size:.85rem;margin:8px 0 0}

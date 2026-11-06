@@ -62,6 +62,7 @@
  *
  * Every run writes one "retention.run" audit row with the counts.
  */
+import { revokeAppleTokens } from "./apple";
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { batch, getDb, type DatabaseEnv } from "../db";
 import { PEOPLE_WINDOW_HOURS } from "../domain/rules";
@@ -407,6 +408,9 @@ export async function runRetention(env: DatabaseEnv, now: Date = new Date(), act
     .orderBy(accounts.deactivatedAt)
     .limit(ACCOUNT_BATCH + 1);
   const ids = due.slice(0, ACCOUNT_BATCH).map((r) => r.id);
+  // Apple asks for the person's token to be revoked at deletion (owner card S1). Usually already
+  // done when they deleted the account themselves; this covers accounts closed any other way.
+  if (ids.length) await revokeAppleTokens(env, db, ids);
   if (ids.length) {
     const theirPhotos = await db.select({ key: chatMessages.photoKey }).from(chatMessages).where(and(inArray(chatMessages.sender, ids), isNotNull(chatMessages.photoKey))).limit(2000);
     await dropFiles(env, theirPhotos.map((p) => p.key!));
