@@ -26,6 +26,7 @@ import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebView
 import * as Notifications from 'expo-notifications';
 import { LOCK_MESSAGE, RELOCK_MS, lockAvailable, lockOn, lockStateScript, setLock, unlock } from '@/lib/app-lock';
 import { AFTER, BEFORE, PAGE_MESSAGE } from '@/lib/page-bridge';
+import { fetchScript, placeOn, placeStateScript, saveWidget, setPlace, WIDGET_MESSAGE, WIDGET_PLACE_MESSAGE } from '@/lib/widget';
 import { answerScript, expoToken, PUSH_MESSAGE, registerScript, tappedPath } from '@/lib/push';
 import { BEGIN_MESSAGE, beginScript, finishScript, makePkce, openSignIn, providerFrom, type Provider } from '@/lib/sign-in';
 
@@ -182,6 +183,25 @@ export default function JurrgunShell() {
     web.current?.injectJavaScript(lockStateScript({ on: await lockOn(), available, ok }));
   }, [th]);
 
+  // Home-screen widget (owner card S4): refreshed when the app opens or comes back, after sign-in,
+  // on My events, and otherwise at most once a minute as pages load.
+  const widgetAt = useRef(0);
+  const refreshWidget = useCallback((force = false) => {
+    let onSite = false;
+    try {
+      onSite = new URL(here.current).host === SITE_HOST;
+    } catch {}
+    if (!onSite || (!force && Date.now() - widgetAt.current < 60_000)) return;
+    widgetAt.current = Date.now();
+    web.current?.injectJavaScript(fetchScript(th ? 'th' : 'en'));
+  }, [th]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshWidget(true);
+    });
+    return () => sub.remove();
+  }, [refreshWidget]);
+
   // Push: on only when the member flips the site's switch; a refreshed token re-registers itself.
   const pushOn = useRef(false);
   const onPushSwitch = useCallback(async (on: boolean) => {
@@ -209,16 +229,24 @@ export default function JurrgunShell() {
 
   const onMessage = useCallback((e: WebViewMessageEvent) => {
     try {
-      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean; dark?: boolean; pull?: boolean };
+      const m = JSON.parse(e.nativeEvent.data) as { type?: string; id?: string; ok?: boolean; on?: boolean; dark?: boolean; pull?: boolean; signedIn?: boolean; table?: Parameters<typeof saveWidget>[0] };
       if (m.type === BEGIN_MESSAGE && typeof m.id === 'string') beginWaiters.current.get(m.id)?.(m.ok === true);
       if (m.type === PUSH_MESSAGE) onPushSwitch(m.on === true);
       if (m.type === PAGE_MESSAGE) {
         setPageDark(m.dark === true);
         setPull(m.pull === true);
       }
+      if (m.type === WIDGET_MESSAGE) saveWidget(m.signedIn ? (m.table ?? null) : null, th ? 'th' : 'en');
+      if (m.type === WIDGET_PLACE_MESSAGE) {
+        const want = m.on;
+        (typeof want === 'boolean' ? setPlace(want).then(() => want) : placeOn()).then((on) => {
+          web.current?.injectJavaScript(placeStateScript(on));
+          if (typeof want === 'boolean') refreshWidget(true);
+        });
+      }
       if (m.type === LOCK_MESSAGE) onLockSwitch(typeof m.on === 'boolean' ? m.on : null);
     } catch {}
-  }, [onPushSwitch, onLockSwitch]);
+  }, [onPushSwitch, onLockSwitch, refreshWidget, th]);
 
   const failed = (reason: 'failed' | 'busy') =>
     Alert.alert(
@@ -314,6 +342,7 @@ export default function JurrgunShell() {
         onLoadEnd={() => {
           setProgress(0);
           SplashScreen.hideAsync().catch(() => {});
+          refreshWidget(/^\/(me\/events|auth\/app\/finish|onboarding|logout)/.test((() => { try { return new URL(here.current).pathname; } catch { return ''; } })()));
           // A sign-in step waiting for a page of the site to finish loading.
           const waiting = loadWaiters.current;
           loadWaiters.current = [];

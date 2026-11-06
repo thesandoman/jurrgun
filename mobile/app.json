@@ -17,6 +17,11 @@
         "CFBundleDevelopmentRegion": "th",
         "CFBundleAllowMixedLocalizations": true,
         "NSFaceIDUsageDescription": "Jurrgun uses Face ID only to unlock the app, when you turn on the app lock."
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.jurrgun"
+        ]
       }
     },
     "android": {
@@ -65,6 +70,25 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Jurrgun uses Face ID only to unlock the app, when you turn on the app lock."
+        }
+      ],
+      "@bacons/apple-targets",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NextTable",
+              "label": "Jurrgun",
+              "description": "โต๊ะถัดไป · Your next table",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000,
+              "widgetCategory": "home_screen"
+            }
+          ]
         }
       ]
     ],

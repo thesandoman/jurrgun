@@ -15,6 +15,8 @@ describe.skipIf(!HAS_DB)("app switches on Me", () => {
     const app = await (await req("/settings?lang=en", { cookie: m.cookie, headers: APP })).text();
     expect(app).toContain('id="app-lock"');
     expect(app).toContain("Lock the app with Face ID or fingerprint");
+    expect(app).toContain("Show the place on the widget");
+    expect(web).not.toContain('id="widget-place"');
   });
 
   it("marks push on for this app session after the app registers its Expo token", async () => {

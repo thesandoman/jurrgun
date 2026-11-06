@@ -21,6 +21,7 @@ import { isExpoToken } from "../../lib/expo-push";
 import { appPushOn, vapidKeys } from "../../services/push";
 import { PushSwitch } from "../../ui/push-switch";
 import { AppLockSwitch } from "../../ui/app-lock-switch";
+import { WidgetPlaceSwitch } from "../../ui/widget-place-switch";
 import { InstallLine } from "../../ui/install-line";
 import { emailEnabled } from "../../services/email-code";
 import { audit } from "../../lib/records";
@@ -158,7 +159,12 @@ settingsRoutes.get("/settings", async (c) => {
       )}
       {vapidKeys(c.env) ? <PushSwitch t={t} publicKey={vapidKeys(c.env)!.publicKey} appOn={await appPushOn(db, getCookie(c, SESSION_COOKIE), c.req.header("user-agent"))} /> : null}
       {/* Inside the Jurrgun phone app only: the Face ID or fingerprint lock (owner). */}
-      {/JurrgunApp/.test(c.req.header("user-agent") ?? "") ? <AppLockSwitch t={t} /> : null}
+      {/JurrgunApp/.test(c.req.header("user-agent") ?? "") ? (
+        <>
+          <AppLockSwitch t={t} />
+          <WidgetPlaceSwitch t={t} />
+        </>
+      ) : null}
       {/* The empty-district alert (owner card 7): shown while notifications are on; off with them, whatever the switch says. */}
       {notifYes && districtName(p.district, lang) ? (
         <QuickSwitch
