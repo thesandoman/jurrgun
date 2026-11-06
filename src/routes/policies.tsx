@@ -73,7 +73,7 @@ export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
 
       <h2>{t("เราเก็บอะไร", "What we collect")}</h2>
       {items([
-        ["บัญชี: ชื่อผู้ใช้และรหัสผ่านแบบแฮช หรือรหัสบัญชี Google หรือ LINE ถ้าคุณใช้เข้าสู่ระบบ", "Account: username and a hashed password, or a Google or LINE account ID if you sign in with them."],
+        ["บัญชี: ชื่อผู้ใช้และรหัสผ่านแบบแฮช หรือรหัสบัญชี Google LINE หรือ Apple ถ้าคุณใช้เข้าสู่ระบบ", "Account: username and a hashed password, or a Google, LINE or Apple account ID if you sign in with them."],
         ["อีเมลสำหรับเข้าสู่ระบบ (ถ้าเพิ่ม): เก็บเป็นค่าแฮชเท่านั้น อ่านย้อนกลับไม่ได้", "Sign-in email, if you add one: stored only as a hash that can't be read back."],
         ["โปรไฟล์: ชื่อเล่น รูป เขต ภาษา ความสนใจ คำตอบในโปรไฟล์ และสรรพนามถ้าใส่", "Profile: nickname, photo, district, languages, interests, profile answers and pronouns if you add them."],
         ["รูปทุกรูปที่อัปโหลด: เราลบข้อมูลตำแหน่ง กล้อง และเวลาที่ถ่ายออกก่อนเก็บ", "Every photo you upload: we remove location, camera and time details before storing it."],
@@ -214,8 +214,8 @@ export function PrivacyNotice(props: { v: View; inSheet?: boolean }) {
 
 /** What sign-up can't go without (auth.tsx, onboarding basics); everything else is optional. */
 export const REQUIRED_TO_JOIN: Pair = [
-  "ชื่อผู้ใช้และรหัสผ่าน (หรือบัญชี Google หรือ LINE) ชื่อเล่น วันเกิด เขต และว่าตอนนี้คุณอยู่กรุงเทพฯ แบบไหน จำเป็นต่อการสมัคร ถ้าไม่ให้ จะสมัครไม่ได้ ข้อมูลอื่นไม่บังคับ",
-  "A username and password (or a Google or LINE account), nickname, birth date, district and how you're in Bangkok right now are needed to sign up; without them you can't join. Everything else is optional.",
+  "ชื่อผู้ใช้และรหัสผ่าน (หรือบัญชี Google LINE หรือ Apple) ชื่อเล่น วันเกิด เขต และว่าตอนนี้คุณอยู่กรุงเทพฯ แบบไหน จำเป็นต่อการสมัคร ถ้าไม่ให้ จะสมัครไม่ได้ ข้อมูลอื่นไม่บังคับ",
+  "A username and password (or a Google, LINE or Apple account), nickname, birth date, district and how you're in Bangkok right now are needed to sign up; without them you can't join. Everything else is optional.",
 ];
 
 export const DISCLOSE_TO_OFFICIALS: Pair = [

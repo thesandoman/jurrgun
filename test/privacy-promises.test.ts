@@ -159,6 +159,7 @@ describe("privacy notice: who else is involved", () => {
     [/google\.com\/maps/, "Google Maps"],
     [/open-meteo\.com/, "Open-Meteo"],
     [/exp\.host/, "Expo"],
+    [/appleid\.apple\.com/, "Apple"],
   ];
   const outbound = [
     ...FILES.filter((f) => /src\/(services|lib)\/|routes\/(oauth|events)\.tsx/.test(f.path)).flatMap((f) => [...f.text.matchAll(/https:\/\/[a-z0-9.-]+\.[a-z]{2,}(?:\/maps)?/g)].map((m) => m[0])),
