@@ -256,7 +256,7 @@ describe("Terms and safety page match the rules", () => {
 
   it("the Terms cover every part of the brief (section 6)", async () => {
     const en = words(await get("/terms", "en"));
-    for (const h of ["Who runs Jurrgun", "A pilot", "Who can join", "Safety rules", "If someone breaks the rules", "Block and report", "What you post", "Paid events", "Meeting in person", "Closing an account", "Changes to these Terms", "Law and contact"]) {
+    for (const h of ["Who runs Jurrgun", "A pilot", "Who can join", "Safety rules", "If someone breaks the rules", "Block and report", "What you post", "Paid events", "Meeting in person", "Deleting your account", "Changes to these Terms", "Law and contact"]) {
       expect(en).toContain(h);
     }
     expect(en).toContain("independent app");

@@ -112,8 +112,8 @@ export const RETENTION: RetentionItem[] = [
   {
     what: { th: "เกี่ยวก้อย · Pinky: แผนนัด โน้ตที่เขียนร่วมกัน ใครกดพัก และข้อความที่ส่งช่วงเกี่ยวก้อย", en: "เกี่ยวก้อย · Pinky: the shared plan, the shared note, who paused it, and the messages sent while it lasted" },
     keep: {
-      th: "ลบทันทีเมื่อคนใดคนหนึ่งจบหรือถอยออก ปิด 💘 บล็อก หรือปิดบัญชี แชตก่อนเกี่ยวก้อยยังอยู่ตามปกติ ถ้าคนใดคนหนึ่งมีรายงานที่ยังเปิดอยู่เกี่ยวกับอีกคน แชตช่วงเกี่ยวก้อยจะเก็บไว้จนกว่ารายงานจะปิด แล้วจึงลบ",
-      en: "deleted at once when either of you ends it or steps back, turns 💘 off, blocks, or closes their account. Your chat from before the Pinky stays as usual. If either of you has an open report about the other, the Pinky chat is kept until the report closes, then deleted",
+      th: "ลบทันทีเมื่อคนใดคนหนึ่งจบหรือถอยออก ปิด 💘 บล็อก หรือลบบัญชี แชตก่อนเกี่ยวก้อยยังอยู่ตามปกติ ถ้าคนใดคนหนึ่งมีรายงานที่ยังเปิดอยู่เกี่ยวกับอีกคน แชตช่วงเกี่ยวก้อยจะเก็บไว้จนกว่ารายงานจะปิด แล้วจึงลบ",
+      en: "deleted at once when either of you ends it or steps back, turns 💘 off, blocks, or deletes their account. Your chat from before the Pinky stays as usual. If either of you has an open report about the other, the Pinky chat is kept until the report closes, then deleted",
     },
   },
   {
@@ -228,18 +228,18 @@ export const RETENTION: RetentionItem[] = [
   {
     what: { th: "คนรู้จัก ช่องทางติดต่อที่แชร์ และลิงก์โซเชียล", en: "Connections, shared contacts and social links" },
     keep: {
-      th: "จนกว่าคุณหรืออีกฝ่ายจะลบหรือบล็อก หรือปิดบัญชี ช่องทางติดต่อที่แชร์จะถูกลบทันทีเมื่อเลิกเป็นคนรู้จักหรือมีการบล็อก",
-      en: "until you or the other person removes them or blocks, or an account is closed. Shared contacts are deleted at once when the connection is removed or either of you blocks",
+      th: "จนกว่าคุณหรืออีกฝ่ายจะลบหรือบล็อก หรือลบบัญชี ช่องทางติดต่อที่แชร์จะถูกลบทันทีเมื่อเลิกเป็นคนรู้จักหรือมีการบล็อก",
+      en: "until you or the other person removes them or blocks, or an account is deleted. Shared contacts are deleted at once when the connection is removed or either of you blocks",
     },
   },
   {
-    what: { th: "ข้อความที่คุณเขียนตอนปิดบัญชี", en: "The note you write when you leave" },
+    what: { th: "ข้อความที่คุณเขียนตอนลบบัญชี", en: "The note you write when you leave" },
     keep: { th: "ลบหลัง", en: "deleted after" },
     period: { n: 1, unit: "years" },
     code: "EXIT_NOTE_RETENTION_DAYS",
   },
   {
-    what: { th: "บัญชีที่ปิดแล้ว", en: "Closed accounts" },
+    what: { th: "บัญชีที่ลบแล้ว", en: "Deleted accounts" },
     keep: {
       th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล คำตอบ City Pulse และแบบสอบถามความรู้สึก และการเข้าสู่ระบบด้วย Google LINE หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
       en: "profile hidden, and photos, social links, City Pulse and wellbeing answers and Google, LINE or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
@@ -441,7 +441,7 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
     key: "service",
     control: "required",
     title: { th: "บัญชีและบริการกิจกรรม", en: "Account and events" },
-    hint: { th: "ใช้ทำให้แอปทำงาน เช่น จัดโต๊ะ แชต และเช็กอิน ตามข้อกำหนดการใช้งาน จบเมื่อปิดบัญชี", en: "Used to run the app: tables, chat and check-in, under the Terms of service. Ends when you close your account." },
+    hint: { th: "ใช้ทำให้แอปทำงาน เช่น จัดโต๊ะ แชต และเช็กอิน ตามข้อกำหนดการใช้งาน จบเมื่อลบบัญชี", en: "Used to run the app: tables, chat and check-in, under the Terms of service. Ends when you delete your account." },
   },
   {
     key: "safety",
