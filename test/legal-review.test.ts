@@ -141,7 +141,7 @@ describe("the new notice and Terms lines", () => {
     ]) {
       expect(th).toContain(line);
     }
-    expect(RETENTION.find((r) => r.what.en === "Closed accounts")?.keep.en).toContain("with your name and details removed");
+    expect(RETENTION.find((r) => r.what.en === "Deleted accounts")?.keep.en).toContain("with your name and details removed");
   });
 
   it("the Terms have the savings line, Thai courts and the OCPB, and an appeal through Report with a reply time", async () => {
@@ -157,7 +157,7 @@ describe("the new notice and Terms lines", () => {
     expect(th).toContain("ข้อพิพาทอยู่ในเขตอำนาจศาลไทย และคุณร้องเรียนสำนักงานคณะกรรมการคุ้มครองผู้บริโภค (สคบ.) ได้");
     // The savings line sits under Meeting in person.
     expect(en.indexOf("This doesn't limit")).toBeGreaterThan(en.indexOf("Meeting in person"));
-    expect(en.indexOf("This doesn't limit")).toBeLessThan(en.indexOf("Closing an account"));
+    expect(en.indexOf("This doesn't limit")).toBeLessThan(en.indexOf("Deleting your account"));
   });
 
   it("outside services are split into those that work for us and those with their own policies", async () => {
