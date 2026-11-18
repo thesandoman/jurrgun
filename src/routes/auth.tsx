@@ -3,6 +3,7 @@
  * the prototype; the PRD's phone/email OTP slots in here later).
  */
 import { Hono } from "hono";
+import { hashKeyFor } from "../lib/hash-key";
 import type { Context } from "hono";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "../db";
@@ -65,8 +66,8 @@ export function clientIp(c: Context<AppEnv>): string {
   return xff || UNKNOWN_IP;
 }
 
-/** The secret the IP and username hashes are keyed with (R10, R11). */
-const hashSecret = (c: Context<AppEnv>) => c.env.IP_HASH_SECRET || c.env.EMAIL_HASH_SALT || "";
+/** The secret the IP and username hashes are keyed with (R10, R11; lib/hash-key.ts). */
+const hashSecret = (c: Context<AppEnv>) => hashKeyFor(c);
 
 /** The client IP as a keyed HMAC, never the address itself (privacy R10: a plain SHA-256 of an IP can be reversed). */
 export async function ipKey(c: Context<AppEnv>): Promise<{ ipHash: string; known: boolean }> {

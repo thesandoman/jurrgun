@@ -3,6 +3,7 @@
  * See ./index.ts for the route list.
  */
 import { and, count, eq, isNull } from "drizzle-orm";
+import { hashKeyFor } from "../../lib/hash-key";
 import { batch, getDb } from "../../db";
 import { isLateCancel, strikeExpiry } from "../../domain/rules";
 import { hmacSha256, newId, randomToken } from "../../lib/crypto";
@@ -33,7 +34,7 @@ eventRoutes.post("/events/:id/questions", requireMember, async (c) => {
   if (question.length < 3 || question.length > TALK_QUESTION_MAX) {
     return renderDetail(c, event, { error: t(`คำถามยาว 3 ถึง ${TALK_QUESTION_MAX} ตัวอักษร`, `A question is 3 to ${TALK_QUESTION_MAX} characters.`), status: 400 });
   }
-  const askerHash = await hmacSha256(c.env.IP_HASH_SECRET ?? "", `talk:${id}:${user.account.id}`);
+  const askerHash = await hmacSha256(hashKeyFor(c), `talk:${id}:${user.account.id}`);
   const [{ n }] = await db.select({ n: count() }).from(talkQuestions).where(and(eq(talkQuestions.eventId, id), eq(talkQuestions.askerHash, askerHash)));
   if (Number(n) >= TALK_QUESTIONS_PER_MEMBER) {
     return renderDetail(c, event, { error: t(`ถามได้ไม่เกิน ${TALK_QUESTIONS_PER_MEMBER} ข้อต่อวง`, `Up to ${TALK_QUESTIONS_PER_MEMBER} questions per talk.`), status: 409 });

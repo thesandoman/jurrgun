@@ -41,17 +41,19 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   /**
    * Sign in with an email code (src/services/email-code.ts). Off, with every
    * surface hidden, until all four are set. EMAIL_PROVIDER is "resend" or
-   * "postmark"; EMAIL_HASH_SALT keys the hash the address is stored as.
+   * "postmark"; EMAIL_HASH_SALT keys the hash the address is stored as: set it
+   * once and never change it, or every linked email stops matching.
    */
   EMAIL_PROVIDER?: string;
   EMAIL_API_KEY?: string;
   EMAIL_FROM?: string;
   EMAIL_HASH_SALT?: string;
   /**
-   * Optional secret key for the hashes of client IPs and sign-in usernames in
-   * identity_login_attempts and identity_login_codes (privacy R10, R11). Falls
-   * back to EMAIL_HASH_SALT; with neither set the hashes are still keyed, but
-   * with a key in the code, so set one of them on the deployed app.
+   * Secret key (32+ random characters) for the hashes of client IPs, sign-in
+   * usernames and anonymous talk questions (privacy R10, R11; lib/hash-key.ts).
+   * Falls back to EMAIL_HASH_SALT. With neither set (or under 16 characters)
+   * the key is public, and a deployed app logs "hash_secret_missing". Changing
+   * it later only resets sign-in counts and talk question caps.
    */
   IP_HASH_SECRET?: string;
   /** Set in tests: skip calls to outside services (weather, email). */
