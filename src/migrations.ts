@@ -435,5 +435,13 @@ export const MIGRATIONS: { id: string; statements: string[] }[] = [
       "CREATE TABLE \"identity_apple_tokens\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"token\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
       "CREATE INDEX \"identity_apple_tokens_account_idx\" ON \"identity_apple_tokens\" (\"account_id\");"
     ]
+  },
+  {
+    "id": "0038_rejoin_holds",
+    "statements": [
+      "CREATE TABLE \"identity_rejoin_holds\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"identity_hash\" text NOT NULL,\n\t\"account_id\" text NOT NULL,\n\t\"banned_at\" timestamp with time zone,\n\t\"expires_at\" timestamp with time zone NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE INDEX \"identity_rejoin_holds_hash_idx\" ON \"identity_rejoin_holds\" (\"identity_hash\");",
+      "CREATE INDEX \"identity_rejoin_holds_account_idx\" ON \"identity_rejoin_holds\" (\"account_id\");"
+    ]
   }
 ];

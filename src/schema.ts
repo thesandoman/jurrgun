@@ -1668,3 +1668,22 @@ export const srcLandings = pgTable(
   },
   (t) => [uniqueIndex("social_src_landings_day_code_idx").on(t.day, t.code)],
 );
+
+/**
+ * Card F4: a keyed hash of the Google, LINE or email login of a member who deleted their account with a
+ * report open (never Apple's account ID). It refuses that login at sign-up only once the report ended in a
+ * ban (bannedAt); released on a dismissal or a lifted ban, and deleted after REJOIN_HOLD_DAYS. Holds no
+ * name, email or Google/LINE id.
+ */
+export const rejoinHolds = pgTable(
+  "identity_rejoin_holds",
+  {
+    id: text("id").primaryKey(),
+    identityHash: text("identity_hash").notNull(),
+    accountId: text("account_id").notNull(),
+    bannedAt: ts("banned_at"),
+    expiresAt: ts("expires_at").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("identity_rejoin_holds_hash_idx").on(t.identityHash), index("identity_rejoin_holds_account_idx").on(t.accountId)],
+);
