@@ -36,6 +36,16 @@ describe("FAQ", () => {
     const html = await res.text();
     for (const f of FAQ) expect(html).toContain(f.q.th);
   });
+
+  it("/faq#contact is where refusals point (JG-2): never the placeholder address", async () => {
+    const { PRIVACY_EMAIL, PRIVACY_EMAIL_IS_PLACEHOLDER } = await import("../src/content/privacy");
+    const html = await (await app.request("/faq?lang=en")).text();
+    expect(html).toContain('id="contact"');
+    if (PRIVACY_EMAIL_IS_PLACEHOLDER) {
+      expect(html).not.toContain(PRIVACY_EMAIL);
+      expect(html).toContain("being set up and will appear here soon");
+    } else expect(html).toContain(PRIVACY_EMAIL);
+  });
 });
 
 describe("Learn", () => {

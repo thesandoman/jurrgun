@@ -123,7 +123,7 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
     expect(r.status).toBe(403);
     const html = await r.text();
     expect(html).toContain("This login can&#39;t be used to join. If that seems wrong, contact us.");
-    expect(html).toContain('href="/privacy#contact"');
+    expect(html).toContain('href="/faq#contact"');
     expect(r.headers.get("set-cookie") ?? "").not.toContain("bkk_sid=");
     expect(await db().select().from(oauthLinks).where(eq(oauthLinks.subject, sub))).toHaveLength(0);
   });
@@ -141,6 +141,14 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
     await db().insert(reports).values({ id: again, reporter: b.m.id, targetAccount: b.m.id, reason: "other", details: "Ban review requested by the member." });
     await act(b.mod, again, { action: "lift", note: "Looked again" });
     expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, b.m.id))).toHaveLength(0);
+  });
+
+  it("F4: an Apple login is never held (owner card S1)", async () => {
+    const [m, reporter] = await Promise.all([createMember(), createMember()]);
+    await db().insert(oauthLinks).values({ id: newId(), provider: "apple", subject: `f4-${newId()}`, accountId: m.id });
+    await db().insert(reports).values({ id: newId(), reporter: reporter.id, targetAccount: m.id, reason: "harassment", details: "test" });
+    await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
+    expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id))).toHaveLength(0);
   });
 
   it("F4: leaving with no report open keeps nothing", async () => {

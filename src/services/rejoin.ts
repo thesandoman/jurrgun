@@ -1,9 +1,9 @@
 /**
- * Card F4 (owner, 2026-11): someone who deactivates with a report open can't come back on the same login
- * if that report ends in a ban.
+ * Card F4 (owner, 2026-11): someone who deletes their account ("Delete account", card S2; the account is
+ * deactivated, then deleted) with a report open can't come back on the same login if that report ends in a ban.
  *
- * In the deactivation itself we take a keyed hash of their Google, LINE and email logins (holdWrites), because
- * deactivating deletes the links. A hold refuses nothing until the report ends in a ban (markBanned). A dismissal,
+ * In that same step we take a keyed hash of their Google, LINE and email logins (holdWrites), because it
+ * deletes the links. Never Apple's account ID (owner card S1). A hold refuses nothing until the report ends in a ban (markBanned). A dismissal,
  * a lesser outcome or a lifted ban releases it (releaseIfSettled, release). All holds go after REJOIN_HOLD_DAYS.
  * Accepted by the owner: a new password account gets around this.
  */
@@ -36,7 +36,8 @@ async function hasOpenReport(db: Db, accountId: string): Promise<boolean> {
 export async function holdWrites(env: Bindings, db: Db, accountId: string, now = new Date()) {
   if (!(await hasOpenReport(db, accountId))) return [];
   const [oauth, email] = await Promise.all([
-    db.select({ provider: oauthLinks.provider, subject: oauthLinks.subject }).from(oauthLinks).where(eq(oauthLinks.accountId, accountId)).limit(10),
+    // Never Apple: its account ID is used only to sign in (owner card S1).
+    db.select({ provider: oauthLinks.provider, subject: oauthLinks.subject }).from(oauthLinks).where(and(eq(oauthLinks.accountId, accountId), ne(oauthLinks.provider, "apple"))).limit(10),
     db.select({ hash: emailLinks.emailHash }).from(emailLinks).where(eq(emailLinks.accountId, accountId)).limit(5),
   ]);
   const hashes = await Promise.all([...oauth.map((o) => oauthIdentity(env, o.provider, o.subject)), ...email.map((e) => emailIdentity(env, e.hash))]);
