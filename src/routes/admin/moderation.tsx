@@ -811,7 +811,10 @@ adminModeration.post("/:id/action", async (c) => {
       db.insert(moderationActions).values({ id: newId(), reportId: r.id, accountId: target.id, action, until, note, by: me.id }),
     );
   }
-  if (target) {
+  // A member who deleted their account stays on the deletion path: a suspension or ban is recorded
+  // (moderation_actions above) but never changes the status, or retention would keep the account forever
+  // (it deletes only "deactivated" ones) and an ended suspension would switch it back on.
+  if (target && target.status !== "deactivated") {
     if (action === "suspend") {
       ops.push(db.update(accounts).set({ status: "suspended", suspendedUntil: until }).where(eq(accounts.id, target.id)));
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));

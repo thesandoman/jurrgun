@@ -286,6 +286,23 @@ describe.skipIf(!HAS_DB)("moderation", () => {
   });
 });
 
+describe.skipIf(!HAS_DB)("a deleted account under report", () => {
+  it("records a ban or suspension but stays on the deletion path", async () => {
+    const mod = await createMember({ role: "moderator" });
+    for (const action of ["ban", "suspend"] as const) {
+      const target = await createMember();
+      const id = await report((await createMember()).id, target.id);
+      await db().update(accounts).set({ status: "deactivated", deactivatedAt: new Date() }).where(eq(accounts.id, target.id));
+      const form: Record<string, string> = { action, note: "x", rule: "spam_scam", days: "7" };
+      expect((await req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form })).status, action).toBe(302);
+      const [acct] = await db().select().from(accounts).where(eq(accounts.id, target.id));
+      expect(acct.status, action).toBe("deactivated");
+      const done = await db().select().from(moderationActions).where(and(eq(moderationActions.reportId, id), eq(moderationActions.action, action)));
+      expect(done, action).toHaveLength(1);
+    }
+  });
+});
+
 describe.skipIf(!HAS_DB)("three flags", () => {
   it("only removes at 3 flags: the third upheld warning suspends for 30 days", async () => {
     const mod = await createMember({ role: "moderator" });
