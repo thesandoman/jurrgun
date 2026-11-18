@@ -95,6 +95,7 @@ describe.skipIf(!HAS_DB)("members who joined before the Terms box", () => {
     // One calm card that says what changed (owner, 2026-10-26): since 30 Oct, the card P1 list.
     expect(html).toContain("What changed");
     expect(html).toContain("There&#39;s now a Jurrgun phone app.");
+    expect(html).toContain("we keep a coded copy of your Google, LINE or email login (never Apple)");
     expect(html).not.toContain("audit log is kept 2 years");
     expect(html.match(/action="\/settings\/terms"/g)).toHaveLength(1);
   });

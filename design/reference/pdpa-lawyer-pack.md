@@ -5,7 +5,7 @@
 ## What to send ahead
 
 1. The privacy notice as members see it: `/privacy` on the live site (dated 27 October 2026 once card P1 lands), with `/terms`.
-2. `design/reference/record-of-processing.md`: 20 processing activities, lawful bases, retention constants, processors.
+2. `design/reference/record-of-processing.md`: 21 processing activities, lawful bases, retention constants, processors.
 3. `design/reference/breach-response-plan.md`, including the dry run of 30 Oct 2026 (section 11).
 4. `design/reference/privacy-risk-assessment.md`.
 5. This page.
@@ -37,6 +37,7 @@
 - **Privacy contact:** the notice still shows a placeholder address. What must the contact be (a named person, a role address)?
 
 - **Chat pattern check (card F3):** an automatic check of one-to-one chats for money mentions, or one message sent to 3 or more people in a week, alerts a moderator, who can open those messages through a logged step. Nothing is automatic for the account. We rely on legitimate interest and disclose it in the notice. Is that enough, or does it need more, such as a balancing record?
+- **Rejoin holds (card F4):** a keyed hash of the Google, LINE or email login of someone who deletes their account with a report open, kept up to 2 years only if that report ends in a ban (released at once otherwise). Does that sit properly with erasure rights?
 
 ## Background: PDPC sources
 

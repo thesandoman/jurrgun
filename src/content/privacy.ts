@@ -17,7 +17,7 @@ export type Text = { th: string; en: string };
  * version members accept (TERMS_VERSION) all follow it, and members who
  * accepted an older version see the "updated Terms" card on Me.
  */
-export const NOTICE_ISO = "2026-11-06";
+export const NOTICE_ISO = "2026-11-18";
 
 /** Research & Data's per-code landing counter (owner-approved 2026-10-27): daily counts, no person, no IP, no cookie. */
 export const CAMPAIGN_COUNT: Text = {
@@ -31,11 +31,18 @@ export const CHAT_CHECK: Text = {
   en: "To stop scams, we automatically check one-to-one chats for money mentions, or the same message sent to 3 or more people in a week. A match alerts a moderator, who decides what happens. Nothing happens to an account automatically. Moderators see counts first, and can open the matching messages only through a step that's logged. Group chats and Pinky or 💘 pairs' chats aren't checked.",
 };
 
+/** Card F4 (services/rejoin.ts), on the notice and the "What changed" card. */
+export const REJOIN_HOLD: Text = {
+  th: "ถ้าคุณลบบัญชีตอนที่มีรายงานเกี่ยวกับคุณค้างอยู่ เราเก็บรหัสที่แปลงแล้วของการเข้าสู่ระบบด้วย Google LINE หรืออีเมล (ไม่รวม Apple) ไว้จนรู้ผล ถ้ารายงานจบด้วยการแบน การเข้าสู่ระบบนั้นจะใช้สมัครใหม่ไม่ได้ 2 ปี ถ้าไม่ใช่ เราลบทันที",
+  en: "If you delete your account while a report about you is open, we keep a coded copy of your Google, LINE or email login (never Apple) until the outcome. If the report ends in a ban, that login can't be used to join again for 2 years. If not, we delete it at once.",
+};
+
 /**
  * What changed since the version before, in plain words: shown once on the
  * "updated Terms" card on Me (owner, 2026-10-26: one calm card, no reminders).
  */
 export const NOTICE_CHANGES: Text[] = [
+  REJOIN_HOLD,
   {
     th: "เข้าสู่ระบบด้วย Apple ได้แล้ว เราไม่ขอชื่อหรืออีเมล เก็บแค่รหัสบัญชี Apple ไว้ให้คุณเข้าสู่ระบบ และรหัสเข้าระบบของ Apple ที่เข้ารหัสไว้ เพื่อยกเลิกการเชื่อมกับ Apple เมื่อคุณลบบัญชี",
     en: "You can now sign in with Apple. We ask for no name or email. We keep only Apple's account ID, to sign you in, and Apple's sign-in token, encrypted, so we can cancel the link with Apple when you delete your account.",
@@ -250,10 +257,17 @@ export const RETENTION: RetentionItem[] = [
     },
   },
   {
+    what: { th: "รหัสที่แปลงแล้วของการเข้าสู่ระบบ ถ้าลบบัญชีตอนมีรายงานค้างอยู่", en: "A coded copy of your login, if you delete your account with a report open" },
+    keep: { th: "ใช้กันไม่ให้สมัครใหม่เมื่อรายงานจบด้วยการแบนเท่านั้น ถ้าไม่แบน ลบทันที ถ้าแบน ลบหลัง", en: "used only to stop that login joining again if the report ends in a ban. Deleted at once if it doesn't; otherwise deleted after" },
+    period: { n: 2, unit: "years" },
+    code: "REJOIN_HOLD_DAYS",
+    from: "services/rejoin",
+  },
+  {
     what: { th: "บัญชีที่ลบแล้ว", en: "Deleted accounts" },
     keep: {
-      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล คำตอบ City Pulse และแบบสอบถามความรู้สึก และการเข้าสู่ระบบด้วย Google LINE Apple หรืออีเมลทันที ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
-      en: "profile hidden, and photos, social links, City Pulse and wellbeing answers and Google, LINE, Apple or email sign-in removed at once; event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
+      th: "ซ่อนโปรไฟล์ ลบรูป ลิงก์โซเชียล คำตอบ City Pulse และแบบสอบถามความรู้สึก และการเข้าสู่ระบบด้วย Google LINE Apple หรืออีเมลทันที (ถ้ามีรายงานค้างอยู่ เราเก็บรหัสที่แปลงแล้วไว้จนรู้ผล ดูข้อก่อนหน้า) ส่วนการเข้าร่วมกิจกรรมและคะแนนความพึงพอใจยังเก็บไว้เพื่อนับยอดรวม โดยลบชื่อและรายละเอียดของคุณออก แล้วลบข้อมูลที่เหลือหลัง",
+      en: "profile hidden, and photos, social links, City Pulse and wellbeing answers and Google, LINE, Apple or email sign-in removed at once (with a report open, a coded copy stays until the outcome; see the line above); event attendance and ratings stay, with your name and details removed, for totals; the rest is deleted after",
     },
     period: { n: 30, unit: "days" },
     code: "DEACTIVATED_RETENTION_DAYS",
