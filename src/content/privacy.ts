@@ -33,8 +33,8 @@ export const CHAT_CHECK: Text = {
 
 /** Card F4 (services/rejoin.ts), on the notice and the "What changed" card. */
 export const REJOIN_HOLD: Text = {
-  th: "ถ้าคุณลบบัญชีตอนที่มีรายงานเกี่ยวกับคุณค้างอยู่ เราเก็บรหัสที่แปลงแล้วของการเข้าสู่ระบบด้วย Google LINE หรืออีเมล (ไม่รวม Apple) ไว้จนรู้ผล ถ้ารายงานจบด้วยการแบน การเข้าสู่ระบบนั้นจะใช้สมัครใหม่ไม่ได้ 2 ปี ถ้าไม่ใช่ เราลบทันที",
-  en: "If you delete your account while a report about you is open, we keep a coded copy of your Google, LINE or email login (never Apple) until the outcome. If the report ends in a ban, that login can't be used to join again for 2 years. If not, we delete it at once.",
+  th: "ถ้าคุณลบบัญชีตอนที่มีรายงานเกี่ยวกับคุณค้างอยู่ เราเก็บรหัสที่แปลงแล้วของการเข้าสู่ระบบด้วย Google LINE หรืออีเมล (ไม่รวม Apple) ไว้จนรู้ผล ถ้ารายงานจบด้วยการแบน การเข้าสู่ระบบนั้นจะใช้สมัครใหม่ไม่ได้ 2 ปีนับจากวันที่แบน ถ้าไม่ใช่ เราลบเมื่อไม่มีรายงานเกี่ยวกับคุณค้างอยู่แล้ว",
+  en: "If you delete your account while a report about you is open, we keep a coded copy of your Google, LINE or email login (never Apple) until the outcome. If the report ends in a ban, that login can't be used to join again for 2 years from the ban. If not, we delete it once no report about you is still open.",
 };
 
 /**
@@ -258,7 +258,7 @@ export const RETENTION: RetentionItem[] = [
   },
   {
     what: { th: "รหัสที่แปลงแล้วของการเข้าสู่ระบบ ถ้าลบบัญชีตอนมีรายงานค้างอยู่", en: "A coded copy of your login, if you delete your account with a report open" },
-    keep: { th: "ใช้กันไม่ให้สมัครใหม่เมื่อรายงานจบด้วยการแบนเท่านั้น ถ้าไม่แบน ลบทันที ถ้าแบน ลบหลัง", en: "used only to stop that login joining again if the report ends in a ban. Deleted at once if it doesn't; otherwise deleted after" },
+    keep: { th: "ใช้กันไม่ให้สมัครใหม่เมื่อรายงานจบด้วยการแบนเท่านั้น ถ้าไม่แบน ลบเมื่อไม่มีรายงานค้างอยู่แล้ว ถ้าแบน เก็บนับจากวันที่แบนเป็นเวลา", en: "used only to stop that login joining again if the report ends in a ban. Deleted once no report about you is still open if it doesn't; if it does, kept from the ban for" },
     period: { n: 2, unit: "years" },
     code: "REJOIN_HOLD_DAYS",
     from: "services/rejoin",

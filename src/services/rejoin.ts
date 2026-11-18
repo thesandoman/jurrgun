@@ -11,7 +11,7 @@ import { and, eq, gt, inArray, isNotNull, lt, ne } from "drizzle-orm";
 import type { getDb } from "../db";
 import { hmacSha256, newId } from "../lib/crypto";
 import type { Bindings } from "../lib/env";
-import { accounts, emailLinks, oauthLinks, rejoinHolds, reports } from "../schema";
+import { emailLinks, oauthLinks, rejoinHolds, reports } from "../schema";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -53,16 +53,26 @@ export async function holdWrites(env: Bindings, db: Db, accountId: string, now =
 }
 
 /** The report ended in a ban: from now on these logins are refused at sign-up. */
-export const markBanned = (db: Db, accountId: string, now = new Date()) => db.update(rejoinHolds).set({ bannedAt: now }).where(eq(rejoinHolds.accountId, accountId));
+export const markBanned = (db: Db, accountId: string, now = new Date()) =>
+  // The 2 years count from the ban, not from the deletion (Trust & Ops, JG-2 note 1).
+  db.update(rejoinHolds).set({ bannedAt: now, expiresAt: new Date(now.getTime() + REJOIN_HOLD_DAYS * 86_400_000) }).where(eq(rejoinHolds.accountId, accountId));
 
 /** A lifted ban: the logins are free again. */
 export const release = (db: Db, accountId: string) => db.delete(rejoinHolds).where(eq(rejoinHolds.accountId, accountId));
 
-/** After a report closes without a ban: release, unless another report is still open or they're banned. */
+/**
+ * After a report closes without a ban: release, unless another report is still open or an earlier report
+ * already ended in a ban. Checked on the holds, not the account: a ban no longer changes a deleted account's status.
+ */
 export async function releaseIfSettled(db: Db, accountId: string): Promise<void> {
   if (await hasOpenReport(db, accountId)) return;
-  const [a] = await db.select({ status: accounts.status }).from(accounts).where(eq(accounts.id, accountId)).limit(1);
-  if (a?.status !== "banned") await release(db, accountId);
+  if (!(await hasBannedHold(db, accountId))) await release(db, accountId);
+}
+
+/** A login of this (deleted) account is refused because a report ended in a ban: a moderator may lift it. */
+export async function hasBannedHold(db: Db, accountId: string): Promise<boolean> {
+  const [h] = await db.select({ id: rejoinHolds.id }).from(rejoinHolds).where(and(eq(rejoinHolds.accountId, accountId), isNotNull(rejoinHolds.bannedAt))).limit(1);
+  return !!h;
 }
 
 /** Whether this login is refused at sign-up. */

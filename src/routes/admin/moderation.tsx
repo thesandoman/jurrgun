@@ -16,7 +16,7 @@
  * Staff never see relationship status, romance settings, gender identity,
  * age preferences or connection choices here — only account basics.
  */
-import { markBanned, release, releaseIfSettled } from "../../services/rejoin";
+import { hasBannedHold, markBanned, release, releaseIfSettled } from "../../services/rejoin";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { aliasedTable, and, asc, count, desc, eq, gte, ilike, inArray, ne, or, sql, type SQL } from "drizzle-orm";
@@ -759,7 +759,8 @@ adminModeration.post("/:id/action", async (c) => {
   }
   // Lifting only undoes a suspension or ban. A member who deactivated (or was
   // deleted by retention) must never be switched back on by a moderator.
-  if (target && action === "lift" && target.status !== "suspended" && target.status !== "banned") {
+  // Card F4: a deleted account whose login is refused after a ban can be lifted too (its status stays).
+  if (target && action === "lift" && target.status !== "suspended" && target.status !== "banned" && !(target.status === "deactivated" && (await hasBannedHold(db, target.id)))) {
     return bad(t("ยกเลิกได้เฉพาะบัญชีที่ถูกระงับหรือแบน", "Only a suspended or banned account can be lifted"));
   }
   // Every action, dismiss and note included: a moderator must never close or
@@ -812,6 +813,10 @@ adminModeration.post("/:id/action", async (c) => {
       db.insert(moderationActions).values({ id: newId(), reportId: r.id, accountId: target.id, action, until, note, by: me.id }),
     );
   }
+  // Card F4, outside the status changes below: the holds belong to members who deleted their account, whose
+  // status a ban no longer changes. A ban starts the 2 years; a lifted ban frees the logins.
+  if (target && action === "ban") ops.push(markBanned(db, target.id, now));
+  if (target && action === "lift") ops.push(release(db, target.id));
   if (target) {
     if (action === "suspend") {
       ops.push(db.update(accounts).set({ status: "suspended", suspendedUntil: until }).where(eq(accounts.id, target.id)));
@@ -820,14 +825,12 @@ adminModeration.post("/:id/action", async (c) => {
       ops.push(notify(db, target.id, "moderation", th, en, "/code-of-conduct"));
     } else if (action === "ban") {
       ops.push(db.update(accounts).set({ status: "banned", suspendedUntil: null }).where(eq(accounts.id, target.id)));
-      ops.push(markBanned(db, target.id, now)); // Card F4: a login held at deactivation is now refused at sign-up.
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
       // Owner card C: they also see this on the blocked sign-in screen, with "ask us to look again".
       const [th, en] = banCopy(rule);
       ops.push(notify(db, target.id, "moderation", th, en, "/login"));
     } else if (action === "lift") {
       ops.push(db.update(accounts).set({ status: "active", suspendedUntil: null }).where(eq(accounts.id, target.id)));
-      ops.push(release(db, target.id)); // Card F4.
       // Any one-time "look again" token goes too, so nothing left over can sign in.
       ops.push(db.delete(sessions).where(eq(sessions.accountId, target.id)));
       ops.push(notify(db, target.id, "moderation", LIFT_COPY[0], LIFT_COPY[1], "/"));

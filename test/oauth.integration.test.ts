@@ -145,6 +145,25 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
     expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, b.m.id))).toHaveLength(0);
   });
 
+  it("F4: the 2 years count from the ban, and a later dismissed report doesn't free a banned login (T&O notes 1, 2)", async () => {
+    const { m, mod, sub, reportId } = await leftWithReport();
+    const second = newId();
+    const [other] = await Promise.all([createMember()]);
+    await db().insert(reports).values({ id: second, reporter: other.id, targetAccount: m.id, reason: "other", details: "second" });
+    // A dismissal while the first report is still open keeps the hold.
+    await act(mod, second, { action: "dismiss", note: "Nothing in it" });
+    expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id))).toHaveLength(1);
+    const before = Date.now();
+    await act(mod, reportId, { action: "ban", note: "Repeated", rule: "harassment" });
+    const [h] = await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id));
+    expect(h.expiresAt.getTime()).toBeGreaterThanOrEqual(before + 729 * 86_400_000);
+    // Another report about them closing without a ban afterwards leaves the banned hold in place.
+    const third = newId();
+    await db().insert(reports).values({ id: third, reporter: other.id, targetAccount: m.id, reason: "other", details: "third" });
+    await act(mod, third, { action: "dismiss", note: "Old news" });
+    expect((await googleIn(sub)).status).toBe(403);
+  });
+
   it("F4: an Apple login is never held (owner card S1)", async () => {
     const [m, reporter] = await Promise.all([createMember(), createMember()]);
     await db().insert(oauthLinks).values({ id: newId(), provider: "apple", subject: `f4-${newId()}`, accountId: m.id });
