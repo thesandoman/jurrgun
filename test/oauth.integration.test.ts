@@ -12,7 +12,9 @@ import { b64url } from "../src/lib/crypto";
 import { accounts, oauthLinks } from "../src/schema";
 import { newId } from "../src/lib/crypto";
 
-const OAUTH_ENV = { ...ENV, GOOGLE_CLIENT_ID: "gid", GOOGLE_CLIENT_SECRET: "gsecret", LINE_CHANNEL_ID: "lid", LINE_CHANNEL_SECRET: "lsecret" };
+/** F4 needs a real hash secret (rejoinEnabled). */
+const SECRET = "test-only-rejoin-secret-32-bytes";
+const OAUTH_ENV = { ...ENV, IP_HASH_SECRET: SECRET, GOOGLE_CLIENT_ID: "gid", GOOGLE_CLIENT_SECRET: "gsecret", LINE_CHANNEL_ID: "lid", LINE_CHANNEL_SECRET: "lsecret" };
 const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
 const jwt = (claims: Record<string, unknown>) => `${enc({ alg: "RS256" })}.${enc(claims)}.sig`;
 
@@ -105,11 +107,11 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
     await db().insert(oauthLinks).values({ id: newId(), provider: "google", subject: sub, accountId: m.id });
     const reportId = newId();
     await db().insert(reports).values({ id: reportId, reporter: reporter.id, targetAccount: m.id, reason: "harassment", details: "test" });
-    const off = await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
+    const off = await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" }, env: { ...ENV, IP_HASH_SECRET: SECRET } });
     expect(off.status).toBe(302);
     return { m, mod, sub, reportId };
   }
-  const act = (mod: { cookie: string }, id: string, form: Record<string, string>) => req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form });
+  const act = (mod: { cookie: string }, id: string, form: Record<string, string>) => req(`/admin/moderation/${id}/action`, { cookie: mod.cookie, form, env: { ...ENV, IP_HASH_SECRET: SECRET } });
 
   it("F4: a login that left with a report open is refused only after the report ends in a ban", async () => {
     const { m, mod, sub, reportId } = await leftWithReport();
@@ -147,6 +149,14 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
     const [m, reporter] = await Promise.all([createMember(), createMember()]);
     await db().insert(oauthLinks).values({ id: newId(), provider: "apple", subject: `f4-${newId()}`, accountId: m.id });
     await db().insert(reports).values({ id: newId(), reporter: reporter.id, targetAccount: m.id, reason: "harassment", details: "test" });
+    await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" }, env: { ...ENV, IP_HASH_SECRET: SECRET } });
+    expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id))).toHaveLength(0);
+  });
+
+  it("F4: without a real hash secret it keeps nothing (QA, JG-2)", async () => {
+    const [m, reporter] = await Promise.all([createMember(), createMember()]);
+    await db().insert(oauthLinks).values({ id: newId(), provider: "google", subject: `f4-${newId()}`, accountId: m.id });
+    await db().insert(reports).values({ id: newId(), reporter: reporter.id, targetAccount: m.id, reason: "harassment", details: "test" });
     await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
     expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id))).toHaveLength(0);
   });
@@ -154,7 +164,7 @@ describe.skipIf(!HAS_DB)("oauth sign-in", () => {
   it("F4: leaving with no report open keeps nothing", async () => {
     const m = await createMember();
     await db().insert(oauthLinks).values({ id: newId(), provider: "google", subject: `f4-${newId()}`, accountId: m.id });
-    await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" } });
+    await req("/settings/deactivate", { cookie: m.cookie, form: { confirm: "1" }, env: { ...ENV, IP_HASH_SECRET: SECRET } });
     expect(await db().select().from(rejoinHolds).where(eq(rejoinHolds.accountId, m.id))).toHaveLength(0);
   });
 

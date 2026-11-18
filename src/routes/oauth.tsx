@@ -31,7 +31,7 @@ import { Notice, page, safeNext, view } from "../ui/kit";
 import { ipKey, signIn, SIGNUP_PREFIX, signupThrottled, tooMany } from "./auth";
 import { backToApp, handOff, readAppLeg, type AppLeg } from "./app-auth";
 import { APPLE_ISSUER, appleClientSecret, appleConfigured, keepAppleToken } from "../services/apple";
-import { oauthIdentity, REJOIN_REFUSED, rejoinRefused } from "../services/rejoin";
+import { oauthIdentity, REJOIN_REFUSED, rejoinEnabled, rejoinRefused } from "../services/rejoin";
 
 export type Provider = "google" | "line" | "apple";
 
@@ -231,7 +231,7 @@ oauthRoutes.get("/auth/:provider/callback", async (c) => {
 
   // Card F4: this login left with a report open, and the report ended in a ban. Never for Apple:
   // its account ID is used only to sign in (owner card S1).
-  if (p !== "apple" && await rejoinRefused(db, await oauthIdentity(c.env, p, sub))) {
+  if (p !== "apple" && rejoinEnabled(c.env) && await rejoinRefused(db, await oauthIdentity(c.env, p, sub))) {
     return page(
       c,
       { title: t("สมัครสมาชิก", "Sign up"), status: 403 },

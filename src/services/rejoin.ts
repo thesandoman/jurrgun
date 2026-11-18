@@ -18,7 +18,13 @@ type Db = ReturnType<typeof getDb>;
 export const REJOIN_HOLD_DAYS = 730;
 const OPEN = ["open", "in_review"];
 
-const key = (env: Bindings, kind: string, value: string) => hmacSha256(`rejoin:${env.IP_HASH_SECRET || env.EMAIL_HASH_SALT || ""}`, `${kind}:${value}`);
+/**
+ * The hash key. Without a real secret the hash of a Google or LINE id could be recomputed by anyone,
+ * so F4 then keeps nothing and refuses nothing (QA, JG-2): it needs IP_HASH_SECRET or EMAIL_HASH_SALT.
+ */
+const secret = (env: Bindings) => env.IP_HASH_SECRET || env.EMAIL_HASH_SALT || "";
+export const rejoinEnabled = (env: Bindings) => secret(env).length >= 16;
+const key = (env: Bindings, kind: string, value: string) => hmacSha256(`rejoin:${secret(env)}`, `${kind}:${value}`);
 export const oauthIdentity = (env: Bindings, provider: string, subject: string) => key(env, "oauth", `${provider}:${subject}`);
 export const emailIdentity = (env: Bindings, emailHash: string) => key(env, "email", emailHash);
 
@@ -34,7 +40,7 @@ async function hasOpenReport(db: Db, accountId: string): Promise<boolean> {
 
 /** For the deactivation batch: holds for each login, or nothing when no report is open. Call before the links are deleted. */
 export async function holdWrites(env: Bindings, db: Db, accountId: string, now = new Date()) {
-  if (!(await hasOpenReport(db, accountId))) return [];
+  if (!rejoinEnabled(env) || !(await hasOpenReport(db, accountId))) return [];
   const [oauth, email] = await Promise.all([
     // Never Apple: its account ID is used only to sign in (owner card S1).
     db.select({ provider: oauthLinks.provider, subject: oauthLinks.subject }).from(oauthLinks).where(and(eq(oauthLinks.accountId, accountId), ne(oauthLinks.provider, "apple"))).limit(10),

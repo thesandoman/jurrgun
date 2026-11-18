@@ -101,7 +101,7 @@ export async function createMember(
 /** Request the app as a member. `form` sends application/x-www-form-urlencoded. */
 export async function req(
   path: string,
-  opts: { cookie?: string; method?: string; form?: Record<string, string | string[]>; json?: unknown; headers?: Record<string, string> } = {},
+  opts: { cookie?: string; method?: string; form?: Record<string, string | string[]>; json?: unknown; headers?: Record<string, string>; env?: Record<string, string> } = {},
 ): Promise<Response> {
   const headers: Record<string, string> = { ...opts.headers };
   if (opts.cookie) headers.cookie = opts.cookie;
@@ -115,7 +115,7 @@ export async function req(
     body = JSON.stringify(opts.json);
     headers["content-type"] = "application/json";
   }
-  return app.request(path, { method: opts.method ?? (body ? "POST" : "GET"), headers, body }, ENV);
+  return app.request(path, { method: opts.method ?? (body ? "POST" : "GET"), headers, body }, opts.env ?? ENV);
 }
 
 /** A past event the member checked in to, so pages that wait for a first event (the tiles on Me) show. */
