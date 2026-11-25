@@ -82,7 +82,7 @@ const kmBetween = (a, b) => {
  * @param {number} [opts.zoom]
  * @param {{south:number,west:number,north:number,east:number}} [opts.panLimit]  keep the map inside this box
  * @param {number} [opts.fitMaxZoom]  closest zoom when fitting the points (default 14)
- * @param {"auto"|"light"|"dark"|"streets"|{tiles: string[], attribution?: string}} [opts.basemap]
+ * @param {"auto"|"light"|"dark"|"streets"|{tiles: string[], attribution?: string, maxzoom?: number}} [opts.basemap]
  * @param {"auto"|{value: string, label: string, icon?: string}[]|false} [opts.chips]  "auto" = from the points' tags
  * @param {Record<string, {label: string, icon?: string}>} [opts.tagLabels]  how "auto" chips name tags
  * @param {{value: string, label: string, icon?: string, test: (p: Point) => boolean}[]} [opts.extraChips]  e.g. "Free"
@@ -244,7 +244,7 @@ export async function createMap(el, opts = {}) {
     attributionControl: { compact: true },
     style: {
       version: 8,
-      sources: Object.fromEntries(tiles.map((t, i) => [`b${i}`, { type: "raster", tiles: [t], tileSize: 256, maxzoom: t.includes("openstreetmap") ? 19 : 16, ...(i === 0 ? { attribution: credit } : {}) }])),
+      sources: Object.fromEntries(tiles.map((t, i) => [`b${i}`, { type: "raster", tiles: [t], tileSize: 256, maxzoom: (typeof base === "object" && base.maxzoom) || (t.includes("openstreetmap") ? 19 : 16), ...(i === 0 ? { attribution: credit } : {}) }])),
       layers: tiles.map((_, i) => ({ id: `b${i}`, type: "raster", source: `b${i}` })),
     },
   });

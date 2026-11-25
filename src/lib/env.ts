@@ -25,6 +25,12 @@ export type Bindings = LoggerEnv & StorageEnv & StateEnv & DatabaseEnv & {
   APPLE_TEAM_ID?: string;
   APPLE_KEY_ID?: string;
   APPLE_PRIVATE_KEY?: string;
+  /**
+   * Mapbox. The public token (pk., URL-restricted to the site) styles the Discover map in the
+   * browser; the server token is for place search and directions and never leaves the server.
+   */
+  MAPBOX_PUBLIC_TOKEN?: string;
+  MAPBOX_SECRET_TOKEN?: string;
   /** Web Push (src/lib/webpush.ts). Push stays off until both keys are set as SV Cloud settings. */
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;

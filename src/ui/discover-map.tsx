@@ -322,6 +322,8 @@ export function FullDiscover(props: {
   langHref: string;
   /** Show the "Quests" button only when City Quests are on screen. */
   hasQuests: boolean;
+  /** MAPBOX_PUBLIC_TOKEN, when set: the map's styles come from Mapbox. */
+  mapboxToken?: string;
 }) {
   const { t, lang } = props;
   const cfg = {
@@ -330,12 +332,15 @@ export function FullDiscover(props: {
     chips: props.chips.map((c) => ({ value: c.value, label: c.label, icon: c.emoji })),
     free: { value: "free", label: t("ฟรี", "Free"), icon: "💸" },
     messages: { none: t("ยังไม่มีกิจกรรมบนแผนที่", "No events on the map yet"), areaNote: t("ระดับเขต ดูที่อยู่ในหน้ากิจกรรม", "District area: address on the event page") },
+    /** Public, URL-restricted Mapbox token (pk.); absent → the free Esri/OpenStreetMap tiles. */
+    mapbox: props.mapboxToken?.startsWith("pk.") ? props.mapboxToken : undefined,
     center: BKK_CENTER,
     panLimit: BKK_PAN_LIMIT,
     words: {
       light: t("แผนที่สว่าง", "Light map"),
       dark: t("แผนที่มืด", "Dark map"),
       streets: t("แผนที่ถนน", "Street map"),
+      satellite: t("ภาพดาวเทียม", "Satellite map"),
       noMatch: t("ไม่พบกิจกรรมที่ค้นหา", "No events match your search"),
       moreChips: moreChipsWords(t),
       found: searchCountWords(t),
@@ -472,8 +477,20 @@ export const FULLMAP_JS = `import { createMap } from "/vendor/sv-map.js?v=__V__"
 const cfg = JSON.parse(document.getElementById("dmap-data").textContent);
 const box = document.getElementById("dmap");
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-const STYLES = ["auto", "light", "dark", "streets"];
+const STYLES = cfg.mapbox ? ["auto", "light", "dark", "streets", "satellite"] : ["auto", "light", "dark", "streets"];
 let style = store.get("bkk-map-style") || "auto";
+if (!STYLES.includes(style)) style = "auto";
+// With a Mapbox token the styles come from Mapbox as image tiles; without one, sv-map's own free tiles.
+const MAPBOX_STYLES = { light: "light-v11", dark: "dark-v11", streets: "streets-v12", satellite: "satellite-streets-v12" };
+const MAPBOX_CREDIT = '<a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">© Mapbox</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> <a href="https://www.mapbox.com/map-feedback/" target="_blank" rel="noopener">Improve this map</a>';
+function basemap() {
+  const theme = document.documentElement.dataset.theme;
+  const dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const name = style === "auto" ? (cfg.mapbox ? (dark ? "dark" : "light") : theme || "auto") : style;
+  if (!cfg.mapbox) return name;
+  const id = MAPBOX_STYLES[name] || MAPBOX_STYLES.light;
+  return { tiles: ["https://api.mapbox.com/styles/v1/mapbox/" + id + "/tiles/256/{z}/{x}/{y}@2x?access_token=" + encodeURIComponent(cfg.mapbox)], attribution: MAPBOX_CREDIT, maxzoom: 22 };
+}
 let query = (document.getElementById("fd-q").value || "").trim().toLowerCase();
 let api = null;
 // The Key used to float on the map and remember where it was dragged; it lives in Filters now, so forget that spot.
@@ -484,7 +501,7 @@ async function start() {
   api?.destroy();
   api = await createMap(box, {
     lang: cfg.lang, points: visible(), chips: cfg.chips, legend: false, messages: cfg.messages,
-    center: cfg.center, panLimit: cfg.panLimit, basemap: style === "auto" ? document.documentElement.dataset.theme || "auto" : style, skipHref: "#discover-sheet",
+    center: cfg.center, panLimit: cfg.panLimit, basemap: basemap(), skipHref: "#discover-sheet",
     extraChips: [{ ...cfg.free, test: (p) => p.free }],
     // sv-map fits the pins to the whole box; refit around the floating controls.
     onFilter: (shown) => { lastShown = shown; hidePill(); setTimeout(() => refit(shown), 0); },

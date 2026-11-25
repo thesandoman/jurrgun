@@ -15,8 +15,8 @@
  *
  * Report-only for two weeks, then enforced (CSP_ENFORCE):
  *   Content-Security-Policy     scripts only with this response's nonce, from
- *                               us, or MapLibre on jsDelivr; map tiles from Esri
- *                               and OpenStreetMap. Violations go to
+ *                               us, or MapLibre on jsDelivr; map tiles from Mapbox,
+ *                               Esri and OpenStreetMap. Violations go to
  *                               /api/csp-report, which logs the directive and
  *                               the blocked origin only, never the page path.
  */
@@ -29,7 +29,7 @@ import { randomToken } from "./crypto";
 export const CSP_ENFORCE = false;
 export const CSP_REPORT_PATH = "/api/csp-report";
 
-const MAP_TILES = ["https://server.arcgisonline.com", "https://tile.openstreetmap.org"];
+const MAP_TILES = ["https://api.mapbox.com", "https://server.arcgisonline.com", "https://tile.openstreetmap.org"];
 const MAP_CODE = "https://cdn.jsdelivr.net";
 const OAUTH = ["https://accounts.google.com", "https://access.line.me", "https://appleid.apple.com"];
 

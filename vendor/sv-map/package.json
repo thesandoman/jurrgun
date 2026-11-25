@@ -1,6 +1,6 @@
 {
   "name": "sv-map",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A ready-made map for any app: pins, filter chips, key, cards, my location. From the Sanroo live map.",
   "type": "module",
   "exports": {

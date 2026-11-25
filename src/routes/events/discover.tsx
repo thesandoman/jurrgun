@@ -378,6 +378,7 @@ export async function discoverPage(c: Context<AppEnv>) {
       <Script dangerouslySetInnerHTML={{ __html: DISCOVER_MEMORY_JS }} />
       <FullDiscover
         t={t}
+        mapboxToken={c.env.MAPBOX_PUBLIC_TOKEN}
         lang={lang}
         points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
         chips={mapChips(list, lang)}

@@ -153,6 +153,7 @@ describe("privacy notice: who else is involved", () => {
     [/access\.line\.me|api\.line\.me|\/\/line\.me/, "LINE"],
     [/api\.resend\.com/, "Resend"],
     [/api\.postmarkapp\.com/, "Postmark"],
+    [/api\.mapbox\.com/, "Mapbox"],
     [/arcgisonline\.com/, "Esri"],
     [/tile\.openstreetmap\.org/, "OpenStreetMap"],
     [/cdn\.jsdelivr\.net/, "jsDelivr"],

@@ -360,7 +360,7 @@ export const PROCESSORS: Processor[] = [
     sees: { th: "ว่าคุณใช้ Jurrgun เราขอแค่รหัสบัญชี ไม่ขอชื่อ อีเมล หรือรายชื่อเพื่อน และสิ่งที่คุณเลือกแชร์", en: "That you use Jurrgun (we only ask for an account ID, never your name, email or friends), and whatever you choose to share" },
   },
   {
-    name: "Esri · OpenStreetMap · jsDelivr",
+    name: "Mapbox · Esri · OpenStreetMap · jsDelivr",
     group: "own",
     does: { th: "ภาพแผนที่และโค้ดแผนที่", en: "Map images and the map's code" },
     sees: { th: "IP ของคุณและบริเวณแผนที่ที่เปิด", en: "Your IP address and the map area you view" },
