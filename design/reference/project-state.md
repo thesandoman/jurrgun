@@ -5,16 +5,25 @@
 ## How chats coordinate
 
 - **Before starting:** pull `main`, read this file, `.agents/brand-context.md`, `design/reference/brand-positioning.md` and `design/reference/thai-voice.md`.
-- **Pushing:** push to `main` after typecheck and tests pass (the owner said "always push"). Pushing deploys. Before pushing schema changes, say so here and get the migration approved: code that needs new database fields must not go live before the fields exist.
+- **Pushing (owner, 2026-11-25, replaces "always push" to main):** the owner works from Claude Code on the Mac (Ghostty) and from Claude on the web at the same time, so nobody commits to `main` directly. See *Working from two places* below. Merging to `main` deploys. Before a schema change, say so here and get the migration approved: code that needs new database fields must not go live before the fields exist.
 - **Conflicts:** if two chats touch the same thing (films, the same files, production), stop and raise it in Branding.
 - **Owner decisions:** recorded below with the date and the chat they were given in. The newest decision wins. Where two conflict, the conflict is listed under Open and waits for the owner.
+
+## Working from two places (owner, 2026-11-25)
+
+The owner works on Jurrgun from local Claude Code (`~/jurgun`, in Ghostty) and from Claude on the web. Both follow the same rule:
+
+1. **Start:** `git fetch origin` and cut a new branch from `origin/main`: `ci/local-<topic>` locally, `ci/cloud-<topic>` on the web. One branch per task.
+2. **Push the branch** (`git push -u origin <branch>`). Any `ci/**` branch runs the full test suite on GitHub (`.github/workflows/tests.yml`).
+3. **Open a PR to `main`.** The owner reviews and squash-merges it. Merging deploys, so only the owner merges.
+4. **After any merge,** the other side runs `git fetch origin && git rebase origin/main` on its open branch before pushing again. If both sides touched the same file, whoever opens the second PR fixes the conflict.
 
 ## Machine load: up to 3 heavy jobs at once (owner, 10-15, updated evening)
 
 All chats share one Mac (14 cores, 24 GB). Earlier, many full-worker suites plus a film render at once pushed load past 100, so tests timed out and skipped. The owner later found one-at-a-time too slow and approved running more in parallel.
 - **Heavy jobs:** film renders (ffmpeg, headless Chrome), full `npm test`, and share-card renders. **At most 3 run at once.** If load goes above about 20, Branding holds the next one until it drops.
 - **Full suite:** `npx vitest run --maxWorkers=1` only, never with all workers.
-- **Pushing:** fetch and rebase onto origin/main, then `git push origin HEAD:main`. If rejected because main moved, rebase and push again; rerun the suite only if the rebase touched your files.
+- **Pushing:** push your `ci/...` branch and open a PR (see *Working from two places*). Never `git push origin HEAD:main`.
 - **Tests while working:** run only the files you changed, `npx vitest run <files> --poolOptions.threads.maxThreads=2 --testTimeout=30000`.
 - **Light work is fine anytime:** reading, writing and editing.
 - **When a chat lands its push,** it tells Branding with the SHA.
