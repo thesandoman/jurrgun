@@ -13,3 +13,4 @@ To update: replace the files here with a new release (keep the .d.ts files and t
 update the commit above), then run `npm run svmap` and the vendor test.
 
 Local change (2026-11-25): a custom basemap may set `maxzoom` (Mapbox tiles go to 22), version bumped to 1.0.1 so browsers fetch the new file.
+Local change (2026-11-25): `style` and `mapOptions` options, so the app can pass Mapbox GL JS and a full style (1.0.2).

@@ -95,7 +95,9 @@ const kmBetween = (a, b) => {
  * @param {(visible: Point[]) => void} [opts.onFilter]
  * @param {string} [opts.skipHref]  "skip the map" link target (e.g. your list view)
  * @param {{id: string, type: "circle"|"line"|"fill", data: object, paint?: object, before?: string}[]} [opts.overlays]  extra GeoJSON layers
- * @param {any} [opts.maplibregl]  your own MapLibre GL module
+ * @param {any} [opts.maplibregl]  your own MapLibre GL module (or a compatible one, such as Mapbox GL JS)
+ * @param {string|object} [opts.style]  a full map style (URL or object), used instead of `basemap`
+ * @param {object} [opts.mapOptions]  extra options for the map constructor (pitch, bearing, …)
  */
 export async function createMap(el, opts = {}) {
   const lang = opts.lang ?? (document.documentElement.lang === "en" ? "en" : "th");
@@ -242,7 +244,8 @@ export async function createMap(el, opts = {}) {
     maxZoom: 18,
     ...(lim ? { maxBounds: [[lim.west, lim.south], [lim.east, lim.north]] } : {}),
     attributionControl: { compact: true },
-    style: {
+    ...(opts.mapOptions ?? {}),
+    style: opts.style ?? {
       version: 8,
       sources: Object.fromEntries(tiles.map((t, i) => [`b${i}`, { type: "raster", tiles: [t], tileSize: 256, maxzoom: (typeof base === "object" && base.maxzoom) || (t.includes("openstreetmap") ? 19 : 16), ...(i === 0 ? { attribution: credit } : {}) }])),
       layers: tiles.map((_, i) => ({ id: `b${i}`, type: "raster", source: `b${i}` })),
@@ -299,7 +302,7 @@ export async function createMap(el, opts = {}) {
     if (!gs.length || opts.fit === false) return;
     const b = new ml.LngLatBounds();
     for (const g of gs) b.extend([g.lng, g.lat]);
-    map.fitBounds(b, { padding: { top: 60, bottom: 60, left: 40, right: 40 }, maxZoom: opts.fitMaxZoom ?? 14, duration: reduce() ? 0 : 600 });
+    map.fitBounds(b, { padding: { top: 60, bottom: 60, left: 40, right: 40 }, maxZoom: opts.fitMaxZoom ?? 14, pitch: map.getPitch(), bearing: map.getBearing(), duration: reduce() ? 0 : 600 });
   }
 
   // ---- my location: stays in the browser

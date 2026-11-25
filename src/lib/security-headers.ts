@@ -29,7 +29,7 @@ import { randomToken } from "./crypto";
 export const CSP_ENFORCE = false;
 export const CSP_REPORT_PATH = "/api/csp-report";
 
-const MAP_TILES = ["https://api.mapbox.com", "https://server.arcgisonline.com", "https://tile.openstreetmap.org"];
+const MAP_TILES = ["https://api.mapbox.com", "https://events.mapbox.com", "https://server.arcgisonline.com", "https://tile.openstreetmap.org"];
 const MAP_CODE = "https://cdn.jsdelivr.net";
 const OAUTH = ["https://accounts.google.com", "https://access.line.me", "https://appleid.apple.com"];
 

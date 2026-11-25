@@ -477,19 +477,43 @@ export const FULLMAP_JS = `import { createMap } from "/vendor/sv-map.js?v=__V__"
 const cfg = JSON.parse(document.getElementById("dmap-data").textContent);
 const box = document.getElementById("dmap");
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-const STYLES = cfg.mapbox ? ["auto", "light", "dark", "streets", "satellite"] : ["auto", "light", "dark", "streets"];
+const STYLES = cfg.mapbox ? ["auto", "light", "dark", "satellite"] : ["auto", "light", "dark", "streets"];
 let style = store.get("bkk-map-style") || "auto";
 if (!STYLES.includes(style)) style = "auto";
-// With a Mapbox token the styles come from Mapbox as image tiles; without one, sv-map's own free tiles.
-const MAPBOX_STYLES = { light: "light-v11", dark: "dark-v11", streets: "streets-v12", satellite: "satellite-streets-v12" };
-const MAPBOX_CREDIT = '<a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">© Mapbox</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> <a href="https://www.mapbox.com/map-feedback/" target="_blank" rel="noopener">Improve this map</a>';
-function basemap() {
+// With a Mapbox token: Mapbox GL JS and the 3D Mapbox Standard style (buildings and landmarks
+// in 3D, day or night light). Without one: MapLibre and sv-map's own free flat tiles.
+const MAPBOX_GL = "https://cdn.jsdelivr.net/npm/mapbox-gl@3.34.2/dist/mapbox-gl";
+let mapboxgl = null;
+function loadMapbox() {
+  if (mapboxgl) return Promise.resolve(mapboxgl);
+  return new Promise((ok, fail) => {
+    const css = document.createElement("link");
+    css.rel = "stylesheet"; css.href = MAPBOX_GL + ".css";
+    document.head.appendChild(css);
+    const js = document.createElement("script");
+    js.src = MAPBOX_GL + ".js";
+    js.onload = () => { mapboxgl = window.mapboxgl; mapboxgl.accessToken = cfg.mapbox; ok(mapboxgl); };
+    js.onerror = fail;
+    document.head.appendChild(js);
+  });
+}
+const isDark = () => {
   const theme = document.documentElement.dataset.theme;
-  const dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-  const name = style === "auto" ? (cfg.mapbox ? (dark ? "dark" : "light") : theme || "auto") : style;
-  if (!cfg.mapbox) return name;
-  const id = MAPBOX_STYLES[name] || MAPBOX_STYLES.light;
-  return { tiles: ["https://api.mapbox.com/styles/v1/mapbox/" + id + "/tiles/256/{z}/{x}/{y}@2x?access_token=" + encodeURIComponent(cfg.mapbox)], attribution: MAPBOX_CREDIT, maxzoom: 22 };
+  return theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+};
+async function mapSetup() {
+  const name = style === "auto" ? (isDark() ? "dark" : "light") : style;
+  if (!cfg.mapbox) return { basemap: style === "auto" ? document.documentElement.dataset.theme || "auto" : style };
+  try { await loadMapbox(); } catch { return { basemap: name === "satellite" ? "light" : name }; }
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return {
+    maplibregl: mapboxgl,
+    style: name === "satellite" ? "mapbox://styles/mapbox/standard-satellite" : "mapbox://styles/mapbox/standard",
+    mapOptions: {
+      pitch: still ? 0 : 50, bearing: still ? 0 : -12, language: cfg.lang, maxZoom: 19,
+      config: { basemap: { lightPreset: name === "dark" ? "night" : "day", show3dObjects: true, showPointOfInterestLabels: false } },
+    },
+  };
 }
 let query = (document.getElementById("fd-q").value || "").trim().toLowerCase();
 let api = null;
@@ -499,9 +523,11 @@ try{localStorage.removeItem("bkk-key-pos")}catch{}
 const visible = () => cfg.points.filter((p) => !query || p.search.includes(query));
 async function start() {
   api?.destroy();
+  const setup = await mapSetup();
   api = await createMap(box, {
+    ...setup,
     lang: cfg.lang, points: visible(), chips: cfg.chips, legend: false, messages: cfg.messages,
-    center: cfg.center, panLimit: cfg.panLimit, basemap: basemap(), skipHref: "#discover-sheet",
+    center: cfg.center, panLimit: cfg.panLimit, skipHref: "#discover-sheet",
     extraChips: [{ ...cfg.free, test: (p) => p.free }],
     // sv-map fits the pins to the whole box; refit around the floating controls.
     onFilter: (shown) => { lastShown = shown; hidePill(); setTimeout(() => refit(shown), 0); },
@@ -648,7 +674,7 @@ const SIDE = matchMedia("${SIDE_PANEL_MQ}");
 const isShown = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
 const hits = (a, b) => a.width > 0 && b.width > 0 && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const px = (v) => Math.ceil(v) + "px";
-const credit = () => document.querySelector(".fullmap .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib") || document.querySelector(".fullmap .maplibregl-ctrl-bottom-right");
+const credit = () => document.querySelector(".fullmap :is(.maplibregl-ctrl-bottom-right,.mapboxgl-ctrl-bottom-right) :is(.maplibregl-ctrl-attrib,.mapboxgl-ctrl-attrib)") || document.querySelector(".fullmap :is(.maplibregl-ctrl-bottom-right,.mapboxgl-ctrl-bottom-right)");
 /** The sheet where it rests (its handle, or the open list), ignoring a drag or spring in progress. */
 function sheetBox() {
   const r = sheetEl.getBoundingClientRect();
@@ -719,7 +745,7 @@ function refit(points, instant = false) {
   let s = 90, w = 180, n = -90, e = -180;
   for (const p of points) { s = Math.min(s, p.lat); n = Math.max(n, p.lat); w = Math.min(w, p.lng); e = Math.max(e, p.lng); }
   try {
-    map.fitBounds([[w, s], [e, n]], { padding: pad, maxZoom: 14, duration: instant || matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400 });
+    map.fitBounds([[w, s], [e, n]], { padding: pad, maxZoom: 15, pitch: map.getPitch(), bearing: map.getBearing(), duration: instant || matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400 });
   } catch {}
 }
 start();
@@ -866,7 +892,7 @@ body.fullmap-body{--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-pane
 .fullmap .dmap{position:fixed;inset:0;--svm-height:100dvh;--svm-brand:var(--brand);--svm-highlight:var(--info);--svm-surface:var(--surface);--svm-surface-2:var(--surface-2);--svm-ink:var(--ink);--svm-muted:var(--ink-3);--svm-line:var(--line);--svm-focus:var(--mango);--svm-ok:var(--ok);--svm-ok-soft:var(--ok-soft);--svm-warn:var(--warn);--svm-warn-soft:var(--warn-soft);--svm-font:var(--font)}
 .fullmap .svm-map{position:absolute;inset:0;height:100%;min-height:0;border:0;border-radius:0}
 .fullmap .dmap-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--ink-3);background:var(--surface-2)}
-.fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right{display:none}
+.fullmap .svm-count,.fullmap .svm-me,.fullmap .maplibregl-ctrl-top-right,.fullmap .mapboxgl-ctrl-top-right{display:none}
 .fullmap .svm-chips{position:fixed;z-index:var(--z-chips);left:0;right:0;top:calc(var(--tk-h) + var(--top-h) + var(--gap) * 2 + 8px + var(--safe-t));padding:0 max(12px,calc(var(--safe-r) + 12px)) 4px max(12px,calc(var(--safe-l) + 12px))}
 /* sv-map draws its chips 40px tall: the house minimum is 44px. */
 .fullmap .svm-chip{min-height:44px;box-shadow:var(--shadow)}
@@ -887,9 +913,11 @@ body.fullmap-body{--z-map:0;--z-pill:4;--z-rail:5;--z-chips:6;--z-top:8;--z-pane
 @media (max-width:899.98px){.fullmap:has(.svm-sheet:not([hidden])) .fd-rail{visibility:hidden}}
 /* The map credit sits on its own line just above the sheet, clear of the rail. */
 /* (MapLibre gives the credit a 10px margin of its own, so the box sits 10px further out.) */
-.fullmap .maplibregl-ctrl-bottom-right{bottom:calc(var(--tab-h) + var(--sheet-cur) - 6px);right:calc(var(--edge-r) - 10px);max-width:calc(100% - var(--edge-l) - var(--edge-r) + 20px)}
+.fullmap :is(.maplibregl-ctrl-bottom-right,.mapboxgl-ctrl-bottom-right){bottom:calc(var(--tab-h) + var(--sheet-cur) - 6px);right:calc(var(--edge-r) - 10px);max-width:calc(100% - var(--edge-l) - var(--edge-r) + 20px)}
+/* Mapbox's logo, bottom left on the same line as the credit. */
+.fullmap .mapboxgl-ctrl-bottom-left{bottom:calc(var(--tab-h) + var(--sheet-cur) - 6px);left:calc(var(--edge-l) - 10px)}
 /* The credit's (i) button is stretched to 44px tall by the app's summary rule: one icon, centred, not two stacked. */
-.fullmap .maplibregl-ctrl-attrib-button{background-repeat:no-repeat;background-position:center}
+.fullmap :is(.maplibregl-ctrl-attrib-button,.mapboxgl-ctrl-attrib-button){background-repeat:no-repeat;background-position:center}
 /* floating header */
 .fd-rail-btn.fd-pulse{color:var(--brand)}
 .fd-top{position:fixed;z-index:var(--z-top);top:calc(var(--tk-h) + var(--gap) + var(--safe-t));left:var(--edge-l);right:var(--edge-r);height:var(--top-h);display:flex;gap:8px;align-items:center;min-width:0}
@@ -995,8 +1023,8 @@ body.fullmap-body .tabbar{z-index:var(--z-tab)}
   /* The panel scrolls as a page does, so its handle may scroll away: let the finger scroll it there too. */
   .fd-sheet>summary{touch-action:auto}
   /* The map credit stays right of the panel, and with large text the rail's labels stop growing at 14px so it still fits above the tab bar. */
-  .fullmap .maplibregl-ctrl-bottom-right{max-width:calc(100% - min(360px,50vw - 24px) - var(--edge-l) - var(--edge-r))}
-  .fullmap .maplibregl-ctrl-attrib{font-size:min(.75rem,12px)}
+  .fullmap :is(.maplibregl-ctrl-bottom-right,.mapboxgl-ctrl-bottom-right){max-width:calc(100% - min(360px,50vw - 24px) - var(--edge-l) - var(--edge-r))}
+  .fullmap :is(.maplibregl-ctrl-attrib,.mapboxgl-ctrl-attrib){font-size:min(.75rem,12px)}
   .fullmap .fd-rail-btn{font-size:min(.7rem,14px)}
   .fullmap .fd-rail-btn b{font-size:min(1.2rem,22px)}
 }

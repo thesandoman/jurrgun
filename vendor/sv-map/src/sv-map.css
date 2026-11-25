@@ -60,7 +60,7 @@
 .svm-me { position: absolute; right: 10px; bottom: 12px; z-index: 3; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--svm-line);
   background: var(--svm-surface); color: var(--svm-brand); font-size: 1.3rem; cursor: pointer; box-shadow: var(--svm-shadow); }
 .svm-count { margin: 6px 2px 0; color: var(--svm-muted); font-size: .86rem; }
-.svm .maplibregl-ctrl-attrib { font-size: .7rem; }
+.svm .maplibregl-ctrl-attrib, .svm .mapboxgl-ctrl-attrib { font-size: .7rem; }
 
 /* key */
 .svm-key { position: absolute; left: 10px; bottom: 12px; z-index: 3; max-width: 62%; padding: 6px 10px; border-radius: 12px; font-size: .8rem;
