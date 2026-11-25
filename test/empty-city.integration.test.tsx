@@ -119,7 +119,7 @@ describe.skipIf(!HAS_DB)("formingTables, the real Regular Tables still taking pe
     const got = await formingTables(db(), viewer.id, { gender: "man" });
     expect(got.map((x) => x.id)).toEqual([newest, newer, older]);
     expect(got.map((x) => x.id)).not.toContain(fourth);
-    expect(got[0]).toEqual({ id: newest, name: expect.any(String), district: "khlong_toei" });
+    expect(got[0]).toEqual({ id: newest, name: expect.any(String), district: "khlong_toei", seated: 0 });
   });
 
   it("leaves out closed, full, women-only (for a man), blocked-host and the viewer's own tables", async () => {

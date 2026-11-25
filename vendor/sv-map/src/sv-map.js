@@ -70,6 +70,7 @@ const kmBetween = (a, b) => {
  * @property {boolean} [highlight] e.g. "you're going": gold pin with a tick
  * @property {boolean} [muted]     e.g. full or closed: a faded pin
  * @property {string} [label]      what a screen reader says for the pin (default: title + first line)
+ * @property {string} [kind]       a word for what it is (e.g. "table"): a pin whose points all share it gets the class kind-<word>
  */
 
 /**
@@ -283,7 +284,8 @@ export async function createMap(el, opts = {}) {
     const p = group.items[0];
     const area = group.items.every((x) => x.precision === "area");
     const hi = group.items.some((x) => x.highlight);
-    b.className = `svm-pin${area ? " area" : ""}${hi ? " highlight" : ""}${group.items.every((x) => x.muted) ? " muted" : ""}`;
+    const kind = p.kind && group.items.every((x) => x.kind === p.kind) ? p.kind : "";
+    b.className = `svm-pin${area ? " area" : ""}${hi ? " highlight" : ""}${group.items.every((x) => x.muted) ? " muted" : ""}${kind ? ` kind-${kind}` : ""}`;
     b.innerHTML = `<span aria-hidden="true">${esc(one ? (p.icon ?? "") : group.items.length)}</span>${hi ? '<i aria-hidden="true">✓</i>' : ""}`;
     b.setAttribute("aria-label", one ? (p.label ?? [p.title, ...(p.lines ?? []).slice(0, 2)].join(", ")) : M.here(group.items.length) + (opts.groupTitle ? `: ${opts.groupTitle(group.items)}` : ""));
     b.addEventListener("click", (e) => { e.stopPropagation(); openSheet(group, b); });

@@ -116,7 +116,7 @@ export async function myTables(db: Db, me: string): Promise<(RegularTable & { ho
  * and any the viewer can't see on its own page (a block with the host, women-only for someone else).
  * Real rows only: no tables means an empty list, and the caller shows nothing.
  */
-export async function formingTables(db: Db, me: string, viewer: { gender?: string | null }, limit = 3, viewerIsDemo = false): Promise<Pick<RegularTable, "id" | "name" | "district">[]> {
+export async function formingTables(db: Db, me: string, viewer: { gender?: string | null }, limit = 3, viewerIsDemo = false): Promise<(Pick<RegularTable, "id" | "name" | "district"> & { seated: number })[]> {
   const rows = await db
     .select({ id: regularTables.id, name: regularTables.name, district: regularTables.district, hostAccountId: regularTables.hostAccountId, womenOnly: regularTables.womenOnly })
     .from(regularTables)
@@ -138,7 +138,7 @@ export async function formingTables(db: Db, me: string, viewer: { gender?: strin
   return rows
     .filter((r) => !at.get(r.id)?.mine && (at.get(r.id)?.n ?? 0) < MAX_MEMBERS && tableVisible(r, viewer, hidden.has(r.hostAccountId)))
     .slice(0, limit)
-    .map((r) => ({ id: r.id, name: r.name, district: r.district }));
+    .map((r) => ({ id: r.id, name: r.name, district: r.district, seated: at.get(r.id)?.n ?? 0 }));
 }
 
 /** Did `me` go to a hangout with this host (a confirmed seat at one of their events that has started)? */

@@ -48,6 +48,8 @@ export type MapPoint = {
   full: boolean;
   /** The viewer's own registration label, if any. */
   mine: string | null;
+  /** "table": a Regular Table still taking people (its own pin colour, links to the table). */
+  kind?: "table";
 };
 
 export type MapChip = { value: string; label: string; emoji: string };
@@ -55,6 +57,24 @@ export type MapChip = { value: string; label: string; emoji: string };
 
 /** One event in sv-map's point shape. */
 export function svmPoint(p: MapPoint, t: T) {
+  if (p.kind === "table")
+    return {
+      id: `table-${p.id}`,
+      kind: "table",
+      lat: p.lat,
+      lng: p.lng,
+      title: p.title,
+      icon: "🪑",
+      href: `/tables/${encodeURIComponent(p.id)}`,
+      lines: [`🪑 ${t("โต๊ะประจำ กลุ่มเดิมที่นัดเจอกันสม่ำเสมอ", "Regular Table: the same group, meeting regularly")}`, `📍 ${p.district}`],
+      badges: [{ text: p.spots, tone: "ok" }],
+      tags: [] as string[],
+      precision: "area",
+      highlight: false,
+      muted: false,
+      free: false,
+      search: `${p.title} ${p.district}`.toLowerCase(),
+    };
   const lines = [`🗓️ ${p.when}`, `📍 ${p.venue} · ${p.district}`];
   if (p.precision === "route") lines.push(t("จุดเริ่มเส้นทาง", "Route start"));
   return {
@@ -229,6 +249,9 @@ export function PinLegend(props: { t: T }) {
         </li>
         <li>
           <i class="svm-k highlight" aria-hidden="true">✓</i> {t("นัดของฉัน", "My events")}
+        </li>
+        <li>
+          <i class="svm-k table" aria-hidden="true" /> {t("โต๊ะประจำที่ยังรับคน (ระดับเขต)", "Regular Table taking people (district area)")}
         </li>
       </ul>
     </details>
@@ -879,6 +902,19 @@ quests?.addEventListener("click", () => {
 
 /** Layout for the full-screen map. Uses the app's tokens; dark mode follows the device. */
 export const FULLMAP_CSS = `
+/* Pins: events are what the map is for, so they stand out from the 3D city. Bigger, a halo, and
+   district-area pins filled (a dashed white ring still says "approximate"). Tables get their own colour. */
+.fullmap{--pin-table:#7048e8;--pin-table-ink:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fullmap{--pin-table:#b197fc;--pin-table-ink:#1a1033}}
+:root[data-theme="dark"] .fullmap{--pin-table:#b197fc;--pin-table-ink:#1a1033}
+.fullmap .svm-pin{width:46px;height:46px;border-width:3px;box-shadow:0 4px 14px rgba(0,0,0,.35),0 0 0 4px color-mix(in srgb,var(--svm-brand) 28%,transparent)}
+.fullmap .svm-pin>span{font-size:21px}
+.fullmap .svm-pin.area{background:var(--svm-brand);color:var(--svm-brand-ink);border:3px dashed #fff}
+.fullmap .svm-pin.highlight{background:var(--svm-highlight);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.35),0 0 0 4px color-mix(in srgb,var(--svm-highlight) 30%,transparent)}
+.fullmap .svm-pin.kind-table{background:var(--pin-table);color:var(--pin-table-ink);box-shadow:0 4px 14px rgba(0,0,0,.35),0 0 0 4px color-mix(in srgb,var(--pin-table) 28%,transparent)}
+.fullmap .svm-pin.muted{opacity:.75}
+.fd-legend .svm-k.area{background:var(--svm-brand);border:2px dashed #fff;box-shadow:0 0 0 1px var(--svm-brand)}
+.fd-legend .svm-k.table{background:var(--pin-table,#7048e8);border:2px dashed #fff;box-shadow:0 0 0 1px var(--pin-table,#7048e8)}
 /* The page never scrolls: html and body are pinned to the viewport on both axes (100vh first, 100dvh where supported). */
 html:has(>body.fullmap-body),body.fullmap-body{height:100vh;height:100dvh;max-width:100%;overflow:hidden;overscroll-behavior:none}
 body.fullmap-body{position:fixed;inset:0;width:100%;margin:0;padding:0}

@@ -16,12 +16,13 @@ import { ageOn, romanceEligible } from "../../domain/rules";
 import { DISTRICTS, EVENT_TAGS, INTENSITY, LANGUAGES, label, values, districtsAZ } from "../../lib/constants";
 import type { AppEnv, CurrentUser } from "../../lib/env";
 import { fmtDate, fmtParts, type Lang, type T } from "../../lib/i18n";
-import { eventPlace } from "../../lib/places";
+import { DISTRICT_CENTERS, eventPlace } from "../../lib/places";
 import { requireMember } from "../../lib/session";
 import { events, profiles, registrations, vibes, type Event, weeklyPlans, type Profile } from "../../schema";
 import { Button, Card, Empty, LinkButton, page, safeNext, Select, str, Tag, Toggle, view, ViewSwitch, type View, PULSE_ICON } from "../../ui/kit";
 import { DistrictAlertOptIn, FullDiscover, NoEventsYet, sheetCopy, type DistrictAlertState, type FormingTable, type MapChip, type MapPoint } from "../../ui/discover-map";
 import { formingTables } from "../../services/regular-tables";
+import { MAX_MEMBERS } from "../../domain/regular-tables";
 import { collabNamesFor } from "../../services/collabs";
 import { listableBase } from "../../services/events";
 import { hasConsent, NOTIFICATIONS_CONSENT } from "../../services/consent";
@@ -316,10 +317,11 @@ export async function discoverPage(c: Context<AppEnv>) {
       : null;
   // An honest empty city (owner card 3): with nothing coming up at all, the real Regular Tables still
   // taking people, up to 3. None means no section at all.
+  // The map also shows them (up to 20), so members can find a table to join as well as an event.
+  const tablesOpen = (mapView || list.length === 0) && !filtered ? await formingTables(db, user.account.id, user.profile, 20, user.account.isDemo) : [];
   const forming: FormingTable[] =
-    list.length === 0 && !filtered
-      ? (await formingTables(db, user.account.id, user.profile, 3, user.account.isDemo)).map((x) => ({ id: x.id, name: x.name, place: label(DISTRICTS, x.district, lang) }))
-      : [];
+    list.length === 0 && !filtered ? tablesOpen.slice(0, 3).map((x) => ({ id: x.id, name: x.name, place: label(DISTRICTS, x.district, lang) })) : [];
+  const tablePoints = mapView ? tablesOpen.flatMap((x) => tablePoint(x, v)) : [];
   // The events, with `extra` (the For you and quiz cards) after the third one, so events come first.
   const cardList = (extra?: Child) => {
     if (rest.length === 0 && above.size) return extra;
@@ -380,7 +382,7 @@ export async function discoverPage(c: Context<AppEnv>) {
         t={t}
         mapboxToken={c.env.MAPBOX_PUBLIC_TOKEN}
         lang={lang}
-        points={placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : []))}
+        points={[...placed.flatMap(({ e, place }) => (place ? [mapPoint(e, place, taken.get(e.id) ?? 0, myStatus.get(e.id), v, covers.get(e.id))] : [])), ...tablePoints]}
         chips={mapChips(list, lang)}
         status={status}
         search={q.text}
@@ -554,6 +556,38 @@ eventRoutes.post("/events/quiz-hint/dismiss", requireMember, (c) => {
 });
 
 // ---------------------------------------------------------- map view --
+
+/**
+ * A Regular Table still taking people, as a map pin: its district only (tables have no address),
+ * nudged ~400 m north so it doesn't sit under that district's event pins. Nothing about who sits there.
+ */
+function tablePoint(x: { id: string; name: string; district: string; seated: number }, v: View): MapPoint[] {
+  const at = DISTRICT_CENTERS[x.district];
+  if (!at) return [];
+  const { t, lang } = v;
+  const left = Math.max(0, MAX_MEMBERS - x.seated);
+  return [
+    {
+      kind: "table",
+      id: x.id,
+      title: x.name,
+      when: "",
+      venue: "",
+      district: label(DISTRICTS, x.district, lang),
+      lat: at[0] + 0.004,
+      lng: at[1],
+      precision: "area",
+      emoji: "🪑",
+      cover: null,
+      tags: [],
+      free: false,
+      cost: "",
+      spots: t(`รับได้อีก ${left} คน`, `Room for ${left} more`),
+      full: false,
+      mine: null,
+    },
+  ];
+}
 
 /** One event as the map needs it: what the card shows, plus where. Nothing about other people. */
 function mapPoint(
